@@ -1,0 +1,25 @@
+# Frontend (React + Vite)
+node_modules/
+dist/
+.DS_Store
+*.local
+
+# Backend (Laravel)
+backend/vendor/
+backend/node_modules/
+backend/public/storage
+backend/.env
+backend/.env.backup
+backend/.phpunit.result.cache
+backend/composer.lock
+backend/npm-debug.log
+backend/yarn-error.log
+backend/yarn-debug.log
+backend/yarn-error.log
+backend/storage/*.key
+backend/storage/logs/laravel.log
+backend/storage/framework/views/*.php
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/testing/*
+backend/bootstrap/cache/*.php
