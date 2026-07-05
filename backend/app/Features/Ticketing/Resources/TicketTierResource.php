@@ -1,0 +1,14 @@
+<?php
+
+namespace App\Features\Ticketing\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class TicketTierResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return parent::toArray($request);
+    }
+}
