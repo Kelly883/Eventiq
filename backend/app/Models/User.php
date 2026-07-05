@@ -75,4 +75,9 @@ class User extends Authenticatable
     {
         return $this->hasRole('admin');
     }
+
+    public function organizer(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Organizer::class);
+    }
 }
