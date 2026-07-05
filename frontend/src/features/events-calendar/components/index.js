@@ -1,7 +1,12 @@
-export { default as EventCard } from './EventCard';
-export { default as CalendarGrid } from './CalendarGrid';
-export { default as FilterSidebar } from './FilterSidebar';
-export { default as SearchBar } from './SearchBar';
-export { default as DateHeader } from './DateHeader';
-export { default as AvailabilityIndicator } from './AvailabilityIndicator';
-export { default as ViewToggle } from './ViewToggle';
+// Calendar components
+export { default as CalendarGrid } from './calendar/CalendarGrid';
+export { default as DateHeader } from './calendar/DateHeader';
+
+// Filters components
+export { default as FilterSidebar } from './filters/FilterSidebar';
+export { default as SearchBar } from './filters/SearchBar';
+export { default as ViewToggle } from './filters/ViewToggle';
+
+// Events components
+export { default as EventCard } from './events/EventCard';
+export { default as AvailabilityIndicator } from './events/AvailabilityIndicator';
