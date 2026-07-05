@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Organizer\EventController;
 use App\Features\Ticketing\Controllers\EventTicketingController;
+use App\Features\Pricing\Controllers\PricingWindowController;
+use App\Features\Pricing\Controllers\PricingController;
 
 // Public routes
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -34,9 +36,15 @@ Route::middleware('auth:sanctum')->group(function () {
         // Event ticketing
         Route::prefix('events/{event}')->group(function () {
             Route::put('/ticketing', [EventTicketingController::class, 'update']);
+
+            // Event pricing (organizer)
+            Route::apiResource('pricing-windows', PricingWindowController::class);
         });
     });
 });
+
+// Public event pricing (attendee)
+Route::get('/events/{event}/pricing', [PricingController::class, 'show']);
 
 // Public organizer profile
 Route::get('/organizers/{organizer}', [OrganizerController::class, 'show']);

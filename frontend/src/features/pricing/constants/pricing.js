@@ -1,0 +1,1 @@
+export const PRICING_WINDOW_DEFAULT_PRIORITY = 1;
