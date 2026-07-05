@@ -1,0 +1,2 @@
+export const TICKET_TIER_DEFAULT_PRICE = 0;
+export const TICKET_TIER_MIN_PURCHASE = 1;

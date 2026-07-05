@@ -2,8 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\OrganizerController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Organizer\EventController;
+use App\Features\Ticketing\Controllers\EventTicketingController;
 
 // Public routes
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -18,7 +21,25 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // User-facing permission routes
     Route::post('/permissions/request', [PermissionController::class, 'submitPermissionRequest']);
+
+    // Organizer routes
+    Route::prefix('organizer')->group(function () {
+        // Organizer profile
+        Route::get('/profile', [OrganizerController::class, 'edit']);
+        Route::put('/profile', [OrganizerController::class, 'update']);
+
+        // Organizer events
+        Route::apiResource('events', EventController::class);
+
+        // Event ticketing
+        Route::prefix('events/{event}')->group(function () {
+            Route::put('/ticketing', [EventTicketingController::class, 'update']);
+        });
+    });
 });
+
+// Public organizer profile
+Route::get('/organizers/{organizer}', [OrganizerController::class, 'show']);
 
 // Admin routes
 Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
