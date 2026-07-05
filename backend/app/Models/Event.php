@@ -32,4 +32,9 @@ class Event extends Model
     {
         return $this->hasMany(TicketTier::class);
     }
+
+    public function pricingWindows(): HasMany
+    {
+        return $this->hasMany(\App\Features\Pricing\Models\PricingWindow::class);
+    }
 }
