@@ -1,0 +1,1 @@
+export const formatEvent = (event) => {};
