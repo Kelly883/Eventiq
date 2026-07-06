@@ -11,6 +11,12 @@ use App\Features\Pricing\Controllers\PricingWindowController;
 use App\Features\Pricing\Controllers\PricingController;
 use App\Features\Delivery\Controllers\DeliveryController;
 
+// Include Push Notifications routes
+require base_path('app/Features/PushNotifications/Routes/api.php');
+
+// Include QR Code Ticketing routes
+require base_path('app/Features/QRCodeTicketing/Routes/api.php');
+
 // Public routes
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
