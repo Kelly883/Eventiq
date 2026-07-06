@@ -26,6 +26,17 @@ require base_path('app/Features/EmailNotifications/Routes/api.php');
 // Include Refunds routes
 require base_path('app/Features/Refunds/Routes/api.php');
 
+// Include Payouts routes
+require base_path('app/Features/Payouts/Routes/api.php');
+
+// Include Compliance routes
+require base_path('app/Features/Compliance/Routes/api.php');
+
+
+// Include Admin routes (platform management)
+require base_path('routes/admin.php');
+
+
 // Public routes
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
