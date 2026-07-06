@@ -9,6 +9,7 @@ use App\Http\Controllers\Organizer\EventController;
 use App\Features\Ticketing\Controllers\EventTicketingController;
 use App\Features\Pricing\Controllers\PricingWindowController;
 use App\Features\Pricing\Controllers\PricingController;
+use App\Features\Delivery\Controllers\DeliveryController;
 
 // Public routes
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -48,6 +49,19 @@ Route::get('/events/{event}/pricing', [PricingController::class, 'show']);
 
 // Public organizer profile
 Route::get('/organizers/{organizer}', [OrganizerController::class, 'show']);
+
+// Ticket Delivery Endpoints
+Route::middleware('auth:sanctum')->group(function () {
+    // User delivery routes
+    Route::prefix('delivery')->group(function () {
+        //
+    });
+    
+    // Admin delivery routes
+    Route::middleware('role:admin')->prefix('admin/delivery')->group(function () {
+        //
+    });
+});
 
 // Admin routes
 Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
