@@ -20,6 +20,9 @@ require base_path('app/Features/QRCodeTicketing/Routes/api.php');
 // Include Check-In routes
 require base_path('app/Features/CheckIn/Routes/api.php');
 
+// Include Email Notifications routes
+require base_path('app/Features/EmailNotifications/Routes/api.php');
+
 // Public routes
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
