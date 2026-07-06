@@ -1,1 +1,3 @@
-// Tickets Hooks
+export * from './useTickets'
+export * from './useTicketDetail'
+
