@@ -1,27 +1,23 @@
-# TODO - Admin + Compliance + Payouts Structure
+# TODO
 
-## Phase 1: Confirm existing payouts feature
-- [x] Verified frontend payouts folder exists
-- [x] Verified backend payouts feature exists
-
-## Phase 2: Add missing Admin feature folders/files
-- [x] Create `frontend/src/features/admin/` structure (pages/components/hooks/types/utils)
-- [x] Create `backend/app/Features/admin/` structure (controllers/policy/models/route)
-- [x] Add `backend/routes/admin.php` and wire routes
+## i18n accessibility-localization folder alignment (frontend)
+- [x] Confirm existing i18n setup (none found in current repo)
+- [x] Create global i18n root under `frontend/src/i18n/`
+- [x] Implement minimal translation utility (language-first, namespaces per feature)
+- [x] Add example namespaces for existing features (admin, compliance)
+- [ ] Ensure no `frontend/src/features/accessibility-localization` folder is created
 
 
-## Phase 3: Add missing Compliance feature folders/files
-- [ ] Create `frontend/src/features/compliance/` structure (pages/components/hooks/types/services)
-- [x] Create `backend/app/Features/Compliance/` structure (controllers/services/requests/jobs)
+## Backend routing alignment for “Users” (backend)
+- [ ] Confirm where “Users” endpoints should live using:
+  - [ ] `backend/routes/api.php`
+  - [ ] `backend/routes/admin.php`
+  - [ ] `backend/app/Features/*/Routes/api.php`
+- [ ] Prefer `backend/app/Features/<Feature>/Controllers/...` + feature route files
+- [ ] Avoid forcing `backend/app/Http/Controllers/Api/Users/...` unless routing convention matches
 
-- [ ] Reuse existing `App\Models\AuditLog` + existing audit logs migration
-
-
-## Phase 4: Compile-safe scaffolding
-- [ ] Ensure new frontend modules export correctly from index files
-- [ ] Ensure backend namespaces/imports/route inclusion are correct
-
-## Phase 5: Basic sanity checks
-- [ ] Run frontend build/typecheck (if available)
-- [ ] Run `php artisan route:list` (if available)
+## Smoke test
+- [ ] Run frontend build/lint
+- [ ] Run backend composer install and any php artisan checks
+- [ ] Ensure commands work in this Windows environment (avoid failing cmd chaining)
 

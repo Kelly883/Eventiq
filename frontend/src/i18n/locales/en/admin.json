@@ -1,0 +1,10 @@
+{
+  "userManagement": {
+    "title": "User management",
+    "searchPlaceholder": "Search users...",
+    "actions": {
+      "refresh": "Refresh"
+    }
+  }
+}
+

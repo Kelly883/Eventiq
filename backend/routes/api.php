@@ -36,6 +36,10 @@ require base_path('app/Features/Compliance/Routes/api.php');
 // Include Admin routes (platform management)
 require base_path('routes/admin.php');
 
+// Include OfflineSync routes
+require base_path('app/Features/OfflineSync/Routes/api.php');
+
+
 
 // Public routes
 Route::post('/auth/register', [AuthController::class, 'register']);
