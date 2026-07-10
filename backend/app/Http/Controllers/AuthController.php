@@ -11,6 +11,27 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    /**
+     * Refresh access token.
+     *
+     * Current token storage approach in the repo is using Sanctum personal access tokens.
+     * This endpoint can only work if the caller is authenticated (i.e. bearer token is valid).
+     */
+    public function refresh(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        // Re-issue a new token. (You may want to revoke the old token(s) depending on your policy.)
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        return response()->json([
+            'accessToken' => $token,
+        ]);
+    }
+
     public function register(Request $request)
     {
         $validated = $request->validate([

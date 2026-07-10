@@ -36,14 +36,19 @@ require base_path('app/Features/Compliance/Routes/api.php');
 // Include Admin routes (platform management)
 require base_path('routes/admin.php');
 
+// Include Payment routes
+require base_path('app/Features/Payment/Routes/api.php');
+
 // Include OfflineSync routes
 require base_path('app/Features/OfflineSync/Routes/api.php');
+
 
 
 
 // Public routes
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/refresh', [AuthController::class, 'refresh']);
 Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 

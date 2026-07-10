@@ -1,23 +1,16 @@
 # TODO
 
-## i18n accessibility-localization folder alignment (frontend)
-- [x] Confirm existing i18n setup (none found in current repo)
-- [x] Create global i18n root under `frontend/src/i18n/`
-- [x] Implement minimal translation utility (language-first, namespaces per feature)
-- [x] Add example namespaces for existing features (admin, compliance)
-- [ ] Ensure no `frontend/src/features/accessibility-localization` folder is created
+## Auth / Token refresh + security hardening
+- [x] Frontend: replace localStorage-based 401 handling in `frontend/src/lib/api.ts` with refresh+retry flow
+- [ ] Frontend: centralize token handling and avoid hard logout on first 401
+- [x] Backend: add refresh token endpoint (or sanctum session refresh) and corresponding auth logic
+- [ ] Backend: if migrating to httpOnly cookies, add cookie-based token issuance + CORS/CSRF configuration
 
+## Image processing + upload edge-case protection
+- [ ] Identify upload endpoints and image resizing pipeline
+- [ ] Add server-side validation: file type/size, decompression bomb limits, dimension bounds
+- [ ] Add sharp processing safeguards: bounded dimensions, concurrency limits, async/background if needed
 
-## Backend routing alignment for “Users” (backend)
-- [ ] Confirm where “Users” endpoints should live using:
-  - [ ] `backend/routes/api.php`
-  - [ ] `backend/routes/admin.php`
-  - [ ] `backend/app/Features/*/Routes/api.php`
-- [ ] Prefer `backend/app/Features/<Feature>/Controllers/...` + feature route files
-- [ ] Avoid forcing `backend/app/Http/Controllers/Api/Users/...` unless routing convention matches
-
-## Smoke test
-- [ ] Run frontend build/lint
-- [ ] Run backend composer install and any php artisan checks
-- [ ] Ensure commands work in this Windows environment (avoid failing cmd chaining)
+## React/UI
+- [ ] Ensure admin pages use the updated api client and handle retried requests correctly
 
