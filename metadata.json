@@ -1,0 +1,10 @@
+{
+  "name": "EventIQ",
+  "description": "An advanced events management, ticketing, check-in, and analytics platform.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

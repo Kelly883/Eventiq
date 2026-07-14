@@ -1,3 +1,3 @@
-export const isValidHexColor = (color: string) => {
+export const isValidHexColor = (color) => {
   return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
 };
