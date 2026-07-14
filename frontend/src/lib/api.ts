@@ -2,6 +2,7 @@ import axios, {
   type AxiosError,
   type InternalAxiosRequestConfig,
   type AxiosRequestConfig,
+  type AxiosResponse,
 } from 'axios';
 
 type Env = {
@@ -23,14 +24,29 @@ let queuedRequests: Array<{
   reject: (err: unknown) => void;
 }> = [];
 
+const AUTH_TOKEN_STORAGE_KEY = 'authToken';
+
+
 function getToken(): string | null {
-  // Token is stored in an httpOnly cookie; JS cannot read it.
-  return null;
+  try {
+    return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
 }
 
-function setToken(_token: string | null) {
-  // No-op: cookie is set by backend.
+function setToken(token: string | null) {
+  try {
+    if (!token) {
+      localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+  } catch {
+    // ignore
+  }
 }
+
 
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -55,6 +71,7 @@ function rejectQueuedRequests(err: unknown) {
   queuedRequests = [];
 }
 
+
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getToken();
   if (token) {
@@ -66,7 +83,7 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const status = error.response?.status;
 
@@ -74,7 +91,12 @@ api.interceptors.response.use(
       _retry?: boolean;
     }) | null;
 
-    if (status === 401 && originalRequest && !originalRequest._retry) {
+    // Avoid refresh loops: if the failing request *is* the refresh endpoint,
+    // don't attempt another refresh.
+    const requestUrl = (originalRequest?.url ?? '').toString();
+    const isRefreshRequest = requestUrl.includes('/auth/refresh');
+
+    if (!isRefreshRequest && status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
 
       if (!refreshPromise) {
@@ -82,7 +104,7 @@ api.interceptors.response.use(
           try {
             const newToken = await refreshAccessToken();
             return newToken;
-          } catch (e) {
+          } catch {
             return null;
           } finally {
             isRefreshing = false;
@@ -105,15 +127,15 @@ api.interceptors.response.use(
 
       // Refresh failed: fall back to logout
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('authToken');
+        localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
         window.location.href = '/login';
       }
-
     }
 
     return Promise.reject(error);
   },
 );
+
 
 
 
