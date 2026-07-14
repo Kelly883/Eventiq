@@ -111,6 +111,6 @@ class FlutterwaveService
      */
     public function verifyWebhookSignature(string $signatureHeader, string $secretHash)
     {
-        return $signatureHeader === $secretHash;
+        return hash_equals($secretHash, $signatureHeader);
     }
 }
