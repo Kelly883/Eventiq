@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   SalesVelocityChart,
   LazyChart
 } from '../components';
 
 const SalesAnalyticsDashboardPage = () => {
-  const [selectedEventId, setSelectedEventId] = useState(1);
+  const { eventId } = useParams();
+  const navigate = useNavigate();
+  const selectedEventId = eventId ? parseInt(eventId, 10) : 1;
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">
@@ -19,7 +22,21 @@ const SalesAnalyticsDashboardPage = () => {
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Event Selector for deep linking */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Event:</span>
+              <select
+                value={selectedEventId}
+                onChange={(e) => navigate(`/analytics/${e.target.value}`)}
+                className="bg-white border border-slate-200 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="1">Summer Festival (ID: 1)</option>
+                <option value="2">Winter Gala (ID: 2)</option>
+                <option value="3">Spring Concert (ID: 3)</option>
+              </select>
+            </div>
+
             <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100 flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
               Pre-Aggregated Server Feed
