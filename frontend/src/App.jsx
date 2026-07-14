@@ -2,6 +2,9 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import SalesAnalyticsDashboardPage from './features/analytics/pages/SalesAnalyticsDashboardPage';
 import { OrganizerDashboardPage, UserDashboardPage } from './features/dashboard/pages';
+import EventBrowsePage from './features/events/pages/EventBrowsePage';
+import EventDetailPage from './features/events/pages/EventDetailPage';
+import CategoryBrowsePage from './features/events/pages/CategoryBrowsePage';
 import './App.css';
 
 function App() {
@@ -70,6 +73,9 @@ function App() {
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<Navigate to="/analytics" replace />} />
+            <Route path="/events" element={<EventBrowsePage />} />
+            <Route path="/events/category/:categoryId" element={<CategoryBrowsePage />} />
+            <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/dashboard/organizer" element={<OrganizerDashboardPage />} />
