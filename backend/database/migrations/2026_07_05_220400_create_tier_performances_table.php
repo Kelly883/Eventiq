@@ -15,6 +15,8 @@ return new class extends Migration
             $table->integer('tickets_sold')->default(0);
             $table->decimal('revenue', 10, 2)->default(0);
             $table->timestamps();
+
+            $table->index(['event_id', 'ticket_tier_id']);
         });
     }
 

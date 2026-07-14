@@ -36,6 +36,17 @@ export function track(eventName: string, properties?: Record<string, unknown>): 
   mixpanel.track(eventName, properties);
 }
 
+/**
+ * Specifically tracks a ticket purchase event with metadata.
+ */
+export function trackTicketPurchased(tierName: string, price: number, timestamp: string | Date = new Date()): void {
+  track('ticket_purchased', {
+    tier: tierName,
+    price: price,
+    timestamp: typeof timestamp === 'string' ? timestamp : timestamp.toISOString(),
+  });
+}
+
 export function identify(userId: string): void {
   if (!initialized) return;
   mixpanel.identify(userId);

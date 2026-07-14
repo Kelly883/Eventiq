@@ -42,6 +42,7 @@ out/
 *.env
 backend/.env
 frontend/.env
+*.sqlite
 
 # OS Files
 .DS_Store
