@@ -3,6 +3,11 @@ import mixpanel from 'mixpanel-browser';
 const token = import.meta.env.VITE_MIXPANEL_TOKEN;
 let initialized = false;
 
+// Expose mixpanel globally for console/debug access
+if (typeof window !== 'undefined') {
+  (window as any).mixpanel = mixpanel;
+}
+
 /**
  * Initialize Mixpanel once, at app startup. Safe to call multiple times.
  * No-ops (with a console warning) if no token is configured, so local/dev
