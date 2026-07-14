@@ -5,3 +5,5 @@ export { default as ConversionFunnelChart } from './ConversionFunnelChart';
 export { default as TransactionTable } from './TransactionTable';
 export { default as EventSelector } from './EventSelector';
 export { default as FilterPanel } from './FilterPanel';
+export { default as LazyChart } from './LazyChart';
+
