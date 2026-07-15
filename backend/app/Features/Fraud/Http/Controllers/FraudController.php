@@ -15,7 +15,7 @@ class FraudController extends Controller
 
     /**
      * POST /api/fraud/detect - runs the full risk assessment
-     * (Sift score + velocity + card testing) for a transaction.
+     * (Sift score + velocity + card testing + device + IP) for a transaction.
      */
     public function detect(FraudCheckRequest $request)
     {
@@ -35,6 +35,10 @@ class FraudController extends Controller
         return response()->json($data);
     }
 
+    /**
+     * GET /api/fraud/transactions/flutterwave/{transactionId} - verify status
+     * server-side.
+     */
     public function verifyFlutterwave(string $transactionId)
     {
         $data = $this->fraudDetection->verifyFlutterwaveTransaction($transactionId);
@@ -42,6 +46,9 @@ class FraudController extends Controller
         return response()->json($data);
     }
 
+    /**
+     * POST /api/fraud/velocity - checks velocity limits
+     */
     public function velocity(Request $request)
     {
         $validated = $request->validate([
@@ -54,6 +61,9 @@ class FraudController extends Controller
         );
     }
 
+    /**
+     * POST /api/fraud/duplicate-tickets - checks for duplicate tickets
+     */
     public function duplicateTickets(Request $request)
     {
         $validated = $request->validate([
@@ -63,6 +73,44 @@ class FraudController extends Controller
 
         return response()->json(
             $this->fraudDetection->detectDuplicateTickets($validated['ticket_tier_id'], $validated['qr_code'])
+        );
+    }
+
+    /**
+     * POST /api/fraud/device - validates device fingerprint
+     */
+    public function deviceFingerprint(Request $request)
+    {
+        $validated = $request->validate([
+            'device_id' => ['required', 'string'],
+        ]);
+
+        return response()->json(
+            $this->fraudDetection->checkDeviceFingerprint($validated['device_id'])
+        );
+    }
+
+    /**
+     * POST /api/fraud/ip - checks IP address reputation
+     */
+    public function ipReputation(Request $request)
+    {
+        $validated = $request->validate([
+            'ip' => ['required', 'string'],
+        ]);
+
+        return response()->json(
+            $this->fraudDetection->checkIpReputation($validated['ip'])
+        );
+    }
+
+    /**
+     * GET /api/fraud/event/{id} - retrieves event/transaction details
+     */
+    public function eventDetails(string $id, Request $request)
+    {
+        return response()->json(
+            $this->fraudDetection->getTransactionDetails($id, $request->get('provider'))
         );
     }
 }

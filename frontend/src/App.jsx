@@ -2,17 +2,21 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import SalesAnalyticsDashboardPage from './features/analytics/pages/SalesAnalyticsDashboardPage';
 import { OrganizerDashboardPage, UserDashboardPage } from './features/dashboard/pages';
+import { CheckInDashboardPage } from './features/check-in';
+import VenueCheckInPage from './features/qr-code-ticketing/pages/VenueCheckInPage';
 import EventBrowsePage from './features/events/pages/EventBrowsePage';
 import EventDetailPage from './features/events/pages/EventDetailPage';
 import CategoryBrowsePage from './features/events/pages/CategoryBrowsePage';
 import EventCalendarPage from './features/events-calendar/pages/EventCalendarPage';
 import TicketStatusPage from './features/ticket-delivery/pages/TicketStatusPage';
+import ToastContainer from './features/notifications/components/ToastContainer';
 import './App.css';
 
 function App() {
   return (
     <BrowserRouter>
       <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
+        <ToastContainer />
         {/* Navigation Bar */}
         <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 shadow-sm backdrop-blur-md bg-white/90">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -55,6 +59,30 @@ function App() {
                   💼 Organizer
                 </NavLink>
                 <NavLink
+                  to="/check-in"
+                  className={({ isActive }) =>
+                    `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                      isActive
+                        ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                    }`
+                  }
+                >
+                  🎟️ Check-In Desk
+                </NavLink>
+                <NavLink
+                  to="/venue-scan"
+                  className={({ isActive }) =>
+                    `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                      isActive
+                        ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                    }`
+                  }
+                >
+                  📷 Gate Scanner
+                </NavLink>
+                <NavLink
                   to="/dashboard/user"
                   className={({ isActive }) =>
                     `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
@@ -83,6 +111,8 @@ function App() {
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/dashboard/organizer" element={<OrganizerDashboardPage />} />
+            <Route path="/check-in" element={<CheckInDashboardPage />} />
+            <Route path="/venue-scan" element={<VenueCheckInPage />} />
             <Route path="/dashboard/user" element={<UserDashboardPage />} />
             <Route path="*" element={<Navigate to="/analytics" replace />} />
           </Routes>
@@ -91,6 +121,7 @@ function App() {
     </BrowserRouter>
   );
 }
+
 
 export default App;
 

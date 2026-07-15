@@ -82,10 +82,97 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
+export type ToastType = 'error' | 'warning' | 'success' | 'info';
+
+export interface ToastMessage {
+  id: string;
+  type: ToastType;
+  title: string;
+  description: string;
+  duration?: number;
+}
+
+type ToastListener = (toast: ToastMessage) => void;
+const toastListeners = new Set<ToastListener>();
+
+export function addToastListener(listener: ToastListener) {
+  toastListeners.add(listener);
+  return () => {
+    toastListeners.delete(listener);
+  };
+}
+
+export function showToast(title: string, description: string, type: ToastType = 'error', duration = 5000) {
+  const id = Math.random().toString(36).substring(2, 9);
+  const toast: ToastMessage = { id, type, title, description, duration };
+  toastListeners.forEach((listener) => {
+    try {
+      listener(toast);
+    } catch (e) {
+      console.error('Error triggering toast listener', e);
+    }
+  });
+}
+
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const status = error.response?.status;
+
+    // Trigger user notification for connection, database, or configuration errors
+    if (!error.response) {
+      if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
+        showToast(
+          'Network Error',
+          'Unable to connect to the server. Please check your internet connection or server status.',
+          'error'
+        );
+      } else {
+        showToast(
+          'Connection Error',
+          error.message || 'A network error occurred.',
+          'error'
+        );
+      }
+    } else {
+      const responseData = error.response.data as any;
+      const serverMessage = responseData?.message || '';
+
+      // Check for database connection loss (usually 500 Internal Server Error with database/SQL error messages, or 503 Service Unavailable)
+      const isDatabaseError = 
+        status === 500 && 
+        (serverMessage.toLowerCase().includes('database') || 
+         serverMessage.toLowerCase().includes('sqlstate') || 
+         serverMessage.toLowerCase().includes('connection') ||
+         JSON.stringify(responseData).toLowerCase().includes('sqlstate') ||
+         JSON.stringify(responseData).toLowerCase().includes('database'));
+
+      if (isDatabaseError) {
+        showToast(
+          'Database Connection Error',
+          'The server is currently unable to communicate with the database. Please try again later.',
+          'error'
+        );
+      } else if (status === 503) {
+        showToast(
+          'Service Unavailable',
+          'The server is temporarily unable to handle the request.',
+          'error'
+        );
+      } else if (status === 403) {
+        showToast(
+          'Access Denied',
+          serverMessage || 'You do not have permission to perform this action.',
+          'warning'
+        );
+      } else if (status === 500) {
+        showToast(
+          'Server Error',
+          serverMessage || 'An unexpected internal server error occurred.',
+          'error'
+        );
+      }
+    }
 
     const originalRequest = error.config as (AxiosRequestConfig & {
       _retry?: boolean;
