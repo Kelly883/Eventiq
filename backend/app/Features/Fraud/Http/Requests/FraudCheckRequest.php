@@ -22,6 +22,10 @@ class FraudCheckRequest extends FormRequest
             'provider' => ['required', 'in:paystack,flutterwave'],
             'ip' => ['nullable', 'ip'],
             'session_id' => ['nullable', 'string'],
+            'device_id' => ['nullable', 'string'],
+            'ticket_tier_id' => ['nullable', 'integer'],
+            'qr_code' => ['nullable', 'string'],
+            'ticket_count' => ['nullable', 'integer', 'min:1'],
         ];
     }
 }
