@@ -120,4 +120,25 @@ class PaystackService
             return null;
         }
     }
+
+    /**
+     * Verify a Paystack webhook's signature.
+     *
+     * Paystack signs the raw request body with HMAC-SHA512 using your
+     * secret key, sent in the `x-paystack-signature` header. Must be
+     * computed against the raw (unparsed) body, not a re-encoded JSON
+     * string, since key order / whitespace differences would break it.
+     *
+     * Docs: https://paystack.com/docs/payments/webhooks/#verify-event-origin
+     */
+    public function verifyWebhookSignature(string $rawPayload, string $signatureHeader): bool
+    {
+        if ($signatureHeader === '' || $this->secretKey === '') {
+            return false;
+        }
+
+        $expected = hash_hmac('sha512', $rawPayload, $this->secretKey);
+
+        return hash_equals($expected, $signatureHeader);
+    }
 }

@@ -11,13 +11,19 @@ class FlutterwaveService
     protected string $secretKey;
     protected string $encryptionKey;
     protected string $baseUrl;
+    protected string $webhookSecretHash;
 
-    public function __construct(string $publicKey, string $secretKey, string $encryptionKey = '', string $baseUrl = 'https://api.flutterwave.com/v3')
+    public function __construct(string $publicKey, string $secretKey, string $encryptionKey = '', string $baseUrl = 'https://api.flutterwave.com/v3', string $webhookSecretHash = '')
     {
         $this->publicKey = $publicKey;
         $this->secretKey = $secretKey;
         $this->encryptionKey = $encryptionKey;
         $this->baseUrl = $baseUrl;
+        // Flutterwave lets you configure a dedicated "Secret Hash" in the
+        // dashboard specifically for webhook verification, separate from
+        // the API secret key. Falls back to secretKey only if no dedicated
+        // hash is configured, so existing setups don't silently break.
+        $this->webhookSecretHash = $webhookSecretHash !== '' ? $webhookSecretHash : $secretKey;
     }
 
     /**
@@ -107,10 +113,16 @@ class FlutterwaveService
     }
 
     /**
-     * Verify Webhook Hash / Signature
+     * Verify a Flutterwave webhook's `verif-hash` header against the
+     * configured secret hash. Flutterwave uses a plain shared-secret
+     * comparison here (not HMAC), per their webhook docs.
      */
-    public function verifyWebhookSignature(string $signatureHeader, string $secretHash)
+    public function verifyWebhookSignature(string $signatureHeader): bool
     {
-        return hash_equals($secretHash, $signatureHeader);
+        if ($signatureHeader === '' || $this->webhookSecretHash === '') {
+            return false;
+        }
+
+        return hash_equals($this->webhookSecretHash, $signatureHeader);
     }
 }
