@@ -21,25 +21,35 @@ const VenueCheckInPage = () => {
   const requestRef = useRef(null);
   const audioContextRef = useRef(null);
 
+  // Get dynamic Event ID from URL query parameters (default to '1')
+  const queryParams = new URLSearchParams(window.location.search);
+  const eventId = queryParams.get('event_id') || '1';
+
   const isOnline = useOfflineSyncStore((state) => state.isOnline);
   const enqueueScan = useOfflineSyncStore((state) => state.enqueueScan);
   const loadOfflineQueue = useOfflineSyncStore((state) => state.loadOfflineQueue);
   const queue = useOfflineSyncStore((state) => state.queue);
   const history = useOfflineSyncStore((state) => state.history);
+  const calculateClockDrift = useOfflineSyncStore((state) => state.calculateClockDrift);
+  const clockDriftOffset = useOfflineSyncStore((state) => state.clockDriftOffset);
 
-  // Load offline queue on mount
+  // Load offline queue & calculate server NTP clock drift on mount
   useEffect(() => {
     loadOfflineQueue();
-  }, [loadOfflineQueue]);
+    if (isOnline) {
+      calculateClockDrift();
+    }
+  }, [loadOfflineQueue, calculateClockDrift, isOnline]);
 
-  // Subscribe to real-time stats updates via Laravel Echo
+  // Subscribe to real-time stats updates via Laravel Echo grouped under specific event.{id}.stats channel
   useEffect(() => {
     const echo = getEchoInstance();
     if (!echo) return;
 
-    const channel = echo.channel('event-checkin-stats')
+    const channelName = `event.${eventId}.stats`;
+    const channel = echo.channel(channelName)
       .listen('.CheckInProcessed', (data) => {
-        console.log('Real-time check-in stats received:', data);
+        console.log(`Real-time check-in stats received on channel ${channelName}:`, data);
         if (data && data.stats) {
           setStats((prev) => ({
             ...prev,
@@ -50,9 +60,9 @@ const VenueCheckInPage = () => {
       });
 
     return () => {
-      echo.leaveChannel('event-checkin-stats');
+      echo.leaveChannel(channelName);
     };
-  }, []);
+  }, [eventId]);
 
   // Play synthesized beep sound upon successful scan
   const playBeep = (freq = 880, duration = 0.15) => {
@@ -183,7 +193,7 @@ const VenueCheckInPage = () => {
       playBeep(880, 0.1); // High pitch for recognition success
       
       // Buffer the scan!
-      enqueueScan(payloadString, 1);
+      enqueueScan(payloadString, eventId);
 
       setValidationStatus('success');
       setStats((prev) => ({ ...prev, processed: prev.processed + 1 }));
@@ -461,6 +471,10 @@ const VenueCheckInPage = () => {
                   <span className="text-[10px] text-slate-400 font-medium block">
                     {queue.length} pending, {history.length} in session logs
                   </span>
+                  <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                    <span className={`w-1.5 h-1.5 rounded-full inline-block ${clockDriftOffset !== 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`}></span>
+                    <span>NTP Clock Offset: {clockDriftOffset}ms</span>
+                  </div>
                 </div>
                 <button
                   id="export-csv-btn"

@@ -19,6 +19,7 @@ interface OfflineSyncState {
   history: QueuedCheckIn[];
   isOnline: boolean;
   isSyncing: boolean;
+  clockDriftOffset: number;
   
   // Actions
   setOnlineStatus: (isOnline: boolean) => void;
@@ -27,6 +28,7 @@ interface OfflineSyncState {
   clearSyncedHistory: () => void;
   removeFailedScan: (id: string) => Promise<void>;
   loadOfflineQueue: () => Promise<void>;
+  calculateClockDrift: () => Promise<void>;
 }
 
 // Simple helper to generate a unique string ID
@@ -39,6 +41,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
       history: [],
       isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
       isSyncing: false,
+      clockDriftOffset: 0,
 
       setOnlineStatus: (isOnline) => {
         // Sync with React Query onlineManager
@@ -53,6 +56,32 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         }
       },
 
+      calculateClockDrift: async () => {
+        if (!get().isOnline) return;
+        try {
+          const startTime = Date.now();
+          // Fast HEAD or GET request to server
+          const response = await axios.get('/api/events/1/pricing', {
+            headers: { 'Cache-Control': 'no-cache' }
+          });
+          const endTime = Date.now();
+          const serverDateHeader = response.headers['date'];
+
+          if (serverDateHeader) {
+            const serverTime = new Date(serverDateHeader).getTime();
+            // Estimate round-trip latency (rtt/2)
+            const latency = (endTime - startTime) / 2;
+            const adjustedServerTime = serverTime + latency;
+            const drift = adjustedServerTime - endTime;
+            
+            set({ clockDriftOffset: drift });
+            console.log(`Clock drift offset synchronized: ${drift}ms (Latency: ${latency}ms)`);
+          }
+        } catch (err) {
+          console.warn('Lightweight NTP sync failed, defaulting drift to 0ms:', err);
+        }
+      },
+
       loadOfflineQueue: async () => {
         const checkins = await indexedDbStore.getAllCheckIns();
         if (checkins && checkins.length > 0) {
@@ -61,11 +90,14 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
       },
 
       enqueueScan: async (ticketCode, eventId) => {
+        const clockDrift = get().clockDriftOffset;
+        const adjustedScannedAt = new Date(Date.now() + clockDrift).toISOString();
+
         const newScan: QueuedCheckIn = {
           id: generateId(),
           ticketCode,
           eventId,
-          scannedAt: new Date().toISOString(),
+          scannedAt: adjustedScannedAt,
           status: 'pending',
           retryCount: 0,
         };
