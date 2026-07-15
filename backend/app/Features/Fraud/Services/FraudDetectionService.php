@@ -9,11 +9,13 @@ use App\Features\Payment\Services\PaystackService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Single entry point for fraud-related operations: Sift Science scoring,
- * Stripe Radar value list checking, Paystack/Flutterwave transaction verification,
- * and internal rule-based checks (velocity, duplicate tickets, card testing).
+ * Paystack/Flutterwave transaction verification, and internal rule-based checks
+ * (velocity, duplicate tickets, card testing, device fingerprinting, IP reputation,
+ * and max ticket limits).
  */
 class FraudDetectionService
 {
@@ -28,7 +30,7 @@ class FraudDetectionService
      *
      * @param array $transaction Expected keys: user_id, email, amount,
      *   reference (gateway transaction ref), provider ('paystack'|'flutterwave'),
-     *   ip, session_id, ticket_tier_id (optional), qr_code (optional)
+     *   ip, session_id, device_id (optional), ticket_tier_id (optional), qr_code (optional), ticket_count (optional)
      */
     public function detectFraudRisk(array $transaction): array
     {
@@ -72,9 +74,22 @@ class FraudDetectionService
 
         // 2. Perform assessments
         $siftScore = $this->reportToSift($transaction, $paymentDetails);
-        $stripeRadar = $this->checkStripeRadarRisk($transaction);
         $velocity = $this->checkVelocity($transaction['user_id'] ?? null, $transaction['amount'] ?? 0);
         $cardTesting = $this->detectCardTesting($transaction['user_id'] ?? null, $transaction['ip'] ?? null);
+        $deviceCheck = $this->checkDeviceFingerprint($transaction['device_id'] ?? null);
+        $ipCheck = $this->checkIpReputation($transaction['ip'] ?? null);
+
+        // Check tickets per transaction limit
+        $ticketCount = $transaction['ticket_count'] ?? 1;
+        $maxTicketsLimit = config('fraud.thresholds.max_tickets_per_transaction', 10);
+        $ticketLimitExceeded = $ticketCount > $maxTicketsLimit;
+
+        // Check duplicate ticket if qr code is supplied
+        $duplicateTicket = false;
+        if (!empty($transaction['ticket_tier_id']) && !empty($transaction['qr_code'])) {
+            $dupCheck = $this->detectDuplicateTickets((int)$transaction['ticket_tier_id'], $transaction['qr_code']);
+            $duplicateTicket = $dupCheck['duplicate'] ?? false;
+        }
 
         $riskScore = $siftScore['score'] ?? 0;
         $thresholds = config('fraud.thresholds');
@@ -86,8 +101,17 @@ class FraudDetectionService
         if ($cardTesting['suspected'] ?? false) {
             $flags[] = 'card_testing_suspected';
         }
-        if ($stripeRadar['suspected'] ?? false) {
-            $flags[] = 'stripe_radar_blocklisted';
+        if ($deviceCheck['suspected'] ?? false) {
+            $flags[] = 'device_limit_exceeded';
+        }
+        if ($ipCheck['suspected'] ?? false) {
+            $flags[] = 'ip_limit_exceeded';
+        }
+        if ($ticketLimitExceeded) {
+            $flags[] = 'max_tickets_limit_exceeded';
+        }
+        if ($duplicateTicket) {
+            $flags[] = 'duplicate_ticket_detected';
         }
 
         $decision = match (true) {
@@ -101,10 +125,29 @@ class FraudDetectionService
             'risk_score' => $riskScore,
             'flags' => $flags,
             'sift' => $siftScore,
-            'stripe_radar' => $stripeRadar,
             'velocity' => $velocity,
             'card_testing' => $cardTesting,
+            'device_check' => $deviceCheck,
+            'ip_check' => $ipCheck,
+            'ticket_limit' => [
+                'count' => $ticketCount,
+                'limit' => $maxTicketsLimit,
+                'exceeded' => $ticketLimitExceeded,
+            ],
+            'duplicate_ticket' => $duplicateTicket,
         ];
+
+        // Increment device/IP counters if approved or reviewing
+        if ($decision !== 'block') {
+            if (!empty($transaction['device_id'])) {
+                $deviceKey = "device_tx_count_" . md5($transaction['device_id']);
+                Cache::put($deviceKey, ((int)Cache::get($deviceKey, 0)) + 1, now()->addDay());
+            }
+            if (!empty($transaction['ip'])) {
+                $ipKey = "ip_tx_count_" . md5($transaction['ip']);
+                Cache::put($ipKey, ((int)Cache::get($ipKey, 0)) + 1, now()->addDay());
+            }
+        }
 
         $this->logFraudEvent(array_merge($transaction, ['result' => $result]));
 
@@ -112,89 +155,75 @@ class FraudDetectionService
     }
 
     /**
-     * Checks if the transaction email, IP, or card fingerprint is blocklisted in Stripe Radar.
+     * Validates a webhook payload signature using the appropriate provider.
      */
-    public function checkStripeRadarRisk(array $transaction): array
+    public function validateWebhook(string $provider, string $payload, string $signature): bool
     {
-        $apiKey = config('fraud.stripe.api_key');
-        if (! $apiKey) {
-            Log::warning('FraudDetectionService::checkStripeRadarRisk skipped - STRIPE_API_KEY not configured.');
-            return ['suspected' => false, 'reason' => null, 'checked' => false];
+        return match (strtolower($provider)) {
+            'paystack' => $this->paystack->verifyWebhookSignature($payload, $signature),
+            'flutterwave' => $this->flutterwave->verifyWebhookSignature($signature),
+            default => false,
+        };
+    }
+
+    /**
+     * Checks if a device ID has exceeded the maximum transaction limit or is flagged.
+     */
+    public function checkDeviceFingerprint(?string $deviceId): array
+    {
+        if (! $deviceId) {
+            return ['suspected' => false, 'reason' => 'No device ID provided', 'checked' => false];
         }
 
-        try {
-            $email = $transaction['email'] ?? null;
-            $ip = $transaction['ip'] ?? null;
-            $fingerprint = $transaction['card_fingerprint'] ?? null;
+        $limit = config('fraud.thresholds.max_transactions_per_device', 5);
+        $cacheKey = "device_tx_count_" . md5($deviceId);
+        $count = (int) Cache::get($cacheKey, 0);
 
-            if (class_exists('Stripe\StripeClient')) {
-                $stripe = new \Stripe\StripeClient($apiKey);
-
-                // Use Stripe Radar Value List Items to check for blocklists
-                if ($email) {
-                    $items = $stripe->radar->valueListItems->all([
-                        'value' => $email,
-                    ]);
-                    if (count($items->data) > 0) {
-                        return ['suspected' => true, 'reason' => 'Stripe Radar: Email is blocklisted.', 'checked' => true];
-                    }
-                }
-
-                if ($ip) {
-                    $items = $stripe->radar->valueListItems->all([
-                        'value' => $ip,
-                    ]);
-                    if (count($items->data) > 0) {
-                        return ['suspected' => true, 'reason' => 'Stripe Radar: IP is blocklisted.', 'checked' => true];
-                    }
-                }
-
-                if ($fingerprint) {
-                    $items = $stripe->radar->valueListItems->all([
-                        'value' => $fingerprint,
-                    ]);
-                    if (count($items->data) > 0) {
-                        return ['suspected' => true, 'reason' => 'Stripe Radar: Card fingerprint is blocklisted.', 'checked' => true];
-                    }
-                }
-            } else {
-                // Fallback direct HTTP API calls to Stripe Radar Value List Items API
-                if ($email) {
-                    $response = Http::withBasicAuth($apiKey, '')
-                        ->get('https://api.stripe.com/v1/radar/value_list_items', [
-                            'value' => $email,
-                        ]);
-                    if ($response->successful() && count($response->json('data', [])) > 0) {
-                        return ['suspected' => true, 'reason' => 'Stripe Radar (HTTP): Email is blocklisted.', 'checked' => true];
-                    }
-                }
-
-                if ($ip) {
-                    $response = Http::withBasicAuth($apiKey, '')
-                        ->get('https://api.stripe.com/v1/radar/value_list_items', [
-                            'value' => $ip,
-                        ]);
-                    if ($response->successful() && count($response->json('data', [])) > 0) {
-                        return ['suspected' => true, 'reason' => 'Stripe Radar (HTTP): IP is blocklisted.', 'checked' => true];
-                    }
-                }
-
-                if ($fingerprint) {
-                    $response = Http::withBasicAuth($apiKey, '')
-                        ->get('https://api.stripe.com/v1/radar/value_list_items', [
-                            'value' => $fingerprint,
-                        ]);
-                    if ($response->successful() && count($response->json('data', [])) > 0) {
-                        return ['suspected' => true, 'reason' => 'Stripe Radar (HTTP): Card fingerprint is blocklisted.', 'checked' => true];
-                    }
-                }
-            }
-
-            return ['suspected' => false, 'reason' => null, 'checked' => true];
-        } catch (\Throwable $e) {
-            Log::error('Stripe Radar check exception: ' . $e->getMessage());
-            return ['suspected' => false, 'reason' => null, 'checked' => false, 'error' => $e->getMessage()];
+        if (Schema::hasTable('orders') && Schema::hasColumn('orders', 'device_id')) {
+            $dbCount = Order::where('device_id', $deviceId)
+                ->where('created_at', '>=', now()->subDay())
+                ->count();
+            $count = max($count, $dbCount);
         }
+
+        return [
+            'suspected' => $count >= $limit,
+            'count' => $count,
+            'limit' => $limit,
+            'checked' => true,
+        ];
+    }
+
+    /**
+     * Checks if an IP address is suspicious or has exceeded transaction limits.
+     */
+    public function checkIpReputation(?string $ipAddress): array
+    {
+        if (! $ipAddress) {
+            return ['suspected' => false, 'reason' => 'No IP address provided', 'checked' => false];
+        }
+
+        if (in_array($ipAddress, ['127.0.0.1', '::1'])) {
+            return ['suspected' => false, 'reason' => 'Localhost IP', 'checked' => true];
+        }
+
+        $limit = config('fraud.thresholds.max_transactions_per_ip', 10);
+        $cacheKey = "ip_tx_count_" . md5($ipAddress);
+        $count = (int) Cache::get($cacheKey, 0);
+
+        if (Schema::hasTable('orders') && Schema::hasColumn('orders', 'ip_address')) {
+            $dbCount = Order::where('ip_address', $ipAddress)
+                ->where('created_at', '>=', now()->subDay())
+                ->count();
+            $count = max($count, $dbCount);
+        }
+
+        return [
+            'suspected' => $count >= $limit,
+            'count' => $count,
+            'limit' => $limit,
+            'checked' => true,
+        ];
     }
 
     /**
@@ -218,12 +247,28 @@ class FraudDetectionService
      */
     public function getTransactionDetails(string $reference, ?string $provider = null): array
     {
-        $provider = $provider ?? 'paystack'; // default fallback
-        return match ($provider) {
-            'paystack' => $this->verifyPaystackTransaction($reference),
-            'flutterwave' => $this->verifyFlutterwaveTransaction($reference),
-            default => throw new \InvalidArgumentException("Unknown payment provider: {$provider}"),
-        };
+        if ($provider) {
+            return match (strtolower($provider)) {
+                'paystack' => $this->verifyPaystackTransaction($reference),
+                'flutterwave' => $this->verifyFlutterwaveTransaction($reference),
+                default => throw new \InvalidArgumentException("Unknown payment provider: {$provider}"),
+            };
+        }
+
+        // Heuristics: if starts with flw, FLW, or is numeric/long ID, try Flutterwave, else default to Paystack
+        if (str_starts_with($reference, 'flw') || str_starts_with($reference, 'FLW')) {
+            return $this->verifyFlutterwaveTransaction($reference);
+        }
+
+        try {
+            return $this->verifyPaystackTransaction($reference);
+        } catch (\Throwable $e) {
+            try {
+                return $this->verifyFlutterwaveTransaction($reference);
+            } catch (\Throwable $ex) {
+                throw new \RuntimeException("Could not resolve transaction details from either provider for ref: {$reference}");
+            }
+        }
     }
 
     /**

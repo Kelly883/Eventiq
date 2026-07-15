@@ -17,6 +17,10 @@ export interface FraudTransactionInput {
   provider: 'paystack' | 'flutterwave';
   ip?: string | null;
   sessionId?: string | null;
+  deviceId?: string | null;
+  ticketTierId?: number | null;
+  qrCode?: string | null;
+  ticketCount?: number;
 }
 
 export interface FraudDecision {
@@ -26,6 +30,10 @@ export interface FraudDecision {
   sift: { score: number; reported: boolean };
   velocity: { exceeded: boolean; count_1h: number | null; count_24h: number | null; checked: boolean };
   card_testing: { suspected: boolean; checked: boolean };
+  device_check: { suspected: boolean; count: number; limit: number; checked: boolean };
+  ip_check: { suspected: boolean; count: number; limit: number; checked: boolean };
+  ticket_limit: { count: number; limit: number; exceeded: boolean };
+  duplicate_ticket: boolean;
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -48,6 +56,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const fraudApi = {
+  /**
+   * Performs full fraud risk assessment on the backend.
+   */
   detectFraudRisk(transaction: FraudTransactionInput): Promise<FraudDecision> {
     return request<FraudDecision>('/api/fraud/detect', {
       method: 'POST',
@@ -55,14 +66,23 @@ export const fraudApi = {
     });
   },
 
+  /**
+   * Verifies a Paystack transaction by reference.
+   */
   verifyPaystackTransaction(reference: string) {
     return request(`/api/fraud/transactions/paystack/${encodeURIComponent(reference)}`);
   },
 
+  /**
+   * Verifies a Flutterwave transaction by ID.
+   */
   verifyFlutterwaveTransaction(transactionId: string) {
     return request(`/api/fraud/transactions/flutterwave/${encodeURIComponent(transactionId)}`);
   },
 
+  /**
+   * Checks the checkout velocity for a given user.
+   */
   checkVelocity(userId: number, amount: number) {
     return request('/api/fraud/velocity', {
       method: 'POST',
@@ -70,6 +90,9 @@ export const fraudApi = {
     });
   },
 
+  /**
+   * Checks for duplicate ticket signatures or QR codes on a given ticket tier.
+   */
   detectDuplicateTickets(ticketTierId: number, qrCode: string) {
     return request('/api/fraud/duplicate-tickets', {
       method: 'POST',
@@ -77,9 +100,39 @@ export const fraudApi = {
     });
   },
 
-  getTransactionDetails(reference: string, provider: 'paystack' | 'flutterwave') {
-    return provider === 'paystack'
-      ? fraudApi.verifyPaystackTransaction(reference)
-      : fraudApi.verifyFlutterwaveTransaction(reference);
+  /**
+   * Checks the reputation and transaction count of a given IP.
+   */
+  checkIpReputation(ip: string) {
+    return request('/api/fraud/ip', {
+      method: 'POST',
+      body: JSON.stringify({ ip }),
+    });
+  },
+
+  /**
+   * Checks the transaction count/history of a given device ID.
+   */
+  checkDeviceFingerprint(deviceId: string) {
+    return request('/api/fraud/device', {
+      method: 'POST',
+      body: JSON.stringify({ device_id: deviceId }),
+    });
+  },
+
+  /**
+   * Retrieves transaction / fraud event details by event ID or payment reference.
+   */
+  getTransactionDetails(reference: string, provider?: 'paystack' | 'flutterwave') {
+    const queryParam = provider ? `?provider=${encodeURIComponent(provider)}` : '';
+    return request(`/api/fraud/event/${encodeURIComponent(reference)}${queryParam}`);
+  },
+
+  /**
+   * Checks for suspicious account activity metrics.
+   */
+  checkSuspiciousAccountActivity(userId: number) {
+    // Can leverage velocity checks or basic account health queries
+    return this.checkVelocity(userId, 0);
   },
 };
