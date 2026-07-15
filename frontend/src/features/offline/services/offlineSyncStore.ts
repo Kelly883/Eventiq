@@ -94,8 +94,10 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
 
         set({ isSyncing: true });
 
-        // Clone queue to process
-        const itemsToProcess = [...queue];
+        // Sort itemsToProcess strictly in chronological sequence to avoid race conditions
+        const itemsToProcess = [...queue].sort((a, b) => 
+          new Date(a.scannedAt).getTime() - new Date(b.scannedAt).getTime()
+        );
 
         for (const item of itemsToProcess) {
           // Update item status in store to syncing

@@ -24,6 +24,8 @@ const VenueCheckInPage = () => {
   const isOnline = useOfflineSyncStore((state) => state.isOnline);
   const enqueueScan = useOfflineSyncStore((state) => state.enqueueScan);
   const loadOfflineQueue = useOfflineSyncStore((state) => state.loadOfflineQueue);
+  const queue = useOfflineSyncStore((state) => state.queue);
+  const history = useOfflineSyncStore((state) => state.history);
 
   // Load offline queue on mount
   useEffect(() => {
@@ -197,6 +199,44 @@ const VenueCheckInPage = () => {
     setValidationStatus('idle');
     setErrorMessage('');
     setActiveCamera(true);
+  };
+
+  const handleExportCSV = () => {
+    const allScans = [
+      ...queue.map(item => ({ ...item, source: 'Queue' })),
+      ...history.map(item => ({ ...item, source: 'History' }))
+    ];
+
+    if (allScans.length === 0) return;
+
+    // Sort chronologically by scannedAt to enforce strict sequence
+    allScans.sort((a, b) => new Date(a.scannedAt).getTime() - new Date(b.scannedAt).getTime());
+
+    const headers = ['ID', 'Ticket Code', 'Event ID', 'Scanned At', 'Status', 'Error', 'Source'];
+    const rows = allScans.map(item => [
+      item.id,
+      `"${item.ticketCode.replace(/"/g, '""')}"`,
+      item.eventId,
+      item.scannedAt,
+      item.status,
+      `"${(item.error || '').replace(/"/g, '""')}"`,
+      item.source
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `eventiq-scans-export-${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -407,6 +447,85 @@ const VenueCheckInPage = () => {
                   Scan Next Ticket
                 </button>
               )}
+            </div>
+
+            {/* Local Sync Logs & Supervisor Export Card */}
+            <div className={`p-6 rounded-2xl border shadow-sm space-y-4 ${
+              highContrast ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm tracking-wide text-slate-400 uppercase">
+                    Local Cache Logs
+                  </h3>
+                  <span className="text-[10px] text-slate-400 font-medium block">
+                    {queue.length} pending, {history.length} in session logs
+                  </span>
+                </div>
+                <button
+                  id="export-csv-btn"
+                  onClick={handleExportCSV}
+                  disabled={queue.length === 0 && history.length === 0}
+                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold rounded-lg flex items-center gap-1.5 shadow transition-all cursor-pointer"
+                >
+                  📥 Export CSV
+                </button>
+              </div>
+
+              {/* Log List */}
+              <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
+                {queue.length === 0 && history.length === 0 ? (
+                  <div className="py-8 text-center text-slate-400 text-xs">
+                    No active scan logs in this session.
+                  </div>
+                ) : (
+                  <>
+                    {/* Queue items */}
+                    {queue.map((item) => (
+                      <div key={item.id} className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl flex items-center justify-between text-xs">
+                        <div className="space-y-0.5 min-w-0 flex-1 pr-2">
+                          <div className="font-semibold truncate font-mono text-amber-600 dark:text-amber-400">
+                            {item.ticketCode}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            Scanned: {new Date(item.scannedAt).toLocaleTimeString()}
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 bg-amber-500/10 text-amber-500 text-[10px] font-bold rounded-full whitespace-nowrap">
+                          Waiting Sync
+                        </span>
+                      </div>
+                    ))}
+
+                    {/* History items */}
+                    {history.map((item) => (
+                      <div key={item.id} className={`p-3 border rounded-xl flex items-center justify-between text-xs ${
+                        item.status === 'synced'
+                          ? 'bg-emerald-500/5 border-emerald-500/10'
+                          : 'bg-rose-500/5 border-rose-500/10'
+                      }`}>
+                        <div className="space-y-0.5 min-w-0 flex-1 pr-2">
+                          <div className={`font-semibold truncate font-mono ${
+                            item.status === 'synced' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'
+                          }`}>
+                            {item.ticketCode}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            Scanned: {new Date(item.scannedAt).toLocaleTimeString()}
+                          </div>
+                        </div>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full whitespace-nowrap ${
+                          item.status === 'synced'
+                            ? 'bg-emerald-500/10 text-emerald-500'
+                            : 'bg-rose-500/10 text-rose-500'
+                        }`}>
+                          {item.status === 'synced' ? 'Synced' : 'Failed'}
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
             </div>
 
           </div>
