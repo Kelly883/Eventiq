@@ -1,0 +1,9 @@
+{
+  "name": "eventiq-mjml-renderer",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Standalone Node script Laravel shells out to for MJML->HTML compilation. MJML is a Node.js package with no PHP port, so it can't run inside Laravel directly - see backend/config/mjml.php for details.",
+  "dependencies": {
+    "mjml": "^5.0.0"
+  }
+}

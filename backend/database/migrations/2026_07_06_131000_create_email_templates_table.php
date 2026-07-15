@@ -12,7 +12,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('subject');
-            $table->text('body');
+            $table->text('body'); // compiled HTML (from MJML, or raw HTML if not using MJML)
+            $table->text('mjml_source')->nullable(); // raw MJML markup, when applicable
             $table->timestamps();
         });
     }

@@ -38,6 +38,9 @@ require base_path('app/Features/Compliance/Routes/api.php');
 // Include Fraud detection routes
 require base_path('app/Features/Fraud/Routes/api.php');
 
+// Include Email Notifications routes
+require base_path('app/Features/EmailNotifications/Routes/api.php');
+
 
 // Include Admin routes (platform management)
 require base_path('routes/admin.php');

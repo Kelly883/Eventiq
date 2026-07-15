@@ -9,6 +9,7 @@ import EventDetailPage from './features/events/pages/EventDetailPage';
 import CategoryBrowsePage from './features/events/pages/CategoryBrowsePage';
 import EventCalendarPage from './features/events-calendar/pages/EventCalendarPage';
 import TicketStatusPage from './features/ticket-delivery/pages/TicketStatusPage';
+import AdminEmailTemplateManagementPage from './features/email-notifications/pages/AdminEmailTemplateManagementPage';
 import ToastContainer from './features/notifications/components/ToastContainer';
 import './App.css';
 
@@ -106,6 +107,7 @@ function App() {
             <Route path="/events" element={<EventBrowsePage />} />
             <Route path="/events/calendar" element={<EventCalendarPage />} />
             <Route path="/tickets/:ticketId/status" element={<TicketStatusPage />} />
+            <Route path="/admin/email-templates" element={<AdminEmailTemplateManagementPage />} />
             <Route path="/events/category/:categoryId" element={<CategoryBrowsePage />} />
             <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
