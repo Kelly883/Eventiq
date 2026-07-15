@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import SalesAnalyticsDashboardPage from './features/analytics/pages/SalesAnalyticsDashboardPage';
 import { OrganizerDashboardPage, UserDashboardPage } from './features/dashboard/pages';
+import { CheckInDashboardPage } from './features/check-in';
 import EventBrowsePage from './features/events/pages/EventBrowsePage';
 import EventDetailPage from './features/events/pages/EventDetailPage';
 import CategoryBrowsePage from './features/events/pages/CategoryBrowsePage';
@@ -56,6 +57,18 @@ function App() {
                   💼 Organizer
                 </NavLink>
                 <NavLink
+                  to="/check-in"
+                  className={({ isActive }) =>
+                    `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                      isActive
+                        ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                    }`
+                  }
+                >
+                  🎟️ Check-In Desk
+                </NavLink>
+                <NavLink
                   to="/dashboard/user"
                   className={({ isActive }) =>
                     `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
@@ -83,6 +96,7 @@ function App() {
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/dashboard/organizer" element={<OrganizerDashboardPage />} />
+            <Route path="/check-in" element={<CheckInDashboardPage />} />
             <Route path="/dashboard/user" element={<UserDashboardPage />} />
             <Route path="*" element={<Navigate to="/analytics" replace />} />
           </Routes>
@@ -91,6 +105,7 @@ function App() {
     </BrowserRouter>
   );
 }
+
 
 export default App;
 

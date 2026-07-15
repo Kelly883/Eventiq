@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../services/apiClient.js'
+import { adminKeys } from '../../../lib/queryKeys'
 
-export const ADMIN_ACCESS_QUERY_KEY = ['adminAccess']
+export const ADMIN_ACCESS_QUERY_KEY = adminKeys.access()
 
 const fetchAdminAccess = async () => {
   // The current repo has placeholder API clients.
@@ -15,7 +16,7 @@ export const useAdminAccess = () => {
   const queryClient = useQueryClient()
 
   return useQuery({
-    queryKey: ADMIN_ACCESS_QUERY_KEY,
+    queryKey: adminKeys.access(),
     queryFn: fetchAdminAccess,
     staleTime: 60_000, // short stale time; invalidate after mutations
     retry: 1,
@@ -24,6 +25,7 @@ export const useAdminAccess = () => {
 
 export const invalidateAdminAccess = () => {
   const queryClient = useQueryClient()
-  return queryClient.invalidateQueries({ queryKey: ADMIN_ACCESS_QUERY_KEY })
+  return queryClient.invalidateQueries({ queryKey: adminKeys.access() })
 }
+
 
