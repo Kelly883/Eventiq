@@ -11,6 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // TODO: this table has no real columns yet. TicketDeliveryService::
+        // sendViaDashboard() (app/Services/TicketDeliveryService.php) expects
+        // user_id, ticket_reference, channel, payload (json) - add those
+        // here when this feature is actually built out. Until then, that
+        // service guards with Schema::hasColumn() and reports 'not checked'
+        // rather than crashing or fabricating a result.
         Schema::create('delivery_events', function (Blueprint $table) {
             $table->id();
             $table->timestamps();

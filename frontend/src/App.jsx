@@ -6,6 +6,7 @@ import EventBrowsePage from './features/events/pages/EventBrowsePage';
 import EventDetailPage from './features/events/pages/EventDetailPage';
 import CategoryBrowsePage from './features/events/pages/CategoryBrowsePage';
 import EventCalendarPage from './features/events-calendar/pages/EventCalendarPage';
+import TicketStatusPage from './features/ticket-delivery/pages/TicketStatusPage';
 import './App.css';
 
 function App() {
@@ -76,6 +77,7 @@ function App() {
             <Route path="/" element={<Navigate to="/analytics" replace />} />
             <Route path="/events" element={<EventBrowsePage />} />
             <Route path="/events/calendar" element={<EventCalendarPage />} />
+            <Route path="/tickets/:ticketId/status" element={<TicketStatusPage />} />
             <Route path="/events/category/:categoryId" element={<CategoryBrowsePage />} />
             <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
