@@ -6,12 +6,14 @@ import EventBrowsePage from './features/events/pages/EventBrowsePage';
 import EventDetailPage from './features/events/pages/EventDetailPage';
 import CategoryBrowsePage from './features/events/pages/CategoryBrowsePage';
 import EventCalendarPage from './features/events-calendar/pages/EventCalendarPage';
+import ToastContainer from './features/notifications/components/ToastContainer';
 import './App.css';
 
 function App() {
   return (
     <BrowserRouter>
       <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
+        <ToastContainer />
         {/* Navigation Bar */}
         <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 shadow-sm backdrop-blur-md bg-white/90">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
