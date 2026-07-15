@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { onlineManager } from '@tanstack/react-query';
 import axios from 'axios';
+import { indexedDbStore } from './indexedDbStore';
 
 export interface QueuedCheckIn {
   id: string; // client-side generated UUID or timestamp
@@ -21,10 +22,11 @@ interface OfflineSyncState {
   
   // Actions
   setOnlineStatus: (isOnline: boolean) => void;
-  enqueueScan: (ticketCode: string, eventId: number | string) => void;
+  enqueueScan: (ticketCode: string, eventId: number | string) => Promise<void>;
   syncQueue: () => Promise<void>;
   clearSyncedHistory: () => void;
-  removeFailedScan: (id: string) => void;
+  removeFailedScan: (id: string) => Promise<void>;
+  loadOfflineQueue: () => Promise<void>;
 }
 
 // Simple helper to generate a unique string ID
@@ -51,7 +53,14 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         }
       },
 
-      enqueueScan: (ticketCode, eventId) => {
+      loadOfflineQueue: async () => {
+        const checkins = await indexedDbStore.getAllCheckIns();
+        if (checkins && checkins.length > 0) {
+          set({ queue: checkins });
+        }
+      },
+
+      enqueueScan: async (ticketCode, eventId) => {
         const newScan: QueuedCheckIn = {
           id: generateId(),
           ticketCode,
@@ -61,7 +70,14 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
           retryCount: 0,
         };
 
-        // Add to queue
+        // Save to IndexedDB first for durability
+        try {
+          await indexedDbStore.saveCheckIn(newScan);
+        } catch (err) {
+          console.warn('Failed to persist scan to IndexedDB:', err);
+        }
+
+        // Add to queue state
         set((state) => ({
           queue: [...state.queue, newScan],
         }));
@@ -99,6 +115,13 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
               client_mutation_id: item.id, // For idempotency check on backend
             });
 
+            // Delete from IndexedDB upon successful sync
+            try {
+              await indexedDbStore.deleteCheckIn(item.id);
+            } catch (dbErr) {
+              console.warn('Failed to delete from IndexedDB:', dbErr);
+            }
+
             // If success, move to history and remove from queue
             const completedItem: QueuedCheckIn = {
               ...item,
@@ -132,6 +155,13 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
                 error: err.response?.data?.message || 'Invalid ticket or validation error',
               };
 
+              // Delete from IndexedDB since we completed trying to sync (it is a logical failure)
+              try {
+                await indexedDbStore.deleteCheckIn(item.id);
+              } catch (dbErr) {
+                console.warn('Failed to delete from IndexedDB:', dbErr);
+              }
+
               set((state) => ({
                 queue: state.queue.filter((q) => q.id !== item.id),
                 history: [failedItem, ...state.history].slice(0, 100),
@@ -149,7 +179,13 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         }));
       },
 
-      removeFailedScan: (id) => {
+      removeFailedScan: async (id) => {
+        try {
+          await indexedDbStore.deleteCheckIn(id);
+        } catch (dbErr) {
+          console.warn('Failed to delete from IndexedDB:', dbErr);
+        }
+
         set((state) => ({
           history: state.history.filter((h) => h.id !== id),
         }));

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import jsQR from 'jsqr';
 import CryptoJS from 'crypto-js';
 import { useOfflineSyncStore } from '../../offline/services/offlineSyncStore';
+import { getEchoInstance } from '../services/echoService';
 import Skeleton from '../../../components/Skeleton';
 import EmptyState from '../../../components/EmptyState';
 
@@ -22,6 +23,34 @@ const VenueCheckInPage = () => {
 
   const isOnline = useOfflineSyncStore((state) => state.isOnline);
   const enqueueScan = useOfflineSyncStore((state) => state.enqueueScan);
+  const loadOfflineQueue = useOfflineSyncStore((state) => state.loadOfflineQueue);
+
+  // Load offline queue on mount
+  useEffect(() => {
+    loadOfflineQueue();
+  }, [loadOfflineQueue]);
+
+  // Subscribe to real-time stats updates via Laravel Echo
+  useEffect(() => {
+    const echo = getEchoInstance();
+    if (!echo) return;
+
+    const channel = echo.channel('event-checkin-stats')
+      .listen('.CheckInProcessed', (data) => {
+        console.log('Real-time check-in stats received:', data);
+        if (data && data.stats) {
+          setStats((prev) => ({
+            ...prev,
+            total: data.stats.total || prev.total,
+            processed: data.stats.processed || prev.processed,
+          }));
+        }
+      });
+
+    return () => {
+      echo.leaveChannel('event-checkin-stats');
+    };
+  }, []);
 
   // Play synthesized beep sound upon successful scan
   const playBeep = (freq = 880, duration = 0.15) => {
