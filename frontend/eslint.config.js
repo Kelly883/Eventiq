@@ -7,7 +7,25 @@ import reactRefresh from "eslint-plugin-react-refresh";
 export default [
   { ignores: ["dist", "node_modules"] },
   {
+    // Service workers run in a different global scope than the rest of
+    // the app (importScripts, self, clients - no window/document), and
+    // `firebase` is injected at runtime by importScripts() rather than
+    // an ES import, so ESLint can't infer it statically.
+    files: ["public/firebase-messaging-sw.js"],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: {
+        ...globals.serviceworker,
+        firebase: "readonly",
+      },
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+    },
+  },
+  {
     files: ["**/*.{js,jsx}"],
+    ignores: ["public/firebase-messaging-sw.js"],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,

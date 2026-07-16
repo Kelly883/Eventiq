@@ -44,6 +44,9 @@ backend/.env
 frontend/.env
 *.sqlite
 
+# Firebase Admin SDK service account (never commit real credentials)
+backend/storage/app/firebase-credentials.json
+
 # OS Files
 .DS_Store
 Thumbs.db
