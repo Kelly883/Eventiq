@@ -143,8 +143,8 @@ class CheckInController extends Controller
                 );
 
                 // Fetch current statistics for the specific event
-                $totalTickets = Ticket::where('event_id', $eventId)->count() ?: 150;
-                $processedTickets = Ticket::where('event_id', $eventId)->where('checked_in', true)->count() ?: 48;
+                $totalTickets = Ticket::where('event_id', $eventId)->count();
+                $processedTickets = Ticket::where('event_id', $eventId)->where('checked_in', true)->count();
 
                 $statsPayload = [
                     'stats' => [

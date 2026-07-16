@@ -37,12 +37,24 @@ export interface FraudDecision {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  // Backend uses Sanctum personal access tokens (Bearer header), not
+  // cookie-based SPA sessions - confirmed against AuthController::login,
+  // which issues $user->createToken(...)->plainTextToken. Matches the
+  // token storage convention in src/lib/api.ts (same localStorage key).
+  const token = (() => {
+    try {
+      return localStorage.getItem('authToken');
+    } catch {
+      return null;
+    }
+  })();
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
-    credentials: 'include', // Sanctum SPA auth relies on the session cookie
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
   });

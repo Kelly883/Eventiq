@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { analyticsService } from '../services';
 
 export const useSalesVelocity = (eventId, interval = 'daily') => {
@@ -6,7 +6,7 @@ export const useSalesVelocity = (eventId, interval = 'daily') => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchSalesVelocity = async () => {
+  const fetchSalesVelocity = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -17,13 +17,13 @@ export const useSalesVelocity = (eventId, interval = 'daily') => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId, interval]);
 
   useEffect(() => {
     if (eventId) {
       fetchSalesVelocity();
     }
-  }, [eventId, interval]);
+  }, [eventId, fetchSalesVelocity]);
 
   return {
     data,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { payoutService } from '../services';
 
 export const usePayouts = (filters = {}) => {
@@ -7,7 +7,13 @@ export const usePayouts = (filters = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchPayouts = async () => {
+  // filters is commonly passed as a fresh object literal on every render;
+  // this content-based key avoids re-fetching when only the reference
+  // changes, while keeping the effect's dependency array a plain,
+  // statically-analyzable value instead of an inline JSON.stringify call.
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
+
+  const fetchPayouts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -18,21 +24,22 @@ export const usePayouts = (filters = {}) => {
     } finally {
       setLoading(false);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey]);
 
-  const fetchSummary = async () => {
+  const fetchSummary = useCallback(async () => {
     try {
       const data = await payoutService.getOrganizerPayoutSummary();
       setSummary(data);
     } catch (err) {
       console.error('Failed to fetch summary:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchPayouts();
     fetchSummary();
-  }, [JSON.stringify(filters)]);
+  }, [fetchPayouts, fetchSummary]);
 
   return {
     payouts,

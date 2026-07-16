@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import jsQR from 'jsqr';
 import CryptoJS from 'crypto-js';
 import { useOfflineSyncStore } from '../../offline/services/offlineSyncStore';
@@ -12,7 +12,7 @@ const VenueCheckInPage = () => {
   const [scannedResult, setScannedResult] = useState(null);
   const [validationStatus, setValidationStatus] = useState('idle'); // 'idle' | 'validating' | 'success' | 'failed'
   const [errorMessage, setErrorMessage] = useState('');
-  const [stats, setStats] = useState({ total: 150, processed: 48 });
+  const [stats, setStats] = useState({ total: 0, processed: 0 });
   const [highContrast, setHighContrast] = useState(false);
 
   // Video and Canvas refs
@@ -65,7 +65,7 @@ const VenueCheckInPage = () => {
   }, [eventId]);
 
   // Play synthesized beep sound upon successful scan
-  const playBeep = (freq = 880, duration = 0.15) => {
+  const playBeep = useCallback((freq = 880, duration = 0.15) => {
     try {
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -87,7 +87,7 @@ const VenueCheckInPage = () => {
     } catch (e) {
       console.warn('Audio feedback failed:', e);
     }
-  };
+  }, []);
 
   // Setup camera stream
   useEffect(() => {
@@ -114,9 +114,9 @@ const VenueCheckInPage = () => {
       });
 
     return () => stopCamera();
-  }, [activeCamera]);
+  }, [activeCamera, scanFrame, stopCamera]);
 
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
     if (requestRef.current) {
       cancelAnimationFrame(requestRef.current);
       requestRef.current = null;
@@ -126,42 +126,10 @@ const VenueCheckInPage = () => {
       tracks.forEach((track) => track.stop());
       videoRef.current.srcObject = null;
     }
-  };
-
-  // Capture frame and search for QR code using jsQR
-  const scanFrame = () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (ctx) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert',
-        });
-
-        if (code) {
-          // Found a code!
-          handleScannedData(code.data);
-          // Pause camera momentarily to prevent immediate rescans
-          setActiveCamera(false);
-          return;
-        }
-      }
-    }
-
-    if (activeCamera) {
-      requestRef.current = requestAnimationFrame(scanFrame);
-    }
-  };
+  }, []);
 
   // Verify and process the scanned QR string
-  const handleScannedData = async (payloadString) => {
+  const handleScannedData = useCallback(async (payloadString) => {
     setScannedResult(payloadString);
     setValidationStatus('validating');
     setErrorMessage('');
@@ -191,7 +159,7 @@ const VenueCheckInPage = () => {
       // Simulate network validation with server-side proxy endpoint
       // We can buffer scans directly to our offline Sync Store!
       playBeep(880, 0.1); // High pitch for recognition success
-      
+
       // Buffer the scan!
       enqueueScan(payloadString, eventId);
 
@@ -202,7 +170,39 @@ const VenueCheckInPage = () => {
       setValidationStatus('failed');
       setErrorMessage(err.message || 'QR Verification failed.');
     }
-  };
+  }, [playBeep, enqueueScan]);
+
+  // Capture frame and search for QR code using jsQR
+  const scanFrame = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (ctx) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert',
+        });
+
+        if (code) {
+          // Found a code!
+          handleScannedData(code.data);
+          // Pause camera momentarily to prevent immediate rescans
+          setActiveCamera(false);
+          return;
+        }
+      }
+    }
+
+    if (activeCamera) {
+      requestRef.current = requestAnimationFrame(scanFrame);
+    }
+  }, [activeCamera, handleScannedData]);
 
   const handleResetScanner = () => {
     setScannedResult(null);
