@@ -4,6 +4,7 @@ namespace App\Features\Checkout\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Ticket extends Model
 {
@@ -25,4 +26,19 @@ class Ticket extends Model
         'checked_in' => 'boolean',
         'checked_in_at' => 'datetime',
     ];
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Event::class);
+    }
+
+    public function ticketTier(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\TicketTier::class);
+    }
 }
