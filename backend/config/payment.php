@@ -56,6 +56,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Payout Settings
+    |--------------------------------------------------------------------------
+    |
+    | Retargeted from the original PRD's Stripe-specific spec - payouts go
+    | through PaymentGatewayService using the same paystack/flutterwave
+    | gateways above (Transfer APIs), not a separate gateway.
+    |
+    */
+
+    'payouts' => [
+        'hold_days' => env('PAYOUT_HOLD_DAYS', 3),
+        'max_retries' => env('PAYOUT_MAX_RETRIES', 3),
+        'audit_log_enabled' => env('AUDIT_LOG_ENABLED', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Callback/Webhook URLs
     |--------------------------------------------------------------------------
     |
