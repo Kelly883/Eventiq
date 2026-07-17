@@ -1,2 +1,0 @@
-// Organizer profile types
-export {};

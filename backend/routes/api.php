@@ -23,8 +23,14 @@ require base_path('app/Features/CheckIn/Routes/api.php');
 // Include Email Notifications routes
 require base_path('app/Features/EmailNotifications/Routes/api.php');
 
+// Include Inventory routes
+require base_path('app/Features/Inventory/Routes/api.php');
+
 // Include Checkout routes
 require base_path('app/Features/Checkout/Routes/api.php');
+
+// Include Organizer Profile routes
+require base_path('app/Features/OrganizerProfile/Routes/api.php');
 
 // Include Refunds routes
 require base_path('app/Features/Refunds/Routes/api.php');
