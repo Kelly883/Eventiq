@@ -11,6 +11,7 @@ import EventCalendarPage from './features/events-calendar/pages/EventCalendarPag
 import TicketStatusPage from './features/ticket-delivery/pages/TicketStatusPage';
 import AdminEmailTemplateManagementPage from './features/email-notifications/pages/AdminEmailTemplateManagementPage';
 import ToastContainer from './features/notifications/components/ToastContainer';
+import DeveloperPortalPage from './features/developer-portal/pages/DeveloperPortalPage';
 import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
 import './App.css';
 
@@ -87,6 +88,18 @@ function App() {
                   📷 Gate Scanner
                 </NavLink>
                 <NavLink
+                  to="/developer"
+                  className={({ isActive }) =>
+                    `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                      isActive
+                        ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                    }`
+                  }
+                >
+                  🧩 Developer
+                </NavLink>
+                <NavLink
                   to="/dashboard/user"
                   className={({ isActive }) =>
                     `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
@@ -116,6 +129,7 @@ function App() {
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/dashboard/organizer" element={<OrganizerDashboardPage />} />
+            <Route path="/developer" element={<DeveloperPortalPage />} />
             <Route path="/check-in" element={<CheckInDashboardPage />} />
             <Route path="/venue-scan" element={<VenueCheckInPage />} />
             <Route path="/dashboard/user" element={<UserDashboardPage />} />
