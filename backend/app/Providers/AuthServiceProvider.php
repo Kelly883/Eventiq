@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\ApiKey;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Policies\ApiKeyPolicy;
 use App\Policies\PermissionPolicy;
 use App\Policies\RolePolicy;
 use App\Features\EmailNotifications\Models\EmailTemplate;
@@ -16,6 +18,7 @@ class AuthServiceProvider extends ServiceProvider
 {
     protected $policies = [
         Role::class => RolePolicy::class,
+        ApiKey::class => ApiKeyPolicy::class,
         Permission::class => PermissionPolicy::class,
         EmailTemplate::class => EmailTemplatePolicy::class,
         OrganizerProfile::class => OrganizerProfilePolicy::class,

@@ -6,6 +6,7 @@ use App\Http\Controllers\OrganizerController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Organizer\EventController;
+use App\Http\Controllers\Organizer\ApiKeyController;
 use App\Features\Ticketing\Controllers\EventTicketingController;
 use App\Features\Pricing\Controllers\PricingWindowController;
 use App\Features\Pricing\Controllers\PricingController;
@@ -81,6 +82,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/profile', [OrganizerController::class, 'edit']);
         Route::put('/profile', [OrganizerController::class, 'update']);
 
+
+        // Developer portal API keys
+        Route::prefix('developer/api-keys')->group(function () {
+            Route::get('/scopes', [ApiKeyController::class, 'scopes']);
+            Route::get('/', [ApiKeyController::class, 'index']);
+            Route::post('/', [ApiKeyController::class, 'store']);
+            Route::post('/{apiKey}/revoke', [ApiKeyController::class, 'revoke']);
+        });
+
         // Organizer events
         Route::apiResource('events', EventController::class);
 
@@ -125,4 +135,16 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::get('permission-requests', [PermissionController::class, 'getPermissionRequests']);
     Route::post('permission-requests/{request}/approve', [PermissionController::class, 'approvePermissionRequest']);
     Route::post('permission-requests/{request}/reject', [PermissionController::class, 'rejectPermissionRequest']);
+});
+
+// Public API integration routes are protected by API keys.
+Route::middleware(['api.key', 'throttle:api-keys'])->prefix('v1')->group(function () {
+    Route::get('/events', function (\Illuminate\Http\Request $request) {
+        abort_unless(in_array('events:read', $request->attributes->get('api_key_scopes', []), true), 403);
+
+        return \App\Models\Event::query()
+            ->where('organizer_id', $request->attributes->get('organizer')->id)
+            ->latest()
+            ->get();
+    });
 });
