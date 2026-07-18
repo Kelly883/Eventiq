@@ -15,7 +15,8 @@ class AuditLog extends Model
         'entity',
         'entity_id',
         'changes',
-        'user_id'
+        'user_id',
+        'request_id'
     ];
 
     protected $casts = [

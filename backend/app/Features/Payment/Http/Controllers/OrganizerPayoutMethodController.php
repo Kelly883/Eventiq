@@ -2,6 +2,7 @@
 
 namespace App\Features\Payment\Http\Controllers;
 
+use App\Features\Compliance\Services\AuditLogService;
 use App\Features\Payment\Http\Requests\StoreOrganizerPayoutMethodRequest;
 use App\Features\Payment\Models\OrganizerPayoutMethod;
 use App\Http\Controllers\Controller;
@@ -10,6 +11,10 @@ use Illuminate\Support\Facades\DB;
 
 class OrganizerPayoutMethodController extends Controller
 {
+    public function __construct(private AuditLogService $auditLogService)
+    {
+    }
+
     /**
      * GET /api/organizer/payout-methods
      */
@@ -34,7 +39,7 @@ class OrganizerPayoutMethodController extends Controller
         $organizer = $request->user()->organizer;
         $data = $request->validated();
 
-        return DB::transaction(function () use ($organizer, $data) {
+        return DB::transaction(function () use ($request, $organizer, $data) {
             if (! empty($data['is_default'])) {
                 $organizer->payoutMethods()->update(['is_default' => false]);
             }
@@ -46,6 +51,12 @@ class OrganizerPayoutMethodController extends Controller
             if ($organizer->payoutMethods()->count() === 1) {
                 $method->update(['is_default' => true]);
             }
+
+            $this->auditLogService->log('payout_method.created', 'organizer_payout_method', $method->id, [
+                'organizer_id' => $organizer->id,
+                'gateway' => $method->gateway ?? null,
+                'is_default' => $method->is_default,
+            ], $request->user()?->id);
 
             return response()->json($method, 201);
         });
@@ -60,6 +71,11 @@ class OrganizerPayoutMethodController extends Controller
 
         $method = $organizer->payoutMethods()->where('id', $id)->firstOrFail();
         $method->delete();
+
+        $this->auditLogService->log('payout_method.deleted', 'organizer_payout_method', $method->id, [
+            'organizer_id' => $organizer->id,
+            'gateway' => $method->gateway ?? null,
+        ], $request->user()?->id);
 
         return response()->noContent();
     }
