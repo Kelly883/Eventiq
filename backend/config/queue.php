@@ -30,6 +30,12 @@ return [
 
     ],
 
+    // Dedicated queue for compliance report generation, per Step 50's
+    // COMPLIANCE_REPORT_QUEUE requirement - kept in config rather than
+    // read via env() directly in application code, since raw env() calls
+    // outside config files break once `php artisan config:cache` runs.
+    'compliance_queue' => env('COMPLIANCE_REPORT_QUEUE', 'compliance'),
+
     'batching' => [
         'database' => env('DB_CONNECTION', 'sqlite'),
         'table' => 'job_batches',

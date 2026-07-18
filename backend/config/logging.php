@@ -37,6 +37,27 @@ return [
             'replace_placeholders' => true,
         ],
 
+        /*
+        | Structured audit trail, separate from the application log and
+        | from the audit_logs DB table (AuditLogService writes to both -
+        | this file-based copy survives even if the database is
+        | temporarily unavailable, per the original requirement). Not a
+        | third-party aggregator (Datadog/Splunk/etc.) - nothing in this
+        | codebase specifies one, and inventing a fake integration would
+        | be worse than a real, working file-based trail with rotation.
+        | Retention here is file-count based (LOG_DAILY_DAYS); the
+        | separate AUDIT_LOG_RETENTION_DAYS setting governs how long DB
+        | rows are kept, which is a different concern (compliance
+        | retention vs disk space).
+        */
+        'audit' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/audit.log'),
+            'level' => 'info',
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
         'syslog' => [
             'driver' => 'syslog',
             'level' => env('LOG_LEVEL', 'debug'),

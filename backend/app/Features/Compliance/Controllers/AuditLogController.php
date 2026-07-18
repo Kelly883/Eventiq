@@ -2,18 +2,30 @@
 
 namespace App\Features\Compliance\Controllers;
 
+use App\Features\Compliance\Requests\AuditLogIndexRequest;
+use App\Features\Compliance\Services\AuditLogService;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 
 class AuditLogController extends Controller
 {
-    public function index(Request $request)
+    public function __construct(private AuditLogService $auditLogService)
     {
-        // TODO: implement filtering/pagination
+    }
+
+    /**
+     * GET /api/admin/compliance/audit-logs
+     */
+    public function index(AuditLogIndexRequest $request)
+    {
+        $results = $this->auditLogService->filter($request->validated());
+
         return response()->json([
-            'data' => [],
-            'meta' => ['total' => 0, 'page' => 1, 'perPage' => 10],
+            'data' => $results->items(),
+            'meta' => [
+                'total' => $results->total(),
+                'page' => $results->currentPage(),
+                'perPage' => $results->perPage(),
+            ],
         ]);
     }
 }
-

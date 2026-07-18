@@ -20,7 +20,9 @@ class GenerateComplianceReportJob implements ShouldQueue
         public int $generationId,
         public string $reportCode,
         public array $filters = []
-    ) {}
+    ) {
+        $this->onQueue(config('queue.compliance_queue', 'compliance'));
+    }
 
     public function handle(ComplianceReportService $service): void
     {

@@ -15,9 +15,13 @@ class AuditLogIndexRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'query' => ['nullable', 'string'],
-            'start' => ['nullable', 'date'],
-            'end' => ['nullable', 'date'],
+            'action' => ['nullable', 'string'],
+            'entity' => ['nullable', 'string'],
+            'entity_id' => ['nullable', 'integer'],
+            'user_id' => ['nullable', 'integer'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];
     }
 }
