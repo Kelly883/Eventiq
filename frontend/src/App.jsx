@@ -11,9 +11,12 @@ import EventCalendarPage from './features/events-calendar/pages/EventCalendarPag
 import TicketStatusPage from './features/ticket-delivery/pages/TicketStatusPage';
 import AdminEmailTemplateManagementPage from './features/email-notifications/pages/AdminEmailTemplateManagementPage';
 import ToastContainer from './features/notifications/components/ToastContainer';
+import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
 import './App.css';
 
 function App() {
+  useFCMTokenSync();
+
   return (
     <BrowserRouter>
       <div className="flex flex-col min-h-screen bg-slate-50 font-sans">

@@ -18,7 +18,8 @@ class DeviceTokenController extends Controller
         $device = $this->pushNotificationService->registerDevice(
             $request->user()->id,
             $request->validated('fcm_token'),
-            $request->validated('platform')
+            $request->validated('platform'),
+            $request->validated('previous_token')
         );
 
         return response()->json(['id' => $device->id], 201);

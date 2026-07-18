@@ -80,8 +80,19 @@ class PushNotificationService
     /**
      * Register or refresh a device token for a user.
      */
-    public function registerDevice(int $userId, string $fcmToken, ?string $platform = null): PushNotificationDevice
+    /**
+     * Register or refresh a device token for a user. If $previousToken is
+     * given (the frontend detected its token rotated), deletes that stale
+     * row rather than leaving a dead token accumulating in the table -
+     * otherwise sendToUser() would keep trying (and failing) to send to
+     * tokens that no longer exist.
+     */
+    public function registerDevice(int $userId, string $fcmToken, ?string $platform = null, ?string $previousToken = null): PushNotificationDevice
     {
+        if ($previousToken && $previousToken !== $fcmToken) {
+            PushNotificationDevice::where('fcm_token', $previousToken)->delete();
+        }
+
         return PushNotificationDevice::updateOrCreate(
             ['fcm_token' => $fcmToken],
             ['user_id' => $userId, 'platform' => $platform, 'last_used_at' => now()]
