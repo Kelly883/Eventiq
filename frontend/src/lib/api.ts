@@ -4,6 +4,7 @@ import axios, {
   type AxiosRequestConfig,
   type AxiosResponse,
 } from 'axios';
+import { getDeviceToken } from '../features/offline/services/deviceToken';
 
 type Env = {
   VITE_API_BASE_URL?: string;
@@ -79,6 +80,10 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (config.headers as any).Authorization = `Bearer ${token}`;
   }
+
+  config.headers = config.headers ?? {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (config.headers as any)['X-Device-Token'] = getDeviceToken();
   return config;
 });
 

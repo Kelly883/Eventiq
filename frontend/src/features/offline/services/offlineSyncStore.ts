@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { onlineManager } from '@tanstack/react-query';
-import axios from 'axios';
+import { api } from '../../../lib/api';
 import { indexedDbStore } from './indexedDbStore';
 
 export interface QueuedCheckIn {
@@ -61,7 +61,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         try {
           const startTime = Date.now();
           // Fast HEAD or GET request to server
-          const response = await axios.get('/api/events/1/pricing', {
+          const response = await api.get('/api/events/1/pricing', {
             headers: { 'Cache-Control': 'no-cache' }
           });
           const endTime = Date.now();
@@ -142,7 +142,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
           try {
             // Send request to real backend endpoint
             // We use standard axios, which will include authorization cookies/headers if configured
-            await axios.post('/api/venue/check-in', {
+            await api.post('/api/venue/check-in', {
               ticket_code: item.ticketCode,
               event_id: item.eventId,
               scanned_at: item.scannedAt,

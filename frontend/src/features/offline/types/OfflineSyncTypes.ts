@@ -6,7 +6,7 @@ export type OfflineOperationIdempotency = {
 };
 
 export type OfflineEnqueueRequest<TPayload extends Record<string, any>> = {
-  client_id: string;
+  client_id?: string;
   op_type: string;
   entity_id: string;
   client_mutation_id: string;
