@@ -6,6 +6,7 @@ use App\Http\Controllers\OrganizerController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Organizer\EventController;
+use App\Http\Controllers\Organizer\ApiKeyController;
 use App\Features\Ticketing\Controllers\EventTicketingController;
 use App\Features\Pricing\Controllers\PricingWindowController;
 use App\Features\Pricing\Controllers\PricingController;
@@ -80,6 +81,14 @@ Route::middleware('auth:sanctum')->group(function () {
         // Organizer profile
         Route::get('/profile', [OrganizerController::class, 'edit']);
         Route::put('/profile', [OrganizerController::class, 'update']);
+
+        // Developer portal API keys
+        Route::prefix('developer/api-keys')->group(function () {
+            Route::get('/scopes', [ApiKeyController::class, 'scopes']);
+            Route::get('/', [ApiKeyController::class, 'index']);
+            Route::post('/', [ApiKeyController::class, 'store']);
+            Route::post('/{apiKey}/revoke', [ApiKeyController::class, 'revoke']);
+        });
 
         // Organizer events
         Route::apiResource('events', EventController::class);
