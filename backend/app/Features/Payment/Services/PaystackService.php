@@ -2,10 +2,11 @@
 
 namespace App\Features\Payment\Services;
 
+use App\Features\Payment\Contracts\PaymentGatewayContract;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class PaystackService
+class PaystackService implements PaymentGatewayContract
 {
     protected string $publicKey;
     protected string $secretKey;
@@ -97,6 +98,55 @@ class PaystackService
             Log::error('Paystack Refund Exception: ' . $e->getMessage());
             throw $e;
         }
+    }
+
+    /**
+     * Initiate a bank transfer (organizer payout). Paystack requires two
+     * steps: create a transfer recipient, then initiate the transfer
+     * against that recipient. Docs: https://paystack.com/docs/transfers/
+     */
+    public function transfer(float $amount, array $bankDetails, string $narration, string $reference): array
+    {
+        $recipientResponse = Http::withToken($this->secretKey)->acceptJson()->post("{$this->baseUrl}/transferrecipient", [
+            'type' => 'nuban',
+            'name' => $bankDetails['account_name'] ?? 'Organizer',
+            'account_number' => $bankDetails['account_number'],
+            'bank_code' => $bankDetails['bank_code'],
+            'currency' => config('payment.currency', 'NGN'),
+        ]);
+
+        if ($recipientResponse->failed()) {
+            Log::error('Paystack transfer recipient creation failed: ' . $recipientResponse->body());
+            throw new \Exception('Paystack transfer recipient creation failed: ' . $recipientResponse->body());
+        }
+
+        $recipientCode = $recipientResponse->json('data.recipient_code');
+
+        $transferResponse = Http::withToken($this->secretKey)->acceptJson()->post("{$this->baseUrl}/transfer", [
+            'source' => 'balance',
+            'amount' => (int) round($amount * 100), // kobo
+            'recipient' => $recipientCode,
+            'reason' => $narration,
+            'reference' => $reference,
+        ]);
+
+        if ($transferResponse->failed()) {
+            Log::error('Paystack transfer failed: ' . $transferResponse->body());
+            throw new \Exception('Paystack transfer failed: ' . $transferResponse->body());
+        }
+
+        return $transferResponse->json('data');
+    }
+
+    public function checkTransferStatus(string $transferReference): array
+    {
+        $response = Http::withToken($this->secretKey)->acceptJson()->get("{$this->baseUrl}/transfer/verify/{$transferReference}");
+
+        if ($response->failed()) {
+            throw new \Exception('Failed to check Paystack transfer status: ' . $response->body());
+        }
+
+        return $response->json('data');
     }
 
     /**

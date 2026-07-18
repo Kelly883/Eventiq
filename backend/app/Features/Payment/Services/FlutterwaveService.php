@@ -2,10 +2,11 @@
 
 namespace App\Features\Payment\Services;
 
+use App\Features\Payment\Contracts\PaymentGatewayContract;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class FlutterwaveService
+class FlutterwaveService implements PaymentGatewayContract
 {
     protected string $publicKey;
     protected string $secretKey;
@@ -110,6 +111,41 @@ class FlutterwaveService
             Log::error('Flutterwave Refund Exception: ' . $e->getMessage());
             throw $e;
         }
+    }
+
+    /**
+     * Initiate a bank transfer (organizer payout) - a single-step call,
+     * unlike Paystack's recipient-then-transfer flow.
+     * Docs: https://developer.flutterwave.com/v3.0/reference/create-a-transfer
+     */
+    public function transfer(float $amount, array $bankDetails, string $narration, string $reference): array
+    {
+        $response = Http::withToken($this->secretKey)->acceptJson()->post("{$this->baseUrl}/transfers", [
+            'account_bank' => $bankDetails['bank_code'],
+            'account_number' => $bankDetails['account_number'],
+            'amount' => $amount,
+            'currency' => config('payment.currency', 'NGN'),
+            'narration' => $narration,
+            'reference' => $reference,
+        ]);
+
+        if ($response->failed()) {
+            Log::error('Flutterwave transfer failed: ' . $response->body());
+            throw new \Exception('Flutterwave transfer failed: ' . $response->body());
+        }
+
+        return $response->json('data');
+    }
+
+    public function checkTransferStatus(string $transferReference): array
+    {
+        $response = Http::withToken($this->secretKey)->acceptJson()->get("{$this->baseUrl}/transfers/{$transferReference}");
+
+        if ($response->failed()) {
+            throw new \Exception('Failed to check Flutterwave transfer status: ' . $response->body());
+        }
+
+        return $response->json('data');
     }
 
     /**

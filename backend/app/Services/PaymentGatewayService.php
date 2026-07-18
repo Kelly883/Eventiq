@@ -4,18 +4,19 @@ namespace App\Services;
 
 use App\Features\Checkout\Models\Order;
 use App\Features\Checkout\Models\Payment;
+use App\Features\Payment\Contracts\PaymentGatewayContract;
 use App\Features\Payment\Services\FlutterwaveService;
 use App\Features\Payment\Services\PaystackService;
 use App\Features\Refunds\Models\RefundRequest;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
  * Abstracts Paystack/Flutterwave for refunds and payouts (organizer
- * settlements). Retargeted from the original Stripe/PayPal-based spec
- * per project direction - see PaystackService/FlutterwaveService for
- * the underlying per-gateway API calls this wraps.
+ * settlements) through PaymentGatewayContract. Adding a third gateway
+ * later: implement the contract, add one line to resolveGateway() -
+ * nothing else in this class changes. Retargeted from the original
+ * Stripe/PayPal-based PRD spec per project direction.
  */
 class PaymentGatewayService
 {
@@ -23,6 +24,15 @@ class PaymentGatewayService
         private PaystackService $paystack,
         private FlutterwaveService $flutterwave,
     ) {
+    }
+
+    private function resolveGateway(string $gateway): PaymentGatewayContract
+    {
+        return match ($gateway) {
+            'paystack' => $this->paystack,
+            'flutterwave' => $this->flutterwave,
+            default => throw new \InvalidArgumentException("Unknown payment gateway: {$gateway}"),
+        };
     }
 
     /**
@@ -43,18 +53,14 @@ class PaymentGatewayService
         $amount = (float) ($refundRequest->approved_amount ?? $refundRequest->requested_amount);
 
         try {
-            $result = $order->payment_gateway === 'paystack'
-                ? $this->paystack->refund($order->payment_reference, $amount)
-                : $this->flutterwave->refund($order->payment_reference, $amount);
+            $result = $this->resolveGateway($order->payment_gateway)->refund($order->payment_reference, $amount);
         } catch (\Throwable $e) {
             Log::error("PaymentGatewayService::processRefund failed for refund request {$refundRequestId}: " . $e->getMessage());
             throw $e;
         }
 
-        $refundId = $this->parseGatewayResponse($order->payment_gateway, $result);
-
         $refundRequest->update([
-            'payment_gateway_refund_id' => $refundId,
+            'payment_gateway_refund_id' => $this->parseRefundId($order->payment_gateway, $result),
             'payment_gateway_response' => $result,
         ]);
 
@@ -65,115 +71,35 @@ class PaymentGatewayService
 
     /**
      * Extracts the gateway's own refund identifier from its response
-     * shape, which differs between Paystack and Flutterwave.
+     * shape, which differs between Paystack and Flutterwave - the one
+     * piece of gateway-specific knowledge that can't live behind the
+     * shared interface, since the two APIs simply name this field
+     * differently.
      */
-    private function parseGatewayResponse(string $gateway, array $response): ?string
+    private function parseRefundId(string $gateway, array $response): ?string
     {
         return $gateway === 'paystack'
-            ? ($response['id'] ?? null)               // Paystack: numeric refund id
-            : ($response['flw_ref'] ?? $response['id'] ?? null); // Flutterwave: flw_ref
+            ? ($response['id'] ?? null)
+            : ($response['flw_ref'] ?? $response['id'] ?? null);
     }
 
     /**
      * Initiates a payout (organizer settlement) to a bank account.
      *
      * @param array $bankDetails Expected keys: account_number, bank_code
-     *   (Flutterwave) / account_number, bank_code, account_name
-     *   (Paystack, via a transfer recipient). Collecting/storing these
-     *   per-organizer is a separate concern this service doesn't own -
-     *   see class doc.
+     *   (both gateways) / account_name (Paystack only, for its transfer-
+     *   recipient step). See App\Features\Payment\Models\OrganizerPayoutMethod
+     *   for where these are stored per-organizer.
      */
     public function initiatePayout(string $gateway, float $amount, array $bankDetails, string $narration = 'Payout'): array
     {
         $reference = 'pay_' . Str::uuid();
 
-        return $gateway === 'paystack'
-            ? $this->initiatePaystackPayout($amount, $bankDetails, $narration, $reference)
-            : $this->initiateFlutterwavePayout($amount, $bankDetails, $narration, $reference);
+        return $this->resolveGateway($gateway)->transfer($amount, $bankDetails, $narration, $reference);
     }
 
-    /**
-     * Paystack payouts are two steps: create a transfer recipient, then
-     * initiate the transfer against that recipient.
-     * Docs: https://paystack.com/docs/transfers/
-     */
-    private function initiatePaystackPayout(float $amount, array $bankDetails, string $narration, string $reference): array
-    {
-        $secretKey = config('payment.gateways.paystack.secret_key');
-        $baseUrl = rtrim(config('payment.gateways.paystack.payment_url', 'https://api.paystack.co'), '/');
-
-        $recipientResponse = Http::withToken($secretKey)->acceptJson()->post("{$baseUrl}/transferrecipient", [
-            'type' => 'nuban',
-            'name' => $bankDetails['account_name'] ?? 'Organizer',
-            'account_number' => $bankDetails['account_number'],
-            'bank_code' => $bankDetails['bank_code'],
-            'currency' => config('payment.currency', 'NGN'),
-        ]);
-
-        if ($recipientResponse->failed()) {
-            throw new \RuntimeException('Paystack transfer recipient creation failed: ' . $recipientResponse->body());
-        }
-
-        $recipientCode = $recipientResponse->json('data.recipient_code');
-
-        $transferResponse = Http::withToken($secretKey)->acceptJson()->post("{$baseUrl}/transfer", [
-            'source' => 'balance',
-            'amount' => (int) round($amount * 100), // kobo
-            'recipient' => $recipientCode,
-            'reason' => $narration,
-            'reference' => $reference,
-        ]);
-
-        if ($transferResponse->failed()) {
-            throw new \RuntimeException('Paystack transfer failed: ' . $transferResponse->body());
-        }
-
-        return $transferResponse->json('data');
-    }
-
-    /**
-     * Flutterwave payouts are a single-step transfer call.
-     * Docs: https://developer.flutterwave.com/v3.0/reference/create-a-transfer
-     */
-    private function initiateFlutterwavePayout(float $amount, array $bankDetails, string $narration, string $reference): array
-    {
-        $secretKey = config('payment.gateways.flutterwave.secret_key');
-        $baseUrl = rtrim(config('payment.gateways.flutterwave.payment_url', 'https://api.flutterwave.com/v3'), '/');
-
-        $response = Http::withToken($secretKey)->acceptJson()->post("{$baseUrl}/transfers", [
-            'account_bank' => $bankDetails['bank_code'],
-            'account_number' => $bankDetails['account_number'],
-            'amount' => $amount,
-            'currency' => config('payment.currency', 'NGN'),
-            'narration' => $narration,
-            'reference' => $reference,
-        ]);
-
-        if ($response->failed()) {
-            throw new \RuntimeException('Flutterwave transfer failed: ' . $response->body());
-        }
-
-        return $response->json('data');
-    }
-
-    /**
-     * Checks the status of a previously-initiated payout/transfer.
-     */
     public function checkTransferStatus(string $gateway, string $transferReference): array
     {
-        $secretKey = config("payment.gateways.{$gateway}.secret_key");
-        $baseUrl = rtrim(config("payment.gateways.{$gateway}.payment_url"), '/');
-
-        $url = $gateway === 'paystack'
-            ? "{$baseUrl}/transfer/verify/{$transferReference}"
-            : "{$baseUrl}/transfers/{$transferReference}";
-
-        $response = Http::withToken($secretKey)->acceptJson()->get($url);
-
-        if ($response->failed()) {
-            throw new \RuntimeException("Failed to check {$gateway} transfer status: " . $response->body());
-        }
-
-        return $response->json('data');
+        return $this->resolveGateway($gateway)->checkTransferStatus($transferReference);
     }
 }

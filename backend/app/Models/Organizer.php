@@ -30,4 +30,9 @@ class Organizer extends Model
     {
         return $this->hasMany(Event::class);
     }
+
+    public function payoutMethods(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Features\Payment\Models\OrganizerPayoutMethod::class);
+    }
 }
