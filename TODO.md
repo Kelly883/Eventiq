@@ -1,16 +1,30 @@
-# TODO
+# EventIQ - Payment wiring task
 
-## Auth / Token refresh + security hardening
-- [x] Frontend: replace localStorage-based 401 handling in `frontend/src/lib/api.ts` with refresh+retry flow
-- [ ] Frontend: centralize token handling and avoid hard logout on first 401
-- [x] Backend: add refresh token endpoint (or sanctum session refresh) and corresponding auth logic
-- [ ] Backend: if migrating to httpOnly cookies, add cookie-based token issuance + CORS/CSRF configuration
+## Step 0 - Repo understanding
+- [x] Read key payment files: PaymentGatewayService, PaymentServiceProvider, WebhookController, PaystackService, FlutterwaveService, Payment routes
 
-## Image processing + upload edge-case protection
-- [ ] Identify upload endpoints and image resizing pipeline
-- [ ] Add server-side validation: file type/size, decompression bomb limits, dimension bounds
-- [ ] Add sharp processing safeguards: bounded dimensions, concurrency limits, async/background if needed
+## Step 1 - Wire PaymentGatewayService to concrete adapters
+- [ ] Create adapter interface + Paystack/Flutterwave adapter implementations
+- [ ] Update PaymentGatewayService to select adapter from env/config and delegate
+- [ ] Update PaymentServiceProvider bindings for adapters
 
-## React/UI
-- [ ] Ensure admin pages use the updated api client and handle retried requests correctly
+
+## Step 2 - Standardize normalized DTOs/errors
+- [ ] Add canonical DTOs (init, verify, webhook outcome, payout outcome)
+- [ ] Add canonical error model + mapper from provider exceptions
+
+## Step 3 - Ensure webhook controller flows are correct
+- [ ] Implement shared webhook flow in Features/Payment/Controllers/WebhookController.php
+- [ ] Refactor PaystackController/FlutterwaveController to use the shared flow
+
+## Step 4 - Add env validation at boot
+- [ ] Implement Env validator for payment gateway config
+- [ ] Call validator during app boot
+
+## Step 5 - “make ripgrep binary”
+- [ ] Add ripgrep installation / local binary setup so code search works
+
+## Step 6 - Verification
+- [ ] Run PHP lint / artisan boot
+- [ ] Smoke-test webhook signature verification paths
 
