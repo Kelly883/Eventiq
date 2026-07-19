@@ -1,0 +1,17 @@
+{
+  "app": { "name": "EventIQ" },
+  "common": {
+    "welcome": "ようこそ",
+    "loading": "読み込み中...",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "submit": "送信",
+    "error": "エラー",
+    "success": "成功",
+    "back": "戻る",
+    "next": "次へ",
+    "search": "検索",
+    "login": "ログイン",
+    "logout": "ログアウト"
+  }
+}

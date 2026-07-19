@@ -1,0 +1,17 @@
+{
+  "app": { "name": "EventIQ" },
+  "common": {
+    "welcome": "Willkommen",
+    "loading": "Wird geladen...",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "submit": "Absenden",
+    "error": "Fehler",
+    "success": "Erfolg",
+    "back": "Zurück",
+    "next": "Weiter",
+    "search": "Suchen",
+    "login": "Anmelden",
+    "logout": "Abmelden"
+  }
+}
