@@ -15,6 +15,7 @@ return new class extends Migration
             $table->unsignedBigInteger('entity_id')->nullable();
             $table->json('changes')->nullable();
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null');
+            $table->string('request_id')->nullable()->index();
             $table->timestamps();
         });
     }

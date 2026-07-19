@@ -128,3 +128,15 @@ Route::middleware(['auth:sanctum', 'role:admin', 'throttle:admin'])->prefix('adm
     Route::post('permission-requests/{request}/approve', [PermissionController::class, 'approvePermissionRequest']);
     Route::post('permission-requests/{request}/reject', [PermissionController::class, 'rejectPermissionRequest']);
 });
+
+// Public API integration routes are protected by API keys.
+Route::middleware('api.key')->prefix('v1')->group(function () {
+    Route::get('/events', function (\Illuminate\Http\Request $request) {
+        abort_unless(in_array('events:read', $request->attributes->get('api_key_scopes', []), true), 403);
+
+        return \App\Models\Event::query()
+            ->where('organizer_id', $request->attributes->get('organizer')->id)
+            ->latest()
+            ->get();
+    });
+});

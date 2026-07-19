@@ -3,14 +3,17 @@
 namespace App\Features\Refunds\Services;
 
 use App\Features\Checkout\Models\Ticket;
+use App\Features\Compliance\Services\AuditLogService;
 use App\Features\Refunds\Models\RefundRequest;
 use App\Services\PaymentGatewayService;
 use Illuminate\Support\Facades\Log;
 
 class RefundService
 {
-    public function __construct(private PaymentGatewayService $paymentGatewayService)
-    {
+    public function __construct(
+        private PaymentGatewayService $paymentGatewayService,
+        private AuditLogService $auditLogService
+    ) {
     }
 
     public function requestRefund(int $userId, int $ticketId, string $reason): RefundRequest
@@ -29,13 +32,20 @@ class RefundService
             throw new \RuntimeException('A refund request for this ticket is already in progress.');
         }
 
-        return RefundRequest::create([
+        $refundRequest = RefundRequest::create([
             'ticket_id' => $ticketId,
             'user_id' => $userId,
             'status' => 'pending',
             'requested_amount' => $ticket->ticketTier->price ?? $ticket->order->total_amount ?? 0,
             'reason' => $reason,
         ]);
+
+        $this->auditLogService->log('refund.requested', 'refund_request', $refundRequest->id, [
+            'ticket_id' => $ticketId,
+            'requested_amount' => $refundRequest->requested_amount,
+        ], $userId);
+
+        return $refundRequest;
     }
 
     /**
@@ -49,6 +59,8 @@ class RefundService
     {
         $refundRequest = RefundRequest::findOrFail($refundRequestId);
 
+        $previousStatus = $refundRequest->status;
+
         $refundRequest->update([
             'status' => 'approved',
             'approved_amount' => $approvedAmount ?? $refundRequest->requested_amount,
@@ -61,11 +73,20 @@ class RefundService
             $this->paymentGatewayService->processRefund($refundRequest->id);
             $refundRequest->update(['status' => 'refunded']);
 
+            $this->auditLogService->log('refund.approved', 'refund_request', $refundRequest->id, [
+                'previous_status' => $previousStatus,
+                'status' => 'refunded',
+                'approved_amount' => $refundRequest->approved_amount,
+            ], $adminUserId);
+
             // Mark the ticket cancelled once the refund actually succeeds.
             $refundRequest->ticket()->update(['status' => 'refunded']);
         } catch (\Throwable $e) {
             Log::error("RefundService::approve - gateway refund failed for request {$refundRequestId}: " . $e->getMessage());
-            $refundRequest->update(['status' => 'approved']); // stays approved, not refunded - needs manual retry
+            $refundRequest->update(['status' => 'approved']);
+            $this->auditLogService->log('refund.gateway_failed', 'refund_request', $refundRequest->id, [
+                'error' => $e->getMessage(),
+            ], $adminUserId); // stays approved, not refunded - needs manual retry
             throw $e;
         }
 
@@ -76,12 +97,19 @@ class RefundService
     {
         $refundRequest = RefundRequest::findOrFail($refundRequestId);
 
+        $previousStatus = $refundRequest->status;
+
         $refundRequest->update([
             'status' => 'rejected',
             'admin_notes' => $adminNotes,
             'reviewed_at' => now(),
             'reviewed_by' => $adminUserId,
         ]);
+
+        $this->auditLogService->log('refund.rejected', 'refund_request', $refundRequest->id, [
+            'previous_status' => $previousStatus,
+            'status' => 'rejected',
+        ], $adminUserId);
 
         return $refundRequest;
     }

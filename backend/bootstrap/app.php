@@ -12,8 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->append(App\Http\Middleware\AssignCorrelationId::class);
+
         $middleware->alias([
             'role' => App\Http\Middleware\CheckRole::class,
+            'api.key' => App\Http\Middleware\ApiKeyMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
