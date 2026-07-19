@@ -57,6 +57,9 @@ require base_path('app/Features/Payment/Routes/api.php');
 // Include OfflineSync routes
 require base_path('app/Features/OfflineSync/Routes/api.php');
 
+// Include API Keys routes
+require base_path('app/Features/ApiKeys/Routes/api.php');
+
 
 
 

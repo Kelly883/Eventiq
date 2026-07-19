@@ -35,4 +35,9 @@ class Organizer extends Model
     {
         return $this->hasMany(\App\Features\Payment\Models\OrganizerPayoutMethod::class);
     }
+
+    public function apiKeys(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\ApiKey::class);
+    }
 }
