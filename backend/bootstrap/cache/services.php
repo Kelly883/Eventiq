@@ -31,9 +31,10 @@
     27 => 'NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider',
     28 => 'Termwind\\Laravel\\TermwindServiceProvider',
     29 => 'Spatie\\LaravelIgnition\\IgnitionServiceProvider',
-    30 => 'App\\Providers\\AuthServiceProvider',
-    31 => 'App\\Providers\\PaymentServiceProvider',
-    32 => 'App\\Providers\\FirebaseServiceProvider',
+    30 => 'App\\Providers\\AppServiceProvider',
+    31 => 'App\\Providers\\AuthServiceProvider',
+    32 => 'App\\Providers\\PaymentServiceProvider',
+    33 => 'App\\Providers\\FirebaseServiceProvider',
   ),
   'eager' => 
   array (
@@ -52,9 +53,10 @@
     12 => 'NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider',
     13 => 'Termwind\\Laravel\\TermwindServiceProvider',
     14 => 'Spatie\\LaravelIgnition\\IgnitionServiceProvider',
-    15 => 'App\\Providers\\AuthServiceProvider',
-    16 => 'App\\Providers\\PaymentServiceProvider',
-    17 => 'App\\Providers\\FirebaseServiceProvider',
+    15 => 'App\\Providers\\AppServiceProvider',
+    16 => 'App\\Providers\\AuthServiceProvider',
+    17 => 'App\\Providers\\PaymentServiceProvider',
+    18 => 'App\\Providers\\FirebaseServiceProvider',
   ),
   'deferred' => 
   array (

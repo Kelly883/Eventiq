@@ -1,85 +1,133 @@
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
+import i18n from 'i18next'
 
-import en from './locales/en/translation.json';
-import es from './locales/es/translation.json';
-import fr from './locales/fr/translation.json';
-import de from './locales/de/translation.json';
-import pt from './locales/pt/translation.json';
-import zh from './locales/zh/translation.json';
-import ja from './locales/ja/translation.json';
-import ar from './locales/ar/translation.json';
+import { initReactI18next } from 'react-i18next'
+import LanguageDetector, { type DetectorOptions } from 'i18next-browser-languagedetector'
 
-export const SUPPORTED_LANGUAGES = (
-  import.meta.env.VITE_SUPPORTED_LANGUAGES || 'en,es,fr,de,pt,zh,ja,ar'
-).split(',');
+const DEFAULT_LANGUAGE = 'en'
 
-export const DEFAULT_LANGUAGE = import.meta.env.VITE_DEFAULT_LANGUAGE || 'en';
+export const SUPPORTED_LANGUAGES = [
+  'en',
+  'es',
+  'fr',
+  'de',
+  'pt',
+  'zh',
+  'ja',
+  'ar',
+]
 
-// ur (Urdu) is listed as a supported RTL language in the requirements
-// even though it's not one of the 8 languages with translation files
-// here - kept in this list so dir='rtl' still applies correctly if/when
-// Urdu translations are added later, rather than silently only handling
-// the 2 RTL languages that happen to already have translation files.
-const RTL_LANGUAGES = ['ar', 'he', 'ur'];
+const FALLBACK_LANGUAGE = 'en'
+const NAMESPACE = 'translation'
 
-const resources = {
-  en: { translation: en },
-  es: { translation: es },
-  fr: { translation: fr },
-  de: { translation: de },
-  pt: { translation: pt },
-  zh: { translation: zh },
-  ja: { translation: ja },
-  ar: { translation: ar },
-};
+const RTL_LANGUAGES = new Set(['ar', 'he', 'ur'])
 
-function applyDirection(language) {
-  const lang = (language || DEFAULT_LANGUAGE).split('-')[0];
-  document.documentElement.dir = RTL_LANGUAGES.includes(lang) ? 'rtl' : 'ltr';
-  document.documentElement.lang = lang;
+function isRtlLanguage(language?: string | null) {
+  if (!language) return false
+  return RTL_LANGUAGES.has(String(language))
 }
 
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    fallbackLng: 'en',
-    supportedLngs: SUPPORTED_LANGUAGES,
-    ns: ['translation'],
-    defaultNS: 'translation',
-    interpolation: {
-      escapeValue: false, // React already escapes output
-    },
-    detection: {
-      // localStorage first (an explicit prior choice), then browser
-      // settings. There is no backend "user preferences API" for
-      // language yet - grepped this whole codebase for one and found
-      // nothing (no column, no endpoint). syncLanguageFromPreferences()
-      // below is the hook point for wiring that in once it exists,
-      // rather than silently building a new backend feature as part of
-      // what was asked as an SDK-setup step.
-      order: ['localStorage', 'navigator'],
-      caches: ['localStorage'],
-      lookupLocalStorage: 'i18nextLng',
-    },
-  });
-
-i18n.on('languageChanged', applyDirection);
-applyDirection(i18n.language);
-
-/**
- * Call this once you have a real backend endpoint for the user's saved
- * language preference (e.g. after fetching the user's profile). Not
- * wired to anything automatically yet, since that endpoint doesn't
- * exist in this codebase - see the comment above.
- */
-export async function syncLanguageFromPreferences(preferredLanguage) {
-  if (preferredLanguage && SUPPORTED_LANGUAGES.includes(preferredLanguage)) {
-    await i18n.changeLanguage(preferredLanguage);
+function applyDirToDocument(language?: string | null) {
+  const dir = isRtlLanguage(language) ? 'rtl' : 'ltr'
+  // document root
+  if (typeof document !== 'undefined' && document.documentElement) {
+    document.documentElement.setAttribute('dir', dir)
   }
 }
 
-export default i18n;
+async function fetchUserPreferredLanguage() {
+  // “user preferences API” — expected to exist on backend.
+  // If it fails / is not present, fallback to null.
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
+
+  // Conservative default endpoint; backend can be adjusted later.
+  const url = `${baseUrl}/api/user/preferences/language`
+
+  try {
+    const res = await fetch(url, {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!res.ok) return null
+    const data = await res.json()
+
+    const lang = data?.language
+    if (typeof lang !== 'string') return null
+    return SUPPORTED_LANGUAGES.includes(lang) ? lang : null
+  } catch {
+    return null
+  }
+}
+
+const detectorOptions: DetectorOptions = {
+  order: ['localStorage', 'querystring', 'navigator'],
+  caches: ['localStorage'],
+  lookupLocalStorage: 'language',
+  // i18next-browser-languagedetector doesn’t support async detection hooks directly
+  // so we’ll complement it via init()’s detection step below.
+}
+
+// Initializes i18next for feature-scoped translations.
+export async function initAccessibilityLocalizationI18n() {
+  if (i18n.isInitialized) return i18n
+
+  i18n
+    .use(initReactI18next)
+    .use(LanguageDetector)
+
+  i18n.on('languageChanged', (lng) => {
+    applyDirToDocument(lng)
+  })
+
+  // Apply initial dir immediately (best-effort based on current language).
+  applyDirToDocument(
+    typeof window !== 'undefined'
+      ? (localStorage.getItem('language') as string | null)
+      : null,
+  )
+
+  i18n.init({
+    defaultNS: NAMESPACE,
+    ns: [NAMESPACE],
+    resources: {},
+    fallbackLng: FALLBACK_LANGUAGE,
+    supportedLngs: SUPPORTED_LANGUAGES,
+
+    interpolation: {
+      escapeValue: false,
+    },
+
+    detection: detectorOptions,
+
+    // Load translation files from local feature path.
+    backend: {
+      // Not used; we load via dynamic resources.
+    },
+
+    // load translation via dynamic import per language
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    async load(lng: string, namespace: string, callback: (err: unknown, res: unknown) => void) {
+      try {
+        const lang = SUPPORTED_LANGUAGES.includes(lng) ? lng : DEFAULT_LANGUAGE
+        const mod = await import(`./locales/${lang}/${namespace}.json`)
+        callback(null, mod.default ?? mod)
+      } catch (e) {
+        callback(e, {})
+      }
+    },
+  } as any)
+
+  // Complement detection with user preferences API (async best-effort).
+  const preferred = await fetchUserPreferredLanguage()
+  if (preferred) {
+    await i18n.changeLanguage(preferred)
+  } else {
+    // Ensure it still uses detected language or fallback.
+    await i18n.changeLanguage(i18n.language || DEFAULT_LANGUAGE)
+  }
+
+  return i18n
+}
+

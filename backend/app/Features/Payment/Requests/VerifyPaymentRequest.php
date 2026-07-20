@@ -12,6 +12,7 @@ class VerifyPaymentRequest extends FormRequest
             'gateway' => ['required', 'string'],
             'reference' => ['required', 'string'],
         ];
+
     }
 }
 

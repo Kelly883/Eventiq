@@ -2,15 +2,39 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PasswordResetToken extends Model
 {
+    use HasUuids;
+
+    const CREATED_AT = 'createdAt';
+    const UPDATED_AT = null;
+
+    protected $table = 'password_reset_tokens';
+
+    public $incrementing = false;
+    protected $keyType = 'string';
+
     protected $fillable = [
-        'email',
+        'id',
+        'userId',
         'token',
-        'created_at',
+        'expiresAt',
+        'usedAt',
+        'createdAt',
     ];
 
-    public $timestamps = false;
+    protected $casts = [
+        'expiresAt' => 'datetime',
+        'usedAt' => 'datetime',
+        'createdAt' => 'datetime',
+    ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'userId');
+    }
 }

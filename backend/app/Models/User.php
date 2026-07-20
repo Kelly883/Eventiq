@@ -3,15 +3,20 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, HasUuids, Notifiable;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     /**
      * The attributes that are mass assignable.
@@ -21,7 +26,10 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'password',
+        'passwordHash',
+        'role',
+        'emailVerified',
+        'lastLoginAt',
     ];
 
     /**
@@ -30,7 +38,7 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $hidden = [
-        'password',
+        'passwordHash',
         'remember_token',
     ];
 
@@ -42,8 +50,8 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'emailVerified' => 'boolean',
+            'lastLoginAt' => 'datetime',
         ];
     }
 
@@ -55,6 +63,16 @@ class User extends Authenticatable
     public function permissions(): BelongsToMany
     {
         return $this->belongsToMany(Permission::class);
+    }
+
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(Session::class, 'userId');
+    }
+
+    public function passwordResetTokens(): HasMany
+    {
+        return $this->hasMany(PasswordResetToken::class, 'userId');
     }
 
     public function hasRole(string $roleName): bool
