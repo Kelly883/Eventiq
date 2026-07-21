@@ -1,5 +1,4 @@
-
-3<?php
+<?php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -9,15 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('ticket_tiers', function (Blueprint $table) {
-            $table->index('event_id');
+        Schema::table('permission_requests', function (Blueprint $table) {
+            $table->index(['status', 'created_at']);
         });
     }
 
     public function down(): void
     {
-        Schema::table('ticket_tiers', function (Blueprint $table) {
-            $table->dropIndex(['ticket_tiers_event_id_index']);
+        Schema::table('permission_requests', function (Blueprint $table) {
+            $table->dropIndex(['status', 'created_at']);
         });
     }
 };

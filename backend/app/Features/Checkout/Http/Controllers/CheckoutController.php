@@ -47,17 +47,41 @@ class CheckoutController extends Controller
         // Re-verify prices/availability server-side - never trust amounts
         // the client sends, even if CartController::verify was already
         // called earlier in the flow (data can go stale between calls).
+        // Use LOCK FOR UPDATE (pessimistic locking) to prevent overselling
+        // when concurrent requests race to purchase the same tier.
         $lineItems = [];
         $total = 0;
 
         foreach ($validated['items'] as $item) {
-            $tier = TicketTier::findOrFail($item['ticket_tier_id']);
-            $inventory = TicketInventory::where('ticket_tier_id', $tier->id)->first();
-            $remaining = $inventory?->remaining ?? $tier->capacity;
+            // Lock the tier row for the duration of this transaction to prevent
+            // concurrent requests from reading stale sold_count/quantity values.
+            $tier = TicketTier::where('id', $item['ticket_tier_id'])
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Also lock the inventory row to prevent concurrent sold_quantity increments
+            $inventory = TicketInventory::where('ticket_tier_id', $tier->id)
+                ->lockForUpdate()
+                ->first();
+
+            // Calculate real-time available count: quantity - sold_count (DB-level enforcement)
+            $availableCount = $tier->quantity !== null
+                ? (int) $tier->quantity - (int) $tier->sold_count
+                : null;
+
+            // Fallback to TicketInventory.remaining if no quantity set on the tier itself
+            $remaining = $availableCount ?? $inventory?->remaining ?? $tier->capacity;
 
             if ($remaining < $item['quantity']) {
                 return response()->json([
                     'message' => "Only {$remaining} left for {$tier->name}, requested {$item['quantity']}.",
+                ], 422);
+            }
+
+            // Enforce max_per_customer limit
+            if ($tier->max_per_customer !== null && $item['quantity'] > $tier->max_per_customer) {
+                return response()->json([
+                    'message' => "You can purchase at most {$tier->max_per_customer} tickets for {$tier->name}.",
                 ], 422);
             }
 

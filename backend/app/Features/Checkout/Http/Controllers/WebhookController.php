@@ -11,6 +11,7 @@ use App\Features\Payment\Services\FlutterwaveService;
 use App\Features\Payment\Services\PaystackService;
 use App\Features\QRCodeTicketing\Services\QRCodeService;
 use App\Http\Controllers\Controller;
+use App\Models\TicketTier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -90,6 +91,16 @@ class WebhookController extends Controller
             Payment::where('order_id', $order->id)->update(['status' => 'success', 'gateway_response' => $verification]);
 
             foreach ($order->items as $item) {
+                // Lock the ticket tier row to prevent concurrent sold_count updates
+                $tier = TicketTier::where('id', $item->ticket_tier_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                // Lock the inventory row to prevent concurrent sold_quantity updates
+                $inventory = TicketInventory::where('ticket_tier_id', $item->ticket_tier_id)
+                    ->lockForUpdate()
+                    ->first();
+
                 for ($i = 0; $i < $item->quantity; $i++) {
                     $ticket = Ticket::create([
                         'order_id' => $order->id,
@@ -102,8 +113,15 @@ class WebhookController extends Controller
                     $ticket->update(['qr_code' => $this->qrCodeService->generateForTicket($ticket)]);
                 }
 
-                $inventory = TicketInventory::where('ticket_tier_id', $item->ticket_tier_id)->first();
-                $inventory?->increment('sold_quantity', $item->quantity);
+                // Atomically increment sold_count on ticket_tier with CHECK constraint enforcing sold_count <= quantity
+                if ($tier) {
+                    $tier->increment('sold_count', $item->quantity);
+                }
+
+                // Atomically increment sold_quantity on inventory
+                if ($inventory) {
+                    $inventory->increment('sold_quantity', $item->quantity);
+                }
             }
         });
 

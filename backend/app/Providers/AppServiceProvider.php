@@ -5,6 +5,8 @@ namespace App\Providers;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use App\Models\Event;
+use App\Observers\EventObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -33,5 +35,8 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('auth', function ($request) {
             return Limit::perMinute(5)->by($request->ip());
         });
+
+        // Register EventObserver for auto-creating analytics
+        Event::observe(EventObserver::class);
     }
 }

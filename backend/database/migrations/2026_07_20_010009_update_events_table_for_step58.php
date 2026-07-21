@@ -18,6 +18,7 @@ return new class extends Migration
 
             $table->index('user_id');
             $table->index('status');
+            $table->index(['organizer_id', 'status']);
         });
     }
 
@@ -26,6 +27,7 @@ return new class extends Migration
         Schema::table('events', function (Blueprint $table) {
             $table->dropIndex(['events_user_id_index']);
             $table->dropIndex(['events_status_index']);
+            $table->dropIndex(['events_organizer_id_status_index']);
 
             $table->dropColumn(['user_id', 'venue_address', 'deleted_at']);
 
