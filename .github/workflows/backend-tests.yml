@@ -14,6 +14,8 @@ jobs:
   test:
     name: PHP Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     defaults:
       run:
