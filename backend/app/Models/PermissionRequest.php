@@ -11,25 +11,31 @@ class PermissionRequest extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'permission_id',
+        'userId',
+        'permissionId',
         'reason',
         'status',
-        'approved_by'
+        'approvedBy',
+        'approvalReason',
+        'resolvedAt',
+    ];
+
+    protected $casts = [
+        'resolvedAt' => 'datetime',
     ];
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'userId');
     }
 
     public function permission(): BelongsTo
     {
-        return $this->belongsTo(Permission::class);
+        return $this->belongsTo(Permission::class, 'permissionId');
     }
 
     public function approvedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->belongsTo(User::class, 'approvedBy');
     }
 }

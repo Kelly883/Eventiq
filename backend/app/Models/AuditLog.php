@@ -11,17 +11,34 @@ class AuditLog extends Model
     use HasFactory;
 
     protected $fillable = [
+        'adminId',
+        'targetUserId',
         'action',
-        'entity',
-        'entity_id',
-        'changes',
+        'oldValue',
+        'newValue',
+        'reason',
+        'metadata',
+        'event_id',
         'user_id',
-        'request_id'
+        'ticket_id',
+        'details',
     ];
 
     protected $casts = [
-        'changes' => 'array',
+        'oldValue' => 'array',
+        'newValue' => 'array',
+        'metadata' => 'array',
     ];
+
+    public function admin(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'adminId');
+    }
+
+    public function targetUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'targetUserId');
+    }
 
     public function user(): BelongsTo
     {
