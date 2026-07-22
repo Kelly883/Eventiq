@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -28,6 +29,8 @@ class User extends Authenticatable
         'email',
         'passwordHash',
         'role',
+        'role_id',
+        'permissions',
         'emailVerified',
         'lastLoginAt',
     ];
@@ -60,6 +63,11 @@ class User extends Authenticatable
         return $this->belongsToMany(Role::class);
     }
 
+    public function roleRelation(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
+
     public function permissions(): BelongsToMany
     {
         return $this->belongsToMany(Permission::class);
@@ -77,6 +85,14 @@ class User extends Authenticatable
 
     public function hasRole(string $roleName): bool
     {
+        if ($this->relationLoaded('roleRelation') && $this->roleRelation !== null) {
+            return $this->roleRelation->name === $roleName;
+        }
+
+        if ($this->roleRelation()->where('name', $roleName)->exists()) {
+            return true;
+        }
+
         return $this->roles()->where('name', $roleName)->exists();
     }
 

@@ -10,7 +10,17 @@ class Role extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'description'];
+    protected $fillable = [
+        'name',
+        'description',
+        'permissions',
+        'isSystemRole',
+    ];
+
+    protected $casts = [
+        'permissions' => 'array',
+        'isSystemRole' => 'boolean',
+    ];
 
     public function permissions(): BelongsToMany
     {
