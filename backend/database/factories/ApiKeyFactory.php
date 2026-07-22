@@ -11,9 +11,17 @@ use Illuminate\Support\Str;
 /**
  * @extends Factory<ApiKey>
  *
- * Note: factories do not expose the raw key. For tests that need the raw
- * key (to build a ****** use ApiKeyService::generate() or
- * construct the model directly via ApiKey::create() with a known hash.
+ * Usage in tests: generate the raw key before calling factory(), then pass
+ * key_prefix and hashed_key as overrides so the test retains the raw key for
+ * use in Authorization headers.
+ *
+ * Example:
+ *   $raw = 'ek_test_abc|' . Str::random(32);
+ *   $key = ApiKey::factory()->for($organizer)->create([
+ *       'key_prefix'  => 'ek_test_abc',
+ *       'hashed_key'  => Hash::make($raw),
+ *       'scopes'      => ['events:read'],
+ *   ]);
  */
 class ApiKeyFactory extends Factory
 {
@@ -21,29 +29,28 @@ class ApiKeyFactory extends Factory
 
     public function definition(): array
     {
-        $prefix = Str::random(8);
-        $secret = Str::random(40);
+        $prefix = 'ek_test_' . Str::random(8);
+        $secret = Str::random(32);
+        $rawKey = "{$prefix}|{$secret}";
 
         return [
             'organizer_id' => Organizer::factory(),
-            'name' => implode(' ', $this->faker->words(3)),
+            'name' => $this->faker->words(3, true),
             'key_prefix' => $prefix,
-            'hashed_key' => Hash::make("{$prefix}|{$secret}"),
-            'scopes' => ['events:read'],
+            'hashed_key' => Hash::make($rawKey),
+            'scopes' => ['events:read', 'orders:read', 'tickets:read'],
             'revoked_at' => null,
             'expires_at' => null,
         ];
     }
 
-    /** Mark this key as revoked. */
     public function revoked(): static
     {
-        return $this->state(['revoked_at' => now()]);
+        return $this->state(fn () => ['revoked_at' => now()->subMinute()]);
     }
 
-    /** Mark this key as already expired. */
     public function expired(): static
     {
-        return $this->state(['expires_at' => now()->subSecond()]);
+        return $this->state(fn () => ['expires_at' => now()->subDay()]);
     }
 }

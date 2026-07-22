@@ -2,7 +2,6 @@
 
 namespace App\GraphQL\Concerns;
 
-use GraphQL\Error\Error;
 use Illuminate\Http\Request;
 
 trait AuthorizesApiScopes
@@ -12,7 +11,7 @@ trait AuthorizesApiScopes
         $scopes = $request->attributes->get('api_key_scopes', []);
 
         if (! in_array($scope, $scopes, true)) {
-            throw new Error("The API key is missing the required [{$scope}] scope.");
+            abort(403, "The API key is missing the required [{$scope}] scope.");
         }
     }
 }
