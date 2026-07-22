@@ -17,8 +17,14 @@ export function formatDate(
   if (value === null || value === undefined) return ''
   const locale = resolveLocale(prefs.locale)
 
-  const dtf = new Intl.DateTimeFormat(locale, prefs.dateFormat)
-  return dtf.format(typeof value === 'string' || typeof value === 'number' ? new Date(value) : value)
+  try {
+    const date = typeof value === 'string' || typeof value === 'number' ? new Date(value) : value
+    if (Number.isNaN(date.getTime())) return ''
+    const dtf = new Intl.DateTimeFormat(locale, prefs.dateFormat)
+    return dtf.format(date)
+  } catch {
+    return ''
+  }
 }
 
 export function formatTime(
@@ -28,8 +34,14 @@ export function formatTime(
   if (value === null || value === undefined) return ''
   const locale = resolveLocale(prefs.locale)
 
-  const dtf = new Intl.DateTimeFormat(locale, prefs.timeFormat)
-  return dtf.format(typeof value === 'string' || typeof value === 'number' ? new Date(value) : value)
+  try {
+    const date = typeof value === 'string' || typeof value === 'number' ? new Date(value) : value
+    if (Number.isNaN(date.getTime())) return ''
+    const dtf = new Intl.DateTimeFormat(locale, prefs.timeFormat)
+    return dtf.format(date)
+  } catch {
+    return ''
+  }
 }
 
 export function formatNumber(

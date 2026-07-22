@@ -3,6 +3,15 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector, { type DetectorOptions } from 'i18next-browser-languagedetector'
 
+import enTranslation from './locales/en/translation.json'
+import esTranslation from './locales/es/translation.json'
+import frTranslation from './locales/fr/translation.json'
+import deTranslation from './locales/de/translation.json'
+import ptTranslation from './locales/pt/translation.json'
+import zhTranslation from './locales/zh/translation.json'
+import jaTranslation from './locales/ja/translation.json'
+import arTranslation from './locales/ar/translation.json'
+
 const DEFAULT_LANGUAGE = 'en'
 
 export const SUPPORTED_LANGUAGES = [
@@ -35,7 +44,7 @@ function applyDirToDocument(language?: string | null) {
 }
 
 async function fetchUserPreferredLanguage() {
-  // “user preferences API” — expected to exist on backend.
+  // "user preferences API" — expected to exist on backend.
   // If it fails / is not present, fallback to null.
   const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -65,8 +74,19 @@ const detectorOptions: DetectorOptions = {
   order: ['localStorage', 'querystring', 'navigator'],
   caches: ['localStorage'],
   lookupLocalStorage: 'language',
-  // i18next-browser-languagedetector doesn’t support async detection hooks directly
-  // so we’ll complement it via init()’s detection step below.
+  // i18next-browser-languagedetector doesn't support async detection hooks directly
+  // so we'll complement it via init()'s detection step below.
+}
+
+const resources = {
+  en: { [NAMESPACE]: enTranslation },
+  es: { [NAMESPACE]: esTranslation },
+  fr: { [NAMESPACE]: frTranslation },
+  de: { [NAMESPACE]: deTranslation },
+  pt: { [NAMESPACE]: ptTranslation },
+  zh: { [NAMESPACE]: zhTranslation },
+  ja: { [NAMESPACE]: jaTranslation },
+  ar: { [NAMESPACE]: arTranslation },
 }
 
 // Initializes i18next for feature-scoped translations.
@@ -91,32 +111,17 @@ export async function initAccessibilityLocalizationI18n() {
   i18n.init({
     defaultNS: NAMESPACE,
     ns: [NAMESPACE],
-    resources: {},
+    resources,
     fallbackLng: FALLBACK_LANGUAGE,
     supportedLngs: SUPPORTED_LANGUAGES,
+    // Allow regional codes (e.g. 'es-MX') to match a base supported language ('es').
+    nonExplicitSupportedLngs: true,
 
     interpolation: {
       escapeValue: false,
     },
 
     detection: detectorOptions,
-
-    // Load translation files from local feature path.
-    backend: {
-      // Not used; we load via dynamic resources.
-    },
-
-    // load translation via dynamic import per language
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    async load(lng: string, namespace: string, callback: (err: unknown, res: unknown) => void) {
-      try {
-        const lang = SUPPORTED_LANGUAGES.includes(lng) ? lng : DEFAULT_LANGUAGE
-        const mod = await import(`./locales/${lang}/${namespace}.json`)
-        callback(null, mod.default ?? mod)
-      } catch (e) {
-        callback(e, {})
-      }
-    },
   } as any)
 
   // Complement detection with user preferences API (async best-effort).
