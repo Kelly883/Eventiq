@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class PricingWindow extends Model
 {
@@ -66,13 +67,14 @@ class PricingWindow extends Model
 
     /**
      * Scope: Only currently active windows (is_active = true, within date range, not soft-deleted).
+     * Uses DB::raw('NOW()') to avoid timezone mismatch between app and database.
      */
     public function scopeActive($query)
     {
         return $query->where('is_active', true)
             ->whereNull('deleted_at')
-            ->where('start_date_time', '<=', now())
-            ->where('end_date_time', '>=', now());
+            ->where('start_date_time', '<=', DB::raw('NOW()'))
+            ->where('end_date_time', '>=', DB::raw('NOW()'));
     }
 
     /**
@@ -100,28 +102,43 @@ class PricingWindow extends Model
     }
 
     /**
-     * Check if the window has available capacity.
-     */
-    public function hasAvailability(): bool
-    {
-        if ($this->quantity_limit === null) {
-            return true;
-        }
-        return $this->quantity_sold < $this->quantity_limit;
-    }
-
-    /**
      * Increment the sold count atomically (for race-safe checkout).
+     * Uses SQL-level atomic increment and whereColumn to prevent overselling
+     * under concurrent requests.
      */
     public function incrementSold(int $quantity = 1): bool
     {
-        if (!$this->hasAvailability()) {
+        $affected = $this->where('id', $this->id)
+            ->where(function ($q) {
+                $q->whereNull('quantity_limit')
+                  ->orWhereColumn('quantity_sold', '<', DB::raw('quantity_limit'));
+            })
+            ->increment('quantity_sold', $quantity);
+
+        if ($affected > 0) {
+            $this->refresh();
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if the window has available capacity using fresh data from the database.
+     */
+    public function hasAvailability(): bool
+    {
+        // Always fetch fresh data to avoid stale model state
+        $fresh = static::find($this->id);
+        if (!$fresh) {
             return false;
         }
 
-        return $this->where('id', $this->id)
-            ->where('quantity_sold', '<', $this->quantity_limit ?? PHP_INT_MAX)
-            ->update(['quantity_sold' => $this->quantity_sold + $quantity]) > 0;
+        if ($fresh->quantity_limit === null) {
+            return true;
+        }
+
+        return $fresh->quantity_sold < $fresh->quantity_limit;
     }
 }
 

@@ -37,4 +37,13 @@ class TicketInventory extends Model
     {
         return $this->belongsTo(TicketTier::class);
     }
+
+    /**
+     * Backward-compatibility accessor for code referencing $inventory->remaining.
+     * The actual column is total_available (a virtual/generated column).
+     */
+    public function getRemainingAttribute(): int
+    {
+        return (int) ($this->total_available ?? 0);
+    }
 }

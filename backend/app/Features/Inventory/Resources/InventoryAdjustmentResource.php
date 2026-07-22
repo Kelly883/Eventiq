@@ -10,12 +10,15 @@ class InventoryAdjustmentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'ticket_inventory_id' => $this->ticket_inventory_id,
-            'user_id' => $this->user_id,
+            'event_id' => $this->event_id,
+            'ticket_tier_id' => $this->ticket_tier_id,
+            'pricing_window_id' => $this->pricing_window_id,
+            'organizer_id' => $this->organizer_id,
             'adjustment_type' => $this->adjustment_type,
-            'quantity_change' => $this->quantity_change,
+            'quantity_before' => $this->quantity_before,
+            'quantity_after' => $this->quantity_after,
+            'quantity_delta' => $this->quantity_delta,
             'reason' => $this->reason,
-            'notes' => $this->notes,
             'created_at' => $this->created_at,
         ];
     }

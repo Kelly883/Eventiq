@@ -9,9 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('pricing_windows', function (Blueprint $table) {
-            // Add missing composite indexes for query performance
-            $table->index(['is_active', 'start_date_time', 'end_date_time'], 'idx_windows_active_daterange');
-            $table->index(['event_id', 'is_active'], 'idx_windows_event_active');
+            // Note: The composite indexes (idx_windows_active_daterange, idx_windows_event_active)
+            // are already created by migration 2026_07_20_010014_create_pricing_windows_table_for_step60
+            // during table creation. No need to recreate.
 
             // Drop the old cascade FK on ticket_category_id and recreate with SET NULL
             $table->dropForeign(['ticket_category_id']);
@@ -25,10 +25,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('pricing_windows', function (Blueprint $table) {
-            // Drop the new indexes
-            $table->dropIndex('idx_windows_active_daterange');
-            $table->dropIndex('idx_windows_event_active');
-
             // Revert FK back to CASCADE
             $table->dropForeign(['ticket_category_id']);
             $table->foreign('ticket_category_id')

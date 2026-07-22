@@ -1,0 +1,34 @@
+=== PRICING WINDOWS COLUMNS ===
+  id                        varchar              default: NULL            nullable: NO
+  event_id                  integer              default: NULL            nullable: NO
+  ticket_category_id        integer              default: NULL            nullable: NO
+  window_name               varchar              default: NULL            nullable: NO
+  start_date_time           datetime             default: NULL            nullable: NO
+  end_date_time             datetime             default: NULL            nullable: NO
+  price                     numeric              default: NULL            nullable: NO
+  quantity_limit            integer              default: NULL            nullable: YES
+  quantity_sold             integer              default: '0'             nullable: NO
+  is_active                 tinyint(1)           default: '0'             nullable: NO
+  priority                  integer              default: '0'             nullable: NO
+  created_at                datetime             default: NULL            nullable: YES
+  updated_at                datetime             default: NULL            nullable: YES
+  deleted_at                datetime             default: NULL            nullable: YES
+
+=== PRICING WINDOWS INDEXES ===
+  idx_windows_active_daterange                  columns: is_active, start_date_time, end_date_time
+  idx_windows_event_active                      columns: event_id, is_active
+  idx_windows_event_priority_start              columns: event_id, priority, start_date_time
+  idx_windows_tier_active_daterange             columns: ticket_category_id, is_active, start_date_time, end_date_time
+  pricing_windows_deleted_at_index              columns: deleted_at
+  pricing_windows_end_date_time_index           columns: end_date_time
+  pricing_windows_event_id_index                columns: event_id
+  pricing_windows_event_id_ticket_category_id_index columns: event_id, ticket_category_id
+  pricing_windows_start_date_time_index         columns: start_date_time
+  pricing_windows_ticket_category_id_index      columns: ticket_category_id
+  sqlite_autoindex_pricing_windows_1            columns: id
+
+=== PRICING WINDOWS FOREIGN KEYS ===
+  ticket_category_id -> ticket_tiers(id) on delete: set null on update: no action
+  event_id -> events(id) on delete: cascade on update: no action
+
+✅ Verification complete.

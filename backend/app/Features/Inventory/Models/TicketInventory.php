@@ -13,16 +13,19 @@ class TicketInventory extends Model
     protected $fillable = [
         'event_id',
         'ticket_tier_id',
-        'pricing_window_id',
-        'total_quantity',
-        'sold_quantity',
-        'reserved_quantity',
+        'total_allocated',
+        'total_sold',
+        'low_stock_threshold',
+        'last_updated_at',
     ];
 
     protected $casts = [
-        'total_quantity' => 'integer',
-        'sold_quantity' => 'integer',
-        'reserved_quantity' => 'integer',
+        'total_allocated' => 'integer',
+        'total_sold' => 'integer',
+        'low_stock_threshold' => 'integer',
+        'last_updated_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function event(): BelongsTo
@@ -35,13 +38,11 @@ class TicketInventory extends Model
         return $this->belongsTo(\App\Models\TicketTier::class);
     }
 
-    public function pricingWindow(): BelongsTo
+    /**
+     * total_available is a virtual/generated column: total_allocated - total_sold
+     */
+    public function getRemainingAttribute(): int
     {
-        return $this->belongsTo(\App\Features\Pricing\Models\PricingWindow::class);
-    }
-
-    public function getRemainingAttribute()
-    {
-        return $this->total_quantity - $this->sold_quantity - $this->reserved_quantity;
+        return (int) ($this->total_available ?? ($this->total_allocated - $this->total_sold));
     }
 }

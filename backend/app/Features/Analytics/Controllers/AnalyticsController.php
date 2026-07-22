@@ -4,7 +4,7 @@ namespace App\Features\Analytics\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Features\Analytics\Models\SalesTimeline;
+use App\Models\AnalyticsSalesTimeline;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -18,7 +18,7 @@ class AnalyticsController extends Controller
         $interval = $request->query('interval', 'daily'); // 'daily' or 'hourly'
         
         // Check if there is actual database data
-        $hasData = SalesTimeline::where('event_id', $eventId)->exists();
+        $hasData = AnalyticsSalesTimeline::where('event_id', $eventId)->exists();
         
         if (!$hasData) {
             // Fallback: Generate clean, pre-aggregated mock sales velocity data
@@ -32,46 +32,46 @@ class AnalyticsController extends Controller
         
         // Database level pre-aggregation
         $driver = DB::connection()->getDriverName();
-        $query = SalesTimeline::where('event_id', $eventId);
+        $query = AnalyticsSalesTimeline::where('event_id', $eventId);
         
         if ($interval === 'hourly') {
             if ($driver === 'sqlite') {
                 $query->select(
-                    DB::raw("strftime('%Y-%m-%d %H:00:00', timestamp) as time_bucket"),
-                    DB::raw("SUM(sales_count) as ticketsSold"),
-                    DB::raw("SUM(revenue) as revenue")
+                    DB::raw("strftime('%Y-%m-%d %H:00:00', sale_timestamp) as time_bucket"),
+                    DB::raw("SUM(quantity) as ticketsSold"),
+                    DB::raw("SUM(total_amount) as revenue")
                 );
             } elseif ($driver === 'mysql') {
                 $query->select(
-                    DB::raw("DATE_FORMAT(timestamp, '%Y-%m-%d %H:00:00') as time_bucket"),
-                    DB::raw("SUM(sales_count) as ticketsSold"),
-                    DB::raw("SUM(revenue) as revenue")
+                    DB::raw("DATE_FORMAT(sale_timestamp, '%Y-%m-%d %H:00:00') as time_bucket"),
+                    DB::raw("SUM(quantity) as ticketsSold"),
+                    DB::raw("SUM(total_amount) as revenue")
                 );
             } else { // postgresql
                 $query->select(
-                    DB::raw("date_trunc('hour', timestamp) as time_bucket"),
-                    DB::raw("SUM(sales_count) as ticketsSold"),
-                    DB::raw("SUM(revenue) as revenue")
+                    DB::raw("date_trunc('hour', sale_timestamp) as time_bucket"),
+                    DB::raw("SUM(quantity) as ticketsSold"),
+                    DB::raw("SUM(total_amount) as revenue")
                 );
             }
         } else { // default to 'daily'
             if ($driver === 'sqlite') {
                 $query->select(
-                    DB::raw("strftime('%Y-%m-%d', timestamp) as time_bucket"),
-                    DB::raw("SUM(sales_count) as ticketsSold"),
-                    DB::raw("SUM(revenue) as revenue")
+                    DB::raw("strftime('%Y-%m-%d', sale_timestamp) as time_bucket"),
+                    DB::raw("SUM(quantity) as ticketsSold"),
+                    DB::raw("SUM(total_amount) as revenue")
                 );
             } elseif ($driver === 'mysql') {
                 $query->select(
-                    DB::raw("DATE_FORMAT(timestamp, '%Y-%m-%d') as time_bucket"),
-                    DB::raw("SUM(sales_count) as ticketsSold"),
-                    DB::raw("SUM(revenue) as revenue")
+                    DB::raw("DATE_FORMAT(sale_timestamp, '%Y-%m-%d') as time_bucket"),
+                    DB::raw("SUM(quantity) as ticketsSold"),
+                    DB::raw("SUM(total_amount) as revenue")
                 );
             } else { // postgresql
                 $query->select(
-                    DB::raw("date_trunc('day', timestamp) as time_bucket"),
-                    DB::raw("SUM(sales_count) as ticketsSold"),
-                    DB::raw("SUM(revenue) as revenue")
+                    DB::raw("date_trunc('day', sale_timestamp) as time_bucket"),
+                    DB::raw("SUM(quantity) as ticketsSold"),
+                    DB::raw("SUM(total_amount) as revenue")
                 );
             }
         }

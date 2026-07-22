@@ -41,11 +41,14 @@ class PricingWindowController extends Controller
 
     /**
      * Create a new pricing window.
+     * Note: quantity_sold is forced to 0 on creation — it is only incremented
+     * via incrementSold() during checkout to maintain atomicity.
      */
     public function store(StorePricingWindowRequest $request, $eventId): JsonResponse
     {
         $data = $request->validated();
         $data['event_id'] = $eventId;
+        $data['quantity_sold'] = 0; // Always start at 0, managed atomically via incrementSold()
 
         $window = PricingWindow::create($data);
 

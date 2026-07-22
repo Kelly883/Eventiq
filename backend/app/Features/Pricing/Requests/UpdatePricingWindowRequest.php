@@ -20,7 +20,6 @@ class UpdatePricingWindowRequest extends FormRequest
             'end_date_time' => 'sometimes|required|date|after:start_date_time',
             'price' => 'sometimes|required|numeric|min:0|max:99999999.99',
             'quantity_limit' => 'nullable|integer|min:0',
-            'quantity_sold' => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
             'priority' => 'nullable|integer|min:0',
         ];

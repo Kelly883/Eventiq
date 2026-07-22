@@ -1,13 +1,4 @@
-# Step 65 - Ticket Tiers Integrity & Concurrency Improvements
 
-## Progress Tracking
-
-### [x] 1. Create Migration: `update_ticket_tiers_for_integrity_step65`
-   - [x] Sync existing `available_count` values
-   - [x] Add CHECK constraint `sold_count <= quantity`
-   - [x] Add `deleted_at` index for soft-delete filtered queries
-   - [x] Add composite index `(event_id, deleted_at)` for soft-delete scoped queries
-   - [x] Add composite index `(event_id, id)` for partition-aware queries
    - [x] Add composite index `(event_id, is_active, sales_start_date, sales_end_date)` for availability checks
 
 ### [x] 2. Update `TicketTier` Model

@@ -44,7 +44,7 @@ class InventoryController extends Controller
 
         $totalRemaining = 0;
         foreach ($inventories as $row) {
-            $totalRemaining += (int) $row->remaining;
+            $totalRemaining += (int) $row->total_available;
         }
 
         return response()->json([

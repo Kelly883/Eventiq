@@ -118,9 +118,9 @@ class WebhookController extends Controller
                     $tier->increment('sold_count', $item->quantity);
                 }
 
-                // Atomically increment sold_quantity on inventory
+                // Atomically increment total_sold on inventory
                 if ($inventory) {
-                    $inventory->increment('sold_quantity', $item->quantity);
+                    $inventory->increment('total_sold', $item->quantity);
                 }
             }
         });
