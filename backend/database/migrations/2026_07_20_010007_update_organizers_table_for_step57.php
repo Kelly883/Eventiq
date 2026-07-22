@@ -34,8 +34,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('organizers', function (Blueprint $table) {
-            $table->dropIndex(['organizers_user_id_index']);
-            $table->dropIndex(['organizers_user_id_is_public_index']);
+            $table->dropIndex(['organizers_userid_index']);
+            $table->dropIndex(['organizers_userid_ispublic_index']);
             $table->dropIndex(['organizers_created_at_index']);
 
             $table->dropColumn([

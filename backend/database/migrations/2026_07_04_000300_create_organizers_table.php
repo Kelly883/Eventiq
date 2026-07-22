@@ -10,7 +10,8 @@ return new class extends Migration
     {
         Schema::create('organizers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade')->unique();
+            $table->uuid('user_id')->unique();
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->string('business_name')->nullable();
             $table->text('bio')->nullable();
             $table->string('branding_color', 7)->nullable();
