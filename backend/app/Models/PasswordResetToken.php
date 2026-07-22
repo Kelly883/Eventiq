@@ -33,6 +33,10 @@ class PasswordResetToken extends Model
         'createdAt' => 'datetime',
     ];
 
+    protected $hidden = [
+        'token',
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'userId');
