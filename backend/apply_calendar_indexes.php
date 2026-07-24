@@ -8,12 +8,21 @@ $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 echo "=== APPLYING CALENDAR INDEXES ===\n\n";
 
 try {
-    // Create indexes on events table
+    // Get existing indexes on events table to avoid duplicates
+    $existingStmt = $db->query("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='events'");
+    $existingIndexNames = array_map(fn($row) => $row['name'], $existingStmt->fetchAll(PDO::FETCH_ASSOC));
+    
     echo "1. Creating indexes on events table...\n";
     
     $indexes = [
+        // Composite index on (status, start_datetime) for filtering published events by date range
         'idx_events_status_date' => 'CREATE INDEX idx_events_status_date ON events (status, start_datetime)',
-        'idx_events_status_organizer' => 'CREATE INDEX idx_events_status_organizer ON events (status, organizer_id)',
+        // Composite index on (status, category) for category filtering (category is a string column)
+        'idx_events_status_category' => 'CREATE INDEX idx_events_status_category ON events (status, category)',
+        // Composite index on (organizer_id, start_datetime) for organizer calendar queries
+        'idx_events_organizer_date' => 'CREATE INDEX idx_events_organizer_date ON events (organizer_id, start_datetime)',
+        // Composite index on (category, status, start_datetime) for category + date filtering
+        'idx_events_category_status_date' => 'CREATE INDEX idx_events_category_status_date ON events (category, status, start_datetime)',
     ];
     
     foreach ($indexes as $name => $sql) {
@@ -30,19 +39,47 @@ try {
     }
     
     // Create index on start_datetime
-    try {
-        $db->exec('CREATE INDEX events_start_datetime_index ON events (start_datetime)');
-        echo "   ✓ Created index: events_start_datetime_index\n";
-    } catch (Exception $e) {
-        if (str_contains($e->getMessage(), 'already exists')) {
-            echo "   ✓ Index already exists: events_start_datetime_index\n";
-        } else {
+    if (!in_array('events_start_date_index', $existingIndexNames)) {
+        try {
+            $db->exec('CREATE INDEX events_start_date_index ON events (start_datetime)');
+            echo "   ✓ Created index: events_start_date_index\n";
+        } catch (Exception $e) {
             echo "   ✗ Error creating start_datetime index: " . $e->getMessage() . "\n";
         }
+    } else {
+        echo "   ✓ Index already exists: events_start_date_index\n";
+    }
+    
+    // Create index on status
+    if (!in_array('events_status_index', $existingIndexNames)) {
+        try {
+            $db->exec('CREATE INDEX events_status_index ON events (status)');
+            echo "   ✓ Created index: events_status_index\n";
+        } catch (Exception $e) {
+            echo "   ✗ Error creating status index: " . $e->getMessage() . "\n";
+        }
+    } else {
+        echo "   ✓ Index already exists: events_status_index\n";
+    }
+    
+    // Add index on ticket_inventory for availability queries
+    echo "\n2. Creating index on ticket_inventory table...\n";
+    $invIndexes = $db->query("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='ticket_inventory'");
+    $invIndexNames = array_map(fn($row) => $row['name'], $invIndexes->fetchAll(PDO::FETCH_ASSOC));
+    
+    if (!in_array('inv_event_available_idx', $invIndexNames)) {
+        try {
+            $db->exec('CREATE INDEX inv_event_available_idx ON ticket_inventory (event_id, total_available)');
+            echo "   ✓ Created index: inv_event_available_idx\n";
+        } catch (Exception $e) {
+            echo "   ✗ Error creating ticket_inventory index: " . $e->getMessage() . "\n";
+        }
+    } else {
+        echo "   ✓ Index already exists: inv_event_available_idx\n";
     }
     
     // Create database view
-    echo "\n2. Creating database view (events_by_date)...\n";
+    echo "\n3. Creating database view (events_by_date)...\n";
     $db->exec("DROP VIEW IF EXISTS events_by_date");
     $viewSQL = "CREATE VIEW events_by_date AS
         SELECT 
@@ -61,7 +98,7 @@ try {
     echo "   ✓ View created successfully\n";
     
     // Verify indexes
-    echo "\n3. Verifying indexes...\n";
+    echo "\n4. Verifying indexes...\n";
     $stmt = $db->query("SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='events' AND sql IS NOT NULL");
     $indexes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -75,7 +112,7 @@ try {
     }
     
     // Verify view
-    echo "\n4. Verifying view...\n";
+    echo "\n5. Verifying view...\n";
     $stmt = $db->query("SELECT name FROM sqlite_master WHERE type='view' AND name='events_by_date'");
     $view = $stmt->fetch(PDO::FETCH_ASSOC);
     
@@ -83,7 +120,7 @@ try {
         echo "   ✓ View 'events_by_date' exists\n";
         
         // Test the view
-        echo "\n5. Testing view query...\n";
+        echo "\n6. Testing view query...\n";
         $start = microtime(true);
         $stmt = $db->query("SELECT * FROM events_by_date LIMIT 5");
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -99,7 +136,7 @@ try {
     }
     
     // Test performance with EXPLAIN
-    echo "\n6. Testing query performance...\n";
+    echo "\n7. Testing query performance...\n";
     
     // Test 1: Published events by date range
     echo "\n   Test 1: Published events in March 2024\n";
@@ -132,3 +169,4 @@ try {
 
 $db = null;
 echo "\n=== COMPLETE ===\n";
+
