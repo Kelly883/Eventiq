@@ -67,8 +67,9 @@ class EventsCalendarSummary extends Model
             ->first();
 
         if ($stats && $stats->total_events > 0) {
+            $eventDate = \Carbon\Carbon::parse($stats->event_date)->startOfDay();
             self::updateOrCreate(
-                ['event_date' => $stats->event_date],
+                ['event_date' => $eventDate],
                 [
                     'total_events' => $stats->total_events,
                     'total_capacity' => $stats->total_capacity,
