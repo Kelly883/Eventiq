@@ -41,6 +41,28 @@
       0 => 'Termwind\\Laravel\\TermwindServiceProvider',
     ),
   ),
+  'rebing/graphql-laravel' =>
+  array (
+    'aliases' =>
+    array (
+      'GraphQL' => 'Rebing\\GraphQL\\Support\\Facades\\GraphQL',
+    ),
+    'providers' =>
+    array (
+      0 => 'Rebing\\GraphQL\\GraphQLServiceProvider',
+    ),
+  ),
+  'simplesoftwareio/simple-qrcode' =>
+  array (
+    'aliases' =>
+    array (
+      'QrCode' => 'SimpleSoftwareIO\\QrCode\\Facades\\QrCode',
+    ),
+    'providers' =>
+    array (
+      0 => 'SimpleSoftwareIO\\QrCode\\QrCodeServiceProvider',
+    ),
+  ),
   'spatie/laravel-ignition' => 
   array (
     'aliases' => 
@@ -50,6 +72,17 @@
     'providers' => 
     array (
       0 => 'Spatie\\LaravelIgnition\\IgnitionServiceProvider',
+    ),
+  ),
+  'unicodeveloper/laravel-paystack' =>
+  array (
+    'aliases' =>
+    array (
+      'Paystack' => 'Unicodeveloper\\Paystack\\Facades\\Paystack',
+    ),
+    'providers' =>
+    array (
+      0 => 'Unicodeveloper\\Paystack\\PaystackServiceProvider',
     ),
   ),
 );
