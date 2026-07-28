@@ -141,24 +141,6 @@ if ($hasPricingWindows) {
     echo "   SKIPPED - pricing_windows table not found\n";
 }
 
-// Test 5: Fetch published events by venue/address and date
-echo "\n   Test 5: Fetch published events filtered by venue address and date range\n";
-$start = microtime(true);
-$explain = DB::select("
-    EXPLAIN QUERY PLAN
-    SELECT * FROM events
-    WHERE status = 'published'
-    AND venue_address = '123 Main St'
-    AND start_datetime >= '2024-03-01'
-    AND start_datetime < '2024-04-01'
-");
-$duration = (microtime(true) - $start) * 1000;
-echo "   Query plan:\n";
-foreach ($explain as $row) {
-    echo "     {$row->detail}\n";
-}
-echo "   ✓ EXPLAIN completed in " . round($duration, 2) . "ms\n";
-
 // Summary
 echo "\n=== SUMMARY ===\n";
 echo "✓ Indexes created:\n";
