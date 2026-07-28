@@ -22,10 +22,16 @@ class EventsQuery extends Query
         return Type::listOf(GraphQL::type('Event'));
     }
 
-    public function resolve($root, array $args, $context, ResolveInfo $resolveInfo, Closure $getSelectFields)
+    public function authorize($root, array $args, $context, ?ResolveInfo $resolveInfo = null, ?Closure $getSelectFields = null): bool
     {
         $request = $context instanceof Request ? $context : request();
         $this->authorizeScope($request, 'events:read');
+        return true;
+    }
+
+    public function resolve($root, array $args, $context, ResolveInfo $resolveInfo, Closure $getSelectFields)
+    {
+        $request = $context instanceof Request ? $context : request();
 
         return Event::query()
             ->where('organizer_id', $request->attributes->get('organizer')->id)

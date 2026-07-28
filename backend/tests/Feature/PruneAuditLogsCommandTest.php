@@ -12,19 +12,19 @@ class PruneAuditLogsCommandTest extends TestCase
 
     public function test_it_deletes_only_audit_logs_older_than_retention_window(): void
     {
-        AuditLog::create([
+        $oldLog = new AuditLog([
             'action' => 'old.event',
-            'entity' => 'test',
-            'created_at' => now()->subDays(400),
-            'updated_at' => now()->subDays(400),
         ]);
+        $oldLog->created_at = now()->subDays(400);
+        $oldLog->updated_at = now()->subDays(400);
+        $oldLog->save();
 
-        $recent = AuditLog::create([
+        $recent = new AuditLog([
             'action' => 'recent.event',
-            'entity' => 'test',
-            'created_at' => now()->subDays(10),
-            'updated_at' => now()->subDays(10),
         ]);
+        $recent->created_at = now()->subDays(10);
+        $recent->updated_at = now()->subDays(10);
+        $recent->save();
 
         $this->artisan('audit:prune', ['--days' => 365])->assertSuccessful();
 
