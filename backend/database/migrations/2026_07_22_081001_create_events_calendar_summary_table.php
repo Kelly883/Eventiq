@@ -33,6 +33,8 @@ return new class extends Migration
             $table->unique('event_date', 'idx_summary_event_date');
         });
 
+        $nowFunc = DB::getDriverName() === 'sqlite' ? "datetime('now')" : "NOW()";
+
         // Seed the summary table with existing data
         DB::statement("
             INSERT INTO events_calendar_summary 
@@ -45,9 +47,9 @@ return new class extends Migration
                 SUM(CASE WHEN status = 'published' THEN COALESCE(capacity, 0) ELSE 0 END) as published_capacity,
                 SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as draft_events,
                 SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_events,
-                CURRENT_TIMESTAMP as last_refreshed_at,
-                CURRENT_TIMESTAMP as created_at,
-                CURRENT_TIMESTAMP as updated_at
+                {$nowFunc} as last_refreshed_at,
+                {$nowFunc} as created_at,
+                {$nowFunc} as updated_at
             FROM events
             WHERE start_datetime IS NOT NULL
             GROUP BY DATE(start_datetime)
