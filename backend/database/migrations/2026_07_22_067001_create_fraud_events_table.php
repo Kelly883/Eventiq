@@ -52,8 +52,17 @@ return new class extends Migration
             $table->uuid('reviewed_by')->nullable();
             $table->text('review_notes')->nullable();
             $table->timestamp('reviewed_at')->nullable();
+
+            // Security Telemetry and Fraud Analysis Columns (Advice recommendations)
+            $table->string('request_fingerprint', 64)->nullable();
+            $table->boolean('proxy_vpn_detected')->default(false);
+            $table->boolean('billing_shipping_mismatch')->default(false);
+            $table->string('card_bin_country', 2)->nullable();
+            $table->string('ip_country', 2)->nullable();
+
             $table->timestamps();
-            $table->softDeletes();
+
+            // Soft deletes removed for audit trail immutability and compliance integrity
             
             // Foreign key constraints
             $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');

@@ -8,9 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::dropIfExists('fraud_events');
+        Schema::dropIfExists('checkin_fraud_events');
 
-        Schema::create('fraud_events', function (Blueprint $table) {
+        Schema::create('checkin_fraud_events', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('ticket_id');
             $table->uuid('event_id');
@@ -28,13 +28,13 @@ return new class extends Migration
             $table->foreign('first_check_in_by')->references('id')->on('users')->onDelete('set null');
             $table->foreign('second_check_in_by')->references('id')->on('users')->onDelete('set null');
 
-            $table->index(['ticket_id', 'event_id'], 'idx_fraud_ticket_event');
-            $table->index(['event_id', 'detected_at'], 'idx_fraud_event_detected');
+            $table->index(['ticket_id', 'event_id'], 'idx_checkin_fraud_ticket_event');
+            $table->index(['event_id', 'detected_at'], 'idx_checkin_fraud_event_detected');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('fraud_events');
+        Schema::dropIfExists('checkin_fraud_events');
     }
 };
