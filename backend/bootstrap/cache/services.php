@@ -35,7 +35,6 @@
     31 => 'App\\Providers\\AuthServiceProvider',
     32 => 'App\\Providers\\PaymentServiceProvider',
     33 => 'App\\Providers\\FirebaseServiceProvider',
-    34 => 'Rebing\\GraphQL\\GraphQLServiceProvider',
   ),
   'eager' => 
   array (
@@ -58,7 +57,6 @@
     16 => 'App\\Providers\\AuthServiceProvider',
     17 => 'App\\Providers\\PaymentServiceProvider',
     18 => 'App\\Providers\\FirebaseServiceProvider',
-    19 => 'Rebing\\GraphQL\\GraphQLServiceProvider',
   ),
   'deferred' => 
   array (
