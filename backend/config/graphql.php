@@ -37,7 +37,15 @@ return [
     ],
 
     'error_formatter' => [Rebing\GraphQL\GraphQL::class, 'formatError'],
-    'errors_handler' => [Rebing\GraphQL\GraphQL::class, 'handleErrors'],
+    'errors_handler' => function (array $errors, $formatter) {
+        foreach ($errors as $error) {
+            $previous = $error->getPrevious();
+            if ($previous instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
+                throw $previous;
+            }
+        }
+        return Rebing\GraphQL\GraphQL::handleErrors($errors, $formatter);
+    },
     'params_key' => 'variables',
     'security' => [
         'query_max_complexity' => null,

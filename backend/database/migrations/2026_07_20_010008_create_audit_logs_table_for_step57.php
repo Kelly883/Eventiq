@@ -15,6 +15,10 @@ return new class extends Migration
             $table->uuid('adminId')->nullable();
             $table->uuid('targetUserId')->nullable();
             $table->string('action');
+            $table->string('entity')->nullable();
+            $table->unsignedBigInteger('entity_id')->nullable();
+            $table->json('changes')->nullable();
+            $table->string('request_id')->nullable()->index();
             $table->json('oldValue')->nullable();
             $table->json('newValue')->nullable();
             $table->timestamps();
