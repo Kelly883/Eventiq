@@ -21,7 +21,6 @@ class EventsCalendarSummary extends Model
     ];
 
     protected $casts = [
-        'event_date' => 'date',
         'total_events' => 'integer',
         'total_capacity' => 'integer',
         'published_events' => 'integer',
@@ -30,6 +29,22 @@ class EventsCalendarSummary extends Model
         'cancelled_events' => 'integer',
         'last_refreshed_at' => 'datetime',
     ];
+
+    /**
+     * Get the event date as a Carbon instance.
+     */
+    public function getEventDateAttribute($value)
+    {
+        return $value ? \Carbon\Carbon::parse($value) : null;
+    }
+
+    /**
+     * Set the event date as a Y-m-d string.
+     */
+    public function setEventDateAttribute($value)
+    {
+        $this->attributes['event_date'] = $value instanceof \Carbon\Carbon ? $value->format('Y-m-d') : $value;
+    }
 
     /**
      * Scope a query to only include dates within a range.
