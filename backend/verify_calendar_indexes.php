@@ -102,7 +102,7 @@ if ($hasInventory) {
     $start = microtime(true);
     $explain = DB::select("
         EXPLAIN QUERY PLAN
-        SELECT e.*, ti.quantity 
+        SELECT e.*, ti.total_allocated
         FROM events e
         INNER JOIN ticket_inventory ti ON e.id = ti.event_id
         WHERE e.status = 'published'
