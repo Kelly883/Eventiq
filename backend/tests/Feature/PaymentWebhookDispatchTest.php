@@ -21,10 +21,18 @@ class PaymentWebhookDispatchTest extends TestCase
         $signature = hash_hmac('sha512', $payload, 'test_paystack_secret');
         Queue::fake();
 
-        $response = $this->withHeaders([
-            'x-paystack-signature' => $signature,
-        ])->withBody($payload, 'application/json')
-            ->post('/api/payments/paystack/webhook');
+        $response = $this->call(
+            'POST',
+            '/api/payments/paystack/webhook',
+            [],
+            [],
+            [],
+            [
+                'CONTENT_TYPE' => 'application/json',
+                'HTTP_X_PAYSTACK_SIGNATURE' => $signature,
+            ],
+            $payload
+        );
 
         $response->assertOk()->assertJson(['received' => true]);
         Queue::assertPushed(ProcessPaystackWebhookJob::class);
