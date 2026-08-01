@@ -2,6 +2,7 @@
 
 namespace App\Features\Payment\Controllers;
 
+use App\Features\Payment\Jobs\ProcessFlutterwaveWebhookJob;
 use App\Features\Payment\Services\FlutterwaveService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -24,9 +25,7 @@ class FlutterwaveController
             return response()->json(['message' => 'Invalid signature'], 401);
         }
 
-        // TODO: dispatch a queued job to process the event (idempotently,
-        // keyed on tx_ref, to handle duplicate delivery) rather than
-        // processing inline in the webhook request.
+        ProcessFlutterwaveWebhookJob::dispatch($request->all());
 
         return response()->json(['received' => true]);
     }

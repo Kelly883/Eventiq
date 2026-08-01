@@ -48,8 +48,11 @@ return [
     },
     'params_key' => 'variables',
     'security' => [
-        'query_max_complexity' => null,
-        'query_max_depth' => null,
+        'query_max_complexity' => (int) env('GRAPHQL_QUERY_MAX_COMPLEXITY', 120),
+        'query_max_depth' => (int) env('GRAPHQL_QUERY_MAX_DEPTH', 8),
         'disable_introspection' => false,
+    ],
+    'cache' => [
+        'ttl' => (int) env('GRAPHQL_QUERY_CACHE_TTL', 120),
     ],
 ];

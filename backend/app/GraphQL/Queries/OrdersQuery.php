@@ -4,6 +4,8 @@ namespace App\GraphQL\Queries;
 
 use App\Features\Checkout\Models\Order;
 use App\GraphQL\Concerns\AuthorizesApiScopes;
+use App\GraphQL\Concerns\ComplexityAnalyzer;
+use App\GraphQL\Concerns\QueryOptimizer;
 use Closure;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
@@ -13,7 +15,7 @@ use Rebing\GraphQL\Support\Query;
 
 class OrdersQuery extends Query
 {
-    use AuthorizesApiScopes;
+    use AuthorizesApiScopes, ComplexityAnalyzer, QueryOptimizer;
 
     protected $attributes = ['name' => 'orders'];
 
@@ -32,10 +34,16 @@ class OrdersQuery extends Query
     public function resolve($root, array $args, $context, ResolveInfo $resolveInfo, Closure $getSelectFields)
     {
         $request = $context instanceof Request ? $context : request();
+        $this->assertQueryWithinLimits($resolveInfo);
 
-        return Order::query()
-            ->whereHas('event', fn ($query) => $query->where('organizer_id', $request->attributes->get('organizer')->id))
-            ->latest()
-            ->get();
+        $cacheKey = 'graphql:orders:' . $request->attributes->get('organizer')->id . ':' . md5(json_encode($args));
+
+        return $this->rememberGraphQLResult($cacheKey, function () use ($request) {
+            return $this->optimizeQuery(
+                Order::query()
+                    ->whereHas('event', fn ($query) => $query->where('organizer_id', $request->attributes->get('organizer')->id)),
+                ['event:id,organizer_id,title', 'user:id,email']
+            )->latest()->get()->all();
+        }, (int) config('graphql.cache.ttl', 120));
     }
 }

@@ -5,6 +5,9 @@ return [
         'api_key' => env('SIFT_API_KEY'),
         'account_id' => env('SIFT_ACCOUNT_ID'),
         'api_base_url' => env('SIFT_API_BASE_URL', 'https://api.sift.com/v205'),
+        'http_timeout' => (int) env('SIFT_HTTP_TIMEOUT', 5),
+        'http_retry_attempts' => (int) env('SIFT_HTTP_RETRY_ATTEMPTS', 3),
+        'http_retry_base_delay_ms' => (int) env('SIFT_HTTP_RETRY_BASE_DELAY_MS', 200),
     ],
     'paystack' => [
         'secret_key' => env('PAYSTACK_SECRET_KEY'),

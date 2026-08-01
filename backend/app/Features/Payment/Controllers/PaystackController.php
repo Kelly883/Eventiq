@@ -2,6 +2,7 @@
 
 namespace App\Features\Payment\Controllers;
 
+use App\Features\Payment\Jobs\ProcessPaystackWebhookJob;
 use App\Features\Payment\Services\PaystackService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -26,9 +27,7 @@ class PaystackController
             return response()->json(['message' => 'Invalid signature'], 401);
         }
 
-        // TODO: dispatch a queued job to process the event (idempotently,
-        // keyed on the transaction reference, to handle duplicate delivery)
-        // rather than processing inline in the webhook request.
+        ProcessPaystackWebhookJob::dispatch($request->all());
 
         return response()->json(['received' => true]);
     }

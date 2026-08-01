@@ -4,6 +4,7 @@ namespace App\Features\OfflineSync\Services;
 
 use App\Features\OfflineSync\Models\OfflineSyncInboxItem;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OfflineSyncEngine
 {
@@ -30,20 +31,39 @@ class OfflineSyncEngine
 
     public function applyDueQueue(int $limit = 50): array
     {
-        $items = OfflineSyncInboxItem::query()
-            ->whereIn('status', ['queued', 'conflict'])
-            ->where(function ($q) {
-                $q->whereNull('next_retry_at')->orWhere('next_retry_at', '<=', now());
-            })
-            ->orderBy('created_at')
-            ->limit($limit)
-            ->get();
-
         $results = [];
+        $processed = 0;
+        $lastId = 0;
+        $chunkSize = max(1, (int) config('offline_sync.apply_batch_size', 25));
 
-        foreach ($items as $item) {
-            $results[] = $this->applySingle($item);
+        while ($processed < $limit) {
+            $batchLimit = min($chunkSize, $limit - $processed);
+            $items = OfflineSyncInboxItem::query()
+                ->where('id', '>', $lastId)
+                ->whereIn('status', ['queued', 'conflict'])
+                ->where(function ($q) {
+                    $q->whereNull('next_retry_at')->orWhere('next_retry_at', '<=', now());
+                })
+                ->orderBy('id')
+                ->limit($batchLimit)
+                ->get();
+
+            if ($items->isEmpty()) {
+                break;
+            }
+
+            foreach ($items as $item) {
+                $results[] = $this->applySingle($item);
+                $lastId = (int) $item->id;
+                $processed++;
+            }
         }
+
+        Log::info('OfflineSyncEngine::applyDueQueue processed due operations', [
+            'limit' => $limit,
+            'chunk_size' => $chunkSize,
+            'processed' => $processed,
+        ]);
 
         return $results;
     }
@@ -85,4 +105,3 @@ class OfflineSyncEngine
         });
     }
 }
-

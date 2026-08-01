@@ -35,6 +35,11 @@ class FlutterwaveService implements PaymentGatewayContract
         try {
             $response = Http::withToken($this->secretKey)
                 ->acceptJson()
+                ->timeout((int) config('payment.http_timeout', 5))
+                ->retry(
+                    (int) config('payment.http_retry_attempts', 3),
+                    fn (int $attempt) => (int) (config('payment.http_retry_base_delay_ms', 200) * (2 ** ($attempt - 1)))
+                )
                 ->post("{$this->baseUrl}/payments", [
                     'tx_ref' => $data['reference'] ?? uniqid('flw_'),
                     'amount' => $data['amount'],

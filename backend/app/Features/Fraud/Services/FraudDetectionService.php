@@ -436,7 +436,7 @@ class FraudDetectionService
                     Log::error('Sift SDK track event failed: ' . $response->message);
                 }
             } else {
-                $eventResponse = Http::asJson()->post("{$baseUrl}/events", array_merge([
+                $eventResponse = $this->siftHttpClient()->asJson()->post("{$baseUrl}/events", array_merge([
                     '$type' => '$transaction',
                     '$api_key' => $apiKey,
                 ], $properties));
@@ -464,7 +464,7 @@ class FraudDetectionService
 
             // Fallback HTTP score fetch
             if ($accountId) {
-                $scoreResponse = Http::get("{$baseUrl}/score/{$userId}", [
+                $scoreResponse = $this->siftHttpClient()->get("{$baseUrl}/score/{$userId}", [
                     'api_key' => $apiKey,
                     'account_id' => $accountId,
                     'abuse_types' => 'payment_abuse',
@@ -481,5 +481,14 @@ class FraudDetectionService
             Log::error('Sift integration exception: ' . $e->getMessage());
             return ['score' => 0, 'reported' => false, 'error' => true];
         }
+    }
+
+    private function siftHttpClient()
+    {
+        return Http::timeout((int) config('fraud.sift.http_timeout', 5))
+            ->retry(
+                (int) config('fraud.sift.http_retry_attempts', 3),
+                fn (int $attempt) => (int) (config('fraud.sift.http_retry_base_delay_ms', 200) * (2 ** ($attempt - 1)))
+            );
     }
 }

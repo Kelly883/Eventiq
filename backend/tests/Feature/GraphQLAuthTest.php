@@ -118,4 +118,10 @@ class GraphQLAuthTest extends TestCase
             $response->assertJsonStructure(['data' => [$resource]]);
         }
     }
+
+    public function test_graphql_security_limits_are_configured(): void
+    {
+        $this->assertGreaterThan(0, (int) config('graphql.security.query_max_depth'));
+        $this->assertGreaterThan(0, (int) config('graphql.security.query_max_complexity'));
+    }
 }
