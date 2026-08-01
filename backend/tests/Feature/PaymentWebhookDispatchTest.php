@@ -23,8 +23,8 @@ class PaymentWebhookDispatchTest extends TestCase
 
         $response = $this->withHeaders([
             'x-paystack-signature' => $signature,
-            'Content-Type' => 'application/json',
-        ])->call('POST', '/api/payments/paystack/webhook', [], [], [], [], $payload);
+        ])->withBody($payload, 'application/json')
+            ->post('/api/payments/paystack/webhook');
 
         $response->assertOk()->assertJson(['received' => true]);
         Queue::assertPushed(ProcessPaystackWebhookJob::class);
