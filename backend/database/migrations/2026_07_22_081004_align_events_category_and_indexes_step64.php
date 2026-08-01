@@ -39,6 +39,15 @@ return new class extends Migration
                 $table->index(['status', 'category'], 'idx_events_status_category');
             });
         }
+
+        if (!$this->indexExists('events', 'idx_events_category_status_date')
+            && Schema::hasColumn('events', 'category')
+            && Schema::hasColumn('events', 'status')
+            && Schema::hasColumn('events', 'start_datetime')) {
+            Schema::table('events', function (Blueprint $table) {
+                $table->index(['category', 'status', 'start_datetime'], 'idx_events_category_status_date');
+            });
+        }
     }
 
     public function down(): void
@@ -50,6 +59,12 @@ return new class extends Migration
         if ($this->indexExists('events', 'idx_events_status_category')) {
             Schema::table('events', function (Blueprint $table) {
                 $table->dropIndex('idx_events_status_category');
+            });
+        }
+
+        if ($this->indexExists('events', 'idx_events_category_status_date')) {
+            Schema::table('events', function (Blueprint $table) {
+                $table->dropIndex('idx_events_category_status_date');
             });
         }
 
