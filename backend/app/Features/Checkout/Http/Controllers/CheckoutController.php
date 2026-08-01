@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
 {
@@ -44,58 +45,70 @@ class CheckoutController extends Controller
 
         $user = $request->user();
 
-        // Re-verify prices/availability server-side - never trust amounts
-        // the client sends, even if CartController::verify was already
-        // called earlier in the flow (data can go stale between calls).
-        // Use LOCK FOR UPDATE (pessimistic locking) to prevent overselling
-        // when concurrent requests race to purchase the same tier.
-        $lineItems = [];
-        $total = 0;
-
-        foreach ($validated['items'] as $item) {
-            // Lock the tier row for the duration of this transaction to prevent
-            // concurrent requests from reading stale sold_count/quantity values.
-            $tier = TicketTier::where('id', $item['ticket_tier_id'])
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            // Also lock the inventory row to prevent concurrent sold_quantity increments
-            $inventory = TicketInventory::where('ticket_tier_id', $tier->id)
-                ->lockForUpdate()
-                ->first();
-
-            // Calculate real-time available count: quantity - sold_count (DB-level enforcement)
-            $availableCount = $tier->quantity !== null
-                ? (int) $tier->quantity - (int) $tier->sold_count
-                : null;
-
-            // Fallback to TicketInventory.remaining if no quantity set on the tier itself
-            $remaining = $availableCount ?? $inventory?->remaining ?? $tier->capacity;
-
-            if ($remaining < $item['quantity']) {
-                return response()->json([
-                    'message' => "Only {$remaining} left for {$tier->name}, requested {$item['quantity']}.",
-                ], 422);
-            }
-
-            // Enforce max_per_customer limit
-            if ($tier->max_per_customer !== null && $item['quantity'] > $tier->max_per_customer) {
-                return response()->json([
-                    'message' => "You can purchase at most {$tier->max_per_customer} tickets for {$tier->name}.",
-                ], 422);
-            }
-
-            $unitPrice = ($tier->early_bird_price && $tier->early_bird_end_date && now()->lt($tier->early_bird_end_date))
-                ? $tier->early_bird_price
-                : $tier->price;
-
-            $lineItems[] = ['tier' => $tier, 'quantity' => $item['quantity'], 'unit_price' => $unitPrice];
-            $total += $unitPrice * $item['quantity'];
-        }
-
         $reference = 'ord_' . Str::uuid();
+        [$order, $total] = DB::transaction(function () use ($user, $validated, $reference) {
+            // Re-verify prices/availability server-side - never trust amounts
+            // the client sends, even if CartController::verify was already
+            // called earlier in the flow (data can go stale between calls).
+            // Lock all affected rows in one batch to reduce per-item lock queries.
+            $requestedItems = collect($validated['items'])
+                ->groupBy('ticket_tier_id')
+                ->map(fn ($items) => (int) collect($items)->sum('quantity'));
 
-        $order = DB::transaction(function () use ($user, $validated, $total, $reference, $lineItems) {
+            $tierIds = $requestedItems->keys()->map(fn ($id) => (int) $id)->values()->all();
+
+            $tiers = TicketTier::whereIn('id', $tierIds)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            if ($tiers->count() !== count($tierIds)) {
+                throw ValidationException::withMessages([
+                    'items' => 'One or more selected ticket tiers no longer exist.',
+                ]);
+            }
+
+            $inventories = TicketInventory::whereIn('ticket_tier_id', $tierIds)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('ticket_tier_id');
+
+            $lineItems = [];
+            $total = 0;
+
+            foreach ($requestedItems as $tierId => $quantity) {
+                $tier = $tiers->get((int) $tierId);
+                $inventory = $inventories->get((int) $tierId);
+
+                // Calculate real-time available count: quantity - sold_count (DB-level enforcement)
+                $availableCount = $tier->quantity !== null
+                    ? (int) $tier->quantity - (int) $tier->sold_count
+                    : null;
+
+                // Fallback to TicketInventory.remaining if no quantity set on the tier itself
+                $remaining = $availableCount ?? $inventory?->remaining ?? $tier->capacity;
+
+                if ($remaining < $quantity) {
+                    throw ValidationException::withMessages([
+                        'items' => "Only {$remaining} left for {$tier->name}, requested {$quantity}.",
+                    ]);
+                }
+
+                // Enforce max_per_customer limit
+                if ($tier->max_per_customer !== null && $quantity > $tier->max_per_customer) {
+                    throw ValidationException::withMessages([
+                        'items' => "You can purchase at most {$tier->max_per_customer} tickets for {$tier->name}.",
+                    ]);
+                }
+
+                $unitPrice = ($tier->early_bird_price && $tier->early_bird_end_date && now()->lt($tier->early_bird_end_date))
+                    ? $tier->early_bird_price
+                    : $tier->price;
+
+                $lineItems[] = ['tier' => $tier, 'quantity' => $quantity, 'unit_price' => $unitPrice];
+                $total += $unitPrice * $quantity;
+            }
+
             $order = Order::create([
                 'user_id' => $user->id,
                 'event_id' => $validated['event_id'],
@@ -116,7 +129,7 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            return $order;
+            return [$order, $total];
         });
 
         $gatewayService = $validated['gateway'] === 'paystack' ? $this->paystack : $this->flutterwave;

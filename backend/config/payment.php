@@ -91,4 +91,13 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Payment HTTP Client Performance Defaults
+    |--------------------------------------------------------------------------
+    */
+    'http_timeout' => (int) env('PAYMENT_HTTP_TIMEOUT', 5),
+    'http_retry_attempts' => (int) env('PAYMENT_HTTP_RETRY_ATTEMPTS', 3),
+    'http_retry_base_delay_ms' => (int) env('PAYMENT_HTTP_RETRY_BASE_DELAY_MS', 200),
+
 ];
