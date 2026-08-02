@@ -21,8 +21,8 @@ class Event extends Model
         'end_datetime',
         'venue_name',
         'venue_address',
-        'latitude',
-        'longitude',
+        'venue_latitude',
+        'venue_longitude',
         'banner_image_url',
         'capacity',
         'status',
@@ -32,30 +32,10 @@ class Event extends Model
     protected $casts = [
         'start_datetime' => 'datetime',
         'end_datetime' => 'datetime',
-        'latitude' => 'decimal:7',
-        'longitude' => 'decimal:7',
+        'venue_latitude' => 'decimal:7',
+        'venue_longitude' => 'decimal:7',
         'deleted_at' => 'datetime',
     ];
-
-    public function setVenueLatitudeAttribute($value): void
-    {
-        $this->attributes['latitude'] = $value;
-    }
-
-    public function getVenueLatitudeAttribute()
-    {
-        return $this->attributes['latitude'] ?? null;
-    }
-
-    public function setVenueLongitudeAttribute($value): void
-    {
-        $this->attributes['longitude'] = $value;
-    }
-
-    public function getVenueLongitudeAttribute()
-    {
-        return $this->attributes['longitude'] ?? null;
-    }
 
     public function organizer(): BelongsTo
     {
