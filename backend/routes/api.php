@@ -41,6 +41,9 @@ require base_path('app/Features/Payouts/Routes/api.php');
 // Include Analytics routes
 require base_path('app/Features/Analytics/Routes/api.php');
 
+// Include Events Calendar routes
+require base_path('app/Features/EventsCalendar/Routes/api.php');
+
 // Include Compliance routes
 require base_path('app/Features/Compliance/Routes/api.php');
 
