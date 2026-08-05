@@ -15,6 +15,7 @@ use App\Models\TicketTier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class WebhookController extends Controller
 {
@@ -53,7 +54,7 @@ class WebhookController extends Controller
             return response()->json(['message' => 'Invalid signature'], 401);
         }
 
-        $order = Order::where('payment_reference', $reference)->first();
+        $order = Order::where('payment_intent_id', $reference)->first();
 
         if (! $order) {
             Log::warning("WebhookController: no order found for reference {$reference}");
@@ -65,10 +66,17 @@ class WebhookController extends Controller
             return response()->json(['received' => true]); // Already processed - webhook delivery isn't guaranteed exactly-once
         }
 
+        if ($gateway === 'flutterwave' && empty($request->input('data.id'))) {
+            Log::warning("WebhookController: flutterwave payload missing data.id for reference {$reference}");
+
+            return response()->json(['message' => 'Invalid flutterwave payload'], 422);
+        }
+
         try {
+            $flutterwaveTransactionId = $gateway === 'flutterwave' ? (string) ($request->input('data.id') ?? '') : '';
             $verification = $gateway === 'paystack'
                 ? $this->paystack->verifyTransaction($reference)
-                : $this->flutterwave->verifyTransaction($reference);
+                : $this->flutterwave->verifyTransaction($flutterwaveTransactionId);
         } catch (\Throwable $e) {
             Log::error("WebhookController: gateway verification call failed for {$reference}: " . $e->getMessage());
 
@@ -102,15 +110,23 @@ class WebhookController extends Controller
                     ->first();
 
                 for ($i = 0; $i < $item->quantity; $i++) {
+                    $attendeeName = $order->user->name ?? 'Attendee';
+                    $attendeeEmail = $order->user->email ?? 'unknown@example.com';
+                    $tierName = $tier->name ?? ('Tier #' . $item->ticket_tier_id);
+
                     $ticket = Ticket::create([
                         'order_id' => $order->id,
                         'event_id' => $order->event_id,
                         'user_id' => $order->user_id,
                         'ticket_tier_id' => $item->ticket_tier_id,
+                        'ticket_id' => 'TCK-' . Str::upper(Str::random(12)),
+                        'attendee_name' => $attendeeName,
+                        'attendee_email' => $attendeeEmail,
+                        'tier' => $tierName,
                         'status' => 'valid',
                     ]);
 
-                    $ticket->update(['qr_code' => $this->qrCodeService->generateForTicket($ticket)]);
+                    $ticket->update(['qr_code_data' => $this->qrCodeService->generateForTicket($ticket)]);
                 }
 
                 // Atomically increment sold_count on ticket_tier with CHECK constraint enforcing sold_count <= quantity

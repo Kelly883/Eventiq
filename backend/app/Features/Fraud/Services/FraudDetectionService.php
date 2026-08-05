@@ -6,10 +6,12 @@ use App\Features\Checkout\Models\Order;
 use App\Features\Checkout\Models\Ticket;
 use App\Features\Payment\Services\FlutterwaveService;
 use App\Features\Payment\Services\PaystackService;
+use App\Features\Fraud\Models\FraudEvent;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 /**
  * Single entry point for fraud-related operations: Sift Science scoring,
@@ -365,18 +367,131 @@ class FraudDetectionService
     }
 
     /**
-     * Logs the final evaluation event.
+     * Persists the fraud event to the database and logs it.
+     *
+     * Only persists events with a decision of 'block' or 'review' to avoid
+     * filling the table with approved transactions. Approved events are still logged.
      */
     public function logFraudEvent(array $event): void
     {
+        $result = $event['result'] ?? [];
+
         Log::info('Fraud event evaluated', [
             'user_id' => $event['user_id'] ?? null,
             'reference' => $event['reference'] ?? null,
             'provider' => $event['provider'] ?? null,
-            'decision' => $event['result']['decision'] ?? null,
-            'risk_score' => $event['result']['risk_score'] ?? null,
-            'flags' => $event['result']['flags'] ?? [],
+            'decision' => $result['decision'] ?? null,
+            'risk_score' => $result['risk_score'] ?? null,
+            'flags' => $result['flags'] ?? [],
         ]);
+
+        // Only persist non-approved events to the database
+        $decision = $result['decision'] ?? 'approve';
+        if ($decision === 'approve') {
+            return;
+        }
+
+        if (!Schema::hasTable('fraud_events')) {
+            Log::warning('FraudDetectionService::logFraudEvent skipped - fraud_events table not available.');
+            return;
+        }
+
+        try {
+            $riskScore = $result['risk_score'] ?? 0;
+            $riskLevel = match (true) {
+                $riskScore >= 75 => 'high',
+                $riskScore >= 31 => 'medium',
+                default => 'low',
+            };
+
+            // Map flags to the most relevant event_type
+            $flags = $result['flags'] ?? [];
+            $eventType = match (true) {
+                in_array('duplicate_ticket_detected', $flags) => 'duplicate_ticket_attempt',
+                in_array('card_testing_suspected', $flags) => 'card_testing',
+                in_array('velocity_exceeded', $flags) => 'velocity_check_failed',
+                in_array('device_limit_exceeded', $flags) => 'device_fingerprint_mismatch',
+                in_array('ip_limit_exceeded', $flags) => 'geolocation_anomaly',
+                in_array('max_tickets_limit_exceeded', $flags) => 'payment_pattern_suspicious',
+                default => 'payment_pattern_suspicious',
+            };
+
+            $detectionMethod = 'rule_based';
+            if (!empty($event['provider']) && $event['provider'] === 'paystack') {
+                $detectionMethod = 'stripe_radar';
+            } elseif (!empty($event['provider']) && $event['provider'] === 'flutterwave') {
+                $detectionMethod = 'sift_science';
+            }
+
+            $status = match ($decision) {
+                'block' => 'auto_blocked',
+                default => 'flagged',
+            };
+
+            // Build the fraud_factors payload
+            $fraudFactors = $flags;
+
+            // Build velocity metrics from result
+            $velocityMetrics = null;
+            if (isset($result['velocity'])) {
+                $velocityMetrics = [
+                    'count_1h' => $result['velocity']['count_1h'] ?? null,
+                    'count_24h' => $result['velocity']['count_24h'] ?? null,
+                    'exceeded' => $result['velocity']['exceeded'] ?? false,
+                ];
+            }
+
+            // Build device info from result and event
+            $deviceInfo = null;
+            $deviceIp = $event['ip'] ?? null;
+            $deviceId = $event['device_id'] ?? null;
+            $sessionId = $event['session_id'] ?? null;
+            if ($deviceIp || $deviceId) {
+                $deviceInfo = [
+                    'ip' => $deviceIp,
+                    'device_id' => $deviceId,
+                    'session_id' => $sessionId,
+                ];
+            }
+
+            // Build payment details from event
+            $paymentDetailsPayload = null;
+            if (!empty($event['card_fingerprint'])) {
+                $paymentDetailsPayload = [
+                    'card_fingerprint' => $event['card_fingerprint'],
+                    'amount' => $event['amount'] ?? null,
+                    'currency' => $event['currency'] ?? null,
+                ];
+            }
+
+            FraudEvent::create([
+                'order_id' => $event['order_id'] ?? $event['reference'],
+                'user_id' => $event['user_id'] ?? '00000000-0000-0000-0000-000000000000',
+                'ticket_id' => $event['ticket_id'] ?? null,
+                'event_id' => $event['event_id'] ?? null,
+                'event_type' => $eventType,
+                'risk_score' => $riskScore,
+                'risk_level' => $riskLevel,
+                'detection_method' => $detectionMethod,
+                'fraud_factors' => $fraudFactors,
+                'payment_details' => $paymentDetailsPayload,
+                'velocity_metrics' => $velocityMetrics,
+                'device_info' => $deviceInfo,
+                'duplicate_ticket_info' => $result['duplicate_ticket'] ?? false ? $result['duplicate_ticket'] : null,
+                'status' => $status,
+                'ip_address' => $deviceIp,
+                'session_id' => $sessionId,
+                'card_fingerprint' => $event['card_fingerprint'] ?? null,
+                'amount' => $event['amount'] ?? null,
+                'currency' => $event['currency'] ?? null,
+                'source' => 'api',
+                'automated_action_taken' => $decision,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('FraudDetectionService::logFraudEvent failed to persist: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
     }
 
     /**

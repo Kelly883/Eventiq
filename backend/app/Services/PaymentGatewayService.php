@@ -46,14 +46,39 @@ class PaymentGatewayService
         $refundRequest = RefundRequest::with('ticket.order')->findOrFail($refundRequestId);
         $order = $refundRequest->ticket->order;
 
-        if (! $order || ! $order->payment_reference) {
-            throw new \RuntimeException("Refund request {$refundRequestId}: no payment reference on the associated order.");
+        if (! $order) {
+            throw new \RuntimeException("Refund request {$refundRequestId}: no order found for the associated ticket.");
         }
 
-        $amount = (float) ($refundRequest->approved_amount ?? $refundRequest->requested_amount);
+        if (! $order->payment_gateway) {
+            throw new \RuntimeException("Refund request {$refundRequestId}: order has no payment gateway.");
+        }
+
+        $amount = (float) ($refundRequest->approved_amount ?? $refundRequest->requested_amount ?? 0);
+        if ($amount <= 0) {
+            throw new \RuntimeException("Refund request {$refundRequestId}: refund amount must be greater than zero.");
+        }
+
+        // Prefer a successful payment attempt's transaction ID, then fall back
+        // to the order-level transaction reference, then payment_intent_id.
+        $payment = Payment::where('order_id', $order->id)
+            ->where('status', 'success')
+            ->orderByDesc('id')
+            ->first();
+
+        $gatewayTransactionId = $payment->gateway_transaction_id
+            ?? $order->gateway_transaction_id
+            ?? $payment->payment_intent_id
+            ?? $order->payment_intent_id;
+
+        if (! $gatewayTransactionId) {
+            throw new \RuntimeException("Refund request {$refundRequestId}: no gateway transaction identifier found.");
+        }
+
+        $reason = (string) ($refundRequest->reason ?? '');
 
         try {
-            $result = $this->resolveGateway($order->payment_gateway)->refund($order->payment_reference, $amount);
+            $result = $this->resolveGateway($order->payment_gateway)->refund($gatewayTransactionId, $amount, $reason);
         } catch (\Throwable $e) {
             Log::error("PaymentGatewayService::processRefund failed for refund request {$refundRequestId}: " . $e->getMessage());
             throw $e;

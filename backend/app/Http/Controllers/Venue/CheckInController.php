@@ -101,6 +101,21 @@ class CheckInController extends Controller
             ], 422);
         }
 
+        // 4a. Application-level duplicate-scan guard: prevent multiple
+        // successful check-in records for the same ticket at the DB level.
+        $alreadyCheckedIn = CheckIn::where('ticket_id', $ticket->id)
+            ->where('status', 'checked_in')
+            ->exists();
+
+        if ($alreadyCheckedIn) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ticket already checked in.',
+                'ticket_id' => $ticket->id,
+                'is_duplicate' => true,
+            ], 422);
+        }
+
         // 5. Update Ticket check-in state
         $ticket->checked_in = true;
         $ticket->checked_in_at = $scannedAt ?: now();
@@ -110,6 +125,9 @@ class CheckInController extends Controller
         $checkIn = new CheckIn();
         $checkIn->ticket_id = $ticket->id;
         $checkIn->user_id = $ticket->user_id ?? null;
+        $checkIn->event_id = $ticket->event_id ?? null;
+        $checkIn->scanned_by = auth()->id();
+        $checkIn->status = 'checked_in';
         $checkIn->checked_in_at = $scannedAt ?: now();
         $checkIn->client_mutation_id = $clientMutationId;
         $checkIn->save();

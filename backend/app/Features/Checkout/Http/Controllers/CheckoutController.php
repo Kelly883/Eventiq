@@ -116,7 +116,7 @@ class CheckoutController extends Controller
                 'total_amount' => $total,
                 'currency' => config('payment.currency', 'NGN'),
                 'payment_gateway' => $validated['gateway'],
-                'payment_reference' => $reference,
+                'payment_intent_id' => $reference,
                 'ip_address' => request()->ip(),
             ]);
 
@@ -153,7 +153,7 @@ class CheckoutController extends Controller
 
         Payment::create([
             'order_id' => $order->id,
-            'gateway_reference' => $reference,
+            'payment_intent_id' => $reference,
             'amount' => $total,
             'currency' => $order->currency,
             'status' => 'pending',

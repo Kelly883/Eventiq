@@ -18,6 +18,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('events_calendar_summary')) {
+            return;
+        }
+
         Schema::create('events_calendar_summary', function (Blueprint $table) {
             $table->id();
             $table->date('event_date');
@@ -47,9 +51,15 @@ return new class extends Migration
                 SUM(CASE WHEN status = 'published' THEN COALESCE(capacity, 0) ELSE 0 END) as published_capacity,
                 SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) as draft_events,
                 SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_events,
+<<<<<<< Updated upstream
                 {$nowFunc} as last_refreshed_at,
                 {$nowFunc} as created_at,
                 {$nowFunc} as updated_at
+=======
+                CURRENT_TIMESTAMP as last_refreshed_at,
+                CURRENT_TIMESTAMP as created_at,
+                CURRENT_TIMESTAMP as updated_at
+>>>>>>> Stashed changes
             FROM events
             WHERE start_datetime IS NOT NULL
             GROUP BY DATE(start_datetime)

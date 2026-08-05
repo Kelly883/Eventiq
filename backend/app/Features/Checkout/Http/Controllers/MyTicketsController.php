@@ -33,7 +33,7 @@ class MyTicketsController extends Controller
                         'ticket_tier' => $ticket->ticketTier->name ?? null,
                         'status' => $ticket->status,
                         'checked_in' => $ticket->checked_in,
-                        'qr_code' => $ticket->qr_code,
+                        'qr_code' => $ticket->qr_code_data,
                     ])->values(),
                 ];
             })

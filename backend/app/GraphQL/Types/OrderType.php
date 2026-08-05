@@ -23,7 +23,7 @@ class OrderType extends GraphQLType
             'total_amount' => ['type' => Type::string()],
             'currency' => ['type' => Type::string()],
             'payment_gateway' => ['type' => Type::string()],
-            'payment_reference' => ['type' => Type::string()],
+            'payment_intent_id' => ['type' => Type::string()],
         ];
     }
 }

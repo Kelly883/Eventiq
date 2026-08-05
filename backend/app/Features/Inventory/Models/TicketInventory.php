@@ -10,6 +10,8 @@ class TicketInventory extends Model
 {
     use HasFactory;
 
+    protected $table = 'ticket_inventory';
+
     protected $fillable = [
         'event_id',
         'ticket_tier_id',

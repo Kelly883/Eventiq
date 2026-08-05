@@ -114,4 +114,12 @@ class User extends Authenticatable
     {
         return $this->hasOne(Organizer::class);
     }
+
+    /**
+     * Get the dashboard preferences for the user (one-to-one).
+     */
+    public function dashboardPreferences(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Features\Dashboard\Models\UserDashboardPreference::class, 'user_id', 'id');
+    }
 }

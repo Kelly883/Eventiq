@@ -2,6 +2,10 @@
 
 namespace App\Features\Delivery\Models;
 
+use App\Models\Event;
+use App\Models\Order;
+use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -9,13 +13,176 @@ class DeliveryEvent extends Model
 {
     use HasFactory;
 
-    // Needed for the mass-assignment in TicketDeliveryService::sendViaDashboard().
-    // Matches the columns that service expects delivery_events to eventually
-    // have (user_id, ticket_reference, channel, payload) - not yet present
-    // in the migration as of this commit; see that migration's TODO.
-    protected $fillable = ['user_id', 'ticket_reference', 'channel', 'payload'];
+    /**
+     * Threshold in bytes above which payload is auto-offloaded to delivery_event_data.
+     * Set to 0 to disable auto-offloading and store everything inline.
+     */
+    public const PAYLOAD_AUTO_OFFLOAD_THRESHOLD = 500;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'ticket_id',
+        'user_id',
+        'event_id',
+        'order_id',
+        'channel',
+        'status',
+        'ticket_reference',
+        'recipient',
+        'subject',
+        'body',
+        'sender',
+        'payload',
+        'provider',
+        'provider_message_id',
+        'provider_response',
+        'error_message',
+        'attempt_count',
+        'max_attempts',
+        'last_attempt_at',
+        'delivered_at',
+        'opened_at',
+        'clicked_at',
+        'archived_at',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'payload' => 'array',
+        'attempt_count' => 'integer',
+        'max_attempts' => 'integer',
+        'last_attempt_at' => 'datetime',
+        'delivered_at' => 'datetime',
+        'opened_at' => 'datetime',
+        'clicked_at' => 'datetime',
+        'archived_at' => 'datetime',
     ];
+
+    /**
+     * Boot the model and register event handlers.
+     *
+     * Auto-offloads large payloads (> 500 bytes) to the delivery_event_data
+     * table on creation, keeping the main delivery_events row slim.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::created(function (DeliveryEvent $event) {
+            // Auto-offload large payloads to the separate data table
+            if (static::PAYLOAD_AUTO_OFFLOAD_THRESHOLD > 0) {
+                $payloadSize = 0;
+                if ($event->payload) {
+                    $payloadSize = strlen(json_encode($event->payload));
+                }
+
+                $hasLargePayload = $payloadSize > static::PAYLOAD_AUTO_OFFLOAD_THRESHOLD;
+                $hasProviderResponse = !empty($event->getOriginal('provider_response'));
+                $hasErrorMessage = !empty($event->getOriginal('error_message'));
+
+                if ($hasLargePayload || $hasProviderResponse || $hasErrorMessage) {
+                    try {
+                        $event->eventData()->create([
+                            'payload' => $hasLargePayload ? $event->payload : null,
+                            'provider_response' => $hasProviderResponse ? $event->provider_response : null,
+                            'error_message' => $hasErrorMessage ? $event->error_message : null,
+                        ]);
+
+                        // Clear inline fields to keep row size small
+                        $updateData = [];
+                        if ($hasLargePayload) {
+                            $updateData['payload'] = null;
+                        }
+                        if ($hasProviderResponse) {
+                            $updateData['provider_response'] = null;
+                        }
+                        if ($hasErrorMessage) {
+                            $updateData['error_message'] = null;
+                        }
+
+                        if (!empty($updateData)) {
+                            $event->updateQuietly($updateData);
+                        }
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::warning(
+                            "DeliveryEvent: Failed to auto-offload payload for {$event->id}: {$e->getMessage()}"
+                        );
+                    }
+                }
+            }
+        });
+    }
+
+    // ── Scopes ───────────────────────────────────────────────────────
+
+    /**
+     * Scope a query to only include unarchived delivery events.
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereNull('archived_at');
+    }
+
+    /**
+     * Scope a query to only include archived delivery events.
+     */
+    public function scopeArchived($query)
+    {
+        return $query->whereNotNull('archived_at');
+    }
+
+    /**
+     * Scope a query to only include events older than a given date.
+     */
+    public function scopeOlderThan($query, $date)
+    {
+        return $query->where('created_at', '<', $date);
+    }
+
+    /**
+     * Scope a query to only include events deliverable for retry.
+     */
+    public function scopeRetryable($query)
+    {
+        return $query->where('status', 'failed')
+            ->whereColumn('attempt_count', '<', 'max_attempts');
+    }
+
+    // ── Relationships ────────────────────────────────────────────────
+
+    public function ticket()
+    {
+        return $this->belongsTo(Ticket::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    /**
+     * One-to-one relationship with delivery_event_data for large payloads.
+     */
+    public function eventData()
+    {
+        return $this->hasOne(DeliveryEventData::class);
+    }
 }
