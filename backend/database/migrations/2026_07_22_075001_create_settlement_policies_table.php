@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('settlement_policies')) {
+            return;
+        }
+
         Schema::create('settlement_policies', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('organizer_tier'); // standard, premium, enterprise

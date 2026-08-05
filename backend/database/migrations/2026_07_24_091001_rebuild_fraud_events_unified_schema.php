@@ -20,7 +20,7 @@ return new class extends Migration
             
             // Checkin-specific fraud (from the 071002 schema)
             $table->uuid('ticket_id')->nullable();
-            $table->uuid('event_id')->nullable();
+            $table->foreignId('event_id')->nullable();
             
             // Fraud type classification
             $table->enum('event_type', [
@@ -81,10 +81,6 @@ return new class extends Migration
             // Timestamps
             $table->timestamps();
             
-            // Soft deletes - fraud records should never be truly deleted,
-            // but soft deletes allow safe "hiding" with recovery option
-            $table->softDeletes();
-
             // === Foreign key constraints ===
             $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

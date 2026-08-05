@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('payouts')) {
+            return;
+        }
+
         Schema::create('payouts', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('organizer_id');

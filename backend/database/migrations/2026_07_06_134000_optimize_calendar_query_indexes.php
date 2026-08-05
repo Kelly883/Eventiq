@@ -20,54 +20,48 @@ return new class extends Migration
         // And orders by start_datetime ASC/DESC
 
         Schema::table('events', function (Blueprint $table) {
-            // Composite index for status + date range filtering.
-            // This is the MOST critical index — the base calendar view
-            // always filters by status (e.g. 'published') and a date range.
-            try {
-                $table->index(['status', 'start_datetime'], 'idx_events_status_start_datetime');
-            } catch (\Throwable $e) {
-                // Index may already exist from prior migrations — safe to skip.
+            if (Schema::hasColumn('events', 'status') && Schema::hasColumn('events', 'start_datetime')) {
+                try {
+                    $table->index(['status', 'start_datetime'], 'idx_events_status_start_datetime');
+                } catch (\Throwable $e) {
+                }
             }
 
-            // Composite index for status + category filtering.
-            // Supports the "filter by category" dropdown in the calendar UI.
-            try {
-                $table->index(['status', 'category'], 'idx_events_status_category');
-            } catch (\Throwable $e) {
-                // Index may already exist — safe to skip.
+            if (Schema::hasColumn('events', 'status') && Schema::hasColumn('events', 'category')) {
+                try {
+                    $table->index(['status', 'category'], 'idx_events_status_category');
+                } catch (\Throwable $e) {
+                }
             }
 
-            // Standalone index on start_datetime for pure date-ordered listings
-            // (used by the ORDER BY clause when status isn't selectivity enough).
-            try {
-                $table->index(['start_datetime'], 'idx_events_start_datetime');
-            } catch (\Throwable $e) {
-                // Index may already exist — safe to skip.
+            if (Schema::hasColumn('events', 'start_datetime')) {
+                try {
+                    $table->index(['start_datetime'], 'idx_events_start_datetime');
+                } catch (\Throwable $e) {
+                }
             }
 
-            // Standalone index on status for quick count operations
-            // (e.g. COUNT(*) WHERE status = 'draft').
-            try {
-                $table->index(['status'], 'idx_events_status');
-            } catch (\Throwable $e) {
-                // Index may already exist — safe to skip.
+            if (Schema::hasColumn('events', 'status')) {
+                try {
+                    $table->index(['status'], 'idx_events_status');
+                } catch (\Throwable $e) {
+                }
             }
 
-            // Composite index for status + organizer_id + date range.
-            // Optimizes "My Events" organizer calendar views that filter
-            // by status + date for a single organizer.
-            try {
-                $table->index(['organizer_id', 'status', 'start_datetime'], 'idx_events_organizer_status_date');
-            } catch (\Throwable $e) {
-                // Index may already exist — safe to skip.
+            if (Schema::hasColumn('events', 'organizer_id')
+                && Schema::hasColumn('events', 'status')
+                && Schema::hasColumn('events', 'start_datetime')) {
+                try {
+                    $table->index(['organizer_id', 'status', 'start_datetime'], 'idx_events_organizer_status_date');
+                } catch (\Throwable $e) {
+                }
             }
 
-            // Index on category (standalone) for category-browse pages
-            // that don't filter by status first.
-            try {
-                $table->index(['category'], 'idx_events_category');
-            } catch (\Throwable $e) {
-                // Index may already exist — safe to skip.
+            if (Schema::hasColumn('events', 'category')) {
+                try {
+                    $table->index(['category'], 'idx_events_category');
+                } catch (\Throwable $e) {
+                }
             }
         });
 
@@ -82,19 +76,21 @@ return new class extends Migration
             // Composite index: (event_id, ticket_tier_id).
             // Used when joining events -> inventory for stock levels,
             // and for per-tier availability lookups on the event detail page.
-            try {
-                $table->index(['event_id', 'ticket_tier_id'], 'idx_ticket_inventory_event_tier');
-            } catch (\Throwable $e) {
-                // Index may already exist — safe to skip.
+            if (Schema::hasColumn('ticket_inventory', 'event_id') && Schema::hasColumn('ticket_inventory', 'ticket_tier_id')) {
+                try {
+                    $table->index(['event_id', 'ticket_tier_id'], 'idx_ticket_inventory_event_tier');
+                } catch (\Throwable $e) {
+                }
             }
 
             // Standalone index on event_id.
             // Speeds up the GROUP BY event_id aggregate in the
             // calendar service when joining to inventory.
-            try {
-                $table->index(['event_id'], 'idx_ticket_inventory_event_id');
-            } catch (\Throwable $e) {
-                // Index may already exist — safe to skip.
+            if (Schema::hasColumn('ticket_inventory', 'event_id')) {
+                try {
+                    $table->index(['event_id'], 'idx_ticket_inventory_event_id');
+                } catch (\Throwable $e) {
+                }
             }
 
             // Optional composite: (event_id, total_available) covering
@@ -110,10 +106,13 @@ return new class extends Migration
                     ");
                 } catch (\Throwable $e) {
                     // MySQL doesn't support INCLUDE; try a composite instead.
-                    try {
-                        $table->index(['event_id', 'total_available', 'total_sold'], 'idx_ticket_inventory_event_stocks');
-                    } catch (\Throwable $e2) {
-                        // Composite may not be beneficial or may already exist — skip.
+                    if (Schema::hasColumn('ticket_inventory', 'event_id')
+                        && Schema::hasColumn('ticket_inventory', 'total_available')
+                        && Schema::hasColumn('ticket_inventory', 'total_sold')) {
+                        try {
+                            $table->index(['event_id', 'total_available', 'total_sold'], 'idx_ticket_inventory_event_stocks');
+                        } catch (\Throwable $e2) {
+                        }
                     }
                 }
             }
@@ -132,39 +131,49 @@ return new class extends Migration
             // active pricing window for a specific ticket tier.
             // Note: The legacy column in pricing_windows is ticket_category_id
             // (aliased as ticket_tier_id in the model relationship).
-            try {
-                $table->index(['event_id', 'ticket_category_id'], 'idx_pricing_windows_event_tier');
-            } catch (\Throwable $e) {
-                // Index may already exist — safe to skip.
+            if (Schema::hasColumn('pricing_windows', 'event_id') && Schema::hasColumn('pricing_windows', 'ticket_category_id')) {
+                try {
+                    $table->index(['event_id', 'ticket_category_id'], 'idx_pricing_windows_event_tier');
+                } catch (\Throwable $e) {
+                }
             }
 
             // Standalone index on event_id.
             // Primary join key for the calendar price-aggregate subquery.
-            try {
-                $table->index(['event_id'], 'idx_pricing_windows_event_id');
-            } catch (\Throwable $e) {
-                // Index may already exist — safe to skip.
+            if (Schema::hasColumn('pricing_windows', 'event_id')) {
+                try {
+                    $table->index(['event_id'], 'idx_pricing_windows_event_id');
+                } catch (\Throwable $e) {
+                }
             }
 
             // Composite index for active-window lookup.
             // Optimizes the EventCalendarService's pricing subquery which
             // filters: WHERE is_active = TRUE AND deleted_at IS NULL.
-            try {
-                $table->index(['event_id', 'is_active', 'deleted_at'], 'idx_pricing_windows_active_event');
-            } catch (\Throwable $e) {
-                // Index may already exist — safe to skip.
+            if (Schema::hasColumn('pricing_windows', 'event_id')
+                && Schema::hasColumn('pricing_windows', 'is_active')
+                && Schema::hasColumn('pricing_windows', 'deleted_at')) {
+                try {
+                    $table->index(['event_id', 'is_active', 'deleted_at'], 'idx_pricing_windows_active_event');
+                } catch (\Throwable $e) {
+                }
             }
 
             // Composite index for time-window filtering.
             // Supports scopes that need "windows currently active by date".
-            try {
-                $table->index(['event_id', 'start_date_time', 'end_date_time'], 'idx_pricing_windows_event_dates');
-            } catch (\Throwable $e) {
-                // Columns may be named start_date/end_date on older schemas.
+            if (Schema::hasColumn('pricing_windows', 'event_id')
+                && Schema::hasColumn('pricing_windows', 'start_date_time')
+                && Schema::hasColumn('pricing_windows', 'end_date_time')) {
+                try {
+                    $table->index(['event_id', 'start_date_time', 'end_date_time'], 'idx_pricing_windows_event_dates');
+                } catch (\Throwable $e) {
+                }
+            } elseif (Schema::hasColumn('pricing_windows', 'event_id')
+                && Schema::hasColumn('pricing_windows', 'start_date')
+                && Schema::hasColumn('pricing_windows', 'end_date')) {
                 try {
                     $table->index(['event_id', 'start_date', 'end_date'], 'idx_pricing_windows_event_dates_old');
                 } catch (\Throwable $e2) {
-                    // Safe to skip.
                 }
             }
         });

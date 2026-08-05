@@ -14,15 +14,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Fraud event model - IMMUTABLE audit trail.
  *
  * ⚠️ CRITICAL: This model does NOT use SoftDeletes.
- * Fraud records must never be deletable. The deleted_at column exists
- * in the database schema but is NOT used by this model.
- * If a record needs to be hidden, transition status to 'archived' instead.
+ * Fraud records must never be deletable. If a record needs to be hidden,
+ * transition status to an audit-safe state instead of deleting it.
  *
  * @property string $id
  * @property string $order_id
  * @property string $user_id
  * @property string|null $ticket_id
- * @property string|null $event_id
+ * @property int|null $event_id
  * @property string $event_type
  * @property float $risk_score
  * @property string $risk_level

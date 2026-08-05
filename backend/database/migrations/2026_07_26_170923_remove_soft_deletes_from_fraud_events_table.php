@@ -18,6 +18,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('fraud_events') || !Schema::hasColumn('fraud_events', 'deleted_at')) {
+            return;
+        }
+
         $driver = Schema::getConnection()->getDriverName();
 
         if ($driver === 'sqlite') {
@@ -37,6 +41,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!Schema::hasTable('fraud_events') || Schema::hasColumn('fraud_events', 'deleted_at')) {
+            return;
+        }
+
         Schema::table('fraud_events', function (Blueprint $table) {
             $table->softDeletes();
         });
@@ -55,28 +63,53 @@ return new class extends Migration
     private function rebuildTableWithoutSoftDeletes(): void
     {
         // 1. Create temp table with the exact schema minus deleted_at
-        DB::statement('
+        DB::statement(<<<'SQL'
             CREATE TABLE fraud_events_new (
                 id                  CHAR(36) PRIMARY KEY NOT NULL,
                 order_id            CHAR(36) NOT NULL,
                 user_id             CHAR(36) NOT NULL,
                 ticket_id           CHAR(36),
-                event_id            CHAR(36),
-                event_type          TEXT NOT NULL,
-                risk_score          REAL NOT NULL,
-                risk_level          TEXT NOT NULL,
-                detection_method    TEXT NOT NULL,
-                fraud_factors       TEXT,
-                payment_details     TEXT,
-                velocity_metrics    TEXT,
-                device_info         TEXT,
-                duplicate_ticket_info TEXT,
+                event_id            INTEGER,
+                event_type          TEXT NOT NULL CHECK (event_type IN (
+                    'duplicate_ticket_attempt',
+                    'velocity_check_failed',
+                    'payment_pattern_suspicious',
+                    'device_fingerprint_mismatch',
+                    'geolocation_anomaly',
+                    'card_testing',
+                    'high_risk_payment_method',
+                    'duplicate_checkin',
+                    'invalid_qr',
+                    'manual_override'
+                )),
+                risk_score          DECIMAL(5,2) NOT NULL,
+                risk_level          TEXT NOT NULL CHECK (risk_level IN ('low', 'medium', 'high')),
+                detection_method    TEXT NOT NULL CHECK (detection_method IN (
+                    'sift_science',
+                    'stripe_radar',
+                    'duplicate_detection',
+                    'velocity_check',
+                    'rule_based',
+                    'qr_validation',
+                    'manual_review'
+                )),
+                fraud_factors       TEXT CHECK (fraud_factors IS NULL OR json_valid(fraud_factors)),
+                payment_details     TEXT CHECK (payment_details IS NULL OR json_valid(payment_details)),
+                velocity_metrics    TEXT CHECK (velocity_metrics IS NULL OR json_valid(velocity_metrics)),
+                device_info         TEXT CHECK (device_info IS NULL OR json_valid(device_info)),
+                duplicate_ticket_info TEXT CHECK (duplicate_ticket_info IS NULL OR json_valid(duplicate_ticket_info)),
                 detected_at         DATETIME,
                 first_check_in_at   DATETIME,
                 first_check_in_by   CHAR(36),
                 second_check_in_at  DATETIME,
                 second_check_in_by  CHAR(36),
-                status              TEXT NOT NULL DEFAULT \'flagged\',
+                status              TEXT NOT NULL DEFAULT 'flagged' CHECK (status IN (
+                    'flagged',
+                    'reviewed',
+                    'approved',
+                    'rejected',
+                    'auto_blocked'
+                )),
                 reviewed_by         CHAR(36),
                 review_notes        TEXT,
                 reviewed_at         DATETIME,
@@ -86,13 +119,20 @@ return new class extends Migration
                 session_id          VARCHAR(255),
                 ip_address          VARCHAR(45),
                 card_fingerprint    VARCHAR(64),
-                amount              REAL,
+                amount              DECIMAL(10,2),
                 currency            VARCHAR(3),
                 gateway_response_code VARCHAR(10),
                 automated_action_taken VARCHAR(50),
-                source              VARCHAR(50)
+                source              VARCHAR(50),
+                FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY(ticket_id) REFERENCES tickets(id) ON DELETE SET NULL,
+                FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE SET NULL,
+                FOREIGN KEY(first_check_in_by) REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY(second_check_in_by) REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY(reviewed_by) REFERENCES users(id) ON DELETE SET NULL
             )
-        ');
+        SQL);
 
         // 2. Copy all data from original table
         DB::statement('
