@@ -61,9 +61,10 @@ class FraudEvent extends Model
     protected $fillable = [
         'order_id',
         'user_id',
+        'user_email',
         'ticket_id',
         'event_id',
-        'event_type',
+        'fraud_type',
         'risk_score',
         'risk_level',
         'detection_method',
@@ -90,6 +91,33 @@ class FraudEvent extends Model
         'gateway_response_code',
         'automated_action_taken',
         'source',
+        // Denormalized columns
+        'card_country',
+        'device_fingerprint',
+        'payment_method',
+        'payment_gateway',
+        'user_orders_last_24h',
+        'user_spend_last_24h',
+        'user_agent',
+        'referrer',
+        'promo_code',
+        'escalated_to',
+        'escalated_at',
+        'resolution',
+        'evidence_snapshot',
+        'is_archived',
+        'archived_at',
+        'order_total',
+        'ticket_quantity',
+        'billing_country',
+        'billing_zip',
+        'shipping_billing_match',
+        // New analysis columns
+        'order_status',
+        'device_type',
+        'proxy_vpn_detected',
+        'ip_reputation_score',
+        'account_age_days',
     ];
 
     protected $casts = [
@@ -99,13 +127,21 @@ class FraudEvent extends Model
         'velocity_metrics' => 'array',
         'device_info' => 'array',
         'duplicate_ticket_info' => 'array',
+        'evidence_snapshot' => 'array',
         'amount' => 'decimal:2',
+        'user_spend_last_24h' => 'decimal:2',
+        'order_total' => 'decimal:2',
         'detected_at' => 'datetime',
         'first_check_in_at' => 'datetime',
         'second_check_in_at' => 'datetime',
         'reviewed_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'escalated_at' => 'datetime',
+        'archived_at' => 'datetime',
+        'is_archived' => 'boolean',
+        'shipping_billing_match' => 'boolean',
+        'proxy_vpn_detected' => 'boolean',
     ];
 
     public function order(): BelongsTo
@@ -172,6 +208,6 @@ class FraudEvent extends Model
      */
     public function scopeOfType($query, string $eventType)
     {
-        return $query->where('event_type', $eventType);
+        return $query->where('fraud_type', $eventType);
     }
 }

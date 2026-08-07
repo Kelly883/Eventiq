@@ -1,22 +1,26 @@
+# Repair Broken Migrations (permissions, calendar views, delivery, fraud_events)
 
-   - [x] Add composite index `(event_id, is_active, sales_start_date, sales_end_date)` for availability checks
+## Goal
+Bring the SQLite database to a consistent, migration-clean state where `php artisan migrate` runs without errors.
 
-### [x] 2. Update `TicketTier` Model
-   - [x] Remove `available_count` from `$fillable`
-   - [x] Add `available_count` as read-only cast
+## Current Broken State
+- Migrations recorded as ran: up to `2026_07_22_070102` only.
+- `2026_07_22_081001_create_events_calendar_summary_table.php` has unresolved Git conflict markers (PHP syntax error) → breaks the entire pending batch.
+- `delivery_preferences` table: MISSING.
+- `fraud_events` table: MISSING.
+- Calendar views: dropped (none exist).
+- `events_calendar_summary`: MISSING.
 
-### [x] 3. Add Concurrency Protection in `CheckoutController`
-   - [x] Use `lockForUpdate()` when checking tier availability
-   - [x] Use `lockForUpdate()` when fetching TicketInventory
-
-### [x] 4. Add Concurrency Protection in `WebhookController`
-   - [x] Add `TicketTier` import
-   - [x] Use `lockForUpdate()` on TicketTier when incrementing `sold_count`
-   - [x] Use `lockForUpdate()` on TicketInventory when incrementing `sold_quantity`
-
-### [x] 5. Add Validation in `UpdateTicketTiersRequest`
-   - [x] Add `withValidator` with custom after-validation hook preventing past `sales_start_date` for new tiers
-   - [x] Add validation ensuring `sold_count <= quantity` for existing tiers
-
-### [x] 6. All Changes Complete ✅
+## Plan Steps
+- [x] Step 1: Repair `2026_07_22_081001_create_events_calendar_summary_table.php` (remove conflict markers).
+- [x] Step 2: Verify the file passes `php -l` syntax check.
+- [ ] Step 3: Create consolidated repair script `repair_broken_migrations_066.php` that:
+  - Creates `delivery_preferences` table (all columns later migrations expect)
+  - Creates `fraud_events` table (unified schema)
+  - Recreates calendar views (`calendar_event_availability_view`, `calendar_date_availability_summary_view`, `calendar_events_availability`)
+  - Creates + seeds `events_calendar_summary`
+- [ ] Step 4: Run the repair script.
+- [ ] Step 5: Run `php artisan migrate` to apply remaining pending migrations.
+- [ ] Step 6: Verify all 4 target areas (permissions, calendar views, delivery, fraud_events) are consistent.
+- [ ] Step 7: Clean up temporary scan/inspect scripts.
 

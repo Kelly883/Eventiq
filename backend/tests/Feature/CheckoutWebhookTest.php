@@ -115,7 +115,9 @@ class CheckoutWebhookTest extends TestCase
     private function seedCheckoutGraph(string $paymentIntentId, int $quantity): array
     {
         $now = now();
-        $userId = DB::table('users')->insertGetId([
+        $userId = (string) Str::uuid();
+        DB::table('users')->insert([
+            'id' => $userId,
             'name' => 'Webhook Test User',
             'email' => 'webhook-' . Str::lower(Str::random(8)) . '@example.com',
             'passwordHash' => bcrypt('password'),
@@ -172,7 +174,9 @@ class CheckoutWebhookTest extends TestCase
             'updated_at' => $now,
         ]);
 
-        $orderId = DB::table('orders')->insertGetId([
+        $orderId = (string) Str::uuid();
+        DB::table('orders')->insert([
+            'id' => $orderId,
             'user_id' => $userId,
             'event_id' => $eventId,
             'status' => 'pending',
@@ -185,6 +189,7 @@ class CheckoutWebhookTest extends TestCase
         ]);
 
         DB::table('order_items')->insert([
+            'id' => (string) Str::uuid(),
             'order_id' => $orderId,
             'ticket_tier_id' => $ticketTierId,
             'quantity' => $quantity,
@@ -194,6 +199,7 @@ class CheckoutWebhookTest extends TestCase
         ]);
 
         DB::table('payments')->insert([
+            'id' => (string) Str::uuid(),
             'order_id' => $orderId,
             'payment_intent_id' => $paymentIntentId,
             'gateway_transaction_id' => 'gw_' . Str::lower(Str::random(12)),
@@ -220,7 +226,7 @@ class CheckoutWebhookTest extends TestCase
         }
 
         Schema::create('users', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             $table->string('name');
             $table->string('email')->unique();
             $table->string('passwordHash');
@@ -231,9 +237,11 @@ class CheckoutWebhookTest extends TestCase
 
         Schema::create('organizers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->uuid('user_id');
             $table->string('business_name')->nullable();
             $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         });
 
         Schema::create('events', function (Blueprint $table) {
@@ -277,8 +285,8 @@ class CheckoutWebhookTest extends TestCase
         });
 
         Schema::create('orders', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->uuid('id')->primary();
+            $table->uuid('user_id')->nullable();
             $table->foreignId('event_id')->nullable()->constrained('events')->nullOnDelete();
             $table->string('status')->default('pending');
             $table->decimal('total_amount', 10, 2)->default(0);
@@ -287,20 +295,24 @@ class CheckoutWebhookTest extends TestCase
             $table->string('payment_intent_id')->nullable();
             $table->string('gateway_transaction_id')->nullable();
             $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('order_items', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->uuid('order_id');
             $table->foreignId('ticket_tier_id')->constrained('ticket_tiers');
             $table->integer('quantity')->default(1);
             $table->decimal('unit_price', 10, 2);
             $table->timestamps();
+
+            $table->foreign('order_id')->references('id')->on('orders')->cascadeOnDelete();
         });
 
         Schema::create('payments', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->uuid('order_id');
             $table->string('payment_intent_id');
             $table->string('gateway_transaction_id')->nullable();
             $table->decimal('amount', 10, 2);
@@ -309,13 +321,15 @@ class CheckoutWebhookTest extends TestCase
             $table->string('gateway');
             $table->json('gateway_response')->nullable();
             $table->timestamps();
+
+            $table->foreign('order_id')->references('id')->on('orders')->cascadeOnDelete();
         });
 
         Schema::create('tickets', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('order_id')->nullable()->constrained('orders')->nullOnDelete();
+            $table->uuid('id')->primary();
+            $table->uuid('order_id')->nullable();
             $table->foreignId('event_id')->constrained('events')->cascadeOnDelete();
-            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->uuid('user_id')->nullable();
             $table->foreignId('ticket_tier_id')->constrained('ticket_tiers')->cascadeOnDelete();
             $table->string('ticket_id');
             $table->string('attendee_name');
@@ -327,10 +341,13 @@ class CheckoutWebhookTest extends TestCase
             $table->timestamp('qr_code_generated_at')->nullable();
             $table->timestamp('qr_code_expires_at')->nullable();
             $table->timestamp('checked_in_at')->nullable();
-            $table->unsignedBigInteger('checked_in_by_uuid')->nullable();
+            $table->uuid('checked_in_by_uuid')->nullable();
             $table->integer('qr_code_scanned_count')->default(0);
             $table->timestamp('last_qr_scan_at')->nullable();
             $table->timestamps();
+
+            $table->foreign('order_id')->references('id')->on('orders')->nullOnDelete();
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
         });
     }
 }

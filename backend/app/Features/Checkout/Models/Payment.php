@@ -5,12 +5,37 @@ namespace App\Features\Checkout\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class Payment extends Model
 {
     use HasFactory;
 
-protected $fillable = [
+    /**
+     * Payments use UUID primary keys.
+     */
+    public $incrementing = false;
+
+    /**
+     * The primary key is a UUID string, not an auto-increment integer.
+     */
+    protected $keyType = 'string';
+
+    /**
+     * Boot the model to auto-generate UUIDs for new records.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (Payment $payment) {
+            if (empty($payment->{$payment->getKeyName()})) {
+                $payment->{$payment->getKeyName()} = (string) Str::uuid();
+            }
+        });
+    }
+
+    protected $fillable = [
         'order_id',
         'payment_intent_id',
         'gateway_transaction_id',

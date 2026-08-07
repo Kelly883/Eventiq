@@ -1,0 +1,32 @@
+=== TABLE EXISTENCE ===
+[delivery_preferences] MISSING
+[user_dashboard_preferences] MISSING
+[delivery_events] EXISTS
+[fraud_events] MISSING
+[events_calendar_summary] MISSING
+[permissions] EXISTS
+
+=== ALL VIEWS ===
+(none)
+
+=== MIGRATIONS (last 20) ===
+  - 2026_07_22_070102_add_delivery_preferences_full_schema
+  - 2026_07_22_070101_add_delivery_events_full_schema
+  - 2026_07_22_070004_add_qr_fields_to_tickets_table
+  - 2026_07_22_070003_create_user_dashboard_preferences_table
+  - 2026_07_22_070002_create_delivery_preferences_table
+  - 2026_07_22_070001_create_delivery_events_table
+  - 2026_07_22_069001_fix_inventory_constraints_and_indexes
+  - 2026_07_22_068001_fix_inventory_advisory_items
+  - 2026_07_22_066004_create_payments_table
+  - 2026_07_22_066003_create_tickets_table
+  - 2026_07_22_066002_create_order_items_table
+  - 2026_07_22_066001_create_orders_table
+  - 2026_07_22_065001_add_calendar_indexes_to_events_table
+  - 2026_07_22_010000_add_pricing_windows_performance_indexes
+  - 2026_07_22_000001_make_ticket_tiers_production_ready
+  - 2026_07_21_040001_update_ticket_tiers_for_integrity_step65
+  - 2026_07_21_030005_create_analytics_tier_performance_table
+  - 2026_07_21_030004_create_analytics_sales_timeline_table
+  - 2026_07_21_030003_create_analytics_events_metrics_table
+  - 2026_07_21_030002_create_inventory_adjustments_table

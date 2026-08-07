@@ -14,6 +14,19 @@ return new class extends Migration
             return;
         }
 
+        // CRITICAL GUARD: If orders was created as a UUID table (Step 66
+        // PRD requirement), do NOT rebuild it - this legacy migration
+        // would otherwise replace the UUID primary key with an integer
+        // auto-increment key and corrupt the checkout schema.
+        $pkType = (string) DB::table('sqlite_master')
+            ->where('type', 'table')
+            ->where('name', 'orders')
+            ->value('sql');
+
+        if (preg_match('/"id"\s+varchar\b/i', $pkType) === 1) {
+            return;
+        }
+
         // Skip if already decimal-compatible.
         $createSql = (string) DB::table('sqlite_master')
             ->where('type', 'table')

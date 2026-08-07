@@ -5,10 +5,35 @@ namespace App\Features\Checkout\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class Ticket extends Model
 {
     use HasFactory;
+
+    /**
+     * Tickets use UUID primary keys.
+     */
+    public $incrementing = false;
+
+    /**
+     * The primary key is a UUID string, not an auto-increment integer.
+     */
+    protected $keyType = 'string';
+
+    /**
+     * Boot the model to auto-generate UUIDs for new records.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (Ticket $ticket) {
+            if (empty($ticket->{$ticket->getKeyName()})) {
+                $ticket->{$ticket->getKeyName()} = (string) Str::uuid();
+            }
+        });
+    }
 
     protected $fillable = [
         'order_id',
@@ -25,7 +50,7 @@ class Ticket extends Model
         'qr_code_generated_at',
         'qr_code_expires_at',
         'checked_in_at',
-        'checked_in_by_uuid',
+        'checked_in_by',
         'qr_code_scanned_count',
         'last_qr_scan_at',
     ];
@@ -59,6 +84,6 @@ class Ticket extends Model
      */
     public function checkedInBy(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'checked_in_by_uuid');
+        return $this->belongsTo(\App\Models\User::class, 'checked_in_by');
     }
 }

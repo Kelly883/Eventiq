@@ -1,0 +1,20 @@
+﻿<?php
+require __DIR__ . "/vendor/autoload.php";
+$app = require_once __DIR__ . "/bootstrap/app.php";
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+use Illuminate\Support\Facades\DB;
+$pdo = DB::connection()->getPdo();
+echo "=== users CREATE SQL ===\n";
+$sql=$pdo->query("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'")->fetch();
+echo $sql["sql"]."\n\n";
+echo "=== organizers CREATE SQL ===\n";
+$sql=$pdo->query("SELECT sql FROM sqlite_master WHERE type='table' AND name='organizers'")->fetch();
+echo $sql["sql"]."\n\n";
+echo "=== events CREATE SQL ===\n";
+$sql=$pdo->query("SELECT sql FROM sqlite_master WHERE type='table' AND name='events'")->fetch();
+echo $sql["sql"]."\n\n";
+echo "=== ticket_tiers CREATE SQL ===\n";
+$sql=$pdo->query("SELECT sql FROM sqlite_master WHERE type='table' AND name='ticket_tiers'")->fetch();
+echo $sql["sql"]."\n\n";
+echo "=== existing users count ===\n";
+echo DB::table("users")->count()."\n";

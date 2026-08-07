@@ -41,9 +41,9 @@ return new class extends Migration
 
         // Seed the summary table with existing data
         DB::statement("
-            INSERT INTO events_calendar_summary 
+            INSERT INTO events_calendar_summary
                 (event_date, total_events, total_capacity, published_events, published_capacity, draft_events, cancelled_events, last_refreshed_at, created_at, updated_at)
-            SELECT 
+            SELECT
                 DATE(start_datetime) as event_date,
                 COUNT(*) as total_events,
                 COALESCE(SUM(capacity), 0) as total_capacity,
@@ -65,3 +65,4 @@ return new class extends Migration
         Schema::dropIfExists('events_calendar_summary');
     }
 };
+

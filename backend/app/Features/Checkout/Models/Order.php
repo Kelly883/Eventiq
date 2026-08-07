@@ -6,12 +6,37 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
     use HasFactory;
 
-protected $fillable = [
+    /**
+     * Orders use UUID primary keys.
+     */
+    public $incrementing = false;
+
+    /**
+     * The primary key is a UUID string, not an auto-increment integer.
+     */
+    protected $keyType = 'string';
+
+    /**
+     * Boot the model to auto-generate UUIDs for new records.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (Order $order) {
+            if (empty($order->{$order->getKeyName()})) {
+                $order->{$order->getKeyName()} = (string) Str::uuid();
+            }
+        });
+    }
+
+    protected $fillable = [
         'user_id',
         'event_id',
         'status',

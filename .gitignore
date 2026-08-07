@@ -50,3 +50,6 @@ backend/storage/app/firebase-credentials.json
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Event Ticketing PRD Export (local documentation)
+event-ticketing-prd-export.md
