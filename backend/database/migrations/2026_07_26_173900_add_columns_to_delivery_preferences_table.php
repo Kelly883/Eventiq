@@ -16,6 +16,39 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('delivery_preferences')) {
+            Schema::create('delivery_preferences', function (Blueprint $table) {
+                $table->uuid('id')->primary();
+                $table->uuid('user_id')->unique();
+                $table->boolean('email_enabled')->default(true);
+                $table->string('email_address')->nullable();
+                $table->boolean('email_verified')->default(false);
+                $table->boolean('sms_enabled')->default(false);
+                $table->string('phone_number')->nullable();
+                $table->boolean('phone_verified')->default(false);
+                $table->boolean('dashboard_enabled')->default(true);
+                $table->string('preferred_channel')->default('email');
+                $table->time('quiet_hours_start')->nullable();
+                $table->time('quiet_hours_end')->nullable();
+                $table->unsignedSmallInteger('max_daily_notifications')->default(10);
+                $table->string('language', 10)->default('en');
+                $table->string('timezone', 64)->default('UTC');
+                $table->timestamps();
+                $table->softDeletes();
+
+                $table->index('user_id');
+            });
+
+            try {
+                Schema::table('delivery_preferences', function (Blueprint $table) {
+                    $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+                });
+            } catch (\Throwable $e) {
+            }
+
+            return;
+        }
+
         // ── Quiet Hours ───────────────────────────────────────────
         if (! Schema::hasColumn('delivery_preferences', 'quiet_hours_start')) {
             Schema::table('delivery_preferences', function (Blueprint $table) {

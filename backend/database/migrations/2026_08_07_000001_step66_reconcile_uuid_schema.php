@@ -35,10 +35,54 @@ return new class extends Migration
             return;
         }
 
+        DB::statement('PRAGMA foreign_keys = OFF');
+
+        try {
+            $this->cleanupTempTables();
+        } finally {
+            DB::statement('PRAGMA foreign_keys = ON');
+        }
+
+        $hasAllTables = true;
         foreach (['orders', 'order_items', 'tickets', 'payments'] as $table) {
             if (! Schema::hasTable($table)) {
-                return; // Fresh DB - the create migrations handle everything.
+                $hasAllTables = false;
+                break;
             }
+        }
+
+        if (! $hasAllTables) {
+            // One or more tables are missing. Rebuild any that exist (empty),
+            // and create any that are missing.
+            DB::statement('PRAGMA foreign_keys = OFF');
+            try {
+                DB::transaction(function () {
+                    $this->dropTriggers();
+
+                    if (Schema::hasTable('payments')) {
+                        $this->dropTable('payments');
+                    }
+                    if (Schema::hasTable('tickets')) {
+                        $this->dropTable('tickets');
+                    }
+                    if (Schema::hasTable('order_items')) {
+                        $this->dropTable('order_items');
+                    }
+                    if (Schema::hasTable('orders')) {
+                        $this->dropTable('orders');
+                    }
+
+                    $this->rebuildOrders();
+                    $this->rebuildOrderItems();
+                    $this->rebuildTickets();
+                    $this->rebuildPayments();
+
+                    $this->createTriggers();
+                });
+            } finally {
+                DB::statement('PRAGMA foreign_keys = ON');
+            }
+            return;
         }
 
         // Confirm all four Step 66 tables are empty before rebuilding.
@@ -54,6 +98,7 @@ return new class extends Migration
 
         try {
             DB::transaction(function () {
+                $this->dropTriggers();
                 $this->dropTable('payments');
                 $this->dropTable('tickets');
                 $this->dropTable('order_items');
@@ -63,6 +108,8 @@ return new class extends Migration
                 $this->rebuildOrderItems();
                 $this->rebuildTickets();
                 $this->rebuildPayments();
+
+                $this->createTriggers();
             });
         } finally {
             DB::statement('PRAGMA foreign_keys = ON');
@@ -82,6 +129,80 @@ return new class extends Migration
             DB::statement('PRAGMA foreign_keys = OFF');
             Schema::dropIfExists($table);
             DB::statement('PRAGMA foreign_keys = ON');
+        }
+    }
+
+    private function cleanupTempTables(): void
+    {
+        $tempTables = [
+            '__temp__orders',
+            '__temp__order_items',
+            '__temp__tickets',
+            '__temp__payments',
+            '__temp__delivery_preferences',
+        ];
+
+        foreach ($tempTables as $tempTable) {
+            try {
+                Schema::dropIfExists($tempTable);
+            } catch (\Throwable) {
+                DB::statement('PRAGMA foreign_keys = OFF');
+                Schema::dropIfExists($tempTable);
+                DB::statement('PRAGMA foreign_keys = ON');
+            }
+        }
+    }
+
+    private function dropTriggers(): void
+    {
+        DB::statement('DROP TRIGGER IF EXISTS sync_inventory_on_ticket_change');
+        DB::statement('DROP TRIGGER IF EXISTS prevent_event_delete_with_checkins');
+        DB::statement('DROP TRIGGER IF EXISTS set_checked_in_timestamp');
+    }
+
+    private function createTriggers(): void
+    {
+        $triggers = [
+            'sync_inventory_on_ticket_change' => "
+                CREATE TRIGGER sync_inventory_on_ticket_change
+                AFTER UPDATE OF status, event_id ON tickets
+                FOR EACH ROW
+                WHEN OLD.status != NEW.status OR OLD.event_id != NEW.event_id
+                BEGIN
+                    UPDATE ticket_inventory
+                    SET
+                        total_allocated = MAX(0, total_allocated - CASE WHEN OLD.status = 'checked_in' THEN 1 ELSE 0 END),
+                        total_sold = MAX(0, total_sold - CASE WHEN OLD.status = 'void' THEN 1 ELSE 0 END),
+                        last_updated_at = datetime('now')
+                    WHERE event_id = OLD.event_id;
+
+                    UPDATE ticket_inventory
+                    SET
+                        total_allocated = total_allocated + CASE WHEN NEW.status = 'checked_in' THEN 1 ELSE 0 END,
+                        total_sold = total_sold + CASE WHEN NEW.status = 'void' THEN 1 ELSE 0 END,
+                        last_updated_at = datetime('now')
+                    WHERE event_id = NEW.event_id;
+                END
+            ",
+            'set_checked_in_timestamp' => "
+                CREATE TRIGGER set_checked_in_timestamp
+                AFTER UPDATE OF status ON tickets
+                FOR EACH ROW
+                WHEN NEW.status = 'checked_in' AND OLD.status != 'checked_in' AND NEW.checked_in_at IS NULL
+                BEGIN
+                    UPDATE tickets
+                    SET checked_in_at = datetime('now')
+                    WHERE id = NEW.id;
+                END
+            ",
+        ];
+
+        foreach ($triggers as $name => $sql) {
+            try {
+                DB::statement($sql);
+            } catch (\Throwable $e) {
+                error_log("Failed to create trigger {$name}: " . $e->getMessage());
+            }
         }
     }
 

@@ -17,7 +17,7 @@ class AuditLogService
      * the whole point of having a separate trail per the original
      * requirement.
      */
-    public function log(string $action, string $entity, ?int $entityId, array $changes = [], ?int $userId = null, ?string $requestId = null): ?AuditLog
+    public function log(string $action, string $entity, $entityId, array $changes = [], $userId = null, ?string $requestId = null): ?AuditLog
     {
         if (! config('audit.enabled', true)) {
             return null;

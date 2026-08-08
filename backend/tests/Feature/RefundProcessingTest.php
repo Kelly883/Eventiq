@@ -273,9 +273,11 @@ class RefundProcessingTest extends TestCase
             $table->timestamp('qr_code_generated_at')->nullable();
             $table->timestamp('qr_code_expires_at')->nullable();
             $table->timestamp('checked_in_at')->nullable();
-            $table->unsignedBigInteger('checked_in_by_uuid')->nullable();
+            $table->boolean('checked_in')->default(false);
+            $table->string('checked_in_by')->nullable();
             $table->integer('qr_code_scanned_count')->default(0);
             $table->timestamp('last_qr_scan_at')->nullable();
+            $table->timestamp('first_scanned_at')->nullable();
             $table->timestamps();
         });
 

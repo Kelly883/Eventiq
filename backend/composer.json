@@ -8,15 +8,15 @@
     ],
     "license": "MIT",
     "require": {
+        "php": "^8.2",
         "bacon/bacon-qr-code": "^2.0",
         "flutterwavedev/flutterwave-v3": "^1.0",
         "kreait/firebase-php": "^7.0",
         "laravel/framework": "^11.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",
-        "php": "^8.2",
         "pusher/pusher-php-server": "^7.2",
-        "rebing/graphql-laravel": "^9.0",
+        "rebing/graphql-laravel": "*",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "unicodeveloper/laravel-paystack": "^1.1"
     },

@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $order_id
  * @property string $user_id
  * @property string|null $ticket_id
- * @property int|null $event_id
+ * @property string|null $event_id
  * @property string $event_type
  * @property float $risk_score
  * @property string $risk_level
@@ -49,6 +49,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $gateway_response_code
  * @property string|null $automated_action_taken
  * @property string|null $source
+ * @property string|null $payment_intent_id
+ * @property bool $chargeback_flag
+ * @property string|null $authentication_method
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
@@ -91,6 +94,10 @@ class FraudEvent extends Model
         'gateway_response_code',
         'automated_action_taken',
         'source',
+        // Gateway / post-transaction columns
+        'payment_intent_id',
+        'chargeback_flag',
+        'authentication_method',
         // Denormalized columns
         'card_country',
         'device_fingerprint',
@@ -142,6 +149,7 @@ class FraudEvent extends Model
         'is_archived' => 'boolean',
         'shipping_billing_match' => 'boolean',
         'proxy_vpn_detected' => 'boolean',
+        'chargeback_flag' => 'boolean',
     ];
 
     public function order(): BelongsTo

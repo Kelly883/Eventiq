@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserDashboardPreference extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
 
     /**
      * The table associated with the model.
