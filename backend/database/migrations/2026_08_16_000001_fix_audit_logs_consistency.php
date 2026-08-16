@@ -34,11 +34,8 @@ return new class extends Migration
                             $table->dropColumn('changes');
                         });
                     } catch (\Throwable $e) {
-                        // Some drivers require raw SQL for column drops
                         $driver = DB::getDriverName();
-                        if ($driver === 'sqlite') {
-                            DB::statement('ALTER TABLE audit_logs DROP COLUMN changes');
-                        } elseif ($driver === 'mysql') {
+                        if ($driver === 'sqlite' || $driver === 'mysql') {
                             DB::statement('ALTER TABLE audit_logs DROP COLUMN changes');
                         }
                     }
@@ -48,70 +45,133 @@ return new class extends Migration
                 $driver = DB::getDriverName();
 
                 if ($driver === 'sqlite') {
-                    $fks = DB::select('PRAGMA foreign_key_list(audit_logs)');
-                    $hasSetNull = false;
-                    $hasCascade = false;
-
-                    foreach ($fks as $fk) {
-                        if ($fk->from === 'ticket_id') {
-                            if (stripos($fk->on_delete, 'SET NULL') !== false) {
-                                $hasSetNull = true;
-                            } elseif (stripos($fk->on_delete, 'CASCADE') !== false) {
-                                $hasCascade = true;
-                            }
-                        }
-                    }
-
-                    if ($hasCascade && ! $hasSetNull) {
-                        $columns = DB::select('PRAGMA table_info(audit_logs)');
-                        $columnDefs = [];
-                        $columnNames = [];
-
-                        foreach ($columns as $col) {
-                            $columnNames[] = $col->name;
-                            $notNull = $col->notnull ? ' NOT NULL' : '';
-                            $default = $col->dflt_value !== null ? " DEFAULT " . trim($col->dflt_value, "()'") : '';
-                            $def = sprintf('"%s" %s%s%s', $col->name, $col->type, $notNull, $default);
-                            $columnDefs[] = $def;
-                        }
-
-                        if (! in_array('ticket_id', $columnNames)) {
-                            $columnDefs[] = '"ticket_id" uuid';
-                        }
-
-                        $createSql = sprintf(
-                            'CREATE TABLE "audit_logs_new" (%s, PRIMARY KEY ("id"))',
-                            implode(', ', $columnDefs)
-                        );
-                        DB::statement($createSql);
-
-                        $columnList = implode('", "', $columnNames);
-                        DB::statement(sprintf(
-                            'INSERT INTO "audit_logs_new" ("%s") SELECT "%s" FROM audit_logs',
-                            $columnList,
-                            $columnList
-                        ));
-
-                        DB::statement('ALTER TABLE "audit_logs_new" ADD CONSTRAINT "fk_audit_logs_new_ticket_id" FOREIGN KEY ("ticket_id") REFERENCES "tickets"("id") ON DELETE SET NULL');
-                        DB::statement('DROP TABLE audit_logs');
-                        DB::statement('ALTER TABLE "audit_logs_new" RENAME TO audit_logs');
-                    }
+                    $this->fixSqliteTicketIdFk();
                 } else {
-                    try {
-                        DB::statement('ALTER TABLE audit_logs DROP FOREIGN KEY audit_logs_ticket_id_foreign');
-                    } catch (\Throwable $e) {
-                        // FK may not exist
-                    }
-
-                    try {
-                        DB::statement('ALTER TABLE audit_logs ADD CONSTRAINT audit_logs_ticket_id_foreign FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE SET NULL');
-                    } catch (\Throwable $e) {
-                        // FK may already exist
-                    }
+                    $this->fixMySqlTicketIdFk();
                 }
             });
         } finally {
             DB::statement('PRAGMA foreign_keys = ON');
+        }
+    }
+
+    private function fixSqliteTicketIdFk(): void
+    {
+        $fks = DB::select('PRAGMA foreign_key_list(audit_logs)');
+        $hasSetNull = false;
+        $hasCascade = false;
+
+        foreach ($fks as $fk) {
+            if ($fk->from === 'ticket_id') {
+                if (stripos($fk->on_delete, 'SET NULL') !== false) {
+                    $hasSetNull = true;
+                } elseif (stripos($fk->on_delete, 'CASCADE') !== false) {
+                    $hasCascade = true;
+                }
+            }
+        }
+
+        if ($hasSetNull || ! $hasCascade) {
+            return;
+        }
+
+        $columns = DB::select('PRAGMA table_info(audit_logs)');
+        $indexes = DB::select('PRAGMA index_list(audit_logs)');
+
+        $columnDefs = [];
+        $columnNames = [];
+        $primaryKey = null;
+
+        foreach ($columns as $col) {
+            $columnNames[] = $col->name;
+            $notNull = $col->notnull ? ' NOT NULL' : '';
+            $default = '';
+            if ($col->dflt_value !== null) {
+                $raw = trim($col->dflt_value, "()'");
+                $default = $raw !== '' ? " DEFAULT '$raw'" : '';
+            }
+
+            if ($col->pk > 0) {
+                $primaryKey = $col->name;
+                $columnDefs[] = sprintf('"%s" %s%s PRIMARY KEY', $col->name, $col->type, $notNull);
+            } else {
+                $columnDefs[] = sprintf('"%s" %s%s%s', $col->name, $col->type, $notNull, $default);
+            }
+        }
+
+        $fkMap = [];
+        foreach ($fks as $fk) {
+            $refTable = $fk->table;
+            $refColumn = $fk->to;
+            $onDelete = stripos($fk->on_delete, 'SET NULL') !== false ? 'SET NULL' : 'CASCADE';
+            $fkMap[$fk->from] = [
+                'table' => $refTable,
+                'column' => $refColumn,
+                'on_delete' => $onDelete,
+            ];
+        }
+
+        foreach ($fkMap as $from => $ref) {
+            if ($from === 'ticket_id') {
+                $ref['on_delete'] = 'SET NULL';
+            }
+            $columnDefs[] = sprintf(
+                'FOREIGN KEY ("%s") REFERENCES "%s"("%s") ON DELETE %s',
+                $from,
+                $ref['table'],
+                $ref['column'],
+                $ref['on_delete']
+            );
+        }
+
+        $createSql = sprintf(
+            'CREATE TABLE "audit_logs_new" (%s)',
+            implode(', ', $columnDefs)
+        );
+        DB::statement($createSql);
+
+        $columnList = implode('", "', $columnNames);
+        DB::statement(sprintf(
+            'INSERT INTO "audit_logs_new" ("%s") SELECT "%s" FROM audit_logs',
+            $columnList,
+            $columnList
+        ));
+
+        DB::statement('DROP TABLE audit_logs');
+        DB::statement('ALTER TABLE "audit_logs_new" RENAME TO audit_logs');
+
+        foreach ($indexes as $index) {
+            if ($index->unique) {
+                continue;
+            }
+
+            $indexColumns = DB::select('PRAGMA index_info(?)', [$index->name]);
+            $columnNames = array_column($indexColumns, 'name');
+            if (empty($columnNames)) {
+                continue;
+            }
+
+            $quotedColumns = implode('", "', $columnNames);
+            DB::statement(sprintf(
+                'CREATE INDEX "%s" ON "audit_logs" ("%s")',
+                $index->name,
+                $quotedColumns
+            ));
+        }
+    }
+
+    private function fixMySqlTicketIdFk(): void
+    {
+        try {
+            DB::statement('ALTER TABLE audit_logs DROP FOREIGN KEY audit_logs_ticket_id_foreign');
+        } catch (\Throwable $e) {
+            // FK may not exist
+        }
+
+        try {
+            DB::statement('ALTER TABLE audit_logs ADD CONSTRAINT audit_logs_ticket_id_foreign FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE SET NULL');
+        } catch (\Throwable $e) {
+            // FK may already exist
         }
     }
 
