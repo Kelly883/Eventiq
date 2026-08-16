@@ -45,6 +45,7 @@ class Payment extends Model
         'currency',
         'status',
         'gateway',
+        'payment_channel',
         'idempotency_key',
         'gateway_response',
         'fees',
@@ -58,6 +59,8 @@ class Payment extends Model
         'settled_at',
         'card_last_four',
         'card_brand',
+        'attempts',
+        'last_error',
     ];
 
     protected $casts = [

@@ -30,6 +30,8 @@ class PaymentMethod extends Model
         'gateway',
         'gateway_payment_method_id',
         'type',
+        'last_four',
+        'expires_at',
         'details',
         'is_default',
     ];
@@ -37,6 +39,7 @@ class PaymentMethod extends Model
     protected $casts = [
         'details' => 'array',
         'is_default' => 'boolean',
+        'expires_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
