@@ -40,9 +40,17 @@ return new class extends Migration
                 }
             }
 
-            if ($isInteger) {
-                $table->dropColumn('checked_in_by');
+            if (! $isInteger) {
+                return;
             }
+
+            try {
+                $table->dropForeign(['checked_in_by']);
+            } catch (\Throwable $e) {
+                // FK may not exist
+            }
+
+            $table->dropColumn('checked_in_by');
         });
     }
 
