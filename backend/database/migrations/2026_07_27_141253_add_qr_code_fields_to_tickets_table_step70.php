@@ -59,23 +59,16 @@ return new class extends Migration
 
             // ── Fix checked_in_by FK ───────────────────────────────
             // The old migration (2026_07_06_124000) added checked_in_by as
-            // unsignedBigInteger without a FK. We need to drop and re-add
-            // it with proper uuid type and FK constraint.
+            // unsignedBigInteger without a FK. Ensure the existing column
+            // has a proper UUID FK to users. Do NOT drop the column or
+            // create checked_in_by_uuid — the model uses checked_in_by.
             try {
-                $table->dropForeign(['checked_in_by']);
-            } catch (\Exception $e) {
-                // No FK exists — expected for the old column
-            }
-
-            // Re-create as uuid type with proper FK to users
-            // SQLite doesn't support changing column types, so we add a
-            // new column and drop the old one if needed
-            if (! Schema::hasColumn('tickets', 'checked_in_by_uuid')) {
-                $table->uuid('checked_in_by_uuid')->nullable()->after('checked_in_at');
-                $table->foreign('checked_in_by_uuid')
+                $table->foreign('checked_in_by')
                     ->references('id')
                     ->on('users')
                     ->onDelete('set null');
+            } catch (\Exception $e) {
+                // FK may already exist
             }
         });
 
@@ -103,13 +96,6 @@ return new class extends Migration
                 // Index may not exist
             }
 
-            // Drop FK on checked_in_by_uuid
-            try {
-                $table->dropForeign(['checked_in_by_uuid']);
-            } catch (\Exception $e) {
-                // FK may not exist
-            }
-
             // Drop columns that were added
             $columns = [];
             if (Schema::hasColumn('tickets', 'qr_code_data')) {
@@ -129,9 +115,6 @@ return new class extends Migration
             }
             if (Schema::hasColumn('tickets', 'last_qr_scan_at')) {
                 $columns[] = 'last_qr_scan_at';
-            }
-            if (Schema::hasColumn('tickets', 'checked_in_by_uuid')) {
-                $columns[] = 'checked_in_by_uuid';
             }
 
             if (! empty($columns)) {
