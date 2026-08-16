@@ -10,6 +10,24 @@ export interface OrganizerProfile {
   website_url: string | null;
   social_links: SocialLinks | null;
   privacy_settings: PrivacySettings | null;
+  paystack_subaccount_code: string | null;
+  flutterwave_subaccount_id: string | null;
+  paystack_connect_status: string | null;
+  flutterwave_connect_status: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface OrganizerPublic {
+  id: number;
+  user_id: number;
+  business_name: string;
+  bio: string | null;
+  branding_color: string | null;
+  logo_path: string | null;
+  website_url: string | null;
+  social_links: SocialLinks | null;
   created_at: string;
   updated_at: string;
 }
