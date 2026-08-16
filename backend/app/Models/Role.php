@@ -31,4 +31,14 @@ class Role extends Model
     {
         return $this->belongsToMany(User::class);
     }
+
+    public function canAssignRole(): bool
+    {
+        return ! $this->isSystemRole;
+    }
+
+    public function getPermissionNames(): array
+    {
+        return $this->permissions()->pluck('name')->toArray();
+    }
 }

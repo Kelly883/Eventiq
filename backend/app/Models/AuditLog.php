@@ -63,4 +63,42 @@ class AuditLog extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function admin(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function targetUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'target_id');
+    }
+
+    public function getActionLabel(): string
+    {
+        return match ($this->action) {
+            'user_login' => 'User Login',
+            'user_logout' => 'User Logout',
+            'user_suspended' => 'User Suspended',
+            'event_created' => 'Event Created',
+            'event_approved' => 'Event Approved',
+            'event_flagged' => 'Event Flagged',
+            'event_cancelled' => 'Event Cancelled',
+            'payment_processed' => 'Payment Processed',
+            'payment_refunded' => 'Payment Refunded',
+            'refund_requested' => 'Refund Requested',
+            'refund_approved' => 'Refund Approved',
+            'refund_rejected' => 'Refund Rejected',
+            'payout_approved' => 'Payout Approved',
+            'payout_rejected' => 'Payout Rejected',
+            'ticket_checked_in' => 'Ticket Checked In',
+            'ticket_voided' => 'Ticket Voided',
+            'fraud_flagged' => 'Fraud Flagged',
+            'fraud_approved' => 'Fraud Approved',
+            'admin_setting_changed' => 'Admin Setting Changed',
+            'user_permission_changed' => 'User Permission Changed',
+            'data_export_requested' => 'Data Export Requested',
+            default => ucfirst(str_replace('_', ' ', $this->action)),
+        };
+    }
 }

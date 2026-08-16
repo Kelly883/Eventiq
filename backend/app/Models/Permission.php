@@ -18,6 +18,10 @@ class Permission extends Model
         'riskLevel',
     ];
 
+    protected $casts = [
+        'riskLevel' => 'string',
+    ];
+
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class);
@@ -26,5 +30,15 @@ class Permission extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class);
+    }
+
+    public function isHighRisk(): bool
+    {
+        return $this->riskLevel === 'high';
+    }
+
+    public function getCategory(): ?string
+    {
+        return $this->category;
     }
 }
