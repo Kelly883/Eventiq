@@ -23,6 +23,10 @@ class AuditLog extends Model
                 $model->{$model->getKeyName()} = (string) \Illuminate\Support\Str::uuid();
             }
         });
+
+        static::updating(function ($model) {
+            throw new \RuntimeException('audit_logs is immutable and cannot be updated.');
+        });
     }
 
     protected $fillable = [
@@ -32,6 +36,7 @@ class AuditLog extends Model
         'target_id',
         'status',
         'ip_address',
+        'source',
         'user_agent',
         'geolocation',
         'request_data',
@@ -41,6 +46,7 @@ class AuditLog extends Model
         'error_code',
         'compliance_classification',
         'retention_date',
+        'retention_reason',
         'metadata',
     ];
 

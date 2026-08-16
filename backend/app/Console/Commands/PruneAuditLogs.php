@@ -9,7 +9,7 @@ class PruneAuditLogs extends Command
 {
     protected $signature = 'audit:prune {--days= : Override AUDIT_LOG_RETENTION_DAYS for this run}';
 
-    protected $description = 'Delete audit log database rows older than the configured retention window.';
+    protected $description = 'Delete audit log database rows past their retention date.';
 
     public function handle(): int
     {
@@ -22,9 +22,10 @@ class PruneAuditLogs extends Command
         }
 
         $cutoff = now()->subDays($days);
-        $deleted = AuditLog::where('created_at', '<', $cutoff)->forceDelete();
+        $pruned = AuditLog::where('retention_date', '<', $cutoff)
+            ->forceDelete();
 
-        $this->info("Pruned {$deleted} audit log row(s) older than {$days} day(s).");
+        $this->info("Pruned {$pruned} audit log row(s) older than {$days} day(s).");
 
         return self::SUCCESS;
     }
