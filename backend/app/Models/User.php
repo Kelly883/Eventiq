@@ -38,6 +38,8 @@ class User extends Authenticatable
         'default_payment_gateway',
         'default_payment_method_id',
         'trial_ends_at',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     /**
@@ -143,5 +145,38 @@ class User extends Authenticatable
     public function invalidateAllSessions(): int
     {
         return $this->sessions()->whereNull('revokedAt')->update(['revokedAt' => now()]);
+    }
+
+    public function hasTwoFactorEnabled(): bool
+    {
+        return ! empty($this->two_factor_secret);
+    }
+
+    public function enableTwoFactor(string $secret, array $recoveryCodes): void
+    {
+        $this->forceFill([
+            'two_factor_secret' => $secret,
+            'two_factor_recovery_codes' => json_encode($recoveryCodes),
+        ])->save();
+    }
+
+    public function disableTwoFactor(): void
+    {
+        $this->forceFill([
+            'two_factor_secret' => null,
+            'two_factor_recovery_codes' => null,
+        ])->save();
+    }
+
+    public function getTwoFactorRecoveryCodes(): array
+    {
+        return json_decode($this->two_factor_recovery_codes, true) ?: [];
+    }
+
+    public function replaceTwoFactorRecoveryCodes(array $recoveryCodes): void
+    {
+        $this->forceFill([
+            'two_factor_recovery_codes' => json_encode($recoveryCodes),
+        ])->save();
     }
 }
