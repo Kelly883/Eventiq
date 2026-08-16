@@ -11,19 +11,31 @@ class SettlementPolicy extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name',
-        'description',
-        'platform_fee_percentage',
+        'organizer_tier',
+        'organizer_id',
+        'platform_commission_percentage',
+        'processing_fee_percentage',
         'payout_frequency',
-        'minimum_payout_amount',
-        'payment_methods',
+        'minimum_payout_threshold',
+        'payout_hold_days',
+        'requires_approval',
+        'auto_approve_threshold',
+        'max_retries',
+        'retry_backoff_multiplier',
+        'tax_withholding_percentage',
+        'allowed_payout_methods',
         'is_active',
     ];
 
     protected $casts = [
-        'platform_fee_percentage' => 'decimal:2',
-        'minimum_payout_amount' => 'decimal:2',
-        'payment_methods' => 'array',
+        'platform_commission_percentage' => 'decimal:2',
+        'processing_fee_percentage' => 'decimal:2',
+        'minimum_payout_threshold' => 'decimal:2',
+        'auto_approve_threshold' => 'decimal:2',
+        'retry_backoff_multiplier' => 'decimal:3',
+        'tax_withholding_percentage' => 'decimal:2',
+        'allowed_payout_methods' => 'array',
+        'requires_approval' => 'boolean',
         'is_active' => 'boolean',
     ];
 
@@ -31,7 +43,7 @@ class SettlementPolicy extends Model
     public const FREQUENCY_WEEKLY = 'weekly';
     public const FREQUENCY_BIWEEKLY = 'biweekly';
     public const FREQUENCY_MONTHLY = 'monthly';
-    public const FREQUENCY_MANUAL = 'manual';
+    public const FREQUENCY_ON_DEMAND = 'on_demand';
 
     public function payouts(): HasMany
     {
@@ -45,12 +57,12 @@ class SettlementPolicy extends Model
 
     public function calculatePlatformFee(float $amount): float
     {
-        return ($amount * (float) $this->platform_fee_percentage) / 100;
+        return ($amount * (float) $this->platform_commission_percentage) / 100;
     }
 
     public function meetsMinimumPayout(float $amount): bool
     {
-        return $amount >= (float) $this->minimum_payout_amount;
+        return $amount >= (float) $this->minimum_payout_threshold;
     }
 
     public function getFrequencyLabel(): string
@@ -60,7 +72,7 @@ class SettlementPolicy extends Model
             self::FREQUENCY_WEEKLY => 'Weekly',
             self::FREQUENCY_BIWEEKLY => 'Bi-weekly',
             self::FREQUENCY_MONTHLY => 'Monthly',
-            self::FREQUENCY_MANUAL => 'Manual',
+            self::FREQUENCY_ON_DEMAND => 'On Demand',
         ];
 
         return $labels[$this->payout_frequency] ?? $this->payout_frequency;

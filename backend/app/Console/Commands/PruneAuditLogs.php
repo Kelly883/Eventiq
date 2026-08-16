@@ -22,7 +22,7 @@ class PruneAuditLogs extends Command
         }
 
         $cutoff = now()->subDays($days);
-        $deleted = AuditLog::where('created_at', '<', $cutoff)->delete();
+        $deleted = AuditLog::where('created_at', '<', $cutoff)->forceDelete();
 
         $this->info("Pruned {$deleted} audit log row(s) older than {$days} day(s).");
 

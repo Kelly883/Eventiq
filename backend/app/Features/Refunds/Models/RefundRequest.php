@@ -13,17 +13,25 @@ class RefundRequest extends Model
     use HasFactory;
 
     protected $fillable = [
-        'ticket_id', 'user_id', 'refund_policy_id', 'status',
-        'requested_amount', 'approved_amount', 'reason', 'admin_notes',
-        'reviewed_at', 'reviewed_by',
+        'ticket_id', 'order_id', 'user_id', 'event_id',
+        'original_amount', 'refund_amount', 'refund_percentage',
+        'reason', 'explanation', 'refund_method', 'status',
+        'rejection_reason', 'approved_by', 'approved_at',
+        'processing_started_at', 'completed_at',
         'payment_gateway_refund_id', 'payment_gateway_response',
+        'appeal_count', 'last_appeal_at',
     ];
 
     protected $casts = [
-        'requested_amount' => 'decimal:2',
-        'approved_amount' => 'decimal:2',
-        'reviewed_at' => 'datetime',
+        'original_amount' => 'decimal:2',
+        'refund_amount' => 'decimal:2',
+        'refund_percentage' => 'decimal:2',
+        'approved_at' => 'datetime',
+        'processing_started_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'last_appeal_at' => 'datetime',
         'payment_gateway_response' => 'array',
+        'appeal_count' => 'integer',
     ];
 
     public function ticket(): BelongsTo
@@ -38,7 +46,17 @@ class RefundRequest extends Model
 
     public function reviewer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'reviewed_by');
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Event::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Order::class);
     }
 
     public function refundPolicy(): BelongsTo

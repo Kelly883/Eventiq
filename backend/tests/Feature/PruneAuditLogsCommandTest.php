@@ -14,6 +14,7 @@ class PruneAuditLogsCommandTest extends TestCase
     {
         $oldLog = new AuditLog([
             'action' => 'old.event',
+            'target_type' => 'test',
         ]);
         $oldLog->created_at = now()->subDays(400);
         $oldLog->updated_at = now()->subDays(400);
@@ -21,6 +22,7 @@ class PruneAuditLogsCommandTest extends TestCase
 
         $recent = new AuditLog([
             'action' => 'recent.event',
+            'target_type' => 'test',
         ]);
         $recent->created_at = now()->subDays(10);
         $recent->updated_at = now()->subDays(10);

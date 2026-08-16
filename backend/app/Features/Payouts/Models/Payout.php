@@ -13,37 +13,62 @@ class Payout extends Model
 
     protected $fillable = [
         'organizer_id',
-        'event_id',
-        'settlement_policy_id',
-        'amount',
-        'currency',
-        'status',
+        'settlement_period_start_date',
+        'settlement_period_end_date',
+        'gross_revenue',
+        'refunds_deducted',
+        'net_revenue',
+        'platform_commission_percentage',
+        'platform_commission_amount',
+        'processing_fee_percentage',
+        'processing_fee_amount',
+        'tax_withholding_percentage',
+        'tax_withholding_amount',
+        'payout_amount',
         'payout_method',
-        'transaction_id',
-        'processed_at',
-        'notes',
-        'processed_by',
+        'payment_gateway_payout_id',
+        'payment_gateway_response',
+        'status',
+        'calculated_at',
+        'approved_by',
+        'approved_at',
+        'processing_started_at',
+        'completed_at',
+        'failure_reason',
+        'retry_count',
+        'next_retry_at',
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
-        'processed_at' => 'datetime',
+        'gross_revenue' => 'decimal:2',
+        'refunds_deducted' => 'decimal:2',
+        'net_revenue' => 'decimal:2',
+        'platform_commission_percentage' => 'decimal:2',
+        'platform_commission_amount' => 'decimal:2',
+        'processing_fee_percentage' => 'decimal:2',
+        'processing_fee_amount' => 'decimal:2',
+        'tax_withholding_percentage' => 'decimal:2',
+        'tax_withholding_amount' => 'decimal:2',
+        'payout_amount' => 'decimal:2',
+        'calculated_at' => 'datetime',
+        'approved_at' => 'datetime',
+        'processing_started_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'next_retry_at' => 'datetime',
+        'payment_gateway_response' => 'array',
+        'retry_count' => 'integer',
     ];
 
     public const STATUS_PENDING = 'pending';
+    public const STATUS_CALCULATED = 'calculated';
+    public const STATUS_APPROVED = 'approved';
     public const STATUS_PROCESSING = 'processing';
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_FAILED = 'failed';
-    public const STATUS_CANCELLED = 'cancelled';
 
     public function organizer(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Organizer::class);
-    }
-
-    public function event(): BelongsTo
-    {
-        return $this->belongsTo(\App\Models\Event::class);
     }
 
     public function settlementPolicy(): BelongsTo
@@ -75,8 +100,8 @@ class Payout extends Model
     public function markAsCompleted(string $transactionId): void
     {
         $this->status = self::STATUS_COMPLETED;
-        $this->transaction_id = $transactionId;
-        $this->processed_at = now();
+        $this->payment_gateway_payout_id = $transactionId;
+        $this->completed_at = now();
         $this->save();
     }
 
@@ -84,7 +109,7 @@ class Payout extends Model
     {
         $this->status = self::STATUS_FAILED;
         if ($notes) {
-            $this->notes = $notes;
+            $this->failure_reason = $notes;
         }
         $this->save();
     }
