@@ -27,7 +27,9 @@ if (Schema::hasTable('tickets')) {
     $indexNames = array_column($indexes, 'name');
     echo "   tickets indexes:\n";
     echo "     - idx_tickets_event_status: " . (in_array('idx_tickets_event_status', $indexNames) ? "YES" : "NO") . "\n";
-    echo "     - idx_tickets_event_checked_in: " . (in_array('idx_tickets_event_checked_in', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - idx_tickets_event_checkin: " . (in_array('idx_tickets_event_checkin', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - idx_tickets_event_created_at: " . (in_array('idx_tickets_event_created_at', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - idx_tickets_ticket_id_unique: " . (in_array('idx_tickets_ticket_id_unique', $indexNames) ? "YES" : "NO") . "\n";
 }
 
 // Check fraud_events indexes
@@ -37,6 +39,9 @@ if (Schema::hasTable('fraud_events')) {
     echo "   fraud_events indexes:\n";
     echo "     - idx_fraud_ticket_event: " . (in_array('idx_fraud_ticket_event', $indexNames) ? "YES" : "NO") . "\n";
     echo "     - idx_fraud_event_detected: " . (in_array('idx_fraud_event_detected', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - idx_fraud_type: " . (in_array('idx_fraud_type', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - idx_fraud_user_created: " . (in_array('idx_fraud_user_created', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - idx_fraud_status_created: " . (in_array('idx_fraud_status_created', $indexNames) ? "YES" : "NO") . "\n";
 }
 
 // Check audit_logs indexes
@@ -44,7 +49,8 @@ if (Schema::hasTable('audit_logs')) {
     $indexes = DB::select("PRAGMA index_list('audit_logs')");
     $indexNames = array_column($indexes, 'name');
     echo "   audit_logs indexes:\n";
-    echo "     - idx_audit_logs_event_created: " . (in_array('idx_audit_logs_event_created', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - idx_audit_event_created: " . (in_array('idx_audit_event_created', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - audit_logs_targetuserid_index: " . (in_array('audit_logs_targetuserid_index', $indexNames) ? "YES" : "NO") . "\n";
 }
 
 // Check ticket_inventory indexes
@@ -53,6 +59,7 @@ if (Schema::hasTable('ticket_inventory')) {
     $indexNames = array_column($indexes, 'name');
     echo "   ticket_inventory indexes:\n";
     echo "     - idx_ticket_inventory_event: " . (in_array('idx_ticket_inventory_event', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - inv_event_tier_idx: " . (in_array('inv_event_tier_idx', $indexNames) ? "YES" : "NO") . "\n";
 }
 
 // Check analytics_events_metrics indexes
@@ -60,7 +67,20 @@ if (Schema::hasTable('analytics_events_metrics')) {
     $indexes = DB::select("PRAGMA index_list('analytics_events_metrics')");
     $indexNames = array_column($indexes, 'name');
     echo "   analytics_events_metrics indexes:\n";
-    echo "     - idx_analytics_event_id: " . (in_array('idx_analytics_event_id', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - idx_analytics_event: " . (in_array('idx_analytics_event', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - idx_metrics_organizer_event: " . (in_array('idx_metrics_organizer_event', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - idx_metrics_organizer_updated: " . (in_array('idx_metrics_organizer_updated', $indexNames) ? "YES" : "NO") . "\n";
+}
+
+// Check check_ins indexes (related check-in table)
+if (Schema::hasTable('check_ins')) {
+    $indexes = DB::select("PRAGMA index_list('check_ins')");
+    $indexNames = array_column($indexes, 'name');
+    echo "   check_ins indexes:\n";
+    echo "     - uq_checkins_ticket_scanned: " . (in_array('uq_checkins_ticket_scanned', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - idx_checkins_event_scanned: " . (in_array('idx_checkins_event_scanned', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - idx_checkins_event_status: " . (in_array('idx_checkins_event_status', $indexNames) ? "YES" : "NO") . "\n";
+    echo "     - idx_checkins_scanned_by_at: " . (in_array('idx_checkins_scanned_by_at', $indexNames) ? "YES" : "NO") . "\n";
 }
 
 echo "\n3. FOREIGN KEYS:\n";
@@ -70,14 +90,18 @@ $tablesWithFKs = [
     'fraud_events' => ['ticket_id', 'event_id', 'first_check_in_by', 'second_check_in_by'],
     'audit_logs' => ['event_id', 'ticket_id'],
     'ticket_inventory' => ['event_id'],
+    'analytics_events_metrics' => ['event_id'],
+    'check_ins' => ['ticket_id', 'event_id', 'scanned_by'],
 ];
 
 foreach ($tablesWithFKs as $table => $columns) {
-    if (!Schema::hasTable($table)) continue;
-    
+    if (!Schema::hasTable($table)) {
+        continue;
+    }
+
     $foreignKeys = DB::select("PRAGMA foreign_key_list('$table')");
     $fkColumns = array_unique(array_column($foreignKeys, 'from'));
-    
+
     echo "   $table:\n";
     foreach ($columns as $column) {
         $hasFK = in_array($column, $fkColumns);
@@ -133,8 +157,3 @@ if (Schema::hasTable('analytics_events_metrics')) {
 }
 
 echo "\nVerification complete\n";
-
-</parameter>
-<command>php backend/verify_step71_tables.php</command>
-<requires_approval>false</requires_approval>
-</execute_command>
