@@ -8,5 +8,18 @@ use Illuminate\Database\Eloquent\Model;
 class PushNotificationTemplate extends Model
 {
     use HasFactory;
-    //
+
+    protected $fillable = [
+        'name',
+        'type',
+        'title',
+        'body',
+        'variables',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+        'variables' => 'array',
+    ];
 }
