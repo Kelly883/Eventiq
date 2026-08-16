@@ -41,4 +41,9 @@ class PasswordResetToken extends Model
     {
         return $this->belongsTo(User::class, 'userId');
     }
+
+    public function isValid(): bool
+    {
+        return $this->usedAt === null && $this->expiresAt->isFuture();
+    }
 }

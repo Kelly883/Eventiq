@@ -33,6 +33,11 @@ class User extends Authenticatable
         'permissions',
         'emailVerified',
         'lastLoginAt',
+        'paystack_customer_code',
+        'flutterwave_customer_id',
+        'default_payment_gateway',
+        'default_payment_method_id',
+        'trial_ends_at',
     ];
 
     /**
@@ -55,6 +60,7 @@ class User extends Authenticatable
         return [
             'emailVerified' => 'boolean',
             'lastLoginAt' => 'datetime',
+            'trial_ends_at' => 'datetime',
         ];
     }
 
@@ -115,11 +121,26 @@ class User extends Authenticatable
         return $this->hasOne(Organizer::class);
     }
 
+    public function paymentMethods(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PaymentMethod::class);
+    }
+
     /**
      * Get the dashboard preferences for the user (one-to-one).
      */
     public function dashboardPreferences(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(\App\Features\Dashboard\Models\UserDashboardPreference::class, 'user_id', 'id');
+    }
+
+    public function isPasswordCorrect(string $password): bool
+    {
+        return \Illuminate\Support\Facades\Hash::check($password, $this->passwordHash);
+    }
+
+    public function invalidateAllSessions(): int
+    {
+        return $this->sessions()->whereNull('revokedAt')->update(['revokedAt' => now()]);
     }
 }

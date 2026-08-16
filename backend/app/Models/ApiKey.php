@@ -13,12 +13,16 @@ class ApiKey extends Model
     protected $fillable = [
         'organizer_id',
         'name',
+        'description',
         'key_prefix',
         'hashed_key',
         'scopes',
         'revoked_at',
         'expires_at',
         'last_used_at',
+        'last_used_ip',
+        'rate_limit',
+        'rate_limit_period',
     ];
 
     protected $casts = [

@@ -42,19 +42,25 @@ class ProcessPaystackWebhookJob implements ShouldQueue
             return;
         }
 
-        $isSuccessful = (data_get($verification, 'status') === 'success')
-            || (data_get($verification, 'data.status') === 'success');
+        $rawStatus = (string) data_get($verification, 'data.status', data_get($verification, 'status', ''));
+
+        $status = match ($rawStatus) {
+            'success' => 'success',
+            'failed' => 'failed',
+            'abandoned' => 'abandoned',
+            default => 'failed',
+        };
 
         $payment->update([
-            'status' => $isSuccessful ? 'success' : 'failed',
+            'status' => $status,
             'gateway_response' => $verification,
         ]);
 
         Order::query()->whereKey($payment->order_id)->update([
-            'status' => $isSuccessful ? 'completed' : 'failed',
+            'status' => $status === 'success' ? 'completed' : ($status === 'abandoned' ? 'abandoned' : 'failed'),
         ]);
 
-        if ($isSuccessful) {
+        if ($status === 'success') {
             SendPaymentConfirmationJob::dispatch($payment->order_id);
         }
     }

@@ -281,6 +281,7 @@ class TicketPurgeTest extends TestCase
             $table->uuid('target_id')->nullable();
             $table->string('status')->default('success');
             $table->string('ip_address')->nullable();
+            $table->string('source')->default('web');
             $table->text('user_agent')->nullable();
             $table->json('geolocation')->nullable();
             $table->json('request_data')->nullable();
@@ -290,11 +291,14 @@ class TicketPurgeTest extends TestCase
             $table->string('error_code')->nullable();
             $table->string('compliance_classification')->default('internal');
             $table->timestamp('retention_date')->nullable();
+            $table->string('retention_reason')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
+
+            $table->index(['target_type', 'target_id', 'created_at']);
         });
 
         Schema::create('analytics_events_metrics', function (Blueprint $table) {

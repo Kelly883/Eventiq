@@ -45,19 +45,25 @@ class ProcessFlutterwaveWebhookJob implements ShouldQueue
             return;
         }
 
-        $isSuccessful = (data_get($verification, 'status') === 'successful')
-            || (data_get($verification, 'data.status') === 'successful');
+        $rawStatus = (string) (data_get($verification, 'data.status', data_get($verification, 'status', '')));
+
+        $status = match ($rawStatus) {
+            'successful', 'completed' => 'success',
+            'failed' => 'failed',
+            'pending' => 'pending',
+            default => 'failed',
+        };
 
         $payment->update([
-            'status' => $isSuccessful ? 'success' : 'failed',
+            'status' => $status,
             'gateway_response' => $verification,
         ]);
 
         Order::query()->whereKey($payment->order_id)->update([
-            'status' => $isSuccessful ? 'completed' : 'failed',
+            'status' => $status === 'success' ? 'completed' : ($status === 'pending' ? 'pending' : 'failed'),
         ]);
 
-        if ($isSuccessful) {
+        if ($status === 'success') {
             SendPaymentConfirmationJob::dispatch($payment->order_id);
         }
     }

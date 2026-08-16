@@ -38,6 +38,7 @@ class AuditLogService
 
         $ipAddress = request()?->ip();
         $userAgent = request()?->userAgent();
+        $source = $this->detectSource();
 
         Log::channel('audit')->info($action, [
             'target_type' => $targetType,
@@ -57,9 +58,11 @@ class AuditLogService
                 'changed_fields' => $changes,
                 'user_id' => $userId,
                 'ip_address' => $ipAddress,
+                'source' => $source,
                 'user_agent' => $userAgent,
                 'status' => 'success',
                 'compliance_classification' => 'internal',
+                'retention_date' => now()->addYears(7),
                 'metadata' => $metadata,
             ]);
         } catch (\Throwable $e) {
@@ -67,6 +70,19 @@ class AuditLogService
 
             return null;
         }
+    }
+
+    private function detectSource(): string
+    {
+        if (app()->runningInConsole()) {
+            return 'cli';
+        }
+
+        if (request()?->expectsJson() || request()?->is('api/*')) {
+            return 'api';
+        }
+
+        return 'web';
     }
 
     /**

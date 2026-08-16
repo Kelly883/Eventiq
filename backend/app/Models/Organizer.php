@@ -19,6 +19,10 @@ class Organizer extends Model
         'website_url',
         'social_links',
         'privacy_settings',
+        'paystack_subaccount_code',
+        'flutterwave_subaccount_id',
+        'paystack_connect_status',
+        'flutterwave_connect_status',
     ];
 
     public function user(): BelongsTo

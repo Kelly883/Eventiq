@@ -85,6 +85,8 @@ class TicketPurgeController extends Controller
                 $adminId
             );
 
+            \Illuminate\Support\Facades\Log::info('DEBUG: audit log called', ['admin_id' => $adminId, 'ticket_id' => $ticket->id]);
+
             return $checkInCount;
         });
 
