@@ -30,6 +30,9 @@ class DeliveryPreference extends Model
         'max_daily_notifications',
         'language',
         'timezone',
+        'event_cancellations',
+        'refund_confirmations',
+        'promotional_offers',
     ];
 
     /**

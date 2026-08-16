@@ -38,7 +38,6 @@ class AuditLog extends Model
         'details',
         'entity',
         'entity_id',
-        'changes',
         'request_id',
     ];
 
@@ -46,7 +45,7 @@ class AuditLog extends Model
         'oldValue' => 'array',
         'newValue' => 'array',
         'metadata' => 'array',
-        'changes' => 'array',
+        'details' => 'array',
     ];
 
     public function admin(): BelongsTo
