@@ -43,7 +43,7 @@ class AuditLogService
                 'action' => $action,
                 'entity' => $entity,
                 'entity_id' => $entityId,
-                'changes' => $changes,
+                'details' => $changes,
                 'user_id' => $userId,
                 'request_id' => $requestId,
             ]);
