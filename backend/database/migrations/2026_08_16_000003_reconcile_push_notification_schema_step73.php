@@ -49,7 +49,7 @@ return new class extends Migration
     {
         Schema::create('push_notification_devices', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->uuid('user_id');
             $table->string('token')->unique();
             $table->string('provider');
             $table->enum('device_type', ['web', 'ios', 'android']);
@@ -57,6 +57,8 @@ return new class extends Migration
 
             $table->index('user_id');
             $table->index('token');
+
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         });
     }
 
