@@ -46,4 +46,9 @@ class Session extends Model
     {
         return $this->revokedAt === null && $this->expiresAt->isFuture();
     }
+
+    public function scopeActive($query)
+    {
+        return $query->whereNull('revokedAt')->where('expiresAt', '>', now());
+    }
 }

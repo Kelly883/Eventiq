@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\AuthResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,8 +28,9 @@ class AuthController extends Controller
         // Re-issue a new token. (You may want to revoke the old token(s) depending on your policy.)
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        return response()->json([
-            'accessToken' => $token,
+        return new AuthResource([
+            'token' => $token,
+            'user' => $user,
         ]);
     }
 
@@ -48,9 +50,9 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        return response()->json([
-            'user' => $user,
+        return new AuthResource([
             'token' => $user->createToken('auth-token')->plainTextToken,
+            'user' => $user,
         ]);
     }
 
@@ -69,9 +71,9 @@ class AuthController extends Controller
 
         $user = Auth::user();
 
-        return response()->json([
-            'user' => $user,
+        return new AuthResource([
             'token' => $user->createToken('auth-token')->plainTextToken,
+            'user' => $user,
         ]);
     }
 

@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => App\Http\Middleware\CheckRole::class,
             'api.key' => App\Http\Middleware\ApiKeyMiddleware::class,
+            'session.auth' => App\Http\Middleware\ValidateSessionToken::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
