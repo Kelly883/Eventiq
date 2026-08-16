@@ -83,20 +83,34 @@ class WebhookController extends Controller
             return response()->json(['message' => 'Verification failed'], 502);
         }
 
-        $succeeded = $gateway === 'paystack'
-            ? ($verification['status'] ?? null) === 'success'
-            : ($verification['status'] ?? null) === 'successful';
+        $rawStatus = $gateway === 'paystack'
+            ? (string) data_get($verification, 'data.status', data_get($verification, 'status', ''))
+            : (string) data_get($verification, 'data.status', data_get($verification, 'status', ''));
 
-        if (! $succeeded) {
-            $order->update(['status' => 'failed']);
-            Payment::where('order_id', $order->id)->update(['status' => 'failed', 'gateway_response' => $verification]);
+        $status = $gateway === 'paystack'
+            ? match ($rawStatus) {
+                'success' => 'success',
+                'failed' => 'failed',
+                'abandoned' => 'abandoned',
+                default => 'failed',
+            }
+            : match ($rawStatus) {
+                'successful', 'completed' => 'success',
+                'failed' => 'failed',
+                'pending' => 'pending',
+                default => 'failed',
+            };
+
+        if (! in_array($status, ['success', 'pending'])) {
+            $order->update(['status' => $status === 'abandoned' ? 'abandoned' : 'failed']);
+            Payment::where('order_id', $order->id)->update(['status' => $status, 'gateway_response' => $verification]);
 
             return response()->json(['received' => true]);
         }
 
-        DB::transaction(function () use ($order, $verification, $gateway) {
-            $order->update(['status' => 'completed']);
-            Payment::where('order_id', $order->id)->update(['status' => 'success', 'gateway_response' => $verification]);
+        DB::transaction(function () use ($order, $verification, $status) {
+            $order->update(['status' => $status === 'success' ? 'completed' : 'pending']);
+            Payment::where('order_id', $order->id)->update(['status' => $status, 'gateway_response' => $verification]);
 
             foreach ($order->items as $item) {
                 // Lock the ticket tier row to prevent concurrent sold_count updates
