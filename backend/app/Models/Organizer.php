@@ -26,9 +26,17 @@ class Organizer extends Model
         'website',
         'socialLinks',
         'brandingColors',
+        'timezone',
+        'currency',
+        'country',
+        'verificationStatus',
+        'paymentDefault',
+        'commissionRate',
         'isPublic',
         'emailPublic',
         'phonePublic',
+        'hideSocialLinks',
+        'hideBrandingColors',
         'notificationPreferences',
         'totalEventsCreated',
         'totalTicketsSold',
@@ -41,9 +49,20 @@ class Organizer extends Model
         'isPublic' => 'boolean',
         'emailPublic' => 'boolean',
         'phonePublic' => 'boolean',
+        'hideSocialLinks' => 'boolean',
+        'hideBrandingColors' => 'boolean',
         'totalEventsCreated' => 'integer',
         'totalTicketsSold' => 'integer',
+        'commissionRate' => 'decimal:2',
         'deletedAt' => 'datetime',
+    ];
+
+    protected $appends = [
+        'isPublic',
+        'emailPublic',
+        'phonePublic',
+        'hideSocialLinks',
+        'hideBrandingColors',
     ];
 
     public function user(): BelongsTo
@@ -78,23 +97,79 @@ class Organizer extends Model
         return $this->hasMany(\App\Models\ApiKey::class);
     }
 
+    public function setSocialLinksAttribute($value): void
+    {
+        if (is_array($value)) {
+            $value = array_map(function ($link) {
+                return $link === '' ? null : $link;
+            }, $value);
+        }
+        $this->attributes['socialLinks'] = $value;
+    }
+
+    public function setBrandingColorsAttribute($value): void
+    {
+        if (is_array($value)) {
+            $value = array_map(function ($color) {
+                if ($color === null || $color === '') {
+                    return null;
+                }
+                $color = strtolower(trim($color));
+                if (preg_match('/^#([a-f0-9]{3})$/', $color, $matches)) {
+                    $color = '#' . $matches[1][0] . $matches[1][0] . $matches[1][1] . $matches[1][1] . $matches[1][2] . $matches[1][2];
+                }
+                return $color;
+            }, $value);
+        }
+        $this->attributes['brandingColors'] = $value;
+    }
+
+    public function setBioAttribute($value): void
+    {
+        $this->attributes['bio'] = $value !== null ? trim(substr($value, 0, 500)) : null;
+    }
+
     public function getPublicProfile(): array
     {
-        return [
+        if (! $this->isPublic) {
+            return [
+                'id' => $this->id,
+                'userId' => $this->userId,
+                'displayName' => $this->displayName,
+                'isPublic' => false,
+                'createdAt' => $this->created_at,
+            ];
+        }
+
+        $profile = [
             'id' => $this->id,
             'userId' => $this->userId,
             'displayName' => $this->displayName,
             'bio' => $this->bio,
             'avatarUrl' => $this->avatarUrl,
             'website' => $this->website,
-            'socialLinks' => $this->socialLinks,
-            'brandingColors' => $this->brandingColors,
             'totalEventsCreated' => $this->totalEventsCreated,
             'totalTicketsSold' => $this->totalTicketsSold,
             'createdAt' => $this->created_at,
-            ...($this->emailPublic ? ['email' => $this->email] : []),
-            ...($this->phonePublic ? ['phone' => $this->phone] : []),
         ];
+
+        if (! $this->hideBrandingColors) {
+            $profile['brandingColors'] = $this->brandingColors;
+        }
+
+        if (! $this->hideSocialLinks) {
+            $profile['socialLinks'] = $this->socialLinks;
+        }
+
+        if ($this->emailPublic) {
+            $profile['email'] = $this->email;
+        }
+
+        if ($this->phonePublic) {
+            $profile['phone'] = $this->phone;
+        }
+
+        return $profile;
     }
 
     public function getPrivateProfile(): array
@@ -111,9 +186,17 @@ class Organizer extends Model
             'website' => $this->website,
             'socialLinks' => $this->socialLinks,
             'brandingColors' => $this->brandingColors,
+            'timezone' => $this->timezone,
+            'currency' => $this->currency,
+            'country' => $this->country,
+            'verificationStatus' => $this->verificationStatus,
+            'paymentDefault' => $this->paymentDefault,
+            'commissionRate' => $this->commissionRate,
             'isPublic' => $this->isPublic,
             'emailPublic' => $this->emailPublic,
             'phonePublic' => $this->phonePublic,
+            'hideSocialLinks' => $this->hideSocialLinks,
+            'hideBrandingColors' => $this->hideBrandingColors,
             'notificationPreferences' => $this->notificationPreferences,
             'totalEventsCreated' => $this->totalEventsCreated,
             'totalTicketsSold' => $this->totalTicketsSold,

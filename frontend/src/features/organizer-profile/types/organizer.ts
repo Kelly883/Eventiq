@@ -1,8 +1,8 @@
 export interface OrganizerSocialLinks {
-  twitter?: string;
-  instagram?: string;
-  linkedin?: string;
-  youtube?: string;
+  twitter?: string | null;
+  instagram?: string | null;
+  linkedin?: string | null;
+  youtube?: string | null;
 }
 
 export interface BrandingColors {
@@ -34,9 +34,17 @@ export interface Organizer {
   website: string | null;
   socialLinks: OrganizerSocialLinks | null;
   brandingColors: BrandingColors | null;
+  timezone: string | null;
+  currency: string | null;
+  country: string | null;
+  verificationStatus: string | null;
+  paymentDefault: string | null;
+  commissionRate: number | null;
   isPublic: boolean;
   emailPublic: boolean;
   phonePublic: boolean;
+  hideSocialLinks: boolean;
+  hideBrandingColors: boolean;
   notificationPreferences: NotificationPreferences | null;
   totalEventsCreated: number;
   totalTicketsSold: number;
@@ -52,8 +60,8 @@ export interface OrganizerPublic {
   bio: string | null;
   avatarUrl: string | null;
   website: string | null;
-  socialLinks: OrganizerSocialLinks | null;
-  brandingColors: BrandingColors | null;
+  socialLinks?: OrganizerSocialLinks | null;
+  brandingColors?: BrandingColors | null;
   totalEventsCreated: number;
   totalTicketsSold: number;
   createdAt: string;
