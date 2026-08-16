@@ -4,12 +4,17 @@ export interface OrganizerProfile {
   id: number;
   user_id: number;
   business_name: string;
+  display_name: string | null;
   bio: string | null;
   branding_color: string | null;
   logo_path: string | null;
+  avatar_url: string | null;
+  email: string | null;
+  phone: string | null;
   website_url: string | null;
   social_links: SocialLinks | null;
   privacy_settings: PrivacySettings | null;
+  is_public: boolean;
   paystack_subaccount_code: string | null;
   flutterwave_subaccount_id: string | null;
   paystack_connect_status: string | null;
@@ -23,11 +28,16 @@ export interface OrganizerPublic {
   id: number;
   user_id: number;
   business_name: string;
+  display_name: string | null;
   bio: string | null;
   branding_color: string | null;
   logo_path: string | null;
+  avatar_url: string | null;
+  email: string | null;
+  phone: string | null;
   website_url: string | null;
   social_links: SocialLinks | null;
+  is_public: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -70,12 +80,17 @@ export interface AuditLogEntry {
 
 export interface OrganizerProfileUpdatePayload {
   business_name?: string;
+  display_name?: string | null;
   bio?: string | null;
   branding_color?: string | null;
   logo_path?: string | null;
+  avatar_url?: string | null;
+  email?: string | null;
+  phone?: string | null;
   website_url?: string | null;
   social_links?: SocialLinks;
   privacy_settings?: PrivacySettings;
+  is_public?: boolean;
 }
 
 export interface ApiResponse<T> {

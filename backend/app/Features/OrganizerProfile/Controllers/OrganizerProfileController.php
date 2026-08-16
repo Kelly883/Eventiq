@@ -4,6 +4,8 @@ namespace App\Features\OrganizerProfile\Controllers;
 
 use App\Features\OrganizerProfile\Models\OrganizerProfile;
 use App\Features\OrganizerProfile\Requests\UpdateOrganizerProfileRequest;
+use App\Http\Resources\OrganizerProfileResource;
+use App\Http\Resources\OrganizerPublicResource;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -12,20 +14,22 @@ class OrganizerProfileController extends Controller
     public function show($id)
     {
         $organizer = OrganizerProfile::with('user', 'events')->findOrFail($id);
-        return response()->json(['data' => $organizer]);
+        return new OrganizerPublicResource($organizer);
     }
 
     public function edit()
     {
         $organizer = OrganizerProfile::where('user_id', auth()->id())->firstOrFail();
-        return response()->json(['data' => $organizer]);
+        $this->authorize('view', $organizer);
+        return new OrganizerProfileResource($organizer);
     }
 
     public function update(UpdateOrganizerProfileRequest $request)
     {
         $organizer = OrganizerProfile::where('user_id', auth()->id())->firstOrFail();
+        $this->authorize('update', $organizer);
         $organizer->update($request->validated());
-        return response()->json(['data' => $organizer, 'message' => 'Profile updated successfully.']);
+        return new OrganizerProfileResource($organizer);
     }
 
     public function events($id)
@@ -37,7 +41,7 @@ class OrganizerProfileController extends Controller
     public function auditLog()
     {
         $organizer = OrganizerProfile::where('user_id', auth()->id())->firstOrFail();
-        // Placeholder: return audit log entries for this organizer
+        $this->authorize('viewAuditLog', $organizer);
         return response()->json(['data' => []]);
     }
 }

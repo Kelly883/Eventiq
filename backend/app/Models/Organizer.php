@@ -14,12 +14,17 @@ class Organizer extends Model
     protected $fillable = [
         'user_id',
         'business_name',
+        'display_name',
         'bio',
         'branding_color',
         'logo_path',
+        'avatar_url',
+        'email',
+        'phone',
         'website_url',
         'social_links',
         'privacy_settings',
+        'is_public',
         'paystack_subaccount_code',
         'flutterwave_subaccount_id',
         'paystack_connect_status',
@@ -29,6 +34,7 @@ class Organizer extends Model
     protected $casts = [
         'social_links' => 'array',
         'privacy_settings' => 'array',
+        'is_public' => 'boolean',
     ];
 
     public function user(): BelongsTo
@@ -53,15 +59,29 @@ class Organizer extends Model
 
     public function getPublicProfile(): array
     {
+        $privacy = $this->privacy_settings ?? [];
+        $showSocialLinks = $privacy['show_social_links'] ?? false;
+        $showEmail = $privacy['show_email'] ?? false;
+        $showPhone = $privacy['show_phone'] ?? false;
+
+        $socialLinks = $showSocialLinks ? $this->social_links : null;
+        $email = $showEmail ? $this->email : null;
+        $phone = $showPhone ? $this->phone : null;
+
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
             'business_name' => $this->business_name,
+            'display_name' => $this->display_name,
             'bio' => $this->bio,
             'branding_color' => $this->branding_color,
             'logo_path' => $this->logo_path,
+            'avatar_url' => $this->avatar_url,
+            'email' => $email,
+            'phone' => $phone,
             'website_url' => $this->website_url,
-            'social_links' => $this->social_links,
+            'social_links' => $socialLinks,
+            'is_public' => $this->is_public,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
@@ -73,12 +93,17 @@ class Organizer extends Model
             'id' => $this->id,
             'user_id' => $this->user_id,
             'business_name' => $this->business_name,
+            'display_name' => $this->display_name,
             'bio' => $this->bio,
             'branding_color' => $this->branding_color,
             'logo_path' => $this->logo_path,
+            'avatar_url' => $this->avatar_url,
+            'email' => $this->email,
+            'phone' => $this->phone,
             'website_url' => $this->website_url,
             'social_links' => $this->social_links,
             'privacy_settings' => $this->privacy_settings,
+            'is_public' => $this->is_public,
             'paystack_subaccount_code' => $this->paystack_subaccount_code,
             'flutterwave_subaccount_id' => $this->flutterwave_subaccount_id,
             'paystack_connect_status' => $this->paystack_connect_status,

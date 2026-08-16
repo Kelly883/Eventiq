@@ -29,7 +29,7 @@ class DatabaseSeeder extends Seeder
 
         $organizerProfile = Organizer::factory()->create([
             'user_id' => $organizer->id,
-            'displayName' => 'Test Organizer',
+            'display_name' => 'Test Organizer',
             'business_name' => 'Test Business',
         ]);
 
