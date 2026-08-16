@@ -61,6 +61,7 @@ class User extends Authenticatable
             'emailVerified' => 'boolean',
             'lastLoginAt' => 'datetime',
             'trial_ends_at' => 'datetime',
+            'email_verified_at' => 'datetime',
         ];
     }
 
