@@ -40,6 +40,11 @@ class Organizer extends Model
         'notificationPreferences',
         'totalEventsCreated',
         'totalTicketsSold',
+        'verified',
+        'response_rate',
+        'average_rating',
+        'location',
+        'timezone',
     ];
 
     protected $casts = [
@@ -73,27 +78,36 @@ class Organizer extends Model
         return $this->hasMany(\App\Models\ApiKey::class);
     }
 
-    public function getPublicProfile(): array
+    public function getPublicProfile(): ?array
     {
+        if (! $this->isPublic) {
+            return null;
+        }
+
         $data = [
             'id' => $this->id,
             'userId' => $this->userId,
             'displayName' => $this->displayName,
-            'bio' => $this->bio,
             'avatarUrl' => $this->avatarUrl,
+            'logoUrl' => $this->logo_path,
             'website' => $this->website,
             'socialLinks' => $this->socialLinks,
             'brandingColors' => $this->brandingColors,
+            'brandingColor' => $this->branding_color,
             'totalEventsCreated' => $this->totalEventsCreated ?? 0,
             'totalTicketsSold' => $this->totalTicketsSold ?? 0,
             'createdAt' => $this->created_at,
         ];
 
-        if ($this->emailPublic) {
+        if ($this->bio !== null) {
+            $data['bio'] = $this->bio;
+        }
+
+        if ($this->emailPublic && $this->email !== null) {
             $data['email'] = $this->email;
         }
 
-        if ($this->phonePublic) {
+        if ($this->phonePublic && $this->phone !== null) {
             $data['phone'] = $this->phone;
         }
 
@@ -124,7 +138,43 @@ class Organizer extends Model
     public function calculateStats(): void
     {
         $this->totalEventsCreated = $this->events()->count();
-        $this->totalTicketsSold = $this->events()->join('tickets', 'events.id', '=', 'tickets.event_id')->count();
+        $this->totalTicketsSold = $this->events()
+            ->join('tickets', 'events.id', '=', 'tickets.event_id')
+            ->whereIn('tickets.status', ['valid', 'checked_in'])
+            ->count();
         $this->save();
+    }
+
+    public function setBrandingColorsAttribute(?array $colors): void
+    {
+        $this->attributes['brandingColors'] = json_encode($this->validateBrandingColors($colors));
+    }
+
+    private function validateBrandingColors(?array $colors): ?array
+    {
+        if ($colors === null) {
+            return null;
+        }
+
+        $validated = [];
+
+        if (isset($colors['primaryColor'])) {
+            $validated['primaryColor'] = $this->validateHexColor($colors['primaryColor']);
+        }
+
+        if (isset($colors['accentColor'])) {
+            $validated['accentColor'] = $this->validateHexColor($colors['accentColor']);
+        }
+
+        return $validated;
+    }
+
+    private function validateHexColor(string $color): string
+    {
+        if (! preg_match('/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/', $color)) {
+            throw new \InvalidArgumentException("Invalid hex color: {$color}");
+        }
+
+        return $color;
     }
 }
