@@ -22,6 +22,14 @@ class PayoutCalculation extends Model
                 $model->{$model->getKeyName()} = (string) \Illuminate\Support\Str::uuid();
             }
         });
+
+        static::updating(function ($model) {
+            throw new \RuntimeException('payout_calculations is append-only and cannot be updated.');
+        });
+
+        static::deleting(function ($model) {
+            throw new \RuntimeException('payout_calculations is append-only and cannot be deleted.');
+        });
     }
 
     protected $fillable = [

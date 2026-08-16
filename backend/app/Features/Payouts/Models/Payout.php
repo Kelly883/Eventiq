@@ -25,11 +25,14 @@ class Payout extends Model
         'tax_withholding_percentage',
         'tax_withholding_amount',
         'payout_amount',
+        'currency',
         'payout_method',
+        'payout_method_details',
         'payment_gateway_payout_id',
         'payment_gateway_response',
         'status',
         'calculated_at',
+        'initiated_by',
         'approved_by',
         'approved_at',
         'processing_started_at',
@@ -56,6 +59,7 @@ class Payout extends Model
         'completed_at' => 'datetime',
         'next_retry_at' => 'datetime',
         'payment_gateway_response' => 'array',
+        'payout_method_details' => 'array',
         'retry_count' => 'integer',
     ];
 
