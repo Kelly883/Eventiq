@@ -16,10 +16,14 @@ class PushNotificationTemplate extends Model
         'body',
         'variables',
         'is_active',
+        'priority',
+        'badge',
+        'sound',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'variables' => 'array',
+        'badge' => 'integer',
     ];
 }

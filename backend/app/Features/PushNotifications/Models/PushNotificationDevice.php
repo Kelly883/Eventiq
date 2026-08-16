@@ -9,9 +9,10 @@ class PushNotificationDevice extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'token', 'provider', 'device_type'];
+    protected $fillable = ['user_id', 'token', 'provider', 'device_type', 'last_used_at'];
 
     protected $casts = [
         'device_type' => 'string',
+        'last_used_at' => 'datetime',
     ];
 }

@@ -46,6 +46,9 @@ class PushNotificationService
 
             $this->messaging->send($message);
 
+            PushNotificationDevice::where('token', $token)
+                ->update(['last_used_at' => now()]);
+
             return true;
         } catch (\Throwable $e) {
             Log::error('PushNotificationService::sendToToken failed: ' . $e->getMessage());
