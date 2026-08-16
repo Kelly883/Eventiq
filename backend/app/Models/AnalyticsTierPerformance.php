@@ -45,4 +45,14 @@ class AnalyticsTierPerformance extends Model
     {
         return $this->belongsTo(TicketTier::class);
     }
+
+    public function scopeForEvent($query, $eventId)
+    {
+        return $query->where('event_id', $eventId);
+    }
+
+    public function scopeForTier($query, $tierId)
+    {
+        return $query->where('ticket_tier_id', $tierId);
+    }
 }

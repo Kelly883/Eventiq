@@ -34,6 +34,7 @@ class Event extends Model
         'end_datetime' => 'datetime',
         'latitude' => 'decimal:7',
         'longitude' => 'decimal:7',
+        'capacity' => 'integer',
         'deleted_at' => 'datetime',
     ];
 
@@ -75,5 +76,10 @@ class Event extends Model
     public function pricingWindows(): HasMany
     {
         return $this->hasMany(\App\Features\Pricing\Models\PricingWindow::class);
+    }
+
+    public function scopeWhereNotDeleted($query)
+    {
+        return $query->whereNull('deleted_at');
     }
 }

@@ -46,4 +46,31 @@ class TicketInventory extends Model
     {
         return (int) ($this->total_available ?? 0);
     }
+
+    public function getTotalAvailableAttribute(): int
+    {
+        return (int) ($this->total_available ?? ($this->total_allocated - $this->total_sold));
+    }
+
+    public function getIsLowStockAttribute(): bool
+    {
+        return $this->total_available <= ($this->low_stock_threshold ?? 0);
+    }
+
+    public function adjustments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(InventoryAdjustment::class);
+    }
+
+    public function updateFromPricingWindows(): void
+    {
+        $totalAllocated = $this->event->pricingWindows()
+            ->where('ticket_category_id', $this->ticket_tier_id)
+            ->sum('quantity_limit');
+
+        $this->update([
+            'total_allocated' => $totalAllocated,
+            'last_updated_at' => now(),
+        ]);
+    }
 }
