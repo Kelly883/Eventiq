@@ -35,4 +35,24 @@ class OrganizerDashboardPreferences extends Model
     {
         return $this->belongsTo(Event::class, 'expanded_event_id');
     }
+
+    public function getDefaultEventFilterAttribute($value): string
+    {
+        return $value ?? 'all';
+    }
+
+    public function getDefaultDateRangeAttribute($value): string
+    {
+        return $value ?? 'last_30_days';
+    }
+
+    public function getShowActivityFeedAttribute($value): bool
+    {
+        return $value ?? true;
+    }
+
+    public function getAutoRefreshEnabledAttribute($value): bool
+    {
+        return $value ?? false;
+    }
 }

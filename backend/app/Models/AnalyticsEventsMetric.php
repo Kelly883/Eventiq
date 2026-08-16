@@ -52,4 +52,9 @@ class AnalyticsEventsMetric extends Model
     {
         return $this->belongsTo(TicketTier::class, 'top_ticket_tier_id');
     }
+
+    public function scopeForEvent($query, $eventId)
+    {
+        return $query->where('event_id', $eventId);
+    }
 }

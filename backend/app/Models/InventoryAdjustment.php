@@ -48,4 +48,14 @@ class InventoryAdjustment extends Model
     {
         return $this->belongsTo(User::class, 'organizer_id');
     }
+
+    public function getQuantityDeltaAttribute(): int
+    {
+        return $this->quantity_after - $this->quantity_before;
+    }
+
+    public function scopeForEvent($query, $eventId)
+    {
+        return $query->where('event_id', $eventId);
+    }
 }

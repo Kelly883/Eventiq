@@ -128,7 +128,6 @@ class PricingWindow extends Model
      */
     public function hasAvailability(): bool
     {
-        // Always fetch fresh data to avoid stale model state
         $fresh = static::find($this->id);
         if (!$fresh) {
             return false;
@@ -139,6 +138,22 @@ class PricingWindow extends Model
         }
 
         return $fresh->quantity_sold < $fresh->quantity_limit;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->is_active
+            && $this->start_date_time <= now()
+            && $this->end_date_time >= now();
+    }
+
+    public function getAvailableQuantity(): ?int
+    {
+        if ($this->quantity_limit === null) {
+            return null;
+        }
+
+        return max(0, $this->quantity_limit - ($this->quantity_sold ?? 0));
     }
 }
 
