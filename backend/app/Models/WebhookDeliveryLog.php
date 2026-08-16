@@ -27,10 +27,12 @@ class WebhookDeliveryLog extends Model
     protected $fillable = [
         'webhook_id',
         'event',
+        'attempt_number',
         'payload',
         'status',
         'response_code',
         'response_body',
+        'error_message',
         'duration_ms',
     ];
 
