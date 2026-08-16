@@ -145,7 +145,8 @@ return new class extends Migration
                 continue;
             }
 
-            $indexColumns = DB::select('PRAGMA index_info(?)', [$index->name]);
+            $quotedIndex = str_replace('\'', '\'\'', $index->name);
+            $indexColumns = DB::select('PRAGMA index_info(\'' . $quotedIndex . '\')');
             $columnNames = array_column($indexColumns, 'name');
             if (empty($columnNames)) {
                 continue;
