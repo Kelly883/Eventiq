@@ -41,4 +41,9 @@ class Session extends Model
     {
         return $this->belongsTo(User::class, 'userId');
     }
+
+    public function isActive(): bool
+    {
+        return $this->revokedAt === null && $this->expiresAt->isFuture();
+    }
 }

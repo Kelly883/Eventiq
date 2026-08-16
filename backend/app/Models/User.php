@@ -133,4 +133,14 @@ class User extends Authenticatable
     {
         return $this->hasOne(\App\Features\Dashboard\Models\UserDashboardPreference::class, 'user_id', 'id');
     }
+
+    public function isPasswordCorrect(string $password): bool
+    {
+        return \Illuminate\Support\Facades\Hash::check($password, $this->passwordHash);
+    }
+
+    public function invalidateAllSessions(): int
+    {
+        return $this->sessions()->whereNull('revokedAt')->update(['revokedAt' => now()]);
+    }
 }
