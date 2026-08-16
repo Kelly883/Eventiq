@@ -17,7 +17,7 @@ class AuditLogService
      * the whole point of having a separate trail per the original
      * requirement.
      */
-    public function log(string $action, string $entity, $entityId, array $changes = [], $userId = null, ?string $requestId = null): ?AuditLog
+    public function log(string $action, string $targetType, $targetId, array $changes = [], $userId = null, ?string $requestId = null): ?AuditLog
     {
         if (! config('audit.enabled', true)) {
             return null;
@@ -27,32 +27,42 @@ class AuditLogService
             ?? request()?->headers->get('X-Request-Id')
             ?? (string) Str::uuid();
 
-        // File write first: if the DB is genuinely down, this is the
-        // trail that actually survives - writing DB-first would lose
-        // the event entirely in that scenario.
+        $metadata = [
+            'requestId' => $requestId,
+            'sessionId' => request()?->attributes->get('session_id'),
+            'correlationId' => request()?->attributes->get('correlation_id'),
+            'duration_ms' => null,
+            'dataSize_bytes' => null,
+            'tags' => [],
+        ];
+
+        $ipAddress = request()?->ip();
+        $userAgent = request()?->userAgent();
+
         Log::channel('audit')->info($action, [
-            'entity' => $entity,
-            'entity_id' => $entityId,
+            'target_type' => $targetType,
+            'target_id' => $targetId,
             'user_id' => $userId,
             'changes' => $changes,
             'request_id' => $requestId,
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
         ]);
 
         try {
             return AuditLog::create([
                 'action' => $action,
-                'entity' => $entity,
-                'entity_id' => $entityId,
-                'details' => $changes,
+                'target_type' => $targetType,
+                'target_id' => $targetId,
+                'changed_fields' => $changes,
                 'user_id' => $userId,
-                'request_id' => $requestId,
+                'ip_address' => $ipAddress,
+                'user_agent' => $userAgent,
+                'status' => 'success',
+                'compliance_classification' => 'internal',
+                'metadata' => $metadata,
             ]);
         } catch (\Throwable $e) {
-            // Deliberately swallowed: an audit-logging failure must never
-            // break the actual business operation that triggered it (a
-            // refund, a payout, etc.) - the file write above already
-            // captured the event, which is exactly the scenario this
-            // fallback exists for.
             Log::channel('audit')->error('audit_log_db_write_failed', ['error' => $e->getMessage()]);
 
             return null;
@@ -60,7 +70,7 @@ class AuditLogService
     }
 
     /**
-     * @param array $filters Optional keys: action, entity, entity_id,
+     * @param array $filters Optional keys: action, target_type, target_id,
      *   user_id, from (date), to (date), per_page
      */
     public function filter(array $filters): LengthAwarePaginator
@@ -71,12 +81,12 @@ class AuditLogService
             $query->where('action', $filters['action']);
         }
 
-        if (! empty($filters['entity'])) {
-            $query->where('entity', $filters['entity']);
+        if (! empty($filters['target_type'])) {
+            $query->where('target_type', $filters['target_type']);
         }
 
-        if (! empty($filters['entity_id'])) {
-            $query->where('entity_id', $filters['entity_id']);
+        if (! empty($filters['target_id'])) {
+            $query->where('target_id', $filters['target_id']);
         }
 
         if (! empty($filters['user_id'])) {

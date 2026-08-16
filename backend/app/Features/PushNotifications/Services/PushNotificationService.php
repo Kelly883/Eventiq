@@ -31,7 +31,7 @@ class PushNotificationService
      *
      * @return bool Whether the send succeeded.
      */
-    public function sendToToken(string $fcmToken, string $title, string $body, array $data = []): bool
+    public function sendToToken(string $token, string $title, string $body, array $data = []): bool
     {
         if (! $this->isConfigured()) {
             Log::warning('PushNotificationService::sendToToken skipped - Firebase not configured.');
@@ -40,11 +40,14 @@ class PushNotificationService
         }
 
         try {
-            $message = CloudMessage::withTarget('token', $fcmToken)
+            $message = CloudMessage::withTarget('token', $token)
                 ->withNotification(FirebaseNotification::create($title, $body))
                 ->withData($data);
 
             $this->messaging->send($message);
+
+            PushNotificationDevice::where('token', $token)
+                ->update(['last_used_at' => now()]);
 
             return true;
         } catch (\Throwable $e) {
@@ -61,7 +64,7 @@ class PushNotificationService
      */
     public function sendToUser(int $userId, string $title, string $body, array $data = []): array
     {
-        $tokens = PushNotificationDevice::where('user_id', $userId)->pluck('fcm_token');
+        $tokens = PushNotificationDevice::where('user_id', $userId)->pluck('token');
 
         $sent = 0;
         $failed = 0;
@@ -78,29 +81,26 @@ class PushNotificationService
     }
 
     /**
-     * Register or refresh a device token for a user.
-     */
-    /**
      * Register or refresh a device token for a user. If $previousToken is
      * given (the frontend detected its token rotated), deletes that stale
      * row rather than leaving a dead token accumulating in the table -
      * otherwise sendToUser() would keep trying (and failing) to send to
      * tokens that no longer exist.
      */
-    public function registerDevice(int $userId, string $fcmToken, ?string $platform = null, ?string $previousToken = null): PushNotificationDevice
+    public function registerDevice(int $userId, string $token, string $provider, string $deviceType, ?string $previousToken = null): PushNotificationDevice
     {
-        if ($previousToken && $previousToken !== $fcmToken) {
-            PushNotificationDevice::where('fcm_token', $previousToken)->delete();
+        if ($previousToken && $previousToken !== $token) {
+            PushNotificationDevice::where('token', $previousToken)->delete();
         }
 
         return PushNotificationDevice::updateOrCreate(
-            ['fcm_token' => $fcmToken],
-            ['user_id' => $userId, 'platform' => $platform, 'last_used_at' => now()]
+            ['token' => $token],
+            ['user_id' => $userId, 'provider' => $provider, 'device_type' => $deviceType]
         );
     }
 
-    public function unregisterDevice(string $fcmToken): void
+    public function unregisterDevice(string $token): void
     {
-        PushNotificationDevice::where('fcm_token', $fcmToken)->delete();
+        PushNotificationDevice::where('token', $token)->delete();
     }
 }

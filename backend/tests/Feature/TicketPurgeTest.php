@@ -77,8 +77,8 @@ class TicketPurgeTest extends TestCase
 
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'ticket.purged',
-            'entity' => 'ticket',
-            'entity_id' => $ticket->id,
+            'target_type' => 'ticket',
+            'target_id' => $ticket->id,
         ]);
     }
 
@@ -275,26 +275,26 @@ class TicketPurgeTest extends TestCase
 
         Schema::create('audit_logs', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('adminId')->nullable();
-            $table->uuid('targetUserId')->nullable();
-            $table->string('action');
-            $table->string('entity')->nullable();
-            $table->unsignedBigInteger('entity_id')->nullable();
-            $table->text('changes')->nullable();
-            $table->string('request_id')->nullable();
-            $table->text('oldValue')->nullable();
-            $table->text('newValue')->nullable();
-            $table->text('reason')->nullable();
-            $table->uuid('event_id')->nullable();
             $table->uuid('user_id')->nullable();
-            $table->uuid('ticket_id')->nullable();
-            $table->text('details')->nullable();
+            $table->string('action');
+            $table->string('target_type')->nullable();
+            $table->uuid('target_id')->nullable();
+            $table->string('status')->default('success');
+            $table->string('ip_address')->nullable();
+            $table->text('user_agent')->nullable();
+            $table->json('geolocation')->nullable();
+            $table->json('request_data')->nullable();
+            $table->json('response_data')->nullable();
+            $table->json('changed_fields')->nullable();
+            $table->text('error_message')->nullable();
+            $table->string('error_code')->nullable();
+            $table->string('compliance_classification')->default('internal');
+            $table->timestamp('retention_date')->nullable();
+            $table->json('metadata')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
-            $table->foreign('adminId')->references('id')->on('users')->nullOnDelete();
-            $table->foreign('targetUserId')->references('id')->on('users')->nullOnDelete();
-            $table->foreign('event_id')->references('id')->on('events')->onDelete('cascade');
-            $table->foreign('ticket_id')->references('id')->on('tickets')->onDelete('set null');
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
         });
 
         Schema::create('analytics_events_metrics', function (Blueprint $table) {

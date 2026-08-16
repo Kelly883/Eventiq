@@ -10,8 +10,19 @@ class AdminSettings extends Model
     use HasFactory;
 
     protected $fillable = [
-        'key',
-        'value',
+        'setting_key',
+        'setting_value',
+        'description',
+        'category',
+        'is_editable',
+        'last_modified_by',
+        'last_modified_at',
+    ];
+
+    protected $casts = [
+        'is_editable' => 'boolean',
+        'last_modified_at' => 'datetime',
+        'setting_value' => 'array',
     ];
 }
 

@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AuditLog extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     public $incrementing = false;
     protected $keyType = 'string';
@@ -25,38 +26,32 @@ class AuditLog extends Model
     }
 
     protected $fillable = [
-        'adminId',
-        'targetUserId',
-        'action',
-        'oldValue',
-        'newValue',
-        'reason',
-        'metadata',
-        'event_id',
         'user_id',
-        'ticket_id',
-        'details',
-        'entity',
-        'entity_id',
-        'request_id',
+        'action',
+        'target_type',
+        'target_id',
+        'status',
+        'ip_address',
+        'user_agent',
+        'geolocation',
+        'request_data',
+        'response_data',
+        'changed_fields',
+        'error_message',
+        'error_code',
+        'compliance_classification',
+        'retention_date',
+        'metadata',
     ];
 
     protected $casts = [
-        'oldValue' => 'array',
-        'newValue' => 'array',
+        'geolocation' => 'array',
+        'request_data' => 'array',
+        'response_data' => 'array',
+        'changed_fields' => 'array',
         'metadata' => 'array',
-        'details' => 'array',
+        'retention_date' => 'datetime',
     ];
-
-    public function admin(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'adminId');
-    }
-
-    public function targetUser(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'targetUserId');
-    }
 
     public function user(): BelongsTo
     {

@@ -10,24 +10,44 @@ class PayoutCalculation extends Model
 {
     use HasFactory;
 
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->{$model->getKeyName()})) {
+                $model->{$model->getKeyName()} = (string) \Illuminate\Support\Str::uuid();
+            }
+        });
+    }
+
     protected $fillable = [
         'payout_id',
-        'event_id',
-        'total_revenue',
-        'platform_fee',
-        'organizer_share',
-        'tax_amount',
-        'refund_amount',
-        'breakdown',
+        'organizer_id',
+        'settlement_period_start_date',
+        'settlement_period_end_date',
+        'event_ids',
+        'order_ids',
+        'refund_request_ids',
+        'total_order_count',
+        'total_tickets_sold',
+        'total_refunds_processed',
+        'calculation_details',
+        'calculated_at',
+        'calculated_by',
+        'created_at',
     ];
 
     protected $casts = [
-        'total_revenue' => 'decimal:2',
-        'platform_fee' => 'decimal:2',
-        'organizer_share' => 'decimal:2',
-        'tax_amount' => 'decimal:2',
-        'refund_amount' => 'decimal:2',
-        'breakdown' => 'array',
+        'event_ids' => 'array',
+        'order_ids' => 'array',
+        'refund_request_ids' => 'array',
+        'calculation_details' => 'array',
+        'calculated_at' => 'datetime',
+        'created_at' => 'datetime',
     ];
 
     public function payout(): BelongsTo
@@ -35,21 +55,21 @@ class PayoutCalculation extends Model
         return $this->belongsTo(Payout::class);
     }
 
-    public function event(): BelongsTo
+    public function organizer(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Event::class);
+        return $this->belongsTo(\App\Models\Organizer::class);
     }
 
     public function calculateNetPayout(): float
     {
-        return (float) $this->organizer_share - (float) $this->refund_amount;
+        return (float) $this->net_revenue - (float) $this->refund_amount;
     }
 
     public function getPlatformFeePercentage(): float
     {
-        if ($this->total_revenue <= 0) {
+        if ($this->gross_revenue <= 0) {
             return 0;
         }
-        return ((float) $this->platform_fee / (float) $this->total_revenue) * 100;
+        return ((float) $this->platform_commission_amount / (float) $this->gross_revenue) * 100;
     }
 }
