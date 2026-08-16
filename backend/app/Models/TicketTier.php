@@ -82,6 +82,23 @@ class TicketTier extends Model
         return $query->where('is_active', true);
     }
 
+    public function scopeAvailable($query)
+    {
+        return $query->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('sales_start_date')
+                  ->orWhere('sales_start_date', '<=', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('sales_end_date')
+                  ->orWhere('sales_end_date', '>=', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('quantity')
+                  ->orWhereRaw('quantity > sold_count');
+            });
+    }
+
     public function scopeForEvent($query, $eventId)
     {
         return $query->where('event_id', $eventId);

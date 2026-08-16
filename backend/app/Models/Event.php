@@ -82,4 +82,9 @@ class Event extends Model
     {
         return $query->whereNull('deleted_at');
     }
+
+    public function scopePublished($query)
+    {
+        return $query->where('status', 'published');
+    }
 }
