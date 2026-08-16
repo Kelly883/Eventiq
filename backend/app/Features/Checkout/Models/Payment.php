@@ -37,8 +37,10 @@ class Payment extends Model
 
     protected $fillable = [
         'order_id',
+        'user_id',
         'payment_intent_id',
         'gateway_transaction_id',
+        'gateway_reference',
         'amount',
         'currency',
         'status',
@@ -47,6 +49,8 @@ class Payment extends Model
         'gateway_response',
         'fees',
         'net_amount',
+        'refunded_amount',
+        'is_fully_refunded',
         'refunded_by',
         'refunded_at',
         'refund_reason',
@@ -60,9 +64,11 @@ class Payment extends Model
         'amount' => 'decimal:2',
         'fees' => 'decimal:2',
         'net_amount' => 'decimal:2',
+        'refunded_amount' => 'decimal:2',
         'gateway_response' => 'array',
         'refunded_at' => 'datetime',
         'settled_at' => 'datetime',
+        'is_fully_refunded' => 'boolean',
     ];
 
     public function order(): BelongsTo

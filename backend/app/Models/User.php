@@ -33,6 +33,11 @@ class User extends Authenticatable
         'permissions',
         'emailVerified',
         'lastLoginAt',
+        'paystack_customer_code',
+        'flutterwave_customer_id',
+        'default_payment_gateway',
+        'default_payment_method_id',
+        'trial_ends_at',
     ];
 
     /**
@@ -55,6 +60,7 @@ class User extends Authenticatable
         return [
             'emailVerified' => 'boolean',
             'lastLoginAt' => 'datetime',
+            'trial_ends_at' => 'datetime',
         ];
     }
 
@@ -113,6 +119,11 @@ class User extends Authenticatable
     public function organizer(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Organizer::class);
+    }
+
+    public function paymentMethods(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PaymentMethod::class);
     }
 
     /**
