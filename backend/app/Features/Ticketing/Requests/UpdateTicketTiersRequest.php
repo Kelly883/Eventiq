@@ -19,7 +19,7 @@ class UpdateTicketTiersRequest extends FormRequest
             'tiers.*.event_id' => 'required|integer|exists:events,id',
             'tiers.*.name' => 'required|string|max:255',
             'tiers.*.description' => 'required|string|max:2000',
-            'tiers.*.price' => 'required|numeric|min:0',
+            'tiers.*.price' => 'required|numeric|min:0.01',
             'tiers.*.quantity' => 'nullable|integer|min:1',
             // For NEW tiers (no id), prevent sales_start_date in the past
             // For existing tiers, we allow past dates since they may have already started selling
