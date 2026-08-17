@@ -52,8 +52,8 @@ export interface TicketInventory {
 }
 
 export interface Event {
-  readonly id: string;
-  readonly organizerId: string;
+  readonly id: number;
+  readonly organizerId: number;
   readonly title: string;
   readonly description: string;
   readonly status: EventStatus;
@@ -69,8 +69,8 @@ export interface Event {
   readonly trending: boolean;
   readonly deletedAt?: string | null;
   readonly capacity: number;
-  readonly latitude: number;
-  readonly longitude: number;
+  readonly latitude: number | null;
+  readonly longitude: number | null;
 }
 
 export interface CalendarDate {
