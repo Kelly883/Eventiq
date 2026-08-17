@@ -15,7 +15,7 @@ class OrganizerFactory extends Factory
 
     private function randomHex(): string
     {
-        return '#' . strtoupper(dechex(random_int(0, 0xFFFFFF)));
+        return '#' . strtoupper(str_pad(dechex(random_int(0, 0xFFFFFF)), 6, '0', STR_PAD_LEFT));
     }
 
     public function definition(): array
