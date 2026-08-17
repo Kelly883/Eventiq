@@ -60,6 +60,27 @@ class TicketTier extends Model
         'sold_count' => 'integer',
     ];
 
+    protected $appends = [
+        'available_count',
+    ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (TicketTier $tier) {
+            if ($tier->quantity !== null && $tier->sold_count > $tier->quantity) {
+                throw new \InvalidArgumentException('Sold count cannot exceed quantity.');
+            }
+
+            if ($tier->price <= 0) {
+                throw new \InvalidArgumentException('Price must be greater than zero.');
+            }
+
+            if ($tier->early_bird_price !== null && $tier->early_bird_price >= $tier->price) {
+                throw new \InvalidArgumentException('Early bird price must be less than regular price.');
+            }
+        });
+    }
+
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);
@@ -75,10 +96,19 @@ class TicketTier extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    public function getAvailableCountAttribute(): ?int
+    public function getAvailableCountAttribute(): int
     {
         if ($this->quantity === null) {
-            return null;
+            return 0;
+        }
+
+        return max(0, $this->quantity - ($this->sold_count ?? 0));
+    }
+
+    public function getRemainingQuantity(): int
+    {
+        if ($this->quantity === null) {
+            return 0;
         }
 
         return max(0, $this->quantity - ($this->sold_count ?? 0));
@@ -121,37 +151,36 @@ class TicketTier extends Model
         return $query->orderBy('tier_order')->orderBy('sales_start_date');
     }
 
-    public function isEarlyBirdActive(): bool
+    public function isEarlyBirdActive(?\Carbon\Carbon $now = null): bool
     {
+        $now = $now ?: now();
+
         return $this->early_bird_price !== null
             && $this->early_bird_end_date !== null
-            && now()->isBefore($this->early_bird_end_date);
+            && $now->isBefore($this->early_bird_end_date);
     }
 
-    public function getEffectivePrice(): float
+    public function getEffectivePrice(?\Carbon\Carbon $now = null): float
     {
-        return $this->isEarlyBirdActive() ? (float) $this->early_bird_price : (float) $this->price;
+        return $this->isEarlyBirdActive($now) ? (float) $this->early_bird_price : (float) $this->price;
     }
 
-    public function isAvailable(): bool
+    public function isAvailable(?\Carbon\Carbon $now = null): bool
     {
-        if ($this->sales_start_date && now()->isBefore($this->sales_start_date)) {
+        $now = $now ?: now();
+
+        if ($this->sales_start_date && $now->isBefore($this->sales_start_date)) {
             return false;
         }
 
-        if ($this->sales_end_date && now()->isAfter($this->sales_end_date)) {
+        if ($this->sales_end_date && $now->isAfter($this->sales_end_date)) {
+            return false;
+        }
+
+        if ($this->quantity !== null && $this->sold_count >= $this->quantity) {
             return false;
         }
 
         return true;
-    }
-
-    public function getRemainingQuantity(): ?int
-    {
-        if ($this->quantity === null) {
-            return null;
-        }
-
-        return max(0, $this->quantity - ($this->sold_count ?? 0));
     }
 }

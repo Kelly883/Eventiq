@@ -2,6 +2,10 @@
 
 namespace App\Features\Inventory\Models;
 
+use App\Models\Event;
+use App\Models\TicketTier;
+use App\Features\Pricing\Models\PricingWindow;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,34 +24,53 @@ class InventoryAdjustment extends Model
         'adjustment_type',
         'quantity_before',
         'quantity_after',
-        'quantity_delta',
         'reason',
     ];
 
     protected $casts = [
         'quantity_before' => 'integer',
         'quantity_after' => 'integer',
-        'quantity_delta' => 'integer',
         'created_at' => 'datetime',
     ];
 
+    protected static function booted(): void
+    {
+        static::updating(function () {
+            throw new \RuntimeException('Inventory adjustments are immutable and cannot be updated.');
+        });
+
+        static::deleting(function () {
+            throw new \RuntimeException('Inventory adjustments are immutable and cannot be deleted.');
+        });
+    }
+
     public function event(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Event::class);
+        return $this->belongsTo(Event::class);
     }
 
     public function ticketTier(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\TicketTier::class);
+        return $this->belongsTo(TicketTier::class);
     }
 
     public function pricingWindow(): BelongsTo
     {
-        return $this->belongsTo(\App\Features\Pricing\Models\PricingWindow::class);
+        return $this->belongsTo(PricingWindow::class);
     }
 
     public function organizer(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\User::class, 'organizer_id');
+        return $this->belongsTo(User::class, 'organizer_id');
+    }
+
+    public function getQuantityDeltaAttribute(): int
+    {
+        return $this->quantity_after - $this->quantity_before;
+    }
+
+    public function scopeForEvent($query, $eventId)
+    {
+        return $query->where('event_id', $eventId);
     }
 }

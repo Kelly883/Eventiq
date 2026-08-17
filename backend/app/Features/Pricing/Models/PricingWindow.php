@@ -44,13 +44,41 @@ class PricingWindow extends Model
         'deleted_at' => 'datetime',
     ];
 
-    protected static function boot()
-    {
-        parent::boot();
+    protected $appends = [
+        'available_quantity',
+    ];
 
+    protected static function booted(): void
+    {
         static::creating(function (self $model) {
             if (empty($model->id)) {
                 $model->id = (string) Str::uuid();
+            }
+
+            if ($model->quantity_sold < 0) {
+                throw new \InvalidArgumentException('Quantity sold cannot be negative.');
+            }
+
+            if ($model->price < 0) {
+                throw new \InvalidArgumentException('Price cannot be negative.');
+            }
+
+            if ($model->priority < 0) {
+                throw new \InvalidArgumentException('Priority cannot be negative.');
+            }
+        });
+
+        static::updating(function (self $model) {
+            if ($model->quantity_sold < 0) {
+                throw new \InvalidArgumentException('Quantity sold cannot be negative.');
+            }
+
+            if ($model->price < 0) {
+                throw new \InvalidArgumentException('Price cannot be negative.');
+            }
+
+            if ($model->priority < 0) {
+                throw new \InvalidArgumentException('Priority cannot be negative.');
             }
         });
     }
@@ -67,14 +95,13 @@ class PricingWindow extends Model
 
     /**
      * Scope: Only currently active windows (is_active = true, within date range, not soft-deleted).
-     * Uses DB::raw('NOW()') to avoid timezone mismatch between app and database.
      */
     public function scopeActive($query)
     {
         return $query->where('is_active', true)
             ->whereNull('deleted_at')
-            ->where('start_date_time', '<=', DB::raw('NOW()'))
-            ->where('end_date_time', '>=', DB::raw('NOW()'));
+            ->where('start_date_time', '<=', now())
+            ->where('end_date_time', '>=', now());
     }
 
     /**
@@ -108,12 +135,19 @@ class PricingWindow extends Model
      */
     public function incrementSold(int $quantity = 1): bool
     {
-        $affected = $this->where('id', $this->id)
-            ->where(function ($q) {
-                $q->whereNull('quantity_limit')
-                  ->orWhereColumn('quantity_sold', '<', DB::raw('quantity_limit'));
-            })
-            ->increment('quantity_sold', $quantity);
+        $affected = DB::transaction(function () use ($quantity) {
+            $fresh = static::where('id', $this->id)->lockForUpdate()->first();
+
+            if (!$fresh) {
+                return 0;
+            }
+
+            if ($fresh->quantity_limit !== null && $fresh->quantity_sold >= $fresh->quantity_limit) {
+                return 0;
+            }
+
+            return $fresh->where('id', $this->id)->increment('quantity_sold', $quantity);
+        });
 
         if ($affected > 0) {
             $this->refresh();
@@ -140,14 +174,16 @@ class PricingWindow extends Model
         return $fresh->quantity_sold < $fresh->quantity_limit;
     }
 
-    public function isActive(): bool
+    public function isActive(?\Carbon\Carbon $now = null): bool
     {
+        $now = $now ?: now();
+
         return $this->is_active
-            && $this->start_date_time <= now()
-            && $this->end_date_time >= now();
+            && $this->start_date_time <= $now
+            && $this->end_date_time >= $now;
     }
 
-    public function getAvailableQuantity(): ?int
+    public function getAvailableQuantityAttribute(): ?int
     {
         if ($this->quantity_limit === null) {
             return null;

@@ -36,6 +36,9 @@ class AnalyticsEventsMetric extends Model
         'total_revenue' => 'decimal:12',
         'average_ticket_price' => 'decimal:10',
         'conversion_rate' => 'decimal:5',
+        'total_tickets_sold' => 'integer',
+        'total_page_views' => 'integer',
+        'total_ticket_page_views' => 'integer',
     ];
 
     public function event(): BelongsTo
@@ -56,5 +59,15 @@ class AnalyticsEventsMetric extends Model
     public function scopeForEvent($query, $eventId)
     {
         return $query->where('event_id', $eventId);
+    }
+
+    public function scopeForOrganizer($query, $organizerId)
+    {
+        return $query->where('organizer_id', $organizerId);
+    }
+
+    public function scopeRecent($query, $days = 30)
+    {
+        return $query->where('created_at', '>=', now()->subDays($days));
     }
 }
