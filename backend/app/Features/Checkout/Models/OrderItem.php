@@ -39,6 +39,7 @@ class OrderItem extends Model
 
     protected $casts = [
         'unit_price' => 'decimal:2',
+        'quantity' => 'integer',
     ];
 
     public function order(): BelongsTo
