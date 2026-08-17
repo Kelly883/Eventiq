@@ -44,10 +44,12 @@ class PricingWindow extends Model
         'deleted_at' => 'datetime',
     ];
 
-    protected static function boot()
-    {
-        parent::boot();
+    protected $appends = [
+        'available_quantity',
+    ];
 
+    protected static function booted(): void
+    {
         static::creating(function (self $model) {
             if (empty($model->id)) {
                 $model->id = (string) Str::uuid();
@@ -67,14 +69,13 @@ class PricingWindow extends Model
 
     /**
      * Scope: Only currently active windows (is_active = true, within date range, not soft-deleted).
-     * Uses DB::raw('NOW()') to avoid timezone mismatch between app and database.
      */
     public function scopeActive($query)
     {
         return $query->where('is_active', true)
             ->whereNull('deleted_at')
-            ->where('start_date_time', '<=', DB::raw('NOW()'))
-            ->where('end_date_time', '>=', DB::raw('NOW()'));
+            ->where('start_date_time', '<=', now())
+            ->where('end_date_time', '>=', now());
     }
 
     /**
@@ -140,14 +141,16 @@ class PricingWindow extends Model
         return $fresh->quantity_sold < $fresh->quantity_limit;
     }
 
-    public function isActive(): bool
+    public function isActive(?\Carbon\Carbon $now = null): bool
     {
+        $now = $now ?: now();
+
         return $this->is_active
-            && $this->start_date_time <= now()
-            && $this->end_date_time >= now();
+            && $this->start_date_time <= $now
+            && $this->end_date_time >= $now;
     }
 
-    public function getAvailableQuantity(): ?int
+    public function getAvailableQuantityAttribute(): ?int
     {
         if ($this->quantity_limit === null) {
             return null;
