@@ -3,7 +3,7 @@
  * @property {number} id
  * @property {number} event_id
  * @property {string} name
- * @property {string|null} description
+ * @property {string} description
  * @property {number} price
  * @property {number|null} early_bird_price
  * @property {string|null} early_bird_end_date
@@ -30,13 +30,23 @@
  * @property {string} updated_at
  */
 
+import {
+  isEarlyBirdActiveForTier,
+  getEffectivePriceForTier,
+  isAvailableForTier,
+  getRemainingQuantity,
+  formatSalesWindow,
+  isSalesWindowActive,
+  validateSalesWindowDates,
+  normalizeSalesDate,
+} from '../../lib/dateUtils';
+
 /**
  * @param {TicketTier} tier
  * @returns {boolean}
  */
 export function isEarlyBirdActive(tier) {
-  if (!tier.early_bird_price || !tier.early_bird_end_date) return false;
-  return new Date() < new Date(tier.early_bird_end_date);
+  return isEarlyBirdActiveForTier(tier);
 }
 
 /**
@@ -44,7 +54,7 @@ export function isEarlyBirdActive(tier) {
  * @returns {number}
  */
 export function getEffectivePrice(tier) {
-  return isEarlyBirdActive(tier) ? tier.early_bird_price : tier.price;
+  return getEffectivePriceForTier(tier);
 }
 
 /**
@@ -52,10 +62,7 @@ export function getEffectivePrice(tier) {
  * @returns {boolean}
  */
 export function isAvailable(tier) {
-  const now = new Date();
-  if (tier.sales_start_date && now < new Date(tier.sales_start_date)) return false;
-  if (tier.sales_end_date && now > new Date(tier.sales_end_date)) return false;
-  return true;
+  return isAvailableForTier(tier);
 }
 
 /**
@@ -63,8 +70,7 @@ export function isAvailable(tier) {
  * @returns {number|null}
  */
 export function getRemainingQuantity(tier) {
-  if (tier.quantity == null) return null;
-  return Math.max(0, tier.quantity - (tier.sold_count ?? 0));
+  return getRemainingQuantity(tier);
 }
 
 /**
