@@ -54,6 +54,32 @@ class PricingWindow extends Model
             if (empty($model->id)) {
                 $model->id = (string) Str::uuid();
             }
+
+            if ($model->quantity_sold < 0) {
+                throw new \InvalidArgumentException('Quantity sold cannot be negative.');
+            }
+
+            if ($model->price < 0) {
+                throw new \InvalidArgumentException('Price cannot be negative.');
+            }
+
+            if ($model->priority < 0) {
+                throw new \InvalidArgumentException('Priority cannot be negative.');
+            }
+        });
+
+        static::updating(function (self $model) {
+            if ($model->quantity_sold < 0) {
+                throw new \InvalidArgumentException('Quantity sold cannot be negative.');
+            }
+
+            if ($model->price < 0) {
+                throw new \InvalidArgumentException('Price cannot be negative.');
+            }
+
+            if ($model->priority < 0) {
+                throw new \InvalidArgumentException('Priority cannot be negative.');
+            }
         });
     }
 
@@ -109,12 +135,19 @@ class PricingWindow extends Model
      */
     public function incrementSold(int $quantity = 1): bool
     {
-        $affected = $this->where('id', $this->id)
-            ->where(function ($q) {
-                $q->whereNull('quantity_limit')
-                  ->orWhereColumn('quantity_sold', '<', DB::raw('quantity_limit'));
-            })
-            ->increment('quantity_sold', $quantity);
+        $affected = DB::transaction(function () use ($quantity) {
+            $fresh = static::where('id', $this->id)->lockForUpdate()->first();
+
+            if (!$fresh) {
+                return 0;
+            }
+
+            if ($fresh->quantity_limit !== null && $fresh->quantity_sold >= $fresh->quantity_limit) {
+                return 0;
+            }
+
+            return $fresh->where('id', $this->id)->increment('quantity_sold', $quantity);
+        });
 
         if ($affected > 0) {
             $this->refresh();
