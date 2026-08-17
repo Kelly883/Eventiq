@@ -36,14 +36,18 @@ class TicketTier extends Model
         'created_by',
         'updated_by',
         'sold_count',
-        // 'available_count' is now a virtual/computed column (quantity - sold_count)
-        // Do NOT include it in $fillable — it's managed at the DB level
+        'is_visible',
+        'is_sold_out',
+        'allow_repurchase',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'early_bird_price' => 'decimal:2',
         'is_active' => 'boolean',
+        'is_visible' => 'boolean',
+        'is_sold_out' => 'boolean',
+        'allow_repurchase' => 'boolean',
         'sales_start_date' => 'datetime',
         'sales_end_date' => 'datetime',
         'early_bird_end_date' => 'datetime',
@@ -54,7 +58,6 @@ class TicketTier extends Model
         'max_per_customer' => 'integer',
         'tier_order' => 'integer',
         'sold_count' => 'integer',
-        'available_count' => 'integer', // read-only: virtual computed column
     ];
 
     public function event(): BelongsTo
@@ -70,6 +73,15 @@ class TicketTier extends Model
     public function updater()
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function getAvailableCountAttribute(): ?int
+    {
+        if ($this->quantity === null) {
+            return null;
+        }
+
+        return max(0, $this->quantity - ($this->sold_count ?? 0));
     }
 
     public function scopePublished($query)
