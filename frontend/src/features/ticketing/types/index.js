@@ -11,7 +11,7 @@
  * @property {number|null} max_purchase
  * @property {number} quantity
  * @property {number} sold_count
- * @property {number|null} available_count
+ * @property {number} available_count
  * @property {number|null} max_per_customer
  * @property {string|null} benefits_description
  * @property {string|null} tier_image_url
@@ -67,7 +67,7 @@ export function isAvailable(tier) {
 
 /**
  * @param {TicketTier} tier
- * @returns {number|null}
+ * @returns {number}
  */
 export function getRemainingQuantity(tier) {
   return getRemainingQuantity(tier);
