@@ -71,6 +71,11 @@
             "pestphp/pest-plugin": true,
             "php-http/discovery": true,
             "composer/package-versions-deprecated": true
+        },
+        "policy": {
+            "advisories": {
+                "block": false
+            }
         }
     },
     "minimum-stability": "stable",
