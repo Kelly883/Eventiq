@@ -87,7 +87,7 @@ class RefundProcessingTest extends TestCase
 
         $organizerId = DB::table('organizers')->insertGetId([
             'user_id' => $userId,
-            'business_name' => 'Refund Org',
+            'displayName' => 'Refund Org',
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -210,8 +210,33 @@ class RefundProcessingTest extends TestCase
         Schema::create('organizers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->string('business_name')->nullable();
+            $table->uuid('userId')->nullable()->unique();
+            $table->string('displayName')->nullable();
+            $table->text('bio')->nullable();
+            $table->string('avatarUrl')->nullable();
+            $table->string('email')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('website')->nullable();
+            $table->json('socialLinks')->nullable();
+            $table->json('brandingColors')->nullable();
+            $table->string('timezone')->nullable();
+            $table->string('currency', 3)->nullable();
+            $table->string('country', 2)->nullable();
+            $table->string('verificationStatus')->nullable();
+            $table->string('paymentDefault')->nullable();
+            $table->decimal('commissionRate', 5, 2)->nullable();
+            $table->boolean('isPublic')->default(true);
+            $table->boolean('emailPublic')->default(false);
+            $table->boolean('phonePublic')->default(false);
+            $table->boolean('hideSocialLinks')->default(false);
+            $table->boolean('hideBrandingColors')->default(false);
+            $table->json('notificationPreferences')->nullable();
+            $table->integer('totalEventsCreated')->default(0);
+            $table->integer('totalTicketsSold')->default(0);
             $table->timestamps();
+            $table->timestamp('deletedAt')->nullable();
+            $table->index('userId');
+            $table->index(['userId', 'isPublic']);
         });
 
         Schema::create('events', function (Blueprint $table) {
