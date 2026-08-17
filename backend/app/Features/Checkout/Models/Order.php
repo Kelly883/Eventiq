@@ -88,4 +88,19 @@ class Order extends Model
     {
         return $this->hasMany(Ticket::class);
     }
+
+    public function getFormattedTotal(): string
+    {
+        return number_format((float) $this->total_amount, 2) . ' ' . strtoupper($this->currency);
+    }
+
+    public function canBeRefunded(): bool
+    {
+        return $this->status === 'completed';
+    }
+
+    public function scopeForUser($query, string $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
 }

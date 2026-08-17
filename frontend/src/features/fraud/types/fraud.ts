@@ -104,3 +104,80 @@ export interface FraudAlertFilters {
   assignee_id?: string | number;
   search?: string;
 }
+
+export type RiskLevel = 'low' | 'medium' | 'high';
+
+export type EventType =
+  | 'suspicious_login'
+  | 'multiple_failed_payments'
+  | 'unusual_location'
+  | 'ticket_scalping'
+  | 'duplicate_order'
+  | 'high_velocity_purchases'
+  | 'blacklisted_ip'
+  | 'stolen_card'
+  | 'chargeback_risk'
+  | 'identity_mismatch';
+
+export type DetectionMethod = 'rule_based' | 'ml_model' | 'manual_review' | 'velocity_check' | 'device_fingerprint' | 'geolocation';
+
+export type FraudEventStatus = 'flagged' | 'reviewed' | 'approved' | 'rejected' | 'auto_blocked';
+
+export interface FraudFactors {
+  readonly duplicateTicketDetected: boolean;
+  readonly velocityCheckFailed: boolean;
+  readonly paymentPatternSuspicious: boolean;
+  readonly deviceFingerprintMismatch: boolean;
+  readonly geolocationAnomaly: boolean;
+  readonly cardTestingPattern: boolean;
+  readonly highRiskPaymentMethod: boolean;
+}
+
+export interface PaymentDetails {
+  readonly cardLast4: string;
+  readonly issuer: string;
+  readonly country: string;
+  readonly cardFingerprint: string;
+}
+
+export interface VelocityMetrics {
+  readonly ordersIn24h: number;
+  readonly totalSpendIn24h: number;
+  readonly averageOrderValue: number;
+  readonly ordersInLastHour: number;
+}
+
+export interface DeviceInfo {
+  readonly ipAddress: string;
+  readonly userAgent: string;
+  readonly deviceFingerprint: string;
+  readonly country: string;
+  readonly city: string;
+}
+
+export interface DuplicateTicketInfo {
+  readonly matchingTicketIds: string[];
+  readonly matchingQRCodes: string[];
+  readonly matchingEventIds: string[];
+}
+
+export interface FraudEvent {
+  readonly id: string;
+  readonly orderId: string | null;
+  readonly userId: string;
+  readonly eventType: EventType;
+  readonly riskScore: number;
+  readonly riskLevel: RiskLevel;
+  readonly detectionMethod: DetectionMethod;
+  readonly fraudFactors: FraudFactors | null;
+  readonly paymentDetails: PaymentDetails | null;
+  readonly velocityMetrics: VelocityMetrics | null;
+  readonly deviceInfo: DeviceInfo | null;
+  readonly duplicateTicketInfo: DuplicateTicketInfo | null;
+  readonly status: FraudEventStatus;
+  readonly reviewedBy: string | null;
+  readonly reviewNotes: string | null;
+  readonly reviewedAt: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}

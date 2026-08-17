@@ -66,9 +66,58 @@ export interface ActivityItem {
 }
 
 export interface DashboardPreferences {
-  defaultEventFilter: string;
+  defaultTicketFilter: string;
   defaultDateRange: string;
-  expandedEventId: string | null;
+  showRecommendations: boolean;
   showActivityFeed: boolean;
   autoRefreshEnabled: boolean;
+}
+
+export type TicketFilter = 'all' | 'upcoming' | 'past';
+
+export type DateRange = '7days' | '30days' | '90days' | 'all';
+
+export interface Event {
+  readonly id: string;
+  readonly title: string;
+  readonly date: string;
+  readonly venue: string;
+  readonly organizer: string;
+}
+
+export interface Ticket {
+  readonly id: string;
+  readonly eventId: string;
+  readonly eventTitle: string;
+  readonly eventDate: string;
+  readonly eventVenue: string;
+  readonly tierId: string;
+  readonly tierName: string;
+  readonly qrCodeData: string;
+  readonly status: string;
+  readonly deliveryStatus: string;
+  readonly deliveryMethod: string;
+  readonly deliveryTimestamp: string | null;
+  readonly orderId: string;
+}
+
+export interface DashboardSummary {
+  readonly totalTickets: number;
+  readonly upcomingEventsCount: number;
+  readonly pastEventsCount: number;
+  readonly totalSpent: number;
+}
+
+export interface ActivityFeedItem {
+  readonly eventTitle: string;
+  readonly tierName: string;
+  readonly purchaseDate: string;
+  readonly deliveryStatus: string;
+}
+
+export interface DeliveryEvent {
+  readonly timestamp: string;
+  readonly status: string;
+  readonly method: string;
+  readonly errorMessage: string | null;
 }

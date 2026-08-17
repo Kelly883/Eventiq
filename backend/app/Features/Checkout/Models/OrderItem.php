@@ -50,4 +50,9 @@ class OrderItem extends Model
     {
         return $this->belongsTo(\App\Models\TicketTier::class);
     }
+
+    public function getLineTotal(): string
+    {
+        return number_format((float) $this->quantity * (float) $this->unit_price, 2);
+    }
 }

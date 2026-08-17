@@ -26,4 +26,22 @@ class PushNotificationTemplate extends Model
         'variables' => 'array',
         'badge' => 'integer',
     ];
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function render(array $variables = []): string
+    {
+        $title = $this->title;
+        $body = $this->body;
+
+        foreach ($variables as $key => $value) {
+            $title = str_replace('{{' . $key . '}}', $value, $title);
+            $body = str_replace('{{' . $key . '}}', $value, $body);
+        }
+
+        return $title . ': ' . $body;
+    }
 }
