@@ -91,7 +91,19 @@ class Order extends Model
 
     public function getFormattedTotal(): string
     {
-        return number_format((float) $this->total_amount, 2) . ' ' . strtoupper($this->currency);
+        $amount = (float) ($this->total_amount ?? 0);
+        $currency = strtoupper($this->currency ?? 'NGN');
+
+        return match ($currency) {
+            'NGN' => '₦' . number_format($amount, 2),
+            'USD' => '$' . number_format($amount, 2),
+            'EUR' => '€' . number_format($amount, 2),
+            'GBP' => '£' . number_format($amount, 2),
+            'GHS' => '₵' . number_format($amount, 2),
+            'KES' => 'KSh' . number_format($amount, 2),
+            'ZAR' => 'R' . number_format($amount, 2),
+            default => $currency . ' ' . number_format($amount, 2),
+        };
     }
 
     public function canBeRefunded(): bool

@@ -55,4 +55,9 @@ class OrderItem extends Model
     {
         return number_format((float) $this->quantity * (float) $this->unit_price, 2);
     }
+
+    public function getLineTotalAmount(): float
+    {
+        return (float) $this->quantity * (float) $this->unit_price;
+    }
 }

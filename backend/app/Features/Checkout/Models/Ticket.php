@@ -97,6 +97,11 @@ class Ticket extends Model
         return $this->status === 'valid';
     }
 
+    public function canBeUsed(): bool
+    {
+        return $this->isValid() && !$this->isQrExpired() && !$this->isCheckedIn();
+    }
+
     public function scopeForUser($query, string $userId)
     {
         return $query->where('user_id', $userId);
