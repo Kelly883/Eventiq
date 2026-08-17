@@ -273,6 +273,16 @@ class FraudEvent extends Model
         return $query->whereBetween('created_at', [$start, $end]);
     }
 
+    public function scopeHighRiskScore($query, float $threshold)
+    {
+        return $query->where('risk_score', '>=', $threshold);
+    }
+
+    public function scopeRecent($query, int $hours = 24)
+    {
+        return $query->where('created_at', '>=', now()->subHours($hours));
+    }
+
     /**
      * Scope a query to only include events with a given status.
      */

@@ -1,4 +1,5 @@
 import type { DetectionMethod, EventType, FraudEventStatus, RiskLevel } from './fraud';
+import { formatCurrency as formatCurrencyValue } from '@/lib/currencyUtils';
 
 export function formatRiskScore(score: number): string {
   return score.toFixed(2);
@@ -6,6 +7,21 @@ export function formatRiskScore(score: number): string {
 
 export function getRiskLevelColor(level: RiskLevel): string {
   return level === 'high' ? 'text-red-600' : level === 'medium' ? 'text-amber-600' : 'text-green-600';
+}
+
+export function getFraudTypeBadgeColor(eventType: EventType): string {
+  return eventType === 'stolen_card' || eventType === 'blacklisted_ip'
+    ? 'text-red-600'
+    : eventType === 'high_velocity_purchases' || eventType === 'duplicate_order'
+      ? 'text-amber-600'
+      : 'text-gray-600';
+}
+
+export function getDetectionMethodBadgeColor(method: DetectionMethod): string {
+  return method === 'ml_model' ? 'text-purple-600'
+    : method === 'manual_review' ? 'text-blue-600'
+    : method === 'rule_based' ? 'text-gray-600'
+    : 'text-green-600';
 }
 
 export function getEventTypeLabel(type: EventType): string {
@@ -39,18 +55,7 @@ export function getDetectionMethodLabel(method: DetectionMethod): string {
 }
 
 export function formatCurrency(amount: number, currency: string): string {
-  const symbols: Record<string, string> = {
-    USD: '$',
-    EUR: '€',
-    GBP: '£',
-    NGN: '₦',
-    GHS: '₵',
-    KES: 'KSh',
-    ZAR: 'R',
-  };
-
-  const symbol = symbols[currency.toUpperCase()] ?? currency.toUpperCase();
-  return `${symbol}${amount.toFixed(2)}`;
+  return formatCurrencyValue(amount, currency);
 }
 
 export function getStatusLabel(status: FraudEventStatus): string {
