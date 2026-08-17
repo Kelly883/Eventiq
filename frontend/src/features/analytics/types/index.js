@@ -87,4 +87,4 @@ export function getTrendIndicator(metrics, direction = 'flat') {
   return direction;
 }
 
-export { AnalyticsMetrics, SalesTimelineEntry, TierPerformance, SalesVelocityDataPoint };
+
