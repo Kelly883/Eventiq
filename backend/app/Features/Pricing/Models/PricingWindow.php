@@ -67,14 +67,14 @@ class PricingWindow extends Model
 
     /**
      * Scope: Only currently active windows (is_active = true, within date range, not soft-deleted).
-     * Uses DB::raw('NOW()') to avoid timezone mismatch between app and database.
+     * Uses now() for database-agnostic time comparison.
      */
     public function scopeActive($query)
     {
         return $query->where('is_active', true)
             ->whereNull('deleted_at')
-            ->where('start_date_time', '<=', DB::raw('NOW()'))
-            ->where('end_date_time', '>=', DB::raw('NOW()'));
+            ->where('start_date_time', '<=', now())
+            ->where('end_date_time', '>=', now());
     }
 
     /**
