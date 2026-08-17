@@ -2,23 +2,11 @@ export type FraudRiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
 export type FraudAlertStatus = 'pending' | 'reviewed' | 'resolved' | 'dismissed' | 'escalated';
 
-export type FraudEventType =
-  | 'suspicious_login'
-  | 'multiple_failed_payments'
-  | 'unusual_location'
-  | 'ticket_scalping'
-  | 'duplicate_order'
-  | 'high_velocity_purchases'
-  | 'blacklisted_ip'
-  | 'stolen_card'
-  | 'chargeback_risk'
-  | 'identity_mismatch';
-
 export interface FraudAlert {
   id: string | number;
   user_id?: string | number;
   order_id?: string | number;
-  event_type: FraudEventType;
+  event_type: EventType;
   risk_level: FraudRiskLevel;
   status: FraudAlertStatus;
   risk_score: number;
@@ -96,7 +84,7 @@ export interface FraudDashboardStats {
 export interface FraudAlertFilters {
   status?: FraudAlertStatus[];
   risk_level?: FraudRiskLevel[];
-  event_type?: FraudEventType[];
+  event_type?: EventType[];
   date_from?: string;
   date_to?: string;
   user_id?: string | number;
