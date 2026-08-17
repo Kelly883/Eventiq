@@ -16,7 +16,11 @@ export interface Organizer {
     readonly primary: string;
     readonly secondary: string;
   };
-  readonly privacySettings: Record<string, unknown>;
+  readonly privacySettings: {
+    readonly showEmail: boolean;
+    readonly showPhone: boolean;
+    readonly allowDirectMessages: boolean;
+  };
 }
 
 export interface TicketTier {
@@ -64,6 +68,9 @@ export interface Event {
   readonly ticketsSold: number;
   readonly trending: boolean;
   readonly deletedAt?: string | null;
+  readonly capacity: number;
+  readonly latitude: number;
+  readonly longitude: number;
 }
 
 export interface CalendarDate {
@@ -100,13 +107,17 @@ export function getAvailabilityStatus(
   totalTickets: number,
   ticketsSold: number,
 ): Availability {
+  if (totalTickets <= 0) {
+    return 'sold_out';
+  }
+
   const available = totalTickets - ticketsSold;
 
   if (available <= 0) {
     return 'sold_out';
   }
 
-  if (available <= Math.max(1, totalTickets * 0.1)) {
+  if (available <= Math.max(1, Math.floor(totalTickets * 0.1))) {
     return 'low';
   }
 
@@ -140,4 +151,27 @@ export function groupEventsByDate(events: readonly Event[]): Map<string, Event[]
   }
 
   return map;
+}
+
+/**
+ * Splits a single datetime string into date and time components.
+ *
+ * Backend stores `start_datetime` / `end_datetime`. The calendar API should
+ * return `eventDate`, `startTime`, and `endTime` separately, but if you only
+ * have the raw datetime, use this helper.
+ */
+export function splitDateTime(isoString: string): {
+  date: string;
+  time: string;
+} {
+  const date = new Date(isoString);
+
+  if (Number.isNaN(date.getTime())) {
+    return { date: isoString, time: '' };
+  }
+
+  return {
+    date: date.toISOString().split('T')[0],
+    time: date.toISOString().split('T')[1] ?? '',
+  };
 }
