@@ -70,4 +70,24 @@ class AnalyticsEventsMetric extends Model
     {
         return $query->where('created_at', '>=', now()->subDays($days));
     }
+
+    public function getTrendAttribute(): string
+    {
+        return 'flat';
+    }
+
+    public function getRevenueTrendAttribute(): string
+    {
+        return 'flat';
+    }
+
+    public function getTicketsSoldTrendAttribute(): string
+    {
+        return 'flat';
+    }
+
+    public function getConversionRateTrendAttribute(): string
+    {
+        return 'flat';
+    }
 }
