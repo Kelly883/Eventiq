@@ -97,36 +97,41 @@ class Organizer extends Model
         return $this->hasMany(\App\Models\ApiKey::class);
     }
 
-    public function setSocialLinksAttribute($value): void
+    public function setSocialLinksAttribute($value): ?array
     {
         if (is_array($value)) {
             $value = array_map(function ($link) {
                 return $link === '' ? null : $link;
             }, $value);
         }
-        $this->attributes['socialLinks'] = $value;
+
+        return $value;
     }
 
-    public function setBrandingColorsAttribute($value): void
+    public function setBrandingColorsAttribute($value): ?array
     {
         if (is_array($value)) {
             $value = array_map(function ($color) {
                 if ($color === null || $color === '') {
                     return null;
                 }
+
                 $color = strtolower(trim($color));
+
                 if (preg_match('/^#([a-f0-9]{3})$/', $color, $matches)) {
                     $color = '#' . $matches[1][0] . $matches[1][0] . $matches[1][1] . $matches[1][1] . $matches[1][2] . $matches[1][2];
                 }
+
                 return $color;
             }, $value);
         }
-        $this->attributes['brandingColors'] = $value;
+
+        return $value;
     }
 
-    public function setBioAttribute($value): void
+    public function setBioAttribute($value): ?string
     {
-        $this->attributes['bio'] = $value !== null ? trim(substr($value, 0, 500)) : null;
+        return $value !== null ? trim(substr($value, 0, 500)) : null;
     }
 
     public function getPublicProfile(): array
