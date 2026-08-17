@@ -75,8 +75,8 @@ export interface TicketTier {
 
 export interface PricingWindow {
   readonly id: string;
-  readonly event_id: string;
-  readonly ticket_category_id: string | null;
+  readonly event_id: number;
+  readonly ticket_category_id: number | null;
   readonly window_name: string;
   readonly start_date_time: string;
   readonly end_date_time: string;
@@ -91,8 +91,8 @@ export interface PricingWindow {
 
 export interface AnalyticsEventsMetrics {
   readonly id: string;
-  readonly event_id: string;
-  readonly organizer_id: string | null;
+  readonly event_id: number;
+  readonly organizer_id: number | null;
   readonly total_revenue: string;
   readonly total_tickets_sold: number;
   readonly total_page_views: number;
@@ -100,8 +100,14 @@ export interface AnalyticsEventsMetrics {
   readonly conversion_rate: string;
   readonly average_ticket_price: string;
   readonly peak_sales_hour: number | null;
-  readonly top_ticket_tier_id: string | null;
+  readonly top_ticket_tier_id: number | null;
   readonly last_updated_at: string;
+  readonly trend: string;
+  readonly revenue_trend: string;
+  readonly tickets_sold_trend: string;
+  readonly conversion_rate_trend: string;
+  readonly created_at: string;
+  readonly updated_at: string;
 }
 
 export interface Event {

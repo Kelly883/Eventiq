@@ -17,6 +17,14 @@ class EventResource extends JsonResource
             default => $this->status,
         };
 
+        $data['ticket_tiers'] = TicketTierResource::collection($this->whenLoaded('ticketTiers'));
+        $data['organizer'] = $this->whenLoaded('organizer', function () {
+            return new OrganizerPrivateResource($this->organizer);
+        });
+        $data['analyticsMetrics'] = $this->whenLoaded('analyticsEventsMetric', function () {
+            return new AnalyticsEventsMetricResource($this->analyticsEventsMetric);
+        });
+
         return $data;
     }
 }
