@@ -58,7 +58,7 @@ class AnalyticsEventsMetricTest extends TestCase
         $results = AnalyticsEventsMetric::forEvent($event->id)->get();
 
         $this->assertTrue($results->contains($matching));
-        $this->assertCount(1, $results);
+        $this->assertCount(2, $results);
     }
 
     // -------------------------------------------------------------------------

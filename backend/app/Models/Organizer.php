@@ -57,14 +57,6 @@ class Organizer extends Model
         'deletedAt' => 'datetime',
     ];
 
-    protected $appends = [
-        'isPublic',
-        'emailPublic',
-        'phonePublic',
-        'hideSocialLinks',
-        'hideBrandingColors',
-    ];
-
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

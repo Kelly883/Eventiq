@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('ticket_tier_id')->constrained()->onDelete('cascade');
             $table->foreignId('pricing_window_id')->nullable()->constrained()->onDelete('set null');
             $table->foreignId('organizer_id')->constrained('users')->onDelete('cascade');
-            $table->enum('adjustment_type', ['manual_increase', 'manual_decrease', 'reallocation', 'system_correction']);
+            $table->string('adjustment_type', 50);
             $table->integer('quantity_before');
             $table->integer('quantity_after');
             $table->integer('quantity_delta');

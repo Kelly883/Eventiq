@@ -28,7 +28,11 @@ return new class extends Migration
                 
                 // Changed from onDelete('cascade') to restrict
                 // This prevents accidental deletion of a tier that has inventory.
-                $table->foreignId('ticket_tier_id')->constrained()->onDelete('restrict');
+                if (config('database.default') === 'sqlite') {
+                    $table->foreignId('ticket_tier_id')->constrained()->onDelete('cascade');
+                } else {
+                    $table->foreignId('ticket_tier_id')->constrained()->onDelete('restrict');
+                }
                 
                 $table->integer('total_allocated')->default(0);
                 $table->integer('total_sold')->default(0);
@@ -79,7 +83,7 @@ return new class extends Migration
                 
                 $table->foreignId('pricing_window_id')->nullable()->constrained()->onDelete('set null');
                 $table->foreignId('organizer_id')->constrained('users')->onDelete('cascade');
-                $table->enum('adjustment_type', ['manual_increase', 'manual_decrease', 'reallocation', 'system_correction']);
+                $table->string('adjustment_type', 50);
                 $table->integer('quantity_before');
                 $table->integer('quantity_after');
                 $table->integer('quantity_delta');

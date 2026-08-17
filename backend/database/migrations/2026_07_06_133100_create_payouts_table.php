@@ -18,8 +18,8 @@ return new class extends Migration
             $table->foreignId('settlement_policy_id')->nullable()->constrained('settlement_policies')->onDelete('set null');
             $table->decimal('amount', 12, 2);
             $table->string('currency', 3)->default('USD');
-            $table->enum('status', ['pending', 'processing', 'completed', 'failed', 'cancelled'])->default('pending');
-            $table->enum('payout_method', ['bank_transfer', 'paypal', 'stripe', 'check']);
+            $table->string('status', 50)->default('pending');
+            $table->string('payout_method', 50)->nullable();
             $table->string('transaction_id')->nullable()->unique();
             $table->timestamp('processed_at')->nullable();
             $table->text('notes')->nullable();

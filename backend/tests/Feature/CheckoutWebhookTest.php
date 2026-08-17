@@ -309,6 +309,22 @@ class CheckoutWebhookTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::create('analytics_events_metrics', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->foreignId('event_id')->constrained('events')->cascadeOnDelete();
+            $table->foreignId('organizer_id')->constrained('organizers')->cascadeOnDelete();
+            $table->decimal('total_revenue', 12, 2)->default(0);
+            $table->integer('total_tickets_sold')->default(0);
+            $table->integer('total_page_views')->default(0);
+            $table->integer('total_ticket_page_views')->default(0);
+            $table->decimal('conversion_rate', 5, 2)->default(0);
+            $table->decimal('average_ticket_price', 10, 2)->default(0);
+            $table->integer('peak_sales_hour')->nullable();
+            $table->foreignId('top_ticket_tier_id')->nullable()->constrained('ticket_tiers')->nullOnDelete();
+            $table->timestamp('last_updated_at')->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('orders', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('user_id')->nullable();

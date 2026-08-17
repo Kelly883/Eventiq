@@ -7,12 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+use App\Models\Event;
+use App\Models\TicketTier;
+use App\Features\Pricing\Models\PricingWindow;
+
 class AnalyticsSalesTimeline extends Model
 {
     use HasFactory, HasUuids;
 
     public $incrementing = false;
     protected $keyType = 'string';
+
+    const UPDATED_AT = null;
 
     protected $table = 'analytics_sales_timeline';
 

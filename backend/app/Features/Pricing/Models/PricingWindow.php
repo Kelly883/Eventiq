@@ -95,6 +95,7 @@ class PricingWindow extends Model
 
     /**
      * Scope: Only currently active windows (is_active = true, within date range, not soft-deleted).
+     * Uses now() for database-agnostic time comparison.
      */
     public function scopeActive($query)
     {
@@ -179,8 +180,8 @@ class PricingWindow extends Model
         $now = $now ?: now();
 
         return $this->is_active
-            && $this->start_date_time <= $now
-            && $this->end_date_time >= $now;
+            && $this->start_date_time->lte($now->copy()->startOfSecond())
+            && $this->end_date_time->gte($now->copy()->startOfSecond());
     }
 
     public function getAvailableQuantityAttribute(): ?int
@@ -191,5 +192,9 @@ class PricingWindow extends Model
 
         return max(0, $this->quantity_limit - ($this->quantity_sold ?? 0));
     }
-}
 
+    public static function newFactory()
+    {
+        return \Database\Factories\PricingWindowFactory::new();
+    }
+}
