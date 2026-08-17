@@ -35,6 +35,7 @@ class AnalyticsSalesTimeline extends Model
         'unit_price' => 'decimal:10',
         'total_amount' => 'decimal:12',
         'created_at' => 'datetime',
+        'source' => \App\Enums\SaleSourceEnum::class,
     ];
 
     protected static function booted(): void
@@ -76,5 +77,10 @@ class AnalyticsSalesTimeline extends Model
     public function scopeByTier($query, $tierId)
     {
         return $query->where('ticket_tier_id', $tierId);
+    }
+
+    public function scopeRecent($query, $days = 30)
+    {
+        return $query->where('sale_timestamp', '>=', now()->subDays($days));
     }
 }

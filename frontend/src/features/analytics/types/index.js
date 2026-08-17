@@ -9,7 +9,7 @@
  * @property {number} totalTicketPageViews
  * @property {number} conversionRate
  * @property {number} averageTicketPrice
- * @property {string|null} peakSalesHour
+ * @property {number|null} peakSalesHour
  * @property {string|null} topTicketTier
  * @property {string|null} lastUpdatedAt
  * @property {string} createdAt
@@ -58,13 +58,17 @@
 
 /**
  * @param {AnalyticsMetrics} metrics
+ * @param {string} [currency='USD']
  * @returns {string}
  */
-export function formatRevenue(metrics) {
-  if (!metrics || metrics.totalRevenue == null) return '$0.00';
+export function formatRevenue(metrics, currency = 'USD') {
+  if (!metrics || metrics.totalRevenue == null) return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+  }).format(0);
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency,
   }).format(metrics.totalRevenue);
 }
 
@@ -78,13 +82,39 @@ export function formatConversionRate(metrics) {
 }
 
 /**
- * @param {AnalyticsMetrics} metrics
+ * @param {AnalyticsMetrics} [metrics]
  * @param {'up'|'down'|'flat'} [direction]
  * @returns {'up'|'down'|'flat'}
  */
 export function getTrendIndicator(metrics, direction = 'flat') {
   if (!metrics) return 'flat';
   return direction;
+}
+
+/**
+ * @param {import('./types').SalesVelocityDataPoint[]} dataPoints
+ * @returns {import('./types').SalesVelocityDataPoint[]}
+ */
+export function buildSalesVelocityData(dataPoints) {
+  if (!dataPoints || dataPoints.length === 0) return [];
+  
+  const sorted = [...dataPoints].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  
+  let cumulativeSales = 0;
+  let cumulativeRevenue = 0;
+  
+  return sorted.map(point => {
+    cumulativeSales += point.periodSales;
+    cumulativeRevenue += point.periodRevenue;
+    
+    return {
+      timestamp: point.timestamp,
+      cumulativeSales,
+      cumulativeRevenue,
+      periodSales: point.periodSales,
+      periodRevenue: point.periodRevenue,
+    };
+  });
 }
 
 

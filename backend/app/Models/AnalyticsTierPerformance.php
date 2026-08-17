@@ -60,4 +60,9 @@ class AnalyticsTierPerformance extends Model
     {
         return $query->where('ticket_tier_id', $tierId);
     }
+
+    public function scopeRecent($query, $days = 30)
+    {
+        return $query->where('created_at', '>=', now()->subDays($days));
+    }
 }

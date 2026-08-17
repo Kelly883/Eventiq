@@ -61,27 +61,13 @@ class AnalyticsEventsMetric extends Model
         return $query->where('event_id', $eventId);
     }
 
-    public function getTrendAttribute(?string $direction = null): string
+    public function scopeForOrganizer($query, $organizerId)
     {
-        if ($direction === null) {
-            return 'flat';
-        }
-
-        return $direction;
+        return $query->where('organizer_id', $organizerId);
     }
 
-    public function getRevenueTrendAttribute(): string
+    public function scopeRecent($query, $days = 30)
     {
-        return $this->getTrendAttribute();
-    }
-
-    public function getTicketsSoldTrendAttribute(): string
-    {
-        return $this->getTrendAttribute();
-    }
-
-    public function getConversionRateTrendAttribute(): string
-    {
-        return $this->getTrendAttribute();
+        return $query->where('created_at', '>=', now()->subDays($days));
     }
 }
