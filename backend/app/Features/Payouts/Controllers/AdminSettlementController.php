@@ -106,7 +106,7 @@ class AdminSettlementController extends Controller
                 'event_id' => $validated['event_id'],
                 'settlement_policy_id' => $validated['settlement_policy_id'],
                 'amount' => $validated['amount'],
-                'currency' => $validated['currency'] ?? 'USD',
+                'currency' => $validated['currency'] ?? 'NGN',
                 'status' => Payout::STATUS_PENDING,
                 'payout_method' => $validated['payout_method'],
                 'notes' => $validated['notes'] ?? null,

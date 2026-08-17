@@ -58,7 +58,7 @@
 
 /**
  * @param {AnalyticsMetrics} metrics
- * @param {string} [currency='USD']
+ * @param {string} [currency='NGN']
  * @returns {string}
  */
 export function formatRevenue(metrics, currency = 'NGN') {
