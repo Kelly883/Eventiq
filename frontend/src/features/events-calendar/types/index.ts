@@ -1,9 +1,9 @@
-export type EventStatus = 'published' | 'draft' | 'cancelled';
+export type EventStatus = 'draft' | 'published' | 'archived';
 export type Availability = 'available' | 'low' | 'sold_out';
 
 export interface Venue {
   readonly name: string;
-  readonly address: string;
+  readonly address?: string | null;
   readonly latitude: number;
   readonly longitude: number;
 }
@@ -11,7 +11,7 @@ export interface Venue {
 export interface Organizer {
   readonly id: string;
   readonly name: string;
-  readonly avatar: string;
+  readonly avatar?: string | null;
   readonly brandingColors: {
     readonly primary: string;
     readonly secondary: string;
@@ -25,6 +25,8 @@ export interface TicketTier {
   readonly currentPrice: number;
   readonly ticketsAvailable: number;
   readonly totalTickets: number;
+  readonly soldCount?: number;
+  readonly isSoldOut?: boolean;
 }
 
 export interface PricingWindow {
@@ -47,6 +49,7 @@ export interface TicketInventory {
 
 export interface Event {
   readonly id: string;
+  readonly organizerId: string;
   readonly title: string;
   readonly description: string;
   readonly status: EventStatus;
@@ -55,11 +58,12 @@ export interface Event {
   readonly endTime: string;
   readonly category: string;
   readonly venue: Venue;
-  readonly bannerUrl: string;
+  readonly bannerUrl?: string | null;
   readonly organizer: Organizer;
   readonly ticketTiers: readonly TicketTier[];
   readonly ticketsSold: number;
   readonly trending: boolean;
+  readonly deletedAt?: string | null;
 }
 
 export interface CalendarDate {
