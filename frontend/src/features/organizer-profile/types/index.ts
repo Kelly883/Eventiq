@@ -1,5 +1,7 @@
 // Organizer Profile feature types
 
+export * from './organizer';
+
 export interface OrganizerProfile {
   id: number;
   user_id: number;

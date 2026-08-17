@@ -6,27 +6,56 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class OrganizerProfile extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'organizers';
 
+    const DELETED_AT = 'deletedAt';
+
     protected $fillable = [
         'user_id',
-        'business_name',
+        'userId',
+        'displayName',
         'bio',
-        'branding_color',
-        'logo_path',
-        'website_url',
-        'social_links',
-        'privacy_settings',
+        'avatarUrl',
+        'email',
+        'phone',
+        'website',
+        'socialLinks',
+        'brandingColors',
+        'timezone',
+        'currency',
+        'country',
+        'verificationStatus',
+        'paymentDefault',
+        'commissionRate',
+        'isPublic',
+        'emailPublic',
+        'phonePublic',
+        'hideSocialLinks',
+        'hideBrandingColors',
+        'notificationPreferences',
+        'totalEventsCreated',
+        'totalTicketsSold',
     ];
 
     protected $casts = [
-        'social_links' => 'array',
-        'privacy_settings' => 'array',
+        'socialLinks' => 'array',
+        'brandingColors' => 'array',
+        'notificationPreferences' => 'array',
+        'isPublic' => 'boolean',
+        'emailPublic' => 'boolean',
+        'phonePublic' => 'boolean',
+        'hideSocialLinks' => 'boolean',
+        'hideBrandingColors' => 'boolean',
+        'totalEventsCreated' => 'integer',
+        'totalTicketsSold' => 'integer',
+        'commissionRate' => 'decimal:2',
+        'deletedAt' => 'datetime',
     ];
 
     public function user(): BelongsTo

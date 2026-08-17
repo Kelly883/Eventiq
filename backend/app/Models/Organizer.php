@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -15,47 +17,52 @@ class Organizer extends Model
 
     protected $fillable = [
         'user_id',
-        'business_name',
-        'bio',
-        'branding_color',
-        'logo_path',
-        'website_url',
-        'social_links',
-        'privacy_settings',
-        'paystack_subaccount_code',
-        'flutterwave_subaccount_id',
-        'paystack_connect_status',
-        'flutterwave_connect_status',
         'userId',
         'displayName',
+        'bio',
         'avatarUrl',
         'email',
         'phone',
         'website',
         'socialLinks',
         'brandingColors',
+        'timezone',
+        'currency',
+        'country',
+        'verificationStatus',
+        'paymentDefault',
+        'commissionRate',
         'isPublic',
         'emailPublic',
         'phonePublic',
+        'hideSocialLinks',
+        'hideBrandingColors',
         'notificationPreferences',
         'totalEventsCreated',
         'totalTicketsSold',
-        'verified',
-        'response_rate',
-        'average_rating',
-        'location',
-        'timezone',
     ];
 
     protected $casts = [
-        'social_links' => 'array',
-        'privacy_settings' => 'array',
         'socialLinks' => 'array',
         'brandingColors' => 'array',
         'notificationPreferences' => 'array',
         'isPublic' => 'boolean',
         'emailPublic' => 'boolean',
         'phonePublic' => 'boolean',
+        'hideSocialLinks' => 'boolean',
+        'hideBrandingColors' => 'boolean',
+        'totalEventsCreated' => 'integer',
+        'totalTicketsSold' => 'integer',
+        'commissionRate' => 'decimal:2',
+        'deletedAt' => 'datetime',
+    ];
+
+    protected $appends = [
+        'isPublic',
+        'emailPublic',
+        'phonePublic',
+        'hideSocialLinks',
+        'hideBrandingColors',
     ];
 
     public function user(): BelongsTo
@@ -63,118 +70,152 @@ class Organizer extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function events(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function events(): HasMany
     {
         return $this->hasMany(Event::class);
     }
 
-    public function payoutMethods(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function tickets(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            \App\Features\Checkout\Models\Ticket::class,
+            Event::class,
+            'organizer_id',
+            'event_id',
+            'id',
+            'id'
+        );
+    }
+
+    public function payoutMethods(): HasMany
     {
         return $this->hasMany(\App\Features\Payment\Models\OrganizerPayoutMethod::class);
     }
 
-    public function apiKeys(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function apiKeys(): HasMany
     {
         return $this->hasMany(\App\Models\ApiKey::class);
     }
 
-    public function getPublicProfile(): ?array
+    public function setSocialLinksAttribute($value): ?array
     {
-        if (! $this->isPublic) {
-            return null;
+        if (is_array($value)) {
+            $value = array_map(function ($link) {
+                return $link === '' ? null : $link;
+            }, $value);
         }
 
-        $data = [
+        return $value;
+    }
+
+    public function setBrandingColorsAttribute($value): ?array
+    {
+        if (is_array($value)) {
+            $value = array_map(function ($color) {
+                if ($color === null || $color === '') {
+                    return null;
+                }
+
+                $color = strtolower(trim($color));
+
+                if (preg_match('/^#([a-f0-9]{3})$/', $color, $matches)) {
+                    $color = '#' . $matches[1][0] . $matches[1][0] . $matches[1][1] . $matches[1][1] . $matches[1][2] . $matches[1][2];
+                }
+
+                return $color;
+            }, $value);
+        }
+
+        return $value;
+    }
+
+    public function setBioAttribute($value): ?string
+    {
+        return $value !== null ? trim(substr($value, 0, 500)) : null;
+    }
+
+    public function getPublicProfile(): array
+    {
+        if (! $this->isPublic) {
+            return [
+                'id' => $this->id,
+                'userId' => $this->userId,
+                'displayName' => $this->displayName,
+                'isPublic' => false,
+                'createdAt' => $this->created_at,
+            ];
+        }
+
+        $profile = [
             'id' => $this->id,
             'userId' => $this->userId,
             'displayName' => $this->displayName,
+            'bio' => $this->bio,
             'avatarUrl' => $this->avatarUrl,
-            'logoUrl' => $this->logo_path,
             'website' => $this->website,
-            'socialLinks' => $this->socialLinks,
-            'brandingColors' => $this->brandingColors,
-            'brandingColor' => $this->branding_color,
-            'totalEventsCreated' => $this->totalEventsCreated ?? 0,
-            'totalTicketsSold' => $this->totalTicketsSold ?? 0,
+            'totalEventsCreated' => $this->totalEventsCreated,
+            'totalTicketsSold' => $this->totalTicketsSold,
             'createdAt' => $this->created_at,
         ];
 
-        if ($this->bio !== null) {
-            $data['bio'] = $this->bio;
+        if (! $this->hideBrandingColors) {
+            $profile['brandingColors'] = $this->brandingColors;
         }
 
-        if ($this->emailPublic && $this->email !== null) {
-            $data['email'] = $this->email;
+        if (! $this->hideSocialLinks) {
+            $profile['socialLinks'] = $this->socialLinks;
         }
 
-        if ($this->phonePublic && $this->phone !== null) {
-            $data['phone'] = $this->phone;
+        if ($this->emailPublic) {
+            $profile['email'] = $this->email;
         }
 
-        return $data;
+        if ($this->phonePublic) {
+            $profile['phone'] = $this->phone;
+        }
+
+        return $profile;
     }
 
     public function getPrivateProfile(): array
     {
-        return array_merge($this->getPublicProfile(), [
+        return [
+            'id' => $this->id,
+            'user_id' => $this->user_id,
+            'userId' => $this->userId,
+            'displayName' => $this->displayName,
+            'bio' => $this->bio,
+            'avatarUrl' => $this->avatarUrl,
             'email' => $this->email,
             'phone' => $this->phone,
-            'business_name' => $this->business_name,
-            'website_url' => $this->website_url,
-            'social_links' => $this->social_links,
-            'privacy_settings' => $this->privacy_settings,
-            'notificationPreferences' => $this->notificationPreferences,
+            'website' => $this->website,
+            'socialLinks' => $this->socialLinks,
+            'brandingColors' => $this->brandingColors,
+            'timezone' => $this->timezone,
+            'currency' => $this->currency,
+            'country' => $this->country,
+            'verificationStatus' => $this->verificationStatus,
+            'paymentDefault' => $this->paymentDefault,
+            'commissionRate' => $this->commissionRate,
             'isPublic' => $this->isPublic,
             'emailPublic' => $this->emailPublic,
             'phonePublic' => $this->phonePublic,
-            'paystack_subaccount_code' => $this->paystack_subaccount_code,
-            'flutterwave_subaccount_id' => $this->flutterwave_subaccount_id,
-            'paystack_connect_status' => $this->paystack_connect_status,
-            'flutterwave_connect_status' => $this->flutterwave_connect_status,
-            'updatedAt' => $this->updated_at,
+            'hideSocialLinks' => $this->hideSocialLinks,
+            'hideBrandingColors' => $this->hideBrandingColors,
+            'notificationPreferences' => $this->notificationPreferences,
+            'totalEventsCreated' => $this->totalEventsCreated,
+            'totalTicketsSold' => $this->totalTicketsSold,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+            'deletedAt' => $this->deletedAt,
+        ];
+    }
+
+    public function recalculateStats(): void
+    {
+        $this->update([
+            'totalEventsCreated' => $this->events()->count(),
+            'totalTicketsSold' => $this->tickets()->count(),
         ]);
-    }
-
-    public function calculateStats(): void
-    {
-        $this->totalEventsCreated = $this->events()->count();
-        $this->totalTicketsSold = $this->events()
-            ->join('tickets', 'events.id', '=', 'tickets.event_id')
-            ->whereIn('tickets.status', ['valid', 'checked_in'])
-            ->count();
-        $this->save();
-    }
-
-    public function setBrandingColorsAttribute(?array $colors): void
-    {
-        $this->attributes['brandingColors'] = json_encode($this->validateBrandingColors($colors));
-    }
-
-    private function validateBrandingColors(?array $colors): ?array
-    {
-        if ($colors === null) {
-            return null;
-        }
-
-        $validated = [];
-
-        if (isset($colors['primaryColor'])) {
-            $validated['primaryColor'] = $this->validateHexColor($colors['primaryColor']);
-        }
-
-        if (isset($colors['accentColor'])) {
-            $validated['accentColor'] = $this->validateHexColor($colors['accentColor']);
-        }
-
-        return $validated;
-    }
-
-    private function validateHexColor(string $color): string
-    {
-        if (! preg_match('/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/', $color)) {
-            throw new \InvalidArgumentException("Invalid hex color: {$color}");
-        }
-
-        return $color;
     }
 }
