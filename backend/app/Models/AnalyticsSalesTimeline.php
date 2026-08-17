@@ -47,11 +47,6 @@ class AnalyticsSalesTimeline extends Model
         return $this->belongsTo(PricingWindow::class);
     }
 
-    protected static function booted(): void
-    {
-        static::creating(fn ($model) => $model->is_active = true);
-    }
-
     public function scopeForEvent($query, $eventId)
     {
         return $query->where('event_id', $eventId);

@@ -60,6 +60,8 @@ class TicketTier extends Model
         'sold_count' => 'integer',
     ];
 
+    protected $appends = ['available_count'];
+
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);

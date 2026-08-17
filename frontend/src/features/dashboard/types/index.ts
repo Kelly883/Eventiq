@@ -11,10 +11,10 @@ export interface DashboardOverview {
 }
 
 export interface EventMetrics {
-  id: string;
+  id: number;
   title: string;
   date: string;
-  status: 'draft' | 'upcoming' | 'live' | 'past';
+  status: 'draft' | 'published' | 'archived';
   thumbnailUrl: string;
   totalRevenue: number;
   totalTicketsSold: number;
@@ -41,10 +41,10 @@ export interface PricingWindowObject {
 }
 
 export interface EventDetail {
-  eventId: string;
+  eventId: number;
   title: string;
   date: string;
-  status: 'draft' | 'upcoming' | 'live' | 'past';
+  status: 'draft' | 'published' | 'archived';
   totalRevenue: number;
   totalTicketsSold: number;
   conversionRate: number;
@@ -53,10 +53,10 @@ export interface EventDetail {
 }
 
 export interface ActivityItem {
-  id: string;
-  eventId: string;
+  id: number;
+  eventId: number;
   eventName: string;
-  tierId: string;
+  tierId: number;
   tierName: string;
   quantity: number;
   unitPrice: number;

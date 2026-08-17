@@ -14,6 +14,7 @@ export interface Event {
   capacity: number;
   status: 'draft' | 'published' | 'archived';
   category: string | null;
+  deleted_at: string | null;
   ticket_tiers: TicketTier[];
   created_at: string;
   updated_at: string;
