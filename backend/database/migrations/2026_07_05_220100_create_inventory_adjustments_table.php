@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('ticket_inventory_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->enum('adjustment_type', ['add', 'remove']);
+            $table->string('adjustment_type', 50);
             $table->integer('quantity_change');
             $table->string('reason');
             $table->text('notes')->nullable();

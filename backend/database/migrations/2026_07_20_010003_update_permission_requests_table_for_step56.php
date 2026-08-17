@@ -18,7 +18,7 @@ return new class extends Migration
             $table->timestamp('resolvedAt')->nullable()->after('approvalReason');
             
             // Change status enum to match requirements: 'pending', 'approved', 'denied'
-            $table->enum('status', ['pending', 'approved', 'denied'])->default('pending')->change();
+            $table->string('status', 50)->default('pending')->change();
             
             $table->index('userId');
             $table->index('status');
@@ -39,7 +39,7 @@ return new class extends Migration
             
             $table->text('reason')->nullable()->change();
             $table->dropColumn(['approvalReason', 'resolvedAt']);
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending')->change();
+            $table->string('status', 50)->default('pending')->change();
         });
     }
 };

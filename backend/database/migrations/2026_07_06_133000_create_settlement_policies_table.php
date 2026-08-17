@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->text('description')->nullable();
             $table->decimal('platform_fee_percentage', 5, 2)->default(0);
-            $table->enum('payout_frequency', ['daily', 'weekly', 'biweekly', 'monthly', 'manual'])->default('monthly');
+            $table->string('payout_frequency', 50)->default('monthly');
             $table->decimal('minimum_payout_amount', 12, 2)->default(0);
             $table->json('payment_methods')->nullable();
             $table->boolean('is_active')->default(true);

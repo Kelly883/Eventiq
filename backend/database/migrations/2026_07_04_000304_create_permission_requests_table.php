@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('permission_id')->constrained()->onDelete('cascade');
             $table->text('reason');
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->string('status', 50)->default('pending');
             $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
         });
