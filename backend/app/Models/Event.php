@@ -38,6 +38,21 @@ class Event extends Model
         'deleted_at' => 'datetime',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (Event $event) {
+            if ($event->capacity === null || $event->capacity < 0) {
+                throw new \InvalidArgumentException('Event capacity is required and must be a non-negative integer.');
+            }
+        });
+
+        static::updating(function (Event $event) {
+            if ($event->isDirty('capacity') && ($event->capacity === null || $event->capacity < 0)) {
+                throw new \InvalidArgumentException('Event capacity is required and must be a non-negative integer.');
+            }
+        });
+    }
+
     public function setVenueLatitudeAttribute($value): void
     {
         $this->attributes['latitude'] = $value;

@@ -45,3 +45,49 @@ export function validateSalesWindowDates(salesStartDate: string | Date | null | 
   return { ok: true };
 }
 
+export function normalizeSalesDate(input: string | Date | null | undefined): Date | null {
+  const d = toDate(input);
+  if (!d) return null;
+  return d;
+}
+
+export function formatSalesWindow(salesStartDate: string | Date | null | undefined, salesEndDate: string | Date | null | undefined, pattern = 'MMM d, yyyy HH:mm'): string {
+  const start = normalizeSalesDate(salesStartDate);
+  const end = normalizeSalesDate(salesEndDate);
+  if (!start && !end) return 'No sales window';
+  if (start && !end) return `Starts ${format(start, pattern)}`;
+  if (!start && end) return `Until ${format(end, pattern)}`;
+  return `${format(start, pattern)} — ${format(end, pattern)}`;
+}
+
+export function isSalesWindowActive(salesStartDate: string | Date | null | undefined, salesEndDate: string | Date | null | undefined, now: Date = new Date()): boolean {
+  const start = normalizeSalesDate(salesStartDate);
+  const end = normalizeSalesDate(salesEndDate);
+  if (start && now < start) return false;
+  if (end && now > end) return false;
+  return true;
+}
+
+export function isEarlyBirdActiveForTier(tier: { early_bird_price?: number | null; early_bird_end_date?: string | Date | null }, now: Date = new Date()): boolean {
+  if (!tier.early_bird_price || !tier.early_bird_end_date) return false;
+  const end = toDate(tier.early_bird_end_date);
+  if (!end) return false;
+  return now.getTime() <= end.getTime();
+}
+
+export function getEffectivePriceForTier(tier: { price: number; early_bird_price?: number | null; early_bird_end_date?: string | Date | null }): number {
+  return isEarlyBirdActiveForTier(tier) ? (tier.early_bird_price as number) : tier.price;
+}
+
+export function isAvailableForTier(tier: { sales_start_date?: string | Date | null; sales_end_date?: string | Date | null }): boolean {
+  const now = new Date();
+  if (tier.sales_start_date && now < new Date(tier.sales_start_date)) return false;
+  if (tier.sales_end_date && now > new Date(tier.sales_end_date)) return false;
+  return true;
+}
+
+export function getRemainingQuantity(tier: { quantity?: number | null; sold_count?: number | null }): number | null {
+  if (tier.quantity == null) return null;
+  return Math.max(0, tier.quantity - (tier.sold_count ?? 0));
+}
+
