@@ -61,12 +61,12 @@
  * @param {string} [currency='USD']
  * @returns {string}
  */
-export function formatRevenue(metrics, currency = 'USD') {
-  if (!metrics || metrics.totalRevenue == null) return new Intl.NumberFormat('en-US', {
+export function formatRevenue(metrics, currency = 'NGN') {
+  if (!metrics || metrics.totalRevenue == null) return new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency,
   }).format(0);
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency,
   }).format(metrics.totalRevenue);
