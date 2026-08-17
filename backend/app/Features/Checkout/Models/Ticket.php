@@ -64,6 +64,9 @@ class Ticket extends Model
         'qr_code_scanned_count' => 'integer',
     ];
 
+    public const CREATED_AT = 'created_at';
+    public const UPDATED_AT = 'updated_at';
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
@@ -112,6 +115,15 @@ class Ticket extends Model
         return $this->qr_code_expires_at !== null && now()->greaterThan($this->qr_code_expires_at);
     }
 
+    public function isExpiringSoon(int $minutes = 5): bool
+    {
+        if ($this->qr_code_expires_at === null) {
+            return false;
+        }
+
+        return now()->addMinutes($minutes)->greaterThanOrEqualTo($this->qr_code_expires_at);
+    }
+
     public function isCheckedIn(): bool
     {
         return $this->checked_in_at !== null;
@@ -132,7 +144,7 @@ class Ticket extends Model
             return 'checked_in';
         }
 
-        if ($this->isQrExpired()) {
+        if ($this->qr_code_expires_at !== null && $this->isQrExpired()) {
             return 'expired';
         }
 
@@ -145,7 +157,14 @@ class Ticket extends Model
 
     public function incrementScanCount(): void
     {
-        $this->increment('qr_code_scanned_count');
-        $this->update(['last_qr_scan_at' => now()]);
+        \Illuminate\Support\Facades\DB::table($this->getTable())
+            ->where('id', $this->id)
+            ->increment('qr_code_scanned_count');
+            
+        \Illuminate\Support\Facades\DB::table($this->getTable())
+            ->where('id', $this->id)
+            ->update(['last_qr_scan_at' => now()]);
+
+        $this->refresh();
     }
 }

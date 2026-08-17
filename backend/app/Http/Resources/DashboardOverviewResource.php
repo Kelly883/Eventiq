@@ -14,6 +14,7 @@ class DashboardOverviewResource extends JsonResource
             'upcomingEventsCount' => $this->resource['upcoming_events_count'] ?? 0,
             'pastEventsCount' => $this->resource['past_events_count'] ?? 0,
             'totalSpent' => $this->resource['total_spent'] ?? 0,
+            'totalRevenue' => $this->resource['total_revenue'] ?? 0,
         ];
     }
 }

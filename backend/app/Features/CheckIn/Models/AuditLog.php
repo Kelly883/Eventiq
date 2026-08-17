@@ -36,6 +36,11 @@ class AuditLog extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function ticket(): BelongsTo
+    {
+        return $this->belongsTo(\App\Features\Checkout\Models\Ticket::class, 'ticket_id');
+    }
+
     public function scopeByEvent($query, string $eventId)
     {
         return $query->where('event_id', $eventId);

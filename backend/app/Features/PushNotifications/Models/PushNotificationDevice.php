@@ -13,6 +13,8 @@ class PushNotificationDevice extends Model
 
     protected $fillable = ['user_id', 'token', 'provider', 'device_type', 'last_used_at'];
 
+    protected $hidden = ['token'];
+
     protected $casts = [
         'device_type' => 'string',
         'last_used_at' => 'datetime',
@@ -31,5 +33,10 @@ class PushNotificationDevice extends Model
     public function scopeActive($query)
     {
         return $query->whereNull('deleted_at');
+    }
+
+    public function markAsUsed(): void
+    {
+        $this->update(['last_used_at' => now()]);
     }
 }

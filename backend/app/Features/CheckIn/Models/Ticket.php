@@ -43,7 +43,12 @@ class Ticket extends Model
 
     public function fraudEvents(): HasMany
     {
-        return $this->hasMany(FraudEvent::class, 'ticket_id');
+        return $this->hasMany(\App\Features\Fraud\Models\FraudEvent::class, 'ticket_id');
+    }
+
+    public function scopeWithFraudEvents($query)
+    {
+        return $query->with('fraudEvents');
     }
 
     public function scopeByEvent($query, string $eventId)
@@ -58,6 +63,19 @@ class Ticket extends Model
 
     public function canCheckIn(): bool
     {
-        return $this->status === 'valid' && !$this->fraudEvents()->where('fraud_type', 'duplicate_checkin')->exists();
+        if ($this->status !== 'valid') {
+            return false;
+        }
+
+        return !$this->fraudEvents()
+            ->where('fraud_type', 'duplicate_checkin')
+            ->exists();
+    }
+
+    public function hasDuplicateFraudCheck(): bool
+    {
+        return $this->fraudEvents()
+            ->where('fraud_type', 'duplicate_checkin')
+            ->exists();
     }
 }

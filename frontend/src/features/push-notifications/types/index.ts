@@ -18,6 +18,11 @@ export interface PushNotificationTemplate {
   readonly body: string;
   readonly variables: string[];
   readonly isActive: boolean;
+  readonly priority: number;
+  readonly badge: number;
+  readonly sound: string;
+  readonly clickAction: string;
+  readonly collapseKey: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 }

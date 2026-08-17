@@ -22,6 +22,13 @@ class DeliveryEvent extends Model
     public const PAYLOAD_AUTO_OFFLOAD_THRESHOLD = 500;
 
     /**
+     * Disable auto-offload during bulk imports or artisan commands.
+     *
+     * @var bool
+     */
+    public static bool $autoOffloadEnabled = true;
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
@@ -84,7 +91,10 @@ class DeliveryEvent extends Model
         parent::boot();
 
         static::created(function (DeliveryEvent $event) {
-            // Auto-offload large payloads to the separate data table
+            if (!static::$autoOffloadEnabled) {
+                return;
+            }
+
             if (static::PAYLOAD_AUTO_OFFLOAD_THRESHOLD > 0) {
                 $payloadSize = 0;
                 if ($event->payload) {

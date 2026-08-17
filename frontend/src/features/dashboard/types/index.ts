@@ -106,6 +106,7 @@ export interface DashboardSummary {
   readonly upcomingEventsCount: number;
   readonly pastEventsCount: number;
   readonly totalSpent: number;
+  readonly totalRevenue: number;
 }
 
 export interface ActivityFeedItem {

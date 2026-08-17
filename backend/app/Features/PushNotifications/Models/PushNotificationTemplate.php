@@ -19,6 +19,8 @@ class PushNotificationTemplate extends Model
         'priority',
         'badge',
         'sound',
+        'click_action',
+        'collapse_key',
     ];
 
     protected $casts = [
@@ -38,10 +40,23 @@ class PushNotificationTemplate extends Model
         $body = $this->body;
 
         foreach ($variables as $key => $value) {
-            $title = str_replace('{{' . $key . '}}', $value, $title);
-            $body = str_replace('{{' . $key . '}}', $value, $body);
+            $placeholder = '{{' . $key . '}}';
+            $title = str_replace($placeholder, $value, $title);
+            $body = str_replace($placeholder, $value, $body);
         }
 
-        return $title . ': ' . $body;
+        $missingVariables = [];
+        foreach ($this->variables ?? [] as $variable) {
+            $placeholder = '{{' . $variable . '}}';
+            if (str_contains($title, $placeholder) || str_contains($body, $placeholder)) {
+                $missingVariables[] = $variable;
+            }
+        }
+
+        if ($missingVariables !== []) {
+            \Illuminate\Support\Facades\Log::warning('PushNotificationTemplate: Missing variables: ' . implode(', ', $missingVariables));
+        }
+
+        return trim($title) . ': ' . trim($body);
     }
 }

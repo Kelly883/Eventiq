@@ -45,7 +45,7 @@ export interface CheckInResult {
   readonly status: 'success' | 'error' | 'warning';
   readonly message: string;
   readonly previousCheckInAt?: string;
-  readonly riskLevel?: string;
+  readonly riskLevel: string;
 }
 
 export interface SearchResult {

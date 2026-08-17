@@ -23,7 +23,7 @@ export interface OrderItem {
   readonly updatedAt: string;
 }
 
-export type TicketStatus = 'valid' | 'checked_in' | 'void';
+export type TicketStatus = 'valid' | 'checked_in' | 'void' | 'fraud_flagged' | 'suspicious';
 
 export interface Ticket {
   readonly id: string;
