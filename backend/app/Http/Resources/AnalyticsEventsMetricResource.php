@@ -22,6 +22,8 @@ class AnalyticsEventsMetricResource extends JsonResource
             'peak_sales_hour' => $this->peak_sales_hour,
             'top_ticket_tier_id' => $this->top_ticket_tier_id,
             'last_updated_at' => $this->last_updated_at?->toIso8601String(),
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 }

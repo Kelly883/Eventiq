@@ -2,7 +2,7 @@
  * @typedef {Object} PricingWindow
  * @property {string} id
  * @property {string} event_id
- * @property {string} ticket_category_id
+ * @property {number} ticket_category_id
  * @property {string} window_name
  * @property {string} start_date_time
  * @property {string} end_date_time
@@ -17,6 +17,7 @@
 
 /**
  * @typedef {Object} PricingWindowFormData
+ * @property {number} ticket_category_id
  * @property {string} window_name
  * @property {string} start_date_time
  * @property {string} end_date_time
@@ -35,11 +36,12 @@
 export { z } from 'zod';
 
 export const pricingWindowSchema = z.object({
+  ticket_category_id: z.number().int().positive('Ticket category is required'),
   window_name: z.string().min(1, 'Window name is required'),
   start_date_time: z.string().datetime(),
   end_date_time: z.string().datetime(),
-  price: z.number().positive('Price must be greater than 0'),
-  quantity_limit: z.number().int().positive('Quantity limit must be a positive integer').optional(),
+  price: z.number().min(0, 'Price must be at least 0'),
+  quantity_limit: z.number().int().min(0).optional(),
   priority: z.number().int().min(0).optional(),
 }).refine((data) => new Date(data.start_date_time) < new Date(data.end_date_time), {
   message: 'Start date must be before end date',

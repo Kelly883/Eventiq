@@ -69,25 +69,26 @@ export function isSalesWindowActive(salesStartDate: string | Date | null | undef
 }
 
 export function isEarlyBirdActiveForTier(tier: { early_bird_price?: number | null; early_bird_end_date?: string | Date | null }, now: Date = new Date()): boolean {
-  if (!tier.early_bird_price || !tier.early_bird_end_date) return false;
+  if (!tier.early_bird_price && tier.early_bird_price !== 0) return false;
+  if (!tier.early_bird_end_date) return false;
   const end = toDate(tier.early_bird_end_date);
   if (!end) return false;
   return now.getTime() <= end.getTime();
 }
 
-export function getEffectivePriceForTier(tier: { price: number; early_bird_price?: number | null; early_bird_end_date?: string | Date | null }): number {
-  return isEarlyBirdActiveForTier(tier) ? (tier.early_bird_price as number) : tier.price;
+export function getEffectivePriceForTier(tier: { price: number; early_bird_price?: number | null; early_bird_end_date?: string | Date | null }, now: Date = new Date()): number {
+  return isEarlyBirdActiveForTier(tier, now) ? (tier.early_bird_price as number) : tier.price;
 }
 
-export function isAvailableForTier(tier: { sales_start_date?: string | Date | null; sales_end_date?: string | Date | null }): boolean {
-  const now = new Date();
+export function isAvailableForTier(tier: { sales_start_date?: string | Date | null; sales_end_date?: string | Date | null; quantity?: number | null; sold_count?: number | null }, now: Date = new Date()): boolean {
   if (tier.sales_start_date && now < new Date(tier.sales_start_date)) return false;
   if (tier.sales_end_date && now > new Date(tier.sales_end_date)) return false;
+  if (tier.quantity != null && (tier.sold_count ?? 0) >= tier.quantity) return false;
   return true;
 }
 
-export function getRemainingQuantity(tier: { quantity?: number | null; sold_count?: number | null }): number | null {
-  if (tier.quantity == null) return null;
+export function getRemainingQuantity(tier: { quantity?: number | null; sold_count?: number | null }): number {
+  if (tier.quantity == null) return 0;
   return Math.max(0, tier.quantity - (tier.sold_count ?? 0));
 }
 

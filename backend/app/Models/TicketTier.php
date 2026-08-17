@@ -61,7 +61,26 @@ class TicketTier extends Model
         'sold_count' => 'integer',
     ];
 
-    protected $appends = ['available_count'];
+    protected $appends = [
+        'available_count',
+    ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (TicketTier $tier) {
+            if ($tier->quantity !== null && $tier->sold_count > $tier->quantity) {
+                throw new \InvalidArgumentException('Sold count cannot exceed quantity.');
+            }
+
+            if ($tier->price <= 0) {
+                throw new \InvalidArgumentException('Price must be greater than zero.');
+            }
+
+            if ($tier->early_bird_price !== null && $tier->early_bird_price >= $tier->price) {
+                throw new \InvalidArgumentException('Early bird price must be less than regular price.');
+            }
+        });
+    }
 
     public function event(): BelongsTo
     {
@@ -79,6 +98,15 @@ class TicketTier extends Model
     }
 
     public function getAvailableCountAttribute(): ?int
+    {
+        if ($this->quantity === null) {
+            return null;
+        }
+
+        return max(0, $this->quantity - ($this->sold_count ?? 0));
+    }
+
+    public function getRemainingQuantity(): ?int
     {
         if ($this->quantity === null) {
             return null;
@@ -135,9 +163,9 @@ class TicketTier extends Model
             && $now->isBefore($this->early_bird_end_date);
     }
 
-    public function getEffectivePrice(): float
+    public function getEffectivePrice(?\Carbon\Carbon $now = null): float
     {
-        return $this->isEarlyBirdActive() ? (float) $this->early_bird_price : (float) $this->price;
+        return $this->isEarlyBirdActive($now) ? (float) $this->early_bird_price : (float) $this->price;
     }
 
     public function isAvailable(?\Carbon\Carbon $now = null): bool
@@ -152,15 +180,10 @@ class TicketTier extends Model
             return false;
         }
 
-        return true;
-    }
-
-    public function getRemainingQuantity(): ?int
-    {
-        if ($this->quantity === null) {
-            return null;
+        if ($this->quantity !== null && $this->sold_count >= $this->quantity) {
+            return false;
         }
 
-        return max(0, $this->quantity - ($this->sold_count ?? 0));
+        return true;
     }
 }

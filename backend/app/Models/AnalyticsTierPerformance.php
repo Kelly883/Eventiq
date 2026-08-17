@@ -2,17 +2,22 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class AnalyticsTierPerformance extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $table = 'analytics_tier_performance';
 
     protected $fillable = [
+        'id',
         'event_id',
         'ticket_tier_id',
         'total_sold',
@@ -54,5 +59,10 @@ class AnalyticsTierPerformance extends Model
     public function scopeForTier($query, $tierId)
     {
         return $query->where('ticket_tier_id', $tierId);
+    }
+
+    public function scopeRecent($query, $days = 30)
+    {
+        return $query->where('created_at', '>=', now()->subDays($days));
     }
 }

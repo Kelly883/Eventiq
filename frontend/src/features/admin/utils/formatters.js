@@ -1,7 +1,7 @@
-export const formatCurrency = (amount, currency = 'USD') => {
+export const formatCurrency = (amount, currency = 'NGN') => {
   if (amount === null || amount === undefined) return '—';
   try {
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat('en-NG', {
       style: 'currency',
       currency,
     }).format(amount);

@@ -21,6 +21,7 @@ class PricingWindowResource extends JsonResource
             'quantity_sold' => $this->quantity_sold,
             'is_active' => $this->is_active,
             'priority' => $this->priority,
+            'available_quantity' => $this->available_quantity,
             'has_availability' => $this->quantity_limit === null || $this->quantity_sold < $this->quantity_limit,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class TicketInventory extends Model
 {
     use HasFactory;
+
+    protected $table = 'ticket_inventory';
 
     protected $fillable = [
         'event_id',
@@ -28,6 +31,30 @@ class TicketInventory extends Model
         'updated_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'total_available',
+        'is_low_stock',
+    ];
+
+    protected $attributes = [
+        'low_stock_threshold' => 10,
+    ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $model) {
+            if ($model->total_sold > $model->total_allocated) {
+                throw new \InvalidArgumentException('Total sold cannot exceed total allocated.');
+            }
+        });
+
+        static::updating(function (self $model) {
+            if ($model->total_sold > $model->total_allocated) {
+                throw new \InvalidArgumentException('Total sold cannot exceed total allocated.');
+            }
+        });
+    }
+
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);
@@ -38,39 +65,40 @@ class TicketInventory extends Model
         return $this->belongsTo(TicketTier::class);
     }
 
-    /**
-     * Backward-compatibility accessor for code referencing $inventory->remaining.
-     * The actual column is total_available (a virtual/generated column).
-     */
-    public function getRemainingAttribute(): int
-    {
-        return (int) ($this->total_available ?? 0);
-    }
-
-    public function getTotalAvailableAttribute(): int
-    {
-        return (int) ($this->total_available ?? ($this->total_allocated - $this->total_sold));
-    }
-
-    public function getIsLowStockAttribute(): bool
-    {
-        return $this->total_available <= ($this->low_stock_threshold ?? 0);
-    }
-
-    public function adjustments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function inventoryAdjustments(): HasMany
     {
         return $this->hasMany(InventoryAdjustment::class);
     }
 
+    public function getTotalAvailableAttribute(): int
+    {
+        $allocated = (int) ($this->attributes['total_allocated'] ?? 0);
+        $sold = (int) ($this->attributes['total_sold'] ?? 0);
+
+        return max(0, $allocated - $sold);
+    }
+
+    public function getIsLowStockAttribute(): bool
+    {
+        $threshold = (int) ($this->attributes['low_stock_threshold'] ?? 0);
+
+        return $this->total_available > 0 && $this->total_available <= $threshold;
+    }
+
     public function updateFromPricingWindows(): void
     {
-        $totalAllocated = $this->event->pricingWindows()
+        $pricingWindows = $this->event->pricingWindows()
             ->where('ticket_category_id', $this->ticket_tier_id)
-            ->sum('quantity_limit');
+            ->get();
+
+        $totalAllocated = $pricingWindows->sum('quantity_limit');
+        $totalSold = $pricingWindows->sum('quantity_sold');
 
         $this->update([
             'total_allocated' => $totalAllocated,
+            'total_sold' => $totalSold,
             'last_updated_at' => now(),
         ]);
     }
 }
+
