@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (config('database.default') === 'sqlite') {
+            return;
+        }
+
         Schema::table('ticket_inventory', function (Blueprint $table) {
             if (Schema::hasColumn('ticket_inventory', 'total_available')) {
                 $table->dropColumn('total_available');
