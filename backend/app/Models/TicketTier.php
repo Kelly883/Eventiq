@@ -183,13 +183,4 @@ class TicketTier extends Model
 
         return true;
     }
-
-    public function getRemainingQuantity(): int
-    {
-        if ($this->quantity === null) {
-            return 0;
-        }
-
-        return max(0, $this->quantity - ($this->sold_count ?? 0));
-    }
 }
