@@ -14,7 +14,7 @@ export function formatUtilizationPercentage(sold, allocated) {
  * @returns {boolean}
  */
 export function calculateLowStock(available, threshold) {
-  return available <= threshold;
+  return available > 0 && available <= threshold;
 }
 
 /**

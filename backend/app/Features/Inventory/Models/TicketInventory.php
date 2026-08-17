@@ -38,6 +38,25 @@ class TicketInventory extends Model
         'is_low_stock',
     ];
 
+    protected $attributes = [
+        'low_stock_threshold' => 10,
+    ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $model) {
+            if ($model->total_sold > $model->total_allocated) {
+                throw new \InvalidArgumentException('Total sold cannot exceed total allocated.');
+            }
+        });
+
+        static::updating(function (self $model) {
+            if ($model->total_sold > $model->total_allocated) {
+                throw new \InvalidArgumentException('Total sold cannot exceed total allocated.');
+            }
+        });
+    }
+
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);
