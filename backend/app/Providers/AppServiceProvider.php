@@ -9,7 +9,6 @@ use App\Models\Event;
 use App\Models\Organizer;
 use App\Features\Checkout\Models\Ticket;
 use App\Observers\EventObserver;
-use App\Observers\OrganizerObserver;
 use App\Observers\TicketObserver;
 
 class AppServiceProvider extends ServiceProvider
@@ -34,7 +33,6 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Event::observe(EventObserver::class);
-        Organizer::observe(OrganizerObserver::class);
         Ticket::observe(TicketObserver::class);
     }
 }

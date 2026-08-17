@@ -32,6 +32,10 @@ class EventObserver
         if ($event->start_datetime) {
             EventsCalendarSummary::refreshForDate($event->start_datetime->format('Y-m-d'));
         }
+
+        if ($event->organizer_id) {
+            \App\Models\Organizer::where('id', $event->organizer_id)->increment('totalEventsCreated');
+        }
     }
 
     public function updated(Event $event): void
@@ -56,12 +60,20 @@ class EventObserver
         if ($event->start_datetime) {
             EventsCalendarSummary::refreshForDate($event->start_datetime->format('Y-m-d'));
         }
+
+        if ($event->organizer_id) {
+            \App\Models\Organizer::where('id', $event->organizer_id)->decrement('totalEventsCreated');
+        }
     }
 
     public function restored(Event $event): void
     {
         if ($event->start_datetime) {
             EventsCalendarSummary::refreshForDate($event->start_datetime->format('Y-m-d'));
+        }
+
+        if ($event->organizer_id) {
+            \App\Models\Organizer::where('id', $event->organizer_id)->increment('totalEventsCreated');
         }
     }
 }
