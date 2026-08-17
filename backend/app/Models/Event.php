@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -93,6 +94,11 @@ class Event extends Model
         return $this->hasMany(\App\Features\Pricing\Models\PricingWindow::class);
     }
 
+    public function analyticsEventsMetric(): HasOne
+    {
+        return $this->hasOne(AnalyticsEventsMetric::class);
+    }
+
     public function scopeWhereNotDeleted($query)
     {
         return $query->whereNull('deleted_at');
@@ -101,5 +107,20 @@ class Event extends Model
     public function scopePublished($query)
     {
         return $query->where('status', 'published');
+    }
+
+    public function scopeUpcomingFirst($query)
+    {
+        return $query->orderBy('start_datetime', 'asc');
+    }
+
+    public function scopeByCategory($query, $category)
+    {
+        return $query->where('category', $category);
+    }
+
+    public function scopeByOrganizer($query, $organizerId)
+    {
+        return $query->where('organizer_id', $organizerId);
     }
 }
