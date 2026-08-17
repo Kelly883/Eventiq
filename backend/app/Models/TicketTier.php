@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Carbon\Carbon;
 
 class TicketTier extends Model
 {
@@ -96,16 +97,18 @@ class TicketTier extends Model
         return $query->where('is_active', true);
     }
 
-    public function scopeAvailable($query)
+    public function scopeAvailable($query, ?\Carbon\Carbon $now = null)
     {
+        $now = $now ?: now();
+
         return $query->where('is_active', true)
-            ->where(function ($q) {
+            ->where(function ($q) use ($now) {
                 $q->whereNull('sales_start_date')
-                  ->orWhere('sales_start_date', '<=', now());
+                  ->orWhere('sales_start_date', '<=', $now);
             })
-            ->where(function ($q) {
+            ->where(function ($q) use ($now) {
                 $q->whereNull('sales_end_date')
-                  ->orWhere('sales_end_date', '>=', now());
+                  ->orWhere('sales_end_date', '>=', $now);
             })
             ->where(function ($q) {
                 $q->whereNull('quantity')
@@ -123,11 +126,13 @@ class TicketTier extends Model
         return $query->orderBy('tier_order')->orderBy('sales_start_date');
     }
 
-    public function isEarlyBirdActive(): bool
+    public function isEarlyBirdActive(?\Carbon\Carbon $now = null): bool
     {
+        $now = $now ?: now();
+
         return $this->early_bird_price !== null
             && $this->early_bird_end_date !== null
-            && now()->isBefore($this->early_bird_end_date);
+            && $now->isBefore($this->early_bird_end_date);
     }
 
     public function getEffectivePrice(): float
@@ -135,13 +140,15 @@ class TicketTier extends Model
         return $this->isEarlyBirdActive() ? (float) $this->early_bird_price : (float) $this->price;
     }
 
-    public function isAvailable(): bool
+    public function isAvailable(?\Carbon\Carbon $now = null): bool
     {
-        if ($this->sales_start_date && now()->isBefore($this->sales_start_date)) {
+        $now = $now ?: now();
+
+        if ($this->sales_start_date && $now->isBefore($this->sales_start_date)) {
             return false;
         }
 
-        if ($this->sales_end_date && now()->isAfter($this->sales_end_date)) {
+        if ($this->sales_end_date && $now->isAfter($this->sales_end_date)) {
             return false;
         }
 

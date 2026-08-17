@@ -57,4 +57,9 @@ class AnalyticsEventsMetric extends Model
     {
         return $query->where('event_id', $eventId);
     }
+
+    public function scopeForOrganizer($query, $organizerId)
+    {
+        return $query->where('organizer_id', $organizerId);
+    }
 }

@@ -11,6 +11,7 @@ use App\Features\Payment\Services\FlutterwaveService;
 use App\Features\Payment\Services\PaystackService;
 use App\Features\QRCodeTicketing\Services\QRCodeService;
 use App\Http\Controllers\Controller;
+use App\Models\AnalyticsEventsMetric;
 use App\Models\TicketTier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -151,6 +152,17 @@ class WebhookController extends Controller
                 // Atomically increment total_sold on inventory
                 if ($inventory) {
                     $inventory->increment('total_sold', $item->quantity);
+                }
+
+                // Update analytics metrics for the event
+                if ($order->event_id) {
+                    $metric = AnalyticsEventsMetric::where('event_id', $order->event_id)->first();
+                    if ($metric) {
+                        $metric->update([
+                            'total_tickets_sold' => $metric->total_tickets_sold + $item->quantity,
+                            'last_updated_at' => now(),
+                        ]);
+                    }
                 }
             }
         });

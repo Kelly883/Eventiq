@@ -13,6 +13,8 @@ class Event extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected $with = ['organizer', 'analyticsEventsMetric'];
+
     protected $fillable = [
         'organizer_id',
         'user_id',
@@ -107,6 +109,12 @@ class Event extends Model
     public function scopePublished($query)
     {
         return $query->where('status', 'published');
+    }
+
+    public function scopeUpcoming($query)
+    {
+        return $query->where('status', 'published')
+            ->where('start_datetime', '>', now());
     }
 
     public function scopeUpcomingFirst($query)
