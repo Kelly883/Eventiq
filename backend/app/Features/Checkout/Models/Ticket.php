@@ -64,6 +64,9 @@ class Ticket extends Model
         'qr_code_scanned_count' => 'integer',
     ];
 
+    public const CREATED_AT = 'created_at';
+    public const UPDATED_AT = 'updated_at';
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
@@ -79,11 +82,89 @@ class Ticket extends Model
         return $this->belongsTo(\App\Models\TicketTier::class);
     }
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class);
+    }
+
     /**
      * Get the staff member who checked in this ticket.
      */
     public function checkedInBy(): BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class, 'checked_in_by');
+    }
+
+    public function isValid(): bool
+    {
+        return $this->status === 'valid';
+    }
+
+    public function canBeUsed(): bool
+    {
+        return $this->isValid() && !$this->isQrExpired() && !$this->isCheckedIn();
+    }
+
+    public function scopeForUser($query, string $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    public function isQrExpired(): bool
+    {
+        return $this->qr_code_expires_at !== null && now()->greaterThan($this->qr_code_expires_at);
+    }
+
+    public function isExpiringSoon(int $minutes = 5): bool
+    {
+        if ($this->qr_code_expires_at === null) {
+            return false;
+        }
+
+        return now()->addMinutes($minutes)->greaterThanOrEqualTo($this->qr_code_expires_at);
+    }
+
+    public function isCheckedIn(): bool
+    {
+        return $this->checked_in_at !== null;
+    }
+
+    public function isVoid(): bool
+    {
+        return $this->status === 'void';
+    }
+
+    public function getQrStatus(): string
+    {
+        if ($this->isVoid()) {
+            return 'void';
+        }
+
+        if ($this->isCheckedIn()) {
+            return 'checked_in';
+        }
+
+        if ($this->qr_code_expires_at !== null && $this->isQrExpired()) {
+            return 'expired';
+        }
+
+        if (in_array($this->status, ['fraud_flagged', 'suspicious'], true)) {
+            return 'fraud_flagged';
+        }
+
+        return 'valid';
+    }
+
+    public function incrementScanCount(): void
+    {
+        \Illuminate\Support\Facades\DB::table($this->getTable())
+            ->where('id', $this->id)
+            ->increment('qr_code_scanned_count');
+            
+        \Illuminate\Support\Facades\DB::table($this->getTable())
+            ->where('id', $this->id)
+            ->update(['last_qr_scan_at' => now()]);
+
+        $this->refresh();
     }
 }

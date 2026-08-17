@@ -104,3 +104,132 @@ export interface FraudAlertFilters {
   assignee_id?: string | number;
   search?: string;
 }
+
+export type RiskLevel = 'low' | 'medium' | 'high';
+
+export type EventType =
+  | 'duplicate_ticket_attempt'
+  | 'velocity_check_failed'
+  | 'payment_pattern_suspicious'
+  | 'device_fingerprint_mismatch'
+  | 'geolocation_anomaly'
+  | 'card_testing'
+  | 'high_risk_payment_method'
+  | 'duplicate_checkin'
+  | 'invalid_qr'
+  | 'manual_override';
+
+export type DetectionMethod =
+  | 'sift_science'
+  | 'stripe_radar'
+  | 'duplicate_detection'
+  | 'velocity_check'
+  | 'rule_based'
+  | 'qr_validation'
+  | 'manual_review';
+
+export type FraudEventStatus = 'flagged' | 'reviewed' | 'approved' | 'rejected' | 'auto_blocked';
+
+export interface FraudFactors {
+  readonly duplicateTicketDetected: boolean;
+  readonly velocityCheckFailed: boolean;
+  readonly paymentPatternSuspicious: boolean;
+  readonly deviceFingerprintMismatch: boolean;
+  readonly geolocationAnomaly: boolean;
+  readonly cardTestingPattern: boolean;
+  readonly highRiskPaymentMethod: boolean;
+}
+
+export interface PaymentDetails {
+  readonly cardLast4: string;
+  readonly issuer: string;
+  readonly country: string;
+  readonly cardFingerprint: string;
+}
+
+export interface VelocityMetrics {
+  readonly ordersIn24h: number;
+  readonly totalSpendIn24h: number;
+  readonly averageOrderValue: number;
+  readonly ordersInLastHour: number;
+}
+
+export interface DeviceInfo {
+  readonly ipAddress: string;
+  readonly userAgent: string;
+  readonly deviceFingerprint: string;
+  readonly country: string;
+  readonly city: string;
+}
+
+export interface DuplicateTicketInfo {
+  readonly matchingTicketIds: string[];
+  readonly matchingQRCodes: string[];
+  readonly matchingEventIds: string[];
+}
+
+export interface FraudEvent {
+  readonly id: string;
+  readonly orderId: string | null;
+  readonly userId: string;
+  readonly userEmail: string | null;
+  readonly ticketId: string | null;
+  readonly eventId: string | null;
+  readonly eventType: EventType;
+  readonly riskScore: number;
+  readonly riskLevel: RiskLevel;
+  readonly detectionMethod: DetectionMethod;
+  readonly fraudFactors: FraudFactors | null;
+  readonly paymentDetails: PaymentDetails | null;
+  readonly velocityMetrics: VelocityMetrics | null;
+  readonly deviceInfo: DeviceInfo | null;
+  readonly duplicateTicketInfo: DuplicateTicketInfo | null;
+  readonly detectedAt: string | null;
+  readonly firstCheckInAt: string | null;
+  readonly firstCheckInBy: string | null;
+  readonly secondCheckInAt: string | null;
+  readonly secondCheckInBy: string | null;
+  readonly status: FraudEventStatus;
+  readonly reviewedBy: string | null;
+  readonly reviewNotes: string | null;
+  readonly reviewedAt: string | null;
+  readonly notes: string | null;
+  readonly sessionId: string | null;
+  readonly ipAddress: string | null;
+  readonly cardFingerprint: string | null;
+  readonly amount: number | null;
+  readonly currency: string | null;
+  readonly gatewayResponseCode: string | null;
+  readonly automatedActionTaken: string | null;
+  readonly source: string | null;
+  readonly paymentIntentId: string | null;
+  readonly chargebackFlag: boolean;
+  readonly authenticationMethod: string | null;
+  readonly cardCountry: string | null;
+  readonly deviceFingerprint: string | null;
+  readonly paymentMethod: string | null;
+  readonly paymentGateway: string | null;
+  readonly userOrdersLast24h: number | null;
+  readonly userSpendLast24h: number | null;
+  readonly userAgent: string | null;
+  readonly referrer: string | null;
+  readonly promoCode: string | null;
+  readonly escalatedTo: string | null;
+  readonly escalatedAt: string | null;
+  readonly resolution: string | null;
+  readonly evidenceSnapshot: Record<string, unknown> | null;
+  readonly isArchived: boolean;
+  readonly archivedAt: string | null;
+  readonly orderTotal: number | null;
+  readonly ticketQuantity: number | null;
+  readonly billingCountry: string | null;
+  readonly billingZip: string | null;
+  readonly shippingBillingMatch: boolean | null;
+  readonly orderStatus: string | null;
+  readonly deviceType: string | null;
+  readonly proxyVpnDetected: boolean | null;
+  readonly ipReputationScore: number | null;
+  readonly accountAgeDays: number | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}

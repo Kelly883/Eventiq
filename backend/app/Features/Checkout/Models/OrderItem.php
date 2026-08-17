@@ -39,6 +39,7 @@ class OrderItem extends Model
 
     protected $casts = [
         'unit_price' => 'decimal:2',
+        'quantity' => 'integer',
     ];
 
     public function order(): BelongsTo
@@ -49,5 +50,15 @@ class OrderItem extends Model
     public function ticketTier(): BelongsTo
     {
         return $this->belongsTo(\App\Models\TicketTier::class);
+    }
+
+    public function getLineTotal(): string
+    {
+        return number_format((float) $this->quantity * (float) $this->unit_price, 2);
+    }
+
+    public function getLineTotalAmount(): float
+    {
+        return (float) $this->quantity * (float) $this->unit_price;
     }
 }

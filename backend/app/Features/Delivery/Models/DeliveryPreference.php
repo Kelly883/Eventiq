@@ -11,11 +11,6 @@ class DeliveryPreference extends Model
 {
     use HasFactory, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'user_id',
         'email_enabled',
@@ -33,28 +28,69 @@ class DeliveryPreference extends Model
         'event_cancellations',
         'refund_confirmations',
         'promotional_offers',
+        'email_verified',
+        'phone_verified',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
+    protected $guarded = [];
+
     protected $casts = [
         'email_enabled' => 'boolean',
         'sms_enabled' => 'boolean',
         'dashboard_enabled' => 'boolean',
         'push_enabled' => 'boolean',
-        'quiet_hours_start' => 'string', // stored as time HH:MM:SS
-        'quiet_hours_end' => 'string',   // stored as time HH:MM:SS
+        'quiet_hours_start' => 'string',
+        'quiet_hours_end' => 'string',
         'max_daily_notifications' => 'integer',
+        'email_verified' => 'boolean',
+        'phone_verified' => 'boolean',
         'deleted_at' => 'datetime',
+        'email_address' => 'encrypted',
+        'phone_number' => 'encrypted',
     ];
-
-    // ── Relationships ────────────────────────────────────────────────
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function getEnabledMethods(): array
+    {
+        $methods = [];
+        if ($this->email_enabled) {
+            $methods[] = 'email';
+        }
+        if ($this->sms_enabled) {
+            $methods[] = 'sms';
+        }
+        if ($this->dashboard_enabled) {
+            $methods[] = 'dashboard';
+        }
+
+        return $methods;
+    }
+
+    public function getPrimaryMethodStatus(): string
+    {
+        return match ($this->preferred_channel) {
+            'email' => ($this->email_verified ?? false) ? 'verified' : 'unverified',
+            'sms' => ($this->phone_verified ?? false) ? 'verified' : 'unverified',
+            default => 'unverified',
+        };
+    }
+
+    public function getBackupMethodStatus(): string
+    {
+        $primary = $this->preferred_channel;
+
+        if ($primary === 'email') {
+            return ($this->phone_verified ?? false) ? 'verified' : 'unverified';
+        }
+
+        if ($primary === 'sms') {
+            return ($this->email_verified ?? false) ? 'verified' : 'unverified';
+        }
+
+        return 'unverified';
     }
 }

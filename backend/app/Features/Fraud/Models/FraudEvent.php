@@ -9,13 +9,14 @@ use App\Models\Event;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * Fraud event model - IMMUTABLE audit trail.
+ * Fraud event model - audit trail with soft deletes.
  *
- * ⚠️ CRITICAL: This model does NOT use SoftDeletes.
- * Fraud records must never be deletable. If a record needs to be hidden,
- * transition status to an audit-safe state instead of deleting it.
+ * Fraud records support soft deletion for audit retention.
+ * Hard deletes are prevented by database constraints.
  *
  * @property string $id
  * @property string $order_id
@@ -38,6 +39,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $second_check_in_by
  * @property string $status
  * @property string|null $reviewed_by
+ * @property string|null $reviewed_by_id
+ * @property string|null $reviewed_by_type
  * @property string|null $review_notes
  * @property string|null $reviewed_at
  * @property string|null $notes
@@ -54,10 +57,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $authentication_method
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
+ * @property \Carbon\Carbon|null $deleted_at
  */
 class FraudEvent extends Model
 {
-    use HasUuids;
+    use HasUuids, SoftDeletes;
 
     protected $table = 'fraud_events';
 
@@ -83,6 +87,8 @@ class FraudEvent extends Model
         'second_check_in_by',
         'status',
         'reviewed_by',
+        'reviewed_by_id',
+        'reviewed_by_type',
         'review_notes',
         'reviewed_at',
         'notes',
@@ -94,11 +100,9 @@ class FraudEvent extends Model
         'gateway_response_code',
         'automated_action_taken',
         'source',
-        // Gateway / post-transaction columns
         'payment_intent_id',
         'chargeback_flag',
         'authentication_method',
-        // Denormalized columns
         'card_country',
         'device_fingerprint',
         'payment_method',
@@ -119,7 +123,6 @@ class FraudEvent extends Model
         'billing_country',
         'billing_zip',
         'shipping_billing_match',
-        // New analysis columns
         'order_status',
         'device_type',
         'proxy_vpn_detected',
@@ -146,6 +149,7 @@ class FraudEvent extends Model
         'updated_at' => 'datetime',
         'escalated_at' => 'datetime',
         'archived_at' => 'datetime',
+        'deleted_at' => 'datetime',
         'is_archived' => 'boolean',
         'shipping_billing_match' => 'boolean',
         'proxy_vpn_detected' => 'boolean',
@@ -177,6 +181,11 @@ class FraudEvent extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    public function reviewedByUser(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
     public function firstCheckInBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'first_check_in_by');
@@ -185,6 +194,93 @@ class FraudEvent extends Model
     public function secondCheckInBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'second_check_in_by');
+    }
+
+    public function getRiskLevelBadgeColor(): string
+    {
+        return match ($this->risk_level) {
+            'low' => 'green',
+            'medium' => 'amber',
+            'high' => 'red',
+            default => 'gray',
+        };
+    }
+
+    public function getFormattedRiskScore(): string
+    {
+        return number_format((float) $this->risk_score, 2);
+    }
+
+    public function getReadableEventType(): string
+    {
+        return match ($this->fraud_type) {
+            'duplicate_ticket_attempt' => 'Duplicate Ticket Attempt',
+            'velocity_check_failed' => 'Velocity Check Failed',
+            'payment_pattern_suspicious' => 'Suspicious Payment Pattern',
+            'device_fingerprint_mismatch' => 'Device Fingerprint Mismatch',
+            'geolocation_anomaly' => 'Geolocation Anomaly',
+            'card_testing' => 'Card Testing',
+            'high_risk_payment_method' => 'High Risk Payment Method',
+            'duplicate_checkin' => 'Duplicate Check-in',
+            'invalid_qr' => 'Invalid QR Code',
+            'manual_override' => 'Manual Override',
+            default => ucfirst(str_replace('_', ' ', $this->fraud_type)),
+        };
+    }
+
+    public function scopeFlagged($query)
+    {
+        return $query->where('status', 'flagged');
+    }
+
+    public function scopeReviewed($query)
+    {
+        return $query->where('status', 'reviewed');
+    }
+
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 'approved');
+    }
+
+    public function scopeRejected($query)
+    {
+        return $query->where('status', 'rejected');
+    }
+
+    public function scopeAutoBlocked($query)
+    {
+        return $query->where('status', 'auto_blocked');
+    }
+
+    public function scopeHighRisk($query)
+    {
+        return $query->where('risk_level', 'high');
+    }
+
+    public function scopeMediumRisk($query)
+    {
+        return $query->where('risk_level', 'medium');
+    }
+
+    public function scopeLowRisk($query)
+    {
+        return $query->where('risk_level', 'low');
+    }
+
+    public function scopeCreatedInDateRange($query, $start, $end)
+    {
+        return $query->whereBetween('created_at', [$start, $end]);
+    }
+
+    public function scopeHighRiskScore($query, float $threshold)
+    {
+        return $query->where('risk_score', '>=', $threshold);
+    }
+
+    public function scopeRecent($query, int $hours = 24)
+    {
+        return $query->where('created_at', '>=', now()->subHours($hours));
     }
 
     /**

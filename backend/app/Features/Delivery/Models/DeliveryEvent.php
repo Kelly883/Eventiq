@@ -6,18 +6,27 @@ use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Features\Fraud\Models\FraudEvent;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DeliveryEvent extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * Threshold in bytes above which payload is auto-offloaded to delivery_event_data.
      * Set to 0 to disable auto-offloading and store everything inline.
      */
     public const PAYLOAD_AUTO_OFFLOAD_THRESHOLD = 500;
+
+    /**
+     * Disable auto-offload during bulk imports or artisan commands.
+     *
+     * @var bool
+     */
+    public static bool $autoOffloadEnabled = true;
 
     /**
      * The attributes that are mass assignable.
@@ -29,6 +38,7 @@ class DeliveryEvent extends Model
         'user_id',
         'event_id',
         'order_id',
+        'fraud_event_id',
         'channel',
         'status',
         'ticket_reference',
@@ -57,6 +67,7 @@ class DeliveryEvent extends Model
      */
     protected $casts = [
         'payload' => 'array',
+        'provider_response' => 'array',
         'attempt_count' => 'integer',
         'max_attempts' => 'integer',
         'last_attempt_at' => 'datetime',
@@ -64,6 +75,9 @@ class DeliveryEvent extends Model
         'opened_at' => 'datetime',
         'clicked_at' => 'datetime',
         'archived_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     /**
@@ -77,7 +91,10 @@ class DeliveryEvent extends Model
         parent::boot();
 
         static::created(function (DeliveryEvent $event) {
-            // Auto-offload large payloads to the separate data table
+            if (!static::$autoOffloadEnabled) {
+                return;
+            }
+
             if (static::PAYLOAD_AUTO_OFFLOAD_THRESHOLD > 0) {
                 $payloadSize = 0;
                 if ($event->payload) {
@@ -156,6 +173,22 @@ class DeliveryEvent extends Model
             ->whereColumn('attempt_count', '<', 'max_attempts');
     }
 
+    /**
+     * Scope a query to only include delivery events for a given user.
+     */
+    public function scopeForUser($query, string $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    /**
+     * Scope a query to only include delivery events with a given status.
+     */
+    public function scopeByStatus($query, string $status)
+    {
+        return $query->where('status', $status);
+    }
+
     // ── Relationships ────────────────────────────────────────────────
 
     public function ticket()
@@ -184,5 +217,30 @@ class DeliveryEvent extends Model
     public function eventData()
     {
         return $this->hasOne(DeliveryEventData::class);
+    }
+
+    public function fraudEvent()
+    {
+        return $this->belongsTo(FraudEvent::class, 'fraud_event_id');
+    }
+
+    public function getStatusBadgeColor(): string
+    {
+        return match ($this->status) {
+            'sent', 'delivered' => 'green',
+            'pending' => 'amber',
+            'failed' => 'red',
+            default => 'gray',
+        };
+    }
+
+    public function canRetry(): bool
+    {
+        return $this->attempt_count < $this->max_attempts && !$this->isBlocked();
+    }
+
+    public function isBlocked(): bool
+    {
+        return $this->status === 'blocked' || $this->status === 'void';
     }
 }

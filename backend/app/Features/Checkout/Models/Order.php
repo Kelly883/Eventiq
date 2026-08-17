@@ -88,4 +88,31 @@ class Order extends Model
     {
         return $this->hasMany(Ticket::class);
     }
+
+    public function getFormattedTotal(): string
+    {
+        $amount = (float) ($this->total_amount ?? 0);
+        $currency = strtoupper($this->currency ?? 'NGN');
+
+        return match ($currency) {
+            'NGN' => '₦' . number_format($amount, 2),
+            'USD' => '$' . number_format($amount, 2),
+            'EUR' => '€' . number_format($amount, 2),
+            'GBP' => '£' . number_format($amount, 2),
+            'GHS' => '₵' . number_format($amount, 2),
+            'KES' => 'KSh' . number_format($amount, 2),
+            'ZAR' => 'R' . number_format($amount, 2),
+            default => $currency . ' ' . number_format($amount, 2),
+        };
+    }
+
+    public function canBeRefunded(): bool
+    {
+        return $this->status === 'completed';
+    }
+
+    public function scopeForUser($query, string $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Features\EmailNotifications\Requests;
 
+use App\Features\EmailNotifications\Models\EmailTemplate;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateEmailTemplateRequest extends FormRequest
@@ -13,11 +14,17 @@ class UpdateEmailTemplateRequest extends FormRequest
 
     public function rules(): array
     {
+        $allowedTypes = ['order_confirmation', 'event_reminder', 'ticket_delivery', 'check_in_confirmation', 'refund_notification'];
+
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'type' => ['sometimes', 'required', 'string', 'in:' . implode(',', $allowedTypes)],
             'subject' => ['sometimes', 'required', 'string', 'max:255'],
-            'body' => ['sometimes', 'nullable', 'string'],
-            'mjml_source' => ['sometimes', 'nullable', 'string'],
+            'html_body' => ['sometimes', 'required', 'string'],
+            'mjml_body' => ['sometimes', 'required', 'string'],
+            'variables' => ['sometimes', 'required', 'array'],
+            'variables.*' => ['string'],
+            'is_active' => ['sometimes', 'boolean'],
         ];
     }
 }
