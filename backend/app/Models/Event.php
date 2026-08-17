@@ -13,6 +13,10 @@ class Event extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /**
+     * Always eager-load these relationships to prevent N+1 queries on event lists.
+     * If you need a lean event query, use Event::without('organizer', 'analyticsEventsMetric')->get().
+     */
     protected $with = ['organizer', 'analyticsEventsMetric'];
 
     protected $fillable = [
@@ -130,5 +134,26 @@ class Event extends Model
     public function scopeByOrganizer($query, $organizerId)
     {
         return $query->where('organizer_id', $organizerId);
+    }
+
+    public function scopeAvailable($query)
+    {
+        return $query->whereHas('ticketTiers', function ($q) {
+            $q->where('is_active', true)
+              ->where(function ($sub) {
+                  $sub->whereNull('quantity')
+                      ->orWhereRaw('quantity > sold_count');
+              });
+        });
+    }
+
+    public function scopeSearch($query, string $search)
+    {
+        return $query->where(function ($q) use ($search) {
+            $q->where('title', 'like', "%{$search}%")
+              ->orWhere('description', 'like', "%{$search}%")
+              ->orWhere('venue_name', 'like', "%{$search}%")
+              ->orWhere('category', 'like', "%{$search}%");
+        });
     }
 }

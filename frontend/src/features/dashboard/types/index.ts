@@ -1,3 +1,5 @@
+import type { Event as EventModel } from '@/features/events/types/shared';
+
 export interface DashboardOverview {
   totalRevenue: number;
   totalTicketsSold: number;
@@ -78,7 +80,7 @@ export type TicketFilter = 'all' | 'upcoming' | 'past';
 export type DateRange = '7days' | '30days' | '90days' | 'all';
 
 export interface Event {
-  readonly id: string;
+  readonly id: number;
   readonly title: string;
   readonly date: string;
   readonly venue: string;
