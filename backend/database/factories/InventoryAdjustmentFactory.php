@@ -26,6 +26,7 @@ class InventoryAdjustmentFactory extends Factory
             'adjustment_type' => $this->faker->randomElement(['manual_increase', 'manual_decrease', 'reallocation', 'system_correction']),
             'quantity_before' => $this->faker->numberBetween(0, 100),
             'quantity_after' => $this->faker->numberBetween(0, 100),
+            'quantity_delta' => $this->faker->numberBetween(-50, 50),
             'reason' => $this->faker->sentence(),
         ];
     }

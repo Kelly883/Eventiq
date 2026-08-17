@@ -8,10 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Str;
 
 class TicketInventory extends Model
 {
     use HasFactory;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $table = 'ticket_inventory';
 
@@ -45,6 +49,10 @@ class TicketInventory extends Model
     protected static function booted(): void
     {
         static::creating(function (self $model) {
+            if (empty($model->id)) {
+                $model->id = (string) Str::uuid();
+            }
+
             if ($model->total_sold > $model->total_allocated) {
                 throw new \InvalidArgumentException('Total sold cannot exceed total allocated.');
             }
@@ -101,5 +109,10 @@ class TicketInventory extends Model
             'total_sold' => $totalSold,
             'last_updated_at' => now(),
         ]);
+    }
+
+    public static function newFactory()
+    {
+        return \Database\Factories\TicketInventoryFactory::new();
     }
 }

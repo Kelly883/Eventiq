@@ -33,7 +33,7 @@ class TicketInventoryTest extends TestCase
 
     public function test_total_available_returns_zero_when_sold_exceeds_allocated(): void
     {
-        $inventory = $this->makeInventory([
+        $inventory = new TicketInventory([
             'total_allocated' => 50,
             'total_sold' => 75,
         ]);
@@ -55,7 +55,7 @@ class TicketInventoryTest extends TestCase
     {
         $inventory = $this->makeInventory([
             'total_allocated' => 100,
-            'total_sold' => 8,
+            'total_sold' => 92,
             'low_stock_threshold' => 10,
         ]);
 

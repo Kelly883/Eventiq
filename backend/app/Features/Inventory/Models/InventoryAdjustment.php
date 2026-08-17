@@ -9,10 +9,14 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Str;
 
 class InventoryAdjustment extends Model
 {
     use HasFactory;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     const UPDATED_AT = null;
 
@@ -35,6 +39,12 @@ class InventoryAdjustment extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (self $model) {
+            if (empty($model->id)) {
+                $model->id = (string) Str::uuid();
+            }
+        });
+
         static::updating(function () {
             throw new \RuntimeException('Inventory adjustments are immutable and cannot be updated.');
         });
@@ -72,5 +82,10 @@ class InventoryAdjustment extends Model
     public function scopeForEvent($query, $eventId)
     {
         return $query->where('event_id', $eventId);
+    }
+
+    public static function newFactory()
+    {
+        return \Database\Factories\InventoryAdjustmentFactory::new();
     }
 }
