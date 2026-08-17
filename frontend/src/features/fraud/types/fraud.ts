@@ -108,18 +108,25 @@ export interface FraudAlertFilters {
 export type RiskLevel = 'low' | 'medium' | 'high';
 
 export type EventType =
-  | 'suspicious_login'
-  | 'multiple_failed_payments'
-  | 'unusual_location'
-  | 'ticket_scalping'
-  | 'duplicate_order'
-  | 'high_velocity_purchases'
-  | 'blacklisted_ip'
-  | 'stolen_card'
-  | 'chargeback_risk'
-  | 'identity_mismatch';
+  | 'duplicate_ticket_attempt'
+  | 'velocity_check_failed'
+  | 'payment_pattern_suspicious'
+  | 'device_fingerprint_mismatch'
+  | 'geolocation_anomaly'
+  | 'card_testing'
+  | 'high_risk_payment_method'
+  | 'duplicate_checkin'
+  | 'invalid_qr'
+  | 'manual_override';
 
-export type DetectionMethod = 'rule_based' | 'ml_model' | 'manual_review' | 'velocity_check' | 'device_fingerprint' | 'geolocation';
+export type DetectionMethod =
+  | 'sift_science'
+  | 'stripe_radar'
+  | 'duplicate_detection'
+  | 'velocity_check'
+  | 'rule_based'
+  | 'qr_validation'
+  | 'manual_review';
 
 export type FraudEventStatus = 'flagged' | 'reviewed' | 'approved' | 'rejected' | 'auto_blocked';
 

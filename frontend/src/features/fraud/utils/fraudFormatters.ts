@@ -10,32 +10,35 @@ export function getRiskLevelColor(level: RiskLevel): string {
 }
 
 export function getFraudTypeBadgeColor(eventType: EventType): string {
-  return eventType === 'stolen_card' || eventType === 'blacklisted_ip'
+  return eventType === 'card_testing' || eventType === 'high_risk_payment_method'
     ? 'text-red-600'
-    : eventType === 'high_velocity_purchases' || eventType === 'duplicate_order'
+    : eventType === 'duplicate_ticket_attempt' || eventType === 'duplicate_checkin'
       ? 'text-amber-600'
       : 'text-gray-600';
 }
 
 export function getDetectionMethodBadgeColor(method: DetectionMethod): string {
-  return method === 'ml_model' ? 'text-purple-600'
-    : method === 'manual_review' ? 'text-blue-600'
-    : method === 'rule_based' ? 'text-gray-600'
-    : 'text-green-600';
+  return method === 'sift_science' || method === 'stripe_radar'
+    ? 'text-purple-600'
+    : method === 'manual_review'
+      ? 'text-blue-600'
+      : method === 'rule_based'
+        ? 'text-gray-600'
+        : 'text-green-600';
 }
 
 export function getEventTypeLabel(type: EventType): string {
   const labels: Record<EventType, string> = {
-    suspicious_login: 'Suspicious Login',
-    multiple_failed_payments: 'Multiple Failed Payments',
-    unusual_location: 'Unusual Location',
-    ticket_scalping: 'Ticket Scalping',
-    duplicate_order: 'Duplicate Order',
-    high_velocity_purchases: 'High Velocity Purchases',
-    blacklisted_ip: 'Blacklisted IP',
-    stolen_card: 'Stolen Card',
-    chargeback_risk: 'Chargeback Risk',
-    identity_mismatch: 'Identity Mismatch',
+    duplicate_ticket_attempt: 'Duplicate Ticket Attempt',
+    velocity_check_failed: 'Velocity Check Failed',
+    payment_pattern_suspicious: 'Suspicious Payment Pattern',
+    device_fingerprint_mismatch: 'Device Fingerprint Mismatch',
+    geolocation_anomaly: 'Geolocation Anomaly',
+    card_testing: 'Card Testing',
+    high_risk_payment_method: 'High Risk Payment Method',
+    duplicate_checkin: 'Duplicate Check-in',
+    invalid_qr: 'Invalid QR Code',
+    manual_override: 'Manual Override',
   };
 
   return labels[type] ?? type.replace(/_/g, ' ');
@@ -43,12 +46,13 @@ export function getEventTypeLabel(type: EventType): string {
 
 export function getDetectionMethodLabel(method: DetectionMethod): string {
   const labels: Record<DetectionMethod, string> = {
-    rule_based: 'Rule Based',
-    ml_model: 'ML Model',
-    manual_review: 'Manual Review',
+    sift_science: 'Sift Science',
+    stripe_radar: 'Stripe Radar',
+    duplicate_detection: 'Duplicate Detection',
     velocity_check: 'Velocity Check',
-    device_fingerprint: 'Device Fingerprint',
-    geolocation: 'Geolocation',
+    rule_based: 'Rule Based',
+    qr_validation: 'QR Validation',
+    manual_review: 'Manual Review',
   };
 
   return labels[method] ?? method.replace(/_/g, ' ');

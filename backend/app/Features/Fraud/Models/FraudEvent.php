@@ -214,16 +214,16 @@ class FraudEvent extends Model
     public function getReadableEventType(): string
     {
         return match ($this->fraud_type) {
-            'suspicious_login' => 'Suspicious Login',
-            'multiple_failed_payments' => 'Multiple Failed Payments',
-            'unusual_location' => 'Unusual Location',
-            'ticket_scalping' => 'Ticket Scalping',
-            'duplicate_order' => 'Duplicate Order',
-            'high_velocity_purchases' => 'High Velocity Purchases',
-            'blacklisted_ip' => 'Blacklisted IP',
-            'stolen_card' => 'Stolen Card',
-            'chargeback_risk' => 'Chargeback Risk',
-            'identity_mismatch' => 'Identity Mismatch',
+            'duplicate_ticket_attempt' => 'Duplicate Ticket Attempt',
+            'velocity_check_failed' => 'Velocity Check Failed',
+            'payment_pattern_suspicious' => 'Suspicious Payment Pattern',
+            'device_fingerprint_mismatch' => 'Device Fingerprint Mismatch',
+            'geolocation_anomaly' => 'Geolocation Anomaly',
+            'card_testing' => 'Card Testing',
+            'high_risk_payment_method' => 'High Risk Payment Method',
+            'duplicate_checkin' => 'Duplicate Check-in',
+            'invalid_qr' => 'Invalid QR Code',
+            'manual_override' => 'Manual Override',
             default => ucfirst(str_replace('_', ' ', $this->fraud_type)),
         };
     }
