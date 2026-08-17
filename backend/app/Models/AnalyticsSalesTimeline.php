@@ -2,17 +2,22 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class AnalyticsSalesTimeline extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $table = 'analytics_sales_timeline';
 
     protected $fillable = [
+        'id',
         'event_id',
         'ticket_tier_id',
         'pricing_window_id',
@@ -32,6 +37,17 @@ class AnalyticsSalesTimeline extends Model
         'created_at' => 'datetime',
     ];
 
+    protected static function booted(): void
+    {
+        static::updating(function () {
+            throw new \RuntimeException('Sales timeline entries are immutable and cannot be updated.');
+        });
+
+        static::deleting(function () {
+            throw new \RuntimeException('Sales timeline entries are immutable and cannot be deleted.');
+        });
+    }
+
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);
@@ -45,11 +61,6 @@ class AnalyticsSalesTimeline extends Model
     public function pricingWindow(): BelongsTo
     {
         return $this->belongsTo(PricingWindow::class);
-    }
-
-    protected static function booted(): void
-    {
-        static::creating(fn ($model) => $model->is_active = true);
     }
 
     public function scopeForEvent($query, $eventId)

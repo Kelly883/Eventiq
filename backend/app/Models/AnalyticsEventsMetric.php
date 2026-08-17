@@ -36,6 +36,9 @@ class AnalyticsEventsMetric extends Model
         'total_revenue' => 'decimal:12',
         'average_ticket_price' => 'decimal:10',
         'conversion_rate' => 'decimal:5',
+        'total_tickets_sold' => 'integer',
+        'total_page_views' => 'integer',
+        'total_ticket_page_views' => 'integer',
     ];
 
     public function event(): BelongsTo
@@ -56,5 +59,29 @@ class AnalyticsEventsMetric extends Model
     public function scopeForEvent($query, $eventId)
     {
         return $query->where('event_id', $eventId);
+    }
+
+    public function getTrendAttribute(?string $direction = null): string
+    {
+        if ($direction === null) {
+            return 'flat';
+        }
+
+        return $direction;
+    }
+
+    public function getRevenueTrendAttribute(): string
+    {
+        return $this->getTrendAttribute();
+    }
+
+    public function getTicketsSoldTrendAttribute(): string
+    {
+        return $this->getTrendAttribute();
+    }
+
+    public function getConversionRateTrendAttribute(): string
+    {
+        return $this->getTrendAttribute();
     }
 }

@@ -56,4 +56,35 @@
  * @property {number} periodRevenue
  */
 
+/**
+ * @param {AnalyticsMetrics} metrics
+ * @returns {string}
+ */
+export function formatRevenue(metrics) {
+  if (!metrics || metrics.totalRevenue == null) return '$0.00';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(metrics.totalRevenue);
+}
+
+/**
+ * @param {AnalyticsMetrics} metrics
+ * @returns {string}
+ */
+export function formatConversionRate(metrics) {
+  if (!metrics || metrics.conversionRate == null) return '0.0%';
+  return metrics.conversionRate.toFixed(1) + '%';
+}
+
+/**
+ * @param {AnalyticsMetrics} metrics
+ * @param {'up'|'down'|'flat'} [direction]
+ * @returns {'up'|'down'|'flat'}
+ */
+export function getTrendIndicator(metrics, direction = 'flat') {
+  if (!metrics) return 'flat';
+  return direction;
+}
+
 export { AnalyticsMetrics, SalesTimelineEntry, TierPerformance, SalesVelocityDataPoint };
