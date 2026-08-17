@@ -64,7 +64,15 @@ Eventiq is a full-stack event management and ticketing platform. It provides eve
 - Composer
 - Node.js 18+
 - npm or yarn
-- MySQL or SQLite
+- PostgreSQL (production) or SQLite (local testing)
+
+### Database
+
+This project uses:
+- **PostgreSQL** in production
+- **SQLite** for local development and testing
+
+The Laravel database configuration in `config/database.php` supports both drivers. Migrations are written to be cross-compatible where possible, with driver-specific guards for advanced features.
 
 ### Backend Setup
 
@@ -99,8 +107,12 @@ php artisan test
 | Variable | Description |
 |---|---|
 | `APP_KEY` | Laravel application key |
-| `DB_CONNECTION` | Database driver (mysql, sqlite) |
+| `DB_CONNECTION` | Database driver (`sqlite` for local, `pgsql` for production) |
 | `DB_DATABASE` | Database name or path |
+| `DB_HOST` | Database host |
+| `DB_PORT` | Database port (5432 for PostgreSQL) |
+| `DB_USERNAME` | Database username |
+| `DB_PASSWORD` | Database password |
 | `SANCTUM_STATEFUL_DOMAINS` | Frontend domain for session auth |
 
 ### Frontend
@@ -112,7 +124,7 @@ php artisan test
 ## Deployment
 
 - **Frontend**: Deployed on Vercel with root directory set to `frontend`, framework preset `Vite`, and output `dist`. `vercel.json` includes SPA rewrites for React Router.
-- **Backend**: Deploy the Laravel app to your preferred PHP hosting.
+- **Backend**: Deploy the Laravel app to your preferred PHP hosting. Set `DB_CONNECTION=pgsql` and configure PostgreSQL connection variables in `.env`.
 
 ## Implementation Progress
 
