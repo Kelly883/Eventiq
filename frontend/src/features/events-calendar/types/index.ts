@@ -4,8 +4,8 @@ export type Availability = 'available' | 'low' | 'sold_out';
 export interface Venue {
   readonly name: string;
   readonly address?: string | null;
-  readonly latitude: number;
-  readonly longitude: number;
+  readonly latitude: number | null;
+  readonly longitude: number | null;
 }
 
 export interface Organizer {
