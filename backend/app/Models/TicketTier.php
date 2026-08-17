@@ -82,6 +82,23 @@ class TicketTier extends Model
         return $query->where('is_active', true);
     }
 
+    public function scopeAvailable($query)
+    {
+        return $query->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('sales_start_date')
+                  ->orWhere('sales_start_date', '<=', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('sales_end_date')
+                  ->orWhere('sales_end_date', '>=', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('quantity')
+                  ->orWhereRaw('quantity > sold_count');
+            });
+    }
+
     public function scopeForEvent($query, $eventId)
     {
         return $query->where('event_id', $eventId);
@@ -90,5 +107,39 @@ class TicketTier extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('tier_order')->orderBy('sales_start_date');
+    }
+
+    public function isEarlyBirdActive(): bool
+    {
+        return $this->early_bird_price !== null
+            && $this->early_bird_end_date !== null
+            && now()->isBefore($this->early_bird_end_date);
+    }
+
+    public function getEffectivePrice(): float
+    {
+        return $this->isEarlyBirdActive() ? (float) $this->early_bird_price : (float) $this->price;
+    }
+
+    public function isAvailable(): bool
+    {
+        if ($this->sales_start_date && now()->isBefore($this->sales_start_date)) {
+            return false;
+        }
+
+        if ($this->sales_end_date && now()->isAfter($this->sales_end_date)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function getRemainingQuantity(): ?int
+    {
+        if ($this->quantity === null) {
+            return null;
+        }
+
+        return max(0, $this->quantity - ($this->sold_count ?? 0));
     }
 }
