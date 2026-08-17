@@ -18,16 +18,26 @@ class InventoryAdjustment extends Model
         'adjustment_type',
         'quantity_before',
         'quantity_after',
-        'quantity_delta',
         'reason',
     ];
 
     protected $casts = [
         'quantity_before' => 'integer',
         'quantity_after' => 'integer',
-        'quantity_delta' => 'integer',
         'created_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::updating(function () {
+            throw new \RuntimeException('Inventory adjustments are immutable and cannot be updated.');
+        });
+
+        static::deleting(function () {
+            throw new \RuntimeException('Inventory adjustments are immutable and cannot be deleted.');
+        });
+    }
 
     public function event(): BelongsTo
     {

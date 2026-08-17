@@ -2,8 +2,11 @@
 
 namespace App\Features\Inventory\Models;
 
+use App\Models\Event;
+use App\Models\TicketTier;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class TicketInventory extends Model
@@ -30,21 +33,54 @@ class TicketInventory extends Model
         'updated_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'total_available',
+        'is_low_stock',
+    ];
+
     public function event(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Event::class);
+        return $this->belongsTo(Event::class);
     }
 
     public function ticketTier(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\TicketTier::class);
+        return $this->belongsTo(TicketTier::class);
     }
 
-    /**
-     * total_available is a virtual/generated column: total_allocated - total_sold
-     */
-    public function getRemainingAttribute(): int
+    public function inventoryAdjustments(): HasMany
     {
-        return (int) ($this->total_available ?? ($this->total_allocated - $this->total_sold));
+        return $this->hasMany(InventoryAdjustment::class);
+    }
+
+    public function getTotalAvailableAttribute(): int
+    {
+        $allocated = (int) ($this->attributes['total_allocated'] ?? 0);
+        $sold = (int) ($this->attributes['total_sold'] ?? 0);
+
+        return max(0, $allocated - $sold);
+    }
+
+    public function getIsLowStockAttribute(): bool
+    {
+        $threshold = (int) ($this->attributes['low_stock_threshold'] ?? 0);
+
+        return $this->total_available > 0 && $this->total_available <= $threshold;
+    }
+
+    public function updateFromPricingWindows(): void
+    {
+        $pricingWindows = $this->event->pricingWindows()
+            ->where('ticket_category_id', $this->ticket_tier_id)
+            ->get();
+
+        $totalAllocated = $pricingWindows->sum('quantity_limit');
+        $totalSold = $pricingWindows->sum('quantity_sold');
+
+        $this->update([
+            'total_allocated' => $totalAllocated,
+            'total_sold' => $totalSold,
+            'last_updated_at' => now(),
+        ]);
     }
 }
