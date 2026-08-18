@@ -17,8 +17,15 @@ export interface RefundRequest {
   readonly processingStartedAt?: string;
   readonly completedAt?: string;
   readonly paymentGatewayRefundId?: string;
+  readonly paymentGateway?: string;
+  readonly paymentIntentId?: string;
   readonly appealCount: number;
   readonly lastAppealAt?: string;
+  readonly formattedAmount: string;
+  readonly formattedRefundAmount: string;
+  readonly statusBadgeColor: string;
+  readonly isEligibleForAppeal: boolean;
+  readonly canBeCancelled: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
 }

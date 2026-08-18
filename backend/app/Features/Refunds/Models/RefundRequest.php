@@ -36,6 +36,8 @@ class RefundRequest extends Model
         'payment_gateway_response',
         'appeal_count',
         'last_appeal_at',
+        'payment_gateway',
+        'payment_intent_id',
     ];
 
     protected $casts = [
@@ -80,6 +82,11 @@ class RefundRequest extends Model
         return $this->hasMany(RefundAppeal::class);
     }
 
+    public function payment(): BelongsTo
+    {
+        return $this->belongsTo(\App\Features\Checkout\Models\Payment::class);
+    }
+
     public function getFormattedAmountAttribute(): string
     {
         return '$' . number_format((float) $this->original_amount, 2);
@@ -103,6 +110,16 @@ class RefundRequest extends Model
         return $this->status === 'rejected' && $this->appeal_count < 3;
     }
 
+    public function getFormattedRefundAmountAttribute(): string
+    {
+        return '$' . number_format((float) $this->refund_amount, 2);
+    }
+
+    public function canBeCancelled(): bool
+    {
+        return in_array($this->status, ['pending', 'processing'], true);
+    }
+
     public function scopeForUser($query, string $userId)
     {
         return $query->where('user_id', $userId);
@@ -116,5 +133,15 @@ class RefundRequest extends Model
     public function scopeByEvent($query, string $eventId)
     {
         return $query->where('event_id', $eventId);
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
+
+    public function scopeRecent($query, int $days = 7)
+    {
+        return $query->where('created_at', '>=', now()->subDays($days));
     }
 }

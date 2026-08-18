@@ -2,29 +2,66 @@
 
 namespace App\Features\Refunds\Resources;
 
+use App\Features\Refunds\Models\RefundAppeal;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class RefundRequestResource extends JsonResource
 {
-    public function toArray($request)
+    public function toArray($request): array
     {
         return [
             'id' => $this->id,
-            'status' => $this->status,
-            'requested_amount' => $this->requested_amount,
-            'approved_amount' => $this->approved_amount,
+            'ticketId' => $this->ticket_id,
+            'orderId' => $this->order_id,
+            'userId' => $this->user_id,
+            'eventId' => $this->event_id,
+            'originalAmount' => (float) $this->original_amount,
+            'refundAmount' => (float) $this->refund_amount,
+            'refundPercentage' => (float) $this->refund_percentage,
             'reason' => $this->reason,
-            'admin_notes' => $this->admin_notes,
-            'reviewed_at' => $this->reviewed_at,
+            'explanation' => $this->explanation,
+            'refundMethod' => $this->refund_method,
+            'status' => $this->status,
+            'rejectionReason' => $this->rejection_reason,
+            'approvedBy' => $this->approved_by,
+            'approvedAt' => $this->approved_at?->toIso8601String(),
+            'processingStartedAt' => $this->processing_started_at?->toIso8601String(),
+            'completedAt' => $this->completed_at?->toIso8601String(),
+            'paymentGatewayRefundId' => $this->payment_gateway_refund_id,
+            'paymentGateway' => $this->payment_gateway,
+            'paymentIntentId' => $this->payment_intent_id,
+            'paymentGatewayResponse' => $this->payment_gateway_response,
+            'appealCount' => (int) $this->appeal_count,
+            'lastAppealAt' => $this->last_appeal_at?->toIso8601String(),
+            'formattedAmount' => '$' . number_format((float) $this->original_amount, 2),
+            'formattedRefundAmount' => '$' . number_format((float) $this->refund_amount, 2),
+            'statusBadgeColor' => $this->status_badge_color,
+            'isEligibleForAppeal' => $this->status === 'rejected' && (int) $this->appeal_count < 3,
+            'canBeCancelled' => in_array($this->status, ['pending', 'processing'], true),
+            'user' => $this->whenLoaded('user', fn () => [
+                'id' => $this->user->id,
+                'name' => $this->user->name,
+                'email' => $this->user->email,
+            ]),
+            'event' => $this->whenLoaded('event', fn () => [
+                'id' => $this->event->id,
+                'title' => $this->event->title,
+            ]),
             'ticket' => $this->whenLoaded('ticket', fn () => [
                 'id' => $this->ticket->id,
-                'event' => $this->ticket->relationLoaded('event') ? [
-                    'id' => $this->ticket->event->id,
-                    'title' => $this->ticket->event->title,
-                ] : null,
+                'tier' => $this->ticket->ticketTier->name ?? null,
             ]),
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'order' => $this->whenLoaded('order', fn () => [
+                'id' => $this->order->id,
+                'orderNumber' => $this->order->payment_intent_id,
+            ]),
+            'refundPolicy' => $this->whenLoaded('refundPolicy', fn () => [
+                'id' => $this->refundPolicy->id,
+                'formattedWindow' => $this->refundPolicy->formatted_window,
+            ]),
+            'appeals' => RefundAppealResource::collection($this->whenLoaded('appeals')),
+            'createdAt' => $this->created_at?->toIso8601String(),
+            'updatedAt' => $this->updated_at?->toIso8601String(),
         ];
     }
 }
