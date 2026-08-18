@@ -80,10 +80,10 @@ class Payment extends Model
     ];
 
     protected $casts = [
-        'amount' => 'integer',
-        'fees' => 'integer',
-        'net_amount' => 'integer',
-        'refunded_amount' => 'integer',
+        'amount' => 'decimal:2',
+        'fees' => 'decimal:2',
+        'net_amount' => 'decimal:2',
+        'refunded_amount' => 'decimal:2',
         'gateway_response' => 'array',
         'refunded_at' => 'datetime',
         'settled_at' => 'datetime',
@@ -160,16 +160,16 @@ class Payment extends Model
 
     public function getAmountInMajorUnits(): float
     {
-        return (float) $this->amount / 100;
+        return (float) $this->amount;
     }
 
     public function getFeesInMajorUnits(): float
     {
-        return (float) $this->fees / 100;
+        return (float) $this->fees;
     }
 
     public function getNetAmountInMajorUnits(): float
     {
-        return (float) $this->net_amount / 100;
+        return (float) $this->net_amount;
     }
 }

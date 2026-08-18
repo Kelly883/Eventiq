@@ -51,9 +51,9 @@ class OrganizerPayout extends Model
     protected $casts = [
         'gateway' => PaymentGateway::class,
         'status' => PaymentStatus::class,
-        'amount' => 'integer',
-        'fees' => 'integer',
-        'net_amount' => 'integer',
+        'amount' => 'decimal:2',
+        'fees' => 'decimal:2',
+        'net_amount' => 'decimal:2',
         'paid_at' => 'datetime',
         'approved_at' => 'datetime',
         'metadata' => 'array',
@@ -106,11 +106,11 @@ class OrganizerPayout extends Model
 
     public function getAmountInMajorUnits(): float
     {
-        return (float) $this->amount / 100;
+        return (float) $this->amount;
     }
 
     public function getNetAmountInMajorUnits(): float
     {
-        return (float) $this->net_amount / 100;
+        return (float) $this->net_amount;
     }
 }

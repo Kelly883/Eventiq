@@ -18,9 +18,9 @@ return new class extends Migration
             $table->string('gateway');
             $table->string('reference');
             $table->string('status');
-            $table->integer('amount');
-            $table->integer('fees')->default(0);
-            $table->integer('net_amount')->default(0);
+            $table->decimal('amount', 10, 2);
+            $table->decimal('fees', 10, 2)->default(0);
+            $table->decimal('net_amount', 10, 2)->default(0);
             $table->string('currency', 3)->default('NGN');
             $table->json('metadata')->nullable();
             $table->dateTime('paid_at')->nullable();

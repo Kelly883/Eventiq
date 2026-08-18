@@ -66,10 +66,10 @@ class Transaction extends Model
     protected $casts = [
         'gateway' => PaymentGateway::class,
         'status' => PaymentStatus::class,
-        'amount' => 'integer',
-        'fees' => 'integer',
-        'net_amount' => 'integer',
-        'refunded_amount' => 'integer',
+        'amount' => 'decimal:2',
+        'fees' => 'decimal:2',
+        'net_amount' => 'decimal:2',
+        'refunded_amount' => 'decimal:2',
         'is_fully_refunded' => 'boolean',
         'paid_at' => 'datetime',
         'gateway_response' => 'array',
@@ -152,16 +152,16 @@ class Transaction extends Model
 
     public function getAmountInMajorUnits(): float
     {
-        return (float) $this->amount / 100;
+        return (float) $this->amount;
     }
 
     public function getFeesInMajorUnits(): float
     {
-        return (float) $this->fees / 100;
+        return (float) $this->fees;
     }
 
     public function getNetAmountInMajorUnits(): float
     {
-        return (float) $this->net_amount / 100;
+        return (float) $this->net_amount;
     }
 }

@@ -25,10 +25,10 @@ return new class extends Migration
             $table->string('gateway_reference')->nullable();
             $table->string('authorization_code')->nullable();
             $table->string('authorization_type')->nullable();
-            $table->integer('amount');
+            $table->decimal('amount', 10, 2);
             $table->string('currency', 3)->default('NGN');
-            $table->integer('fees')->default(0);
-            $table->integer('net_amount')->default(0);
+            $table->decimal('fees', 10, 2)->default(0);
+            $table->decimal('net_amount', 10, 2)->default(0);
             $table->string('status');
             $table->string('payment_channel')->nullable();
             $table->string('customer_email')->nullable();
@@ -36,7 +36,7 @@ return new class extends Migration
             $table->json('gateway_response')->nullable();
             $table->text('last_error')->nullable();
             $table->dateTime('paid_at')->nullable();
-            $table->integer('refunded_amount')->default(0);
+            $table->decimal('refunded_amount', 10, 2)->default(0);
             $table->string('refund_reference')->nullable();
             $table->boolean('is_fully_refunded')->default(false);
             $table->string('webhook_event_id')->nullable();
