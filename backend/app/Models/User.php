@@ -215,6 +215,8 @@ class User extends Authenticatable
             default => ucfirst($this->status),
         };
     }
+
+    public function isPasswordCorrect(string $password): bool
     {
         return \Illuminate\Support\Facades\Hash::check($password, $this->passwordHash);
     }
