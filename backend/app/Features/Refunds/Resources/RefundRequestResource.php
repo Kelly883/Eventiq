@@ -42,6 +42,7 @@ class RefundRequestResource extends JsonResource
             'statusBadgeColor' => $this->status_badge_color,
             'isEligibleForAppeal' => $this->status === 'rejected' && (int) $this->appeal_count < 3,
             'canBeCancelled' => in_array($this->status, ['pending', 'processing'], true),
+            'isRefundable' => $this->is_refundable,
             'user' => $this->whenLoaded('user', fn () => [
                 'id' => $this->user->id,
                 'name' => $this->user->name,

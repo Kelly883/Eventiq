@@ -120,6 +120,24 @@ class RefundRequest extends Model
         return in_array($this->status, ['pending', 'processing'], true);
     }
 
+    public function getIsRefundableAttribute(): bool
+    {
+        if (! $this->payment()->exists() || $this->status === 'completed') {
+            return false;
+        }
+
+        $payment = $this->payment;
+
+        if (! $payment || $payment->is_fully_refunded) {
+            return false;
+        }
+
+        return match ($payment->status) {
+            'succeeded', 'success', 'completed' => true,
+            default => false,
+        };
+    }
+
     public function getRemainingAppealAttemptsAttribute(): int
     {
         return max(0, 3 - (int) $this->appeal_count);

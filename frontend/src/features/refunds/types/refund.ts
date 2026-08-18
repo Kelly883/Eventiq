@@ -44,6 +44,7 @@ export interface RefundRequest {
   readonly statusBadgeColor: string;
   readonly isEligibleForAppeal: boolean;
   readonly canBeCancelled: boolean;
+  readonly isRefundable: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
