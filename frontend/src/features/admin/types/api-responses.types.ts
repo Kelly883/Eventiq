@@ -14,6 +14,8 @@ export interface PaginatedResponse<T> {
   readonly lastPage: number;
   readonly perPage: number;
   readonly total: number;
+  readonly page?: number;
+  readonly limit?: number;
 }
 
 export interface ApiResponse<T> {

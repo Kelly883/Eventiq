@@ -65,6 +65,8 @@ export interface AdminSettings {
   readonly isEditable: boolean;
   readonly lastModifiedBy?: string;
   readonly lastModifiedAt?: string;
+  readonly createdAt?: string;
+  readonly updatedAt?: string;
 }
 
 export interface AuditLog {
