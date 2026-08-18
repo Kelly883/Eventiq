@@ -3,10 +3,13 @@ export type TicketStatus = 'valid' | 'checked_in' | 'void';
 export interface Ticket {
   readonly id: string;
   readonly eventId: string;
+  readonly orderId: string;
+  readonly ticketTierId: string;
   readonly ticketId: string;
   readonly attendeeName: string;
   readonly attendeeEmail: string;
   readonly tier: string;
+  readonly qrCodeData: string;
   readonly status: TicketStatus;
   readonly checkedInAt: string | null;
   readonly checkedInBy: string | null;

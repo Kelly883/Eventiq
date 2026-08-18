@@ -18,6 +18,8 @@ class Ticket extends Model
 
     protected $fillable = [
         'event_id',
+        'order_id',
+        'ticket_tier_id',
         'ticket_id',
         'attendee_name',
         'attendee_email',
@@ -25,6 +27,7 @@ class Ticket extends Model
         'status',
         'checked_in_at',
         'checked_in_by',
+        'qr_code_data',
     ];
 
     protected $casts = [
@@ -58,12 +61,12 @@ class Ticket extends Model
 
     public function isCheckedIn(): bool
     {
-        return $this->status === 'checked_in';
+        return $this->status !== null && $this->status === 'checked_in';
     }
 
     public function canCheckIn(): bool
     {
-        if ($this->status !== 'valid') {
+        if ($this->id === null || $this->status !== 'valid') {
             return false;
         }
 

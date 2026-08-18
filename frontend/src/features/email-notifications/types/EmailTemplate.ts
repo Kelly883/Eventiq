@@ -7,6 +7,11 @@ export interface EmailTemplate {
   readonly mjmlBody: string;
   readonly variables: string[];
   readonly isActive: boolean;
+  readonly publishedAt: string | null;
+  readonly version: string | null;
+  readonly category: string | null;
+  readonly description: string | null;
+  readonly previewHtml: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
