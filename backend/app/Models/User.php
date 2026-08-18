@@ -124,6 +124,11 @@ class User extends Authenticatable
         return $this->hasOne(Organizer::class);
     }
 
+    public function deliveryPreferences(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Features\PushNotifications\Models\DeliveryPreferences::class);
+    }
+
     public function paymentMethods(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(\App\Features\Payment\Models\PaymentMethod::class);

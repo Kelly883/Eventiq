@@ -45,16 +45,12 @@ class PushNotificationTemplate extends Model
             $body = str_replace($placeholder, $value, $body);
         }
 
-        $missingVariables = [];
         foreach ($this->variables ?? [] as $variable) {
             $placeholder = '{{' . $variable . '}}';
             if (str_contains($title, $placeholder) || str_contains($body, $placeholder)) {
-                $missingVariables[] = $variable;
+                $title = str_replace($placeholder, '', $title);
+                $body = str_replace($placeholder, '', $body);
             }
-        }
-
-        if ($missingVariables !== []) {
-            \Illuminate\Support\Facades\Log::warning('PushNotificationTemplate: Missing variables: ' . implode(', ', $missingVariables));
         }
 
         return trim($title) . ': ' . trim($body);

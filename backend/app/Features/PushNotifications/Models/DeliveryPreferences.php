@@ -34,6 +34,11 @@ class DeliveryPreferences extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function scopeForUser($query, string $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
     public function isNotificationTypeEnabled(string $type): bool
     {
         $field = 'push_' . $type;
