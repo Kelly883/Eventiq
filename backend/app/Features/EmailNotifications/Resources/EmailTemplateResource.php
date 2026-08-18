@@ -14,6 +14,8 @@ class EmailTemplateResource extends JsonResource
             'name' => $this->resource->name,
             'type' => $this->resource->type,
             'subject' => $this->resource->subject,
+            'fromName' => $this->resource->from_name,
+            'fromEmail' => $this->resource->from_email,
             'htmlBody' => $this->resource->html_body,
             'mjmlBody' => $this->resource->mjml_body,
             'variables' => $this->resource->variables ?? [],

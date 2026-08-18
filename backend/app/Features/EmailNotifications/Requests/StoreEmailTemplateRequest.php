@@ -20,6 +20,8 @@ class StoreEmailTemplateRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', 'string', 'in:' . implode(',', $allowedTypes)],
             'subject' => ['required', 'string', 'max:255'],
+            'from_name' => ['nullable', 'string', 'max:255'],
+            'from_email' => ['nullable', 'email', 'max:255'],
             'html_body' => ['required', 'string'],
             'mjml_body' => ['required', 'string'],
             'variables' => ['required', 'array'],

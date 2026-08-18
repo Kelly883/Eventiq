@@ -3,6 +3,8 @@ export interface EmailTemplate {
   readonly name: string;
   readonly type: string;
   readonly subject: string;
+  readonly fromName: string | null;
+  readonly fromEmail: string | null;
   readonly htmlBody: string;
   readonly mjmlBody: string;
   readonly variables: string[];
