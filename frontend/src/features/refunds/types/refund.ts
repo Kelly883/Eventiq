@@ -1,3 +1,16 @@
+export type PaymentGatewayName = 'paystack' | 'flutterwave';
+
+export interface Payment {
+  readonly id: string;
+  readonly gateway: PaymentGatewayName;
+  readonly amount: number;
+  readonly currency: string;
+  readonly status: string;
+  readonly paymentIntentId?: string;
+  readonly gatewayTransactionId?: string;
+  readonly paidAt?: string;
+}
+
 export interface RefundRequest {
   readonly id: string;
   readonly ticketId: string;
@@ -7,6 +20,7 @@ export interface RefundRequest {
   readonly originalAmount: number;
   readonly refundAmount: number;
   readonly refundPercentage: number;
+  readonly formattedPercentage: string;
   readonly reason: 'event_cancelled' | 'personal_circumstances' | 'duplicate_purchase' | 'other';
   readonly explanation?: string;
   readonly refundMethod: 'original_payment_method' | 'store_credit' | 'alternative_payment_method';
@@ -17,8 +31,9 @@ export interface RefundRequest {
   readonly processingStartedAt?: string;
   readonly completedAt?: string;
   readonly paymentGatewayRefundId?: string;
-  readonly paymentGateway?: string;
+  readonly paymentGateway?: PaymentGatewayName;
   readonly paymentIntentId?: string;
+  readonly payment?: Payment;
   readonly appealCount: number;
   readonly lastAppealAt?: string;
   readonly formattedAmount: string;

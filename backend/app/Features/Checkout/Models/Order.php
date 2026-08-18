@@ -89,6 +89,11 @@ class Order extends Model
         return $this->hasMany(Ticket::class);
     }
 
+    public function refundRequests(): HasMany
+    {
+        return $this->hasMany(\App\Features\Refunds\Models\RefundRequest::class);
+    }
+
     public function getFormattedTotal(): string
     {
         $amount = (float) ($this->total_amount ?? 0);

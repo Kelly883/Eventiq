@@ -134,6 +134,11 @@ class User extends Authenticatable
         return $this->hasMany(\App\Features\Payment\Models\PaymentMethod::class);
     }
 
+    public function refundRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Features\Refunds\Models\RefundRequest::class);
+    }
+
     public function getDefaultPaymentMethod(): ?\App\Features\Payment\Models\PaymentMethod
     {
         return $this->paymentMethods()->where('is_default', true)->whereNull('deleted_at')->first();

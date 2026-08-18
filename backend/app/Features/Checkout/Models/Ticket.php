@@ -95,6 +95,11 @@ class Ticket extends Model
         return $this->belongsTo(\App\Models\User::class);
     }
 
+    public function refundRequest(): BelongsTo
+    {
+        return $this->belongsTo(\App\Features\Refunds\Models\RefundRequest::class);
+    }
+
     /**
      * Get the staff member who checked in this ticket.
      */

@@ -95,6 +95,11 @@ class Event extends Model
         return $this->hasMany(TicketTier::class);
     }
 
+    public function refundRequests(): HasMany
+    {
+        return $this->hasMany(\App\Features\Refunds\Models\RefundRequest::class);
+    }
+
     public function pricingWindows(): HasMany
     {
         return $this->hasMany(\App\Features\Pricing\Models\PricingWindow::class);

@@ -120,6 +120,21 @@ class RefundRequest extends Model
         return in_array($this->status, ['pending', 'processing'], true);
     }
 
+    public function getFormattedPercentageAttribute(): string
+    {
+        return number_format((float) $this->refund_percentage, 0) . '%';
+    }
+
+    public function scopeByPaymentGateway($query, string $gateway)
+    {
+        return $query->where('payment_gateway', $gateway);
+    }
+
+    public function scopeApproved($query)
+    {
+        return $query->where('status', 'approved');
+    }
+
     public function scopeForUser($query, string $userId)
     {
         return $query->where('user_id', $userId);
