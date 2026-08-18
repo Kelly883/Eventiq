@@ -158,7 +158,17 @@ class Payment extends Model
         return $query->whereIn('status', [PaymentStatus::REFUNDED, PaymentStatus::PARTIALLY_REFUNDED]);
     }
 
-    public function getAmountInMajorUnits(): float
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            PaymentStatus::SUCCESS => 'Completed',
+            PaymentStatus::PENDING => 'Pending',
+            PaymentStatus::FAILED => 'Failed',
+            PaymentStatus::REFUNDED => 'Refunded',
+            PaymentStatus::PARTIALLY_REFUNDED => 'Partially Refunded',
+            default => ucfirst($this->status),
+        };
+    }
     {
         return (float) $this->amount;
     }

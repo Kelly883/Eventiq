@@ -196,7 +196,25 @@ class User extends Authenticatable
         return $query->where('status', $status);
     }
 
-    public function isPasswordCorrect(string $password): bool
+    public function getStatusBadgeColor(): string
+    {
+        return match ($this->status) {
+            'active' => 'green',
+            'suspended' => 'red',
+            'pending' => 'amber',
+            default => 'gray',
+        };
+    }
+
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            'active' => 'Active',
+            'suspended' => 'Suspended',
+            'pending' => 'Pending',
+            default => ucfirst($this->status),
+        };
+    }
     {
         return \Illuminate\Support\Facades\Hash::check($password, $this->passwordHash);
     }
