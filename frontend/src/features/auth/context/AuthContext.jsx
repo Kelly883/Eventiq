@@ -9,9 +9,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Hydrate the session on load: if a token already exists (returning
-  // user), fetch the current user rather than starting every page load
-  // logged-out until the next explicit login.
   useEffect(() => {
     const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
     if (!token) {
@@ -22,12 +19,41 @@ export const AuthProvider = ({ children }) => {
     api.get('/auth/me')
       .then((res) => setUser(res.data))
       .catch(() => {
-        // Token is invalid/expired - lib/api.ts's own 401 interceptor
-        // already handles refresh/logout for ongoing requests; this
-        // just makes sure we don't render as "logged in" on a stale token.
+        localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
         setUser(null);
       })
       .finally(() => setLoading(false));
+  }, []);
+
+  const login = useCallback(async (email, password) => {
+    const response = await api.post('/auth/login', { email, password });
+    const { token, user } = response.data;
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+    setUser(user);
+    return user;
+  }, []);
+
+  const register = useCallback(async (email, password, name) => {
+    const response = await api.post('/auth/register', { email, password, name });
+    const { token, user } = response.data;
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+    setUser(user);
+    return user;
+  }, []);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    setUser(null);
+  }, []);
+
+  const forgotPassword = useCallback(async (email) => {
+    await api.post('/auth/forgot-password', { email });
+  }, []);
+
+  const resetPassword = useCallback(async (token, newPassword) => {
+    await api.post('/auth/reset-password', { token, newPassword });
+    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    setUser(null);
   }, []);
 
   const checkAdminAccess = useCallback(() => {
@@ -35,7 +61,7 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, checkAdminAccess }}>
+    <AuthContext.Provider value={{ user, setUser, loading, checkAdminAccess, login, register, logout, forgotPassword, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

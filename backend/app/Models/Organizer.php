@@ -40,6 +40,8 @@ class Organizer extends Model
         'notificationPreferences',
         'totalEventsCreated',
         'totalTicketsSold',
+        'stripe_account_id',
+        'stripe_connect_status',
     ];
 
     protected $casts = [
@@ -209,5 +211,15 @@ class Organizer extends Model
             'totalEventsCreated' => $this->events()->count(),
             'totalTicketsSold' => $this->tickets()->count(),
         ]);
+    }
+
+    public function isStripeConnected(): bool
+    {
+        return $this->stripe_connect_status === 'enabled';
+    }
+
+    public function getConnectionStatus(): string
+    {
+        return $this->stripe_connect_status ?? 'not_connected';
     }
 }

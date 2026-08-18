@@ -126,7 +126,17 @@ class User extends Authenticatable
 
     public function paymentMethods(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(PaymentMethod::class);
+        return $this->hasMany(\App\Features\Payment\Models\PaymentMethod::class);
+    }
+
+    public function getDefaultPaymentMethod(): ?\App\Features\Payment\Models\PaymentMethod
+    {
+        return $this->paymentMethods()->where('is_default', true)->first();
+    }
+
+    public function isStripeCustomer(): bool
+    {
+        return (bool) ($this->default_payment_gateway === 'stripe');
     }
 
     /**
