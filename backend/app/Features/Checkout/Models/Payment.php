@@ -2,6 +2,11 @@
 
 namespace App\Features\Checkout\Models;
 
+use App\Features\Payment\Enums\PaymentGateway;
+use App\Features\Payment\Enums\PaymentStatus;
+use App\Models\Event;
+use App\Models\Organizer;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -38,15 +43,22 @@ class Payment extends Model
     protected $fillable = [
         'order_id',
         'user_id',
+        'organizer_id',
+        'event_id',
+        'ticket_id',
         'payment_intent_id',
         'gateway_transaction_id',
         'gateway_reference',
+        'authorization_code',
+        'authorization_type',
         'amount',
         'currency',
         'status',
         'gateway',
         'payment_channel',
         'idempotency_key',
+        'customer_email',
+        'customer_code',
         'gateway_response',
         'fees',
         'net_amount',
@@ -55,12 +67,16 @@ class Payment extends Model
         'refunded_by',
         'refunded_at',
         'refund_reason',
+        'refund_reference',
         'settlement_id',
         'settled_at',
         'card_last_four',
         'card_brand',
-        'attempts',
         'last_error',
+        'webhook_event_id',
+        'webhook_idempotency_key',
+        'paid_at',
+        'attempts',
     ];
 
     protected $casts = [
@@ -71,7 +87,10 @@ class Payment extends Model
         'gateway_response' => 'array',
         'refunded_at' => 'datetime',
         'settled_at' => 'datetime',
+        'paid_at' => 'datetime',
         'is_fully_refunded' => 'boolean',
+        'gateway' => PaymentGateway::class,
+        'status' => PaymentStatus::class,
     ];
 
     public function order(): BelongsTo
@@ -79,9 +98,54 @@ class Payment extends Model
         return $this->belongsTo(Order::class);
     }
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function organizer(): BelongsTo
+    {
+        return $this->belongsTo(Organizer::class);
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(Event::class);
+    }
+
+    public function ticket(): BelongsTo
+    {
+        return $this->belongsTo(\App\Features\Checkout\Models\Ticket::class);
+    }
+
     public function isSuccessful(): bool
     {
-        return $this->status === 'succeeded';
+        return $this->status === PaymentStatus::SUCCESS;
+    }
+
+    public function scopeSuccessful($query)
+    {
+        return $query->where('status', PaymentStatus::SUCCESS);
+    }
+
+    public function scopeFailed($query)
+    {
+        return $query->where('status', PaymentStatus::FAILED);
+    }
+
+    public function scopePending($query)
+    {
+        return $query->whereIn('status', [PaymentStatus::PENDING, PaymentStatus::PROCESSING, PaymentStatus::INITIATED]);
+    }
+
+    public function scopeForOrganizer($query, string $organizerId)
+    {
+        return $query->where('organizer_id', $organizerId);
+    }
+
+    public function scopeByGateway($query, string $gateway)
+    {
+        return $query->where('gateway', $gateway);
     }
 
     public function scopeByStatus($query, string $status)
@@ -89,19 +153,23 @@ class Payment extends Model
         return $query->where('status', $status);
     }
 
-    public function scopeByMethod($query, string $method)
+    public function scopeRefunded($query)
     {
-        return $query->where('gateway', $method);
+        return $query->whereIn('status', [PaymentStatus::REFUNDED, PaymentStatus::PARTIALLY_REFUNDED]);
     }
 
-    public function getStatusLabel(): string
+    public function getAmountInMajorUnits(): float
     {
-        return match ($this->status) {
-            'succeeded' => 'Completed',
-            'pending' => 'Pending',
-            'failed' => 'Failed',
-            'refunded' => 'Refunded',
-            default => ucfirst($this->status),
-        };
+        return (float) $this->amount;
+    }
+
+    public function getFeesInMajorUnits(): float
+    {
+        return (float) $this->fees;
+    }
+
+    public function getNetAmountInMajorUnits(): float
+    {
+        return (float) $this->net_amount;
     }
 }

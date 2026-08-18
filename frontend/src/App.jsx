@@ -12,6 +12,14 @@ import TicketStatusPage from './features/ticket-delivery/pages/TicketStatusPage'
 import AdminEmailTemplateManagementPage from './features/email-notifications/pages/AdminEmailTemplateManagementPage';
 import ToastContainer from './features/notifications/components/ToastContainer';
 import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
+import { ProtectedRoute, PublicRoute } from './features/auth/components/RouteGuards';
+import {
+  LoginPage,
+  RegisterPage,
+  ForgotPasswordPage,
+  ResetPasswordPage,
+} from './features/auth/pages';
+import { TicketInventoryDashboardPage, AdjustInventoryModal } from './features/ticket-inventory/pages';
 import './App.css';
 
 function App() {
@@ -116,9 +124,43 @@ function App() {
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/dashboard/organizer" element={<OrganizerDashboardPage />} />
+            <Route path="/organizer/events/:eventId/inventory" element={<TicketInventoryDashboardPage />} />
+            <Route path="/organizer/events/:eventId/inventory/adjust" element={<AdjustInventoryModal />} />
             <Route path="/check-in" element={<CheckInDashboardPage />} />
             <Route path="/venue-scan" element={<VenueCheckInPage />} />
             <Route path="/dashboard/user" element={<UserDashboardPage />} />
+            <Route
+              path="/login"
+              element={
+                <PublicRoute>
+                  <LoginPage />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <PublicRoute>
+                  <RegisterPage />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/forgot-password"
+              element={
+                <PublicRoute>
+                  <ForgotPasswordPage />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/reset-password"
+              element={
+                <PublicRoute>
+                  <ResetPasswordPage />
+                </PublicRoute>
+              }
+            />
             <Route path="*" element={<Navigate to="/analytics" replace />} />
           </Routes>
         </main>
@@ -129,5 +171,3 @@ function App() {
 
 
 export default App;
-
-
