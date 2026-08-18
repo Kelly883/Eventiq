@@ -36,6 +36,8 @@ class RefundRequestResource extends JsonResource
             'lastAppealAt' => $this->last_appeal_at?->toIso8601String(),
             'formattedAmount' => '$' . number_format((float) $this->original_amount, 2),
             'formattedRefundAmount' => '$' . number_format((float) $this->refund_amount, 2),
+            'formattedPercentage' => number_format((float) $this->refund_percentage, 0) . '%',
+            'remainingAppealAttempts' => max(0, 3 - (int) $this->appeal_count),
             'statusBadgeColor' => $this->status_badge_color,
             'isEligibleForAppeal' => $this->status === 'rejected' && (int) $this->appeal_count < 3,
             'canBeCancelled' => in_array($this->status, ['pending', 'processing'], true),

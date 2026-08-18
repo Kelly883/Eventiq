@@ -65,4 +65,9 @@ class RefundPolicy extends Model
     {
         return $query->where('is_active', true);
     }
+
+    public function scopeForOrganizer($query, string $organizerId)
+    {
+        return $query->where('organizer_id', $organizerId);
+    }
 }

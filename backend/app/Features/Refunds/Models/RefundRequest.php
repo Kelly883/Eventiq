@@ -120,6 +120,11 @@ class RefundRequest extends Model
         return in_array($this->status, ['pending', 'processing'], true);
     }
 
+    public function getRemainingAppealAttemptsAttribute(): int
+    {
+        return max(0, 3 - (int) $this->appeal_count);
+    }
+
     public function getFormattedPercentageAttribute(): string
     {
         return number_format((float) $this->refund_percentage, 0) . '%';
@@ -128,6 +133,16 @@ class RefundRequest extends Model
     public function scopeByPaymentGateway($query, string $gateway)
     {
         return $query->where('payment_gateway', $gateway);
+    }
+
+    public function scopeByReason($query, string $reason)
+    {
+        return $query->where('reason', $reason);
+    }
+
+    public function scopeByRefundMethod($query, string $method)
+    {
+        return $query->where('refund_method', $method);
     }
 
     public function scopeApproved($query)

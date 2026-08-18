@@ -38,11 +38,25 @@ export interface RefundRequest {
   readonly lastAppealAt?: string;
   readonly formattedAmount: string;
   readonly formattedRefundAmount: string;
+  readonly formattedPercentage: string;
+  readonly remainingAppealAttempts: number;
   readonly statusBadgeColor: string;
   readonly isEligibleForAppeal: boolean;
   readonly canBeCancelled: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+export interface RefundRequestListResponse {
+  readonly data: RefundRequest[];
+  readonly currentPage: number;
+  readonly lastPage: number;
+  readonly perPage: number;
+  readonly total: number;
+}
+
+export interface RefundRequestDetailsResponse {
+  readonly data: RefundRequest;
 }
 
 export interface RefundPolicy {
