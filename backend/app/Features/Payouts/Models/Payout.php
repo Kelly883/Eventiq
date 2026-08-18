@@ -104,6 +104,11 @@ class Payout extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    public function initiatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'initiated_by');
+    }
+
     public function calculations(): HasMany
     {
         return $this->hasMany(PayoutCalculation::class);
