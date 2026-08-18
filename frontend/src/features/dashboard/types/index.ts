@@ -8,12 +8,22 @@ export interface DashboardOverview {
   totalRevenue: number;
 }
 
+export interface PaginationMeta {
+  readonly currentPage: number;
+  readonly lastPage: number;
+  readonly perPage: number;
+  readonly total: number;
+  readonly from: number | null;
+  readonly to: number | null;
+}
+
 export interface EventMetrics {
   id: number;
   title: string;
-  date: string;
+  startDate: string;
+  endDate: string;
   status: 'draft' | 'published' | 'archived';
-  thumbnailUrl: string;
+  thumbnailUrl: string | null;
   totalRevenue: number;
   totalTicketsSold: number;
   ticketsAvailable: number;
@@ -41,7 +51,8 @@ export interface PricingWindowObject {
 export interface EventDetail {
   eventId: number;
   title: string;
-  date: string;
+  startDate: string;
+  endDate: string;
   status: 'draft' | 'published' | 'archived';
   totalRevenue: number;
   totalTicketsSold: number;
@@ -52,9 +63,9 @@ export interface EventDetail {
 
 export interface ActivityItem {
   id: number;
-  eventId: number;
+  eventId: number | string;
   eventName: string;
-  tierId: number;
+  tierId: number | string;
   tierName: string;
   quantity: number;
   unitPrice: number;
