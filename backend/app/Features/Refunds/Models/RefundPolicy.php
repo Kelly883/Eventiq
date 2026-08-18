@@ -2,9 +2,12 @@
 
 namespace App\Features\Refunds\Models;
 
+use App\Models\Event;
+use App\Models\Organizer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RefundPolicy extends Model
 {
@@ -40,11 +43,26 @@ class RefundPolicy extends Model
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Event::class);
+        return $this->belongsTo(Event::class);
     }
 
     public function organizer(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Organizer::class);
+        return $this->belongsTo(Organizer::class);
+    }
+
+    public function refundRequests(): HasMany
+    {
+        return $this->hasMany(RefundRequest::class, 'event_id');
+    }
+
+    public function getFormattedWindowAttribute(): string
+    {
+        return "Refunds allowed within {$this->refund_window_days} days";
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
     }
 }

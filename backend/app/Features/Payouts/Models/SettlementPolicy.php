@@ -2,9 +2,10 @@
 
 namespace App\Features\Payouts\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class SettlementPolicy extends Model
 {
@@ -53,6 +54,16 @@ class SettlementPolicy extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeByTier($query, string $tier)
+    {
+        return $query->where('organizer_tier', $tier);
+    }
+
+    public function canAutoApprove(float $amount): bool
+    {
+        return $amount <= (float) $this->auto_approve_threshold;
     }
 
     public function calculatePlatformFee(float $amount): float

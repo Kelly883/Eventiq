@@ -39,4 +39,14 @@ class RefundAppeal extends Model
     {
         return $this->belongsTo(User::class, 'reviewed_by');
     }
+
+    public function scopeForUser($query, string $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
 }
