@@ -33,6 +33,14 @@ class Ticket extends Model
                 $ticket->{$ticket->getKeyName()} = (string) Str::uuid();
             }
         });
+
+        static::updating(function (Ticket $ticket) {
+            if ($ticket->isDirty('checked_in_at') && $ticket->isCheckedIn()) {
+                $ticket->forceFill([
+                    'checked_in_at' => $ticket->getOriginal('checked_in_at'),
+                ]);
+            }
+        });
     }
 
     protected $fillable = [
@@ -110,6 +118,11 @@ class Ticket extends Model
         return $query->where('user_id', $userId);
     }
 
+    public function scopeNotCheckedIn($query)
+    {
+        return $query->whereNull('checked_in_at');
+    }
+
     public function isQrExpired(): bool
     {
         return $this->qr_code_expires_at !== null && now()->greaterThan($this->qr_code_expires_at);
@@ -166,5 +179,13 @@ class Ticket extends Model
             ->update(['last_qr_scan_at' => now()]);
 
         $this->refresh();
+    }
+
+    /**
+     * Safely retrieve the staff member who checked in this ticket.
+     */
+    public function getScannedByStaff(): ?\App\Models\User
+    {
+        return $this->checkedInBy;
     }
 }
