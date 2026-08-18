@@ -156,4 +156,15 @@ class Event extends Model
               ->orWhere('category', 'like', "%{$search}%");
         });
     }
+
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            'published' => 'Published',
+            'draft' => 'Draft',
+            'cancelled' => 'Cancelled',
+            'flagged' => 'Flagged',
+            default => ucfirst($this->status),
+        };
+    }
 }

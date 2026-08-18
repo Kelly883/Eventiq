@@ -172,4 +172,17 @@ class Payment extends Model
     {
         return (float) $this->net_amount;
     }
+
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            'success' => 'Completed',
+            'failed' => 'Failed',
+            'pending' => 'Pending',
+            'processing' => 'Processing',
+            'refunded' => 'Refunded',
+            'partially_refunded' => 'Partially Refunded',
+            default => ucfirst($this->status),
+        };
+    }
 }

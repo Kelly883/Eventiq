@@ -74,6 +74,26 @@ class AuditLog extends Model
         return $this->belongsTo(User::class, 'target_id');
     }
 
+    public function getPerformedByName(): string
+    {
+        return $this->user?->name ?? 'System';
+    }
+
+    public function scopeByAction($query, string $action)
+    {
+        return $query->where('action', $action);
+    }
+
+    public function scopeByAdmin($query, string $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    public function scopeRecent($query, int $days = 7)
+    {
+        return $query->where('created_at', '>=', now()->subDays($days));
+    }
+
     public function getActionLabel(): string
     {
         return match ($this->action) {

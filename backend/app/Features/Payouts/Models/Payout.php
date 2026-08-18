@@ -166,4 +166,17 @@ class Payout extends Model
     {
         return '$' . number_format((float) $this->payout_amount, 2);
     }
+
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            'pending' => 'Pending',
+            'calculated' => 'Calculated',
+            'approved' => 'Approved',
+            'processing' => 'Processing',
+            'completed' => 'Completed',
+            'failed' => 'Failed',
+            default => ucfirst($this->status),
+        };
+    }
 }
