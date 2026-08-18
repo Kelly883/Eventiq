@@ -70,6 +70,7 @@ export interface AdminSettings {
 export interface AuditLog {
   readonly id: string;
   readonly userId: string;
+  readonly ipAddress?: string;
   readonly action: string;
   readonly targetType: TargetType;
   readonly targetId: string;
