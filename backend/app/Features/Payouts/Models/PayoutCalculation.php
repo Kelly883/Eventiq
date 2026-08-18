@@ -67,6 +67,24 @@ class PayoutCalculation extends Model
         return $this->belongsTo(\App\Models\Organizer::class);
     }
 
+    public function scopeForList($query)
+    {
+        return $query->select([
+            'id',
+            'payout_id',
+            'organizer_id',
+            'settlement_period_start_date',
+            'settlement_period_end_date',
+            'total_order_count',
+            'total_tickets_sold',
+            'total_refunds_processed',
+            'calculated_at',
+            'calculated_by',
+            'created_at',
+            'updated_at',
+        ]);
+    }
+
     public function getCalculationSummary(): array
     {
         return [

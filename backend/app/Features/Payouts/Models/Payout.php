@@ -144,6 +144,11 @@ class Payout extends Model
         return $query->where('status', self::STATUS_FAILED);
     }
 
+    public function scopeByFrequency($query, string $frequency)
+    {
+        return $query->where('payout_frequency', $frequency);
+    }
+
     public function isPending(): bool
     {
         return $this->status === self::STATUS_PENDING;

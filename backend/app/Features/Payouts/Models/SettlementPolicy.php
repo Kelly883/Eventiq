@@ -4,6 +4,7 @@ namespace App\Features\Payouts\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
@@ -63,6 +64,11 @@ class SettlementPolicy extends Model
     public function payouts(): HasMany
     {
         return $this->hasMany(Payout::class);
+    }
+
+    public function organizer(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Organizer::class);
     }
 
     public function scopeActive($query)
