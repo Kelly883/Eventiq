@@ -20,6 +20,8 @@ class UpdateEmailTemplateRequest extends FormRequest
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'type' => ['sometimes', 'required', 'string', 'in:' . implode(',', $allowedTypes)],
             'subject' => ['sometimes', 'required', 'string', 'max:255'],
+            'from_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'from_email' => ['sometimes', 'nullable', 'email', 'max:255'],
             'html_body' => ['sometimes', 'required', 'string'],
             'mjml_body' => ['sometimes', 'required', 'string'],
             'variables' => ['sometimes', 'required', 'array'],
