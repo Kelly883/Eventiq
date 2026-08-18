@@ -40,6 +40,7 @@ export interface RefundRequest {
   readonly formattedRefundAmount: string;
   readonly formattedPercentage: string;
   readonly remainingAppealAttempts: number;
+  readonly timeRemainingForAppeal: string | null;
   readonly statusBadgeColor: string;
   readonly isEligibleForAppeal: boolean;
   readonly canBeCancelled: boolean;
@@ -69,6 +70,7 @@ export interface RefundPolicy {
   readonly allowRefundsAfterEventStart: boolean;
   readonly processingTimeBusinessDays: number;
   readonly allowedRefundMethods: string[];
+  readonly allowedMethodsList: string;
   readonly requiresApproval: boolean;
   readonly autoApproveThreshold?: number;
   readonly maxRefundsPerUser?: number;
@@ -77,6 +79,22 @@ export interface RefundPolicy {
   readonly isActive: boolean;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+export interface RefundPolicyListResponse {
+  readonly data: RefundPolicy[];
+  readonly currentPage: number;
+  readonly lastPage: number;
+  readonly perPage: number;
+  readonly total: number;
+}
+
+export interface RefundAppealListResponse {
+  readonly data: RefundAppeal[];
+  readonly currentPage: number;
+  readonly lastPage: number;
+  readonly perPage: number;
+  readonly total: number;
 }
 
 export interface RefundAppeal {

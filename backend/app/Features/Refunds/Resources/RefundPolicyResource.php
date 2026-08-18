@@ -19,6 +19,7 @@ class RefundPolicyResource extends JsonResource
             'allowRefundsAfterEventStart' => (bool) $this->allow_refunds_after_event_start,
             'processingTimeBusinessDays' => (int) $this->processing_time_business_days,
             'allowedRefundMethods' => $this->allowed_refund_methods ?? [],
+            'allowedMethodsList' => $this->allowed_methods_list,
             'requiresApproval' => (bool) $this->requires_approval,
             'autoApproveThreshold' => $this->auto_approve_threshold !== null ? (float) $this->auto_approve_threshold : null,
             'maxRefundsPerUser' => $this->max_refunds_per_user !== null ? (int) $this->max_refunds_per_user : null,

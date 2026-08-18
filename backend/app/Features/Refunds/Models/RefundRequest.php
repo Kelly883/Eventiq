@@ -174,4 +174,27 @@ class RefundRequest extends Model
     {
         return $query->where('created_at', '>=', now()->subDays($days));
     }
+
+    public function scopeByDateRange($query, $startDate, $endDate)
+    {
+        return $query->whereBetween('created_at', [$startDate, $endDate]);
+    }
+
+    public function getTimeRemainingForAppealAttribute(): ?string
+    {
+        if ($this->status !== 'rejected' || $this->last_appeal_at === null) {
+            return null;
+        }
+
+        $appealDeadline = $this->last_appeal_at->copy()->addDays(7);
+
+        if ($appealDeadline->isPast()) {
+            return 'Expired';
+        }
+
+        return $appealDeadline->diffForHumans(now(), [
+            'parts' => 2,
+            'short' => true,
+        ]) . ' remaining';
+    }
 }

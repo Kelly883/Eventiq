@@ -70,4 +70,9 @@ class RefundPolicy extends Model
     {
         return $query->where('organizer_id', $organizerId);
     }
+
+    public function getAllowedMethodsListAttribute(): string
+    {
+        return implode(', ', $this->allowed_refund_methods ?? []);
+    }
 }
