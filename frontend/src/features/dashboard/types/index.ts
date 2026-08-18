@@ -75,6 +75,14 @@ export interface ActivityItem {
 }
 
 export interface DashboardPreferences {
+  defaultTicketFilter: string;
+  defaultDateRange: string;
+  showRecommendations: boolean;
+  showActivityFeed: boolean;
+  autoRefreshEnabled: boolean;
+}
+
+export interface OrganizerDashboardPreferences {
   defaultEventFilter: string;
   defaultDateRange: string;
   expandedEventId: number | null;
