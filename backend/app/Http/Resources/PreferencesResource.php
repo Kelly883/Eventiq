@@ -10,9 +10,9 @@ class PreferencesResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'defaultTicketFilter' => $this->resource->default_ticket_filter,
+            'defaultEventFilter' => $this->resource->default_event_filter,
             'defaultDateRange' => $this->resource->default_date_range,
-            'showRecommendations' => $this->resource->show_recommendations,
+            'expandedEventId' => $this->resource->expanded_event_id,
             'showActivityFeed' => $this->resource->show_activity_feed,
             'autoRefreshEnabled' => $this->resource->auto_refresh_enabled,
         ];

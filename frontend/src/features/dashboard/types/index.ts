@@ -1,15 +1,11 @@
 import type { Event as EventModel } from '@/features/events/types/shared';
 
 export interface DashboardOverview {
+  totalTickets: number;
+  upcomingEventsCount: number;
+  pastEventsCount: number;
+  totalSpent: number;
   totalRevenue: number;
-  totalTicketsSold: number;
-  averageConversionRate: number;
-  upcomingEventCount: number;
-  totalEventCount: number;
-  revenueTrend: 'up' | 'down' | 'flat';
-  ticketsTrend: 'up' | 'down' | 'flat';
-  conversionTrend: 'up' | 'down' | 'flat';
-  lastUpdatedAt: string;
 }
 
 export interface EventMetrics {
@@ -68,9 +64,9 @@ export interface ActivityItem {
 }
 
 export interface DashboardPreferences {
-  defaultTicketFilter: string;
+  defaultEventFilter: string;
   defaultDateRange: string;
-  showRecommendations: boolean;
+  expandedEventId: number | null;
   showActivityFeed: boolean;
   autoRefreshEnabled: boolean;
 }
