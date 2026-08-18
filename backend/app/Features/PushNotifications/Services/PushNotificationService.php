@@ -64,7 +64,7 @@ class PushNotificationService
      */
     public function sendToUser(int $userId, string $title, string $body, array $data = []): array
     {
-        $tokens = PushNotificationDevice::where('user_id', $userId)->pluck('token');
+        $tokens = PushNotificationDevice::forUser($userId)->active()->pluck('token');
 
         $sent = 0;
         $failed = 0;

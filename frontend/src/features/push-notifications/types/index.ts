@@ -6,6 +6,7 @@ export interface PushNotificationDevice {
   readonly token: string;
   readonly provider: string;
   readonly deviceType: string;
+  readonly lastUsedAt?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -28,9 +29,13 @@ export interface PushNotificationTemplate {
 }
 
 export interface DeliveryPreferences {
+  readonly id: string;
+  readonly userId: string;
   readonly pushNotificationsEnabled: boolean;
   readonly pushOrderConfirmation: boolean;
   readonly pushEventReminder: boolean;
   readonly pushCheckinAlert: boolean;
   readonly pushPromotionalOffers: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 }
