@@ -15,13 +15,24 @@ class DeviceTokenController extends Controller
 
     public function store(StoreDeviceTokenRequest $request)
     {
+        $validated = $request->validated();
+
         $device = $this->pushNotificationService->registerDevice(
             $request->user()->id,
-            $request->validated('token'),
-            $request->validated('provider'),
-            $request->validated('device_type'),
-            $request->validated('previous_token')
+            $validated['token'],
+            $validated['provider'],
+            $validated['device_type'],
+            $validated['previous_token'] ?? null,
         );
+
+        $device->update([
+            'device_name' => $validated['device_name'] ?? null,
+            'model' => $validated['model'] ?? null,
+            'app_version' => $validated['app_version'] ?? null,
+            'os_version' => $validated['os_version'] ?? null,
+            'locale' => $validated['locale'] ?? null,
+            'timezone' => $validated['timezone'] ?? null,
+        ]);
 
         return response()->json(['id' => $device->id], 201);
     }

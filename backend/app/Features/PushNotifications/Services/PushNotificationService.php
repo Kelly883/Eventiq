@@ -3,6 +3,7 @@
 namespace App\Features\PushNotifications\Services;
 
 use App\Features\PushNotifications\Models\PushNotificationDevice;
+use App\Features\PushNotifications\Models\PushNotificationHistory;
 use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Contract\Messaging;
 use Kreait\Firebase\Messaging\CloudMessage;
@@ -39,6 +40,8 @@ class PushNotificationService
             return false;
         }
 
+        $device = PushNotificationDevice::where('token', $token)->first();
+
         try {
             $message = CloudMessage::withTarget('token', $token)
                 ->withNotification(FirebaseNotification::create($title, $body))
@@ -49,9 +52,36 @@ class PushNotificationService
             PushNotificationDevice::where('token', $token)
                 ->update(['last_used_at' => now()]);
 
+            PushNotificationHistory::create([
+                'user_id' => $device->user_id ?? null,
+                'device_id' => $device->id ?? null,
+                'title' => $title,
+                'body' => $body,
+                'data' => $data,
+                'status' => 'sent',
+                'sent_at' => now(),
+                'gateway_response' => ['provider' => 'firebase'],
+            ]);
+
             return true;
         } catch (\Throwable $e) {
             Log::error('PushNotificationService::sendToToken failed: ' . $e->getMessage());
+
+            if ($device) {
+                $device->recordError($e->getMessage());
+            }
+
+            PushNotificationHistory::create([
+                'user_id' => $device->user_id ?? null,
+                'device_id' => $device->id ?? null,
+                'title' => $title,
+                'body' => $body,
+                'data' => $data,
+                'status' => 'failed',
+                'sent_at' => now(),
+                'error_message' => $e->getMessage(),
+                'gateway_response' => ['provider' => 'firebase', 'error' => $e->getMessage()],
+            ]);
 
             return false;
         }
