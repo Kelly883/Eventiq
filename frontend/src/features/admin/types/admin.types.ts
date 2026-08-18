@@ -33,6 +33,7 @@ export interface AdminEvent {
   readonly title: string;
   readonly organizerId: string;
   readonly organizerName: string;
+  readonly organizerEmail: string;
   readonly status: EventStatus;
   readonly attendeeCount: number;
   readonly ticketsSold: number;

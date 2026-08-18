@@ -85,6 +85,11 @@ class Event extends Model
         return $this->belongsTo(Organizer::class);
     }
 
+    public function getOrganizerEmailAttribute(): ?string
+    {
+        return $this->organizer?->email ?? $this->user?->email ?? null;
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
