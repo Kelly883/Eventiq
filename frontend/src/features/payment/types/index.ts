@@ -110,4 +110,3 @@ export interface PaymentVerificationResponse {
 export * from './payment';
 export * from './paystack';
 export * from './flutterwave';
-export * from './stripe';

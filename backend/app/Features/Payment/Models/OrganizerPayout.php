@@ -9,10 +9,25 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class OrganizerPayout extends Model
 {
     use HasFactory;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->{$model->getKeyName()})) {
+                $model->{$model->getKeyName()} = (string) Str::uuid();
+            }
+        });
+    }
 
     protected $fillable = [
         'id',
@@ -30,6 +45,7 @@ class OrganizerPayout extends Model
         'initiated_by',
         'approved_by',
         'approved_at',
+        'settlement_id',
     ];
 
     protected $casts = [
@@ -56,6 +72,11 @@ class OrganizerPayout extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function settlement(): BelongsTo
+    {
+        return $this->belongsTo(\App\Features\Payouts\Models\Payout::class, 'settlement_id');
     }
 
     public function scopeByGateway($query, string $gateway)

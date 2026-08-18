@@ -36,6 +36,7 @@ export interface FlutterwaveVerifyResponse {
     readonly createdAt: string;
     readonly customer: FlutterwaveCustomer;
     readonly card?: FlutterwaveCard;
+    readonly processorResponse?: string;
   };
 }
 
@@ -50,6 +51,7 @@ export interface FlutterwaveWebhookPayload {
     readonly status: 'successful' | 'failed';
     readonly createdAt: string;
     readonly customer: FlutterwaveCustomer;
+    readonly processorResponse?: string;
   };
 }
 
