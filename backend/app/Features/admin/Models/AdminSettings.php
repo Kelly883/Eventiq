@@ -19,6 +19,7 @@ class AdminSettings extends Model
         'description',
         'category',
         'is_editable',
+        'notes',
         'last_modified_by',
         'last_modified_at',
     ];

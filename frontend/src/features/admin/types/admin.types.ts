@@ -63,6 +63,7 @@ export interface AdminSettings {
   readonly description: string;
   readonly category: SettingCategory;
   readonly isEditable: boolean;
+  readonly notes?: string;
   readonly lastModifiedBy?: string;
   readonly lastModifiedAt?: string;
 }
@@ -71,6 +72,7 @@ export interface AuditLog {
   readonly id: string;
   readonly userId: string;
   readonly ipAddress?: string;
+  readonly userAgent?: string;
   readonly action: string;
   readonly targetType: TargetType;
   readonly targetId: string;
