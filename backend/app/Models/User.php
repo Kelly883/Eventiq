@@ -131,12 +131,36 @@ class User extends Authenticatable
 
     public function getDefaultPaymentMethod(): ?\App\Features\Payment\Models\PaymentMethod
     {
-        return $this->paymentMethods()->where('is_default', true)->first();
+        return $this->paymentMethods()->where('is_default', true)->whereNull('deleted_at')->first();
     }
 
-    public function isStripeCustomer(): bool
+    public function getDefaultPaymentMethodForGateway(string $gateway): ?\App\Features\Payment\Models\PaymentMethod
     {
-        return (bool) ($this->default_payment_gateway === 'stripe');
+        return $this->paymentMethods()
+            ->where('gateway', $gateway)
+            ->where('is_default', true)
+            ->whereNull('deleted_at')
+            ->first();
+    }
+
+    public function hasPaystackCustomer(): bool
+    {
+        return ! empty($this->paystack_customer_code);
+    }
+
+    public function hasFlutterwaveCustomer(): bool
+    {
+        return ! empty($this->flutterwave_customer_id);
+    }
+
+    public function getPaystackCustomerReference(): ?string
+    {
+        return $this->paystack_customer_code ?: null;
+    }
+
+    public function getFlutterwaveCustomerReference(): ?string
+    {
+        return $this->flutterwave_customer_id ?: null;
     }
 
     /**

@@ -40,8 +40,15 @@ class Organizer extends Model
         'notificationPreferences',
         'totalEventsCreated',
         'totalTicketsSold',
-        'stripe_account_id',
-        'stripe_connect_status',
+        'paystack_subaccount_code',
+        'paystack_business_name',
+        'paystack_recipient_code',
+        'paystack_connect_status',
+        'paystack_connected_at',
+        'flutterwave_subaccount_id',
+        'flutterwave_business_reference',
+        'flutterwave_connect_status',
+        'flutterwave_connected_at',
     ];
 
     protected $casts = [
@@ -57,6 +64,8 @@ class Organizer extends Model
         'totalTicketsSold' => 'integer',
         'commissionRate' => 'decimal:2',
         'deletedAt' => 'datetime',
+        'paystack_connected_at' => 'datetime',
+        'flutterwave_connected_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -89,6 +98,26 @@ class Organizer extends Model
     public function apiKeys(): HasMany
     {
         return $this->hasMany(\App\Models\ApiKey::class);
+    }
+
+    public function paystackTransactions(): HasMany
+    {
+        return $this->hasMany(\App\Features\Payment\Models\Transaction::class, 'organizer_id');
+    }
+
+    public function flutterwaveTransactions(): HasMany
+    {
+        return $this->hasMany(\App\Features\Payment\Models\Transaction::class, 'organizer_id');
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(\App\Features\Payment\Models\Transaction::class, 'organizer_id');
+    }
+
+    public function payouts(): HasMany
+    {
+        return $this->hasMany(\App\Features\Payment\Models\OrganizerPayout::class);
     }
 
     public function setSocialLinksAttribute($value): ?array
@@ -213,13 +242,28 @@ class Organizer extends Model
         ]);
     }
 
-    public function isStripeConnected(): bool
+    public function isPaystackConnected(): bool
     {
-        return $this->stripe_connect_status === 'enabled';
+        return $this->paystack_connect_status === 'enabled';
     }
 
-    public function getConnectionStatus(): string
+    public function isFlutterwaveConnected(): bool
     {
-        return $this->stripe_connect_status ?? 'not_connected';
+        return $this->flutterwave_connect_status === 'enabled';
+    }
+
+    public function getPaystackConnectionStatus(): string
+    {
+        return $this->paystack_connect_status ?? 'not_connected';
+    }
+
+    public function getFlutterwaveConnectionStatus(): string
+    {
+        return $this->flutterwave_connect_status ?? 'not_connected';
+    }
+
+    public function hasPaymentProviderConfigured(): bool
+    {
+        return $this->isPaystackConnected() || $this->isFlutterwaveConnected();
     }
 }
