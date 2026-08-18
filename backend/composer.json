@@ -18,7 +18,8 @@
         "pusher/pusher-php-server": "^7.2",
         "rebing/graphql-laravel": "*",
         "simplesoftwareio/simple-qrcode": "^4.2",
-        "unicodeveloper/laravel-paystack": "^1.1"
+        "unicodeveloper/laravel-paystack": "^1.1",
+        "mews/purifier": "^3.4"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

@@ -50,6 +50,10 @@ class EmailTemplate extends Model
 
     public function sanitizeHtmlBody(string $html): string
     {
+        if (class_exists(\Mews\Purifier\Purifier::class)) {
+            return app('purifier')->clean($html);
+        }
+
         $html = preg_replace('/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/is', '', $html);
         $html = preg_replace('/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/is', '', $html);
         $html = preg_replace('/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/is', '', $html);
