@@ -83,4 +83,25 @@ class Payment extends Model
     {
         return $this->status === 'succeeded';
     }
+
+    public function scopeByStatus($query, string $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeByMethod($query, string $method)
+    {
+        return $query->where('gateway', $method);
+    }
+
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            'succeeded' => 'Completed',
+            'pending' => 'Pending',
+            'failed' => 'Failed',
+            'refunded' => 'Refunded',
+            default => ucfirst($this->status),
+        };
+    }
 }

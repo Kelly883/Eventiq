@@ -2,16 +2,40 @@
 
 namespace App\Features\Payouts\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Organizer;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Payout extends Model
 {
     use HasFactory;
 
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->{$model->getKeyName()})) {
+                $model->{$model->getKeyName()} = (string) Str::uuid();
+            }
+        });
+
+        static::saving(function ($model) {
+            if ($model->payout_amount < 0) {
+                $model->payout_amount = 0;
+            }
+        });
+    }
+
     protected $fillable = [
+        'id',
         'organizer_id',
         'settlement_period_start_date',
         'settlement_period_end_date',
@@ -72,17 +96,47 @@ class Payout extends Model
 
     public function organizer(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Organizer::class);
+        return $this->belongsTo(Organizer::class);
     }
 
-    public function settlementPolicy(): BelongsTo
+    public function approvedBy(): BelongsTo
     {
-        return $this->belongsTo(SettlementPolicy::class);
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
-    public function calculation(): HasOne
+    public function calculations(): HasMany
     {
-        return $this->hasOne(PayoutCalculation::class);
+        return $this->hasMany(PayoutCalculation::class);
+    }
+
+    public function scopeByOrganizer($query, string $organizerId)
+    {
+        return $query->where('organizer_id', $organizerId);
+    }
+
+    public function scopeByStatus($query, string $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeByDateRange($query, $startDate, $endDate)
+    {
+        return $query->whereBetween('settlement_period_start_date', [$startDate, $endDate]);
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('status', self::STATUS_PENDING);
+    }
+
+    public function scopeCompleted($query)
+    {
+        return $query->where('status', self::STATUS_COMPLETED);
+    }
+
+    public function scopeFailed($query)
+    {
+        return $query->where('status', self::STATUS_FAILED);
     }
 
     public function isPending(): bool
@@ -95,26 +149,21 @@ class Payout extends Model
         return $this->status === self::STATUS_COMPLETED;
     }
 
-    public function markAsProcessing(): void
+    public function isFailed(): bool
     {
-        $this->status = self::STATUS_PROCESSING;
-        $this->save();
+        return $this->status === self::STATUS_FAILED;
     }
 
-    public function markAsCompleted(string $transactionId): void
+    public function canRetry(): bool
     {
-        $this->status = self::STATUS_COMPLETED;
-        $this->payment_gateway_payout_id = $transactionId;
-        $this->completed_at = now();
-        $this->save();
+        return $this->isFailed()
+            && $this->retry_count < 3
+            && $this->next_retry_at !== null
+            && $this->next_retry_at->isPast();
     }
 
-    public function markAsFailed(string $notes = null): void
+    public function calculateNetAmount(): string
     {
-        $this->status = self::STATUS_FAILED;
-        if ($notes) {
-            $this->failure_reason = $notes;
-        }
-        $this->save();
+        return '$' . number_format((float) $this->payout_amount, 2);
     }
 }

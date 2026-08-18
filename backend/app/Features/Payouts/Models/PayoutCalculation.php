@@ -2,9 +2,10 @@
 
 namespace App\Features\Payouts\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class PayoutCalculation extends Model
 {
@@ -19,7 +20,7 @@ class PayoutCalculation extends Model
 
         static::creating(function ($model) {
             if (empty($model->{$model->getKeyName()})) {
-                $model->{$model->getKeyName()} = (string) \Illuminate\Support\Str::uuid();
+                $model->{$model->getKeyName()} = (string) Str::uuid();
             }
         });
 
@@ -46,7 +47,6 @@ class PayoutCalculation extends Model
         'calculation_details',
         'calculated_at',
         'calculated_by',
-        'created_at',
     ];
 
     protected $casts = [
@@ -55,7 +55,6 @@ class PayoutCalculation extends Model
         'refund_request_ids' => 'array',
         'calculation_details' => 'array',
         'calculated_at' => 'datetime',
-        'created_at' => 'datetime',
     ];
 
     public function payout(): BelongsTo
@@ -68,16 +67,16 @@ class PayoutCalculation extends Model
         return $this->belongsTo(\App\Models\Organizer::class);
     }
 
-    public function calculateNetPayout(): float
+    public function getCalculationSummary(): array
     {
-        return (float) $this->net_revenue - (float) $this->refund_amount;
-    }
-
-    public function getPlatformFeePercentage(): float
-    {
-        if ($this->gross_revenue <= 0) {
-            return 0;
-        }
-        return ((float) $this->platform_commission_amount / (float) $this->gross_revenue) * 100;
+        return [
+            'total_orders' => $this->total_order_count,
+            'total_tickets' => $this->total_tickets_sold,
+            'total_refunds' => $this->total_refunds_processed,
+            'events' => $this->event_ids ?? [],
+            'orders' => $this->order_ids ?? [],
+            'refunds' => $this->refund_request_ids ?? [],
+            'details' => $this->calculation_details ?? [],
+        ];
     }
 }

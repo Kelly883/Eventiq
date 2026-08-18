@@ -137,6 +137,21 @@ class User extends Authenticatable
         return $this->hasOne(\App\Features\Dashboard\Models\UserDashboardPreference::class, 'user_id', 'id');
     }
 
+    public function auditLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\AuditLog::class);
+    }
+
+    public function scopeByRole($query, string $role)
+    {
+        return $query->where('role', $role);
+    }
+
+    public function scopeByStatus($query, string $status)
+    {
+        return $query->where('status', $status);
+    }
+
     public function isPasswordCorrect(string $password): bool
     {
         return \Illuminate\Support\Facades\Hash::check($password, $this->passwordHash);

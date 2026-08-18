@@ -3,35 +3,51 @@
 namespace App\Features\Refunds\Models;
 
 use App\Features\Checkout\Models\Ticket;
+use App\Models\Event;
+use App\Models\Order;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RefundRequest extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'ticket_id', 'order_id', 'user_id', 'event_id',
-        'original_amount', 'refund_amount', 'refund_percentage',
-        'reason', 'explanation', 'refund_method', 'status',
-        'rejection_reason', 'approved_by', 'approved_at',
-        'processing_started_at', 'completed_at',
-        'payment_gateway_refund_id', 'payment_gateway_response',
-        'appeal_count', 'last_appeal_at',
+        'ticket_id',
+        'order_id',
+        'user_id',
+        'event_id',
+        'original_amount',
+        'refund_amount',
+        'refund_percentage',
+        'reason',
+        'explanation',
+        'refund_method',
+        'status',
+        'rejection_reason',
+        'approved_by',
+        'approved_at',
+        'processing_started_at',
+        'completed_at',
+        'payment_gateway_refund_id',
+        'payment_gateway_response',
+        'appeal_count',
+        'last_appeal_at',
     ];
 
     protected $casts = [
         'original_amount' => 'decimal:2',
         'refund_amount' => 'decimal:2',
         'refund_percentage' => 'decimal:2',
+        'appeal_count' => 'integer',
+        'payment_gateway_response' => 'array',
         'approved_at' => 'datetime',
         'processing_started_at' => 'datetime',
         'completed_at' => 'datetime',
         'last_appeal_at' => 'datetime',
-        'payment_gateway_response' => 'array',
-        'appeal_count' => 'integer',
     ];
 
     public function ticket(): BelongsTo
@@ -44,23 +60,61 @@ class RefundRequest extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function reviewer(): BelongsTo
+    public function order(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->belongsTo(Order::class);
     }
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Event::class);
-    }
-
-    public function order(): BelongsTo
-    {
-        return $this->belongsTo(\App\Models\Order::class);
+        return $this->belongsTo(Event::class);
     }
 
     public function refundPolicy(): BelongsTo
     {
-        return $this->belongsTo(\App\Features\Refunds\Models\RefundPolicy::class);
+        return $this->belongsTo(RefundPolicy::class, 'event_id');
+    }
+
+    public function appeals(): HasMany
+    {
+        return $this->hasMany(RefundAppeal::class);
+    }
+
+    public function getFormattedAmountAttribute(): string
+    {
+        return '$' . number_format((float) $this->original_amount, 2);
+    }
+
+    public function getStatusBadgeColorAttribute(): string
+    {
+        return match ($this->status) {
+            'pending' => 'amber',
+            'approved' => 'green',
+            'rejected' => 'red',
+            'processing' => 'blue',
+            'completed' => 'green',
+            'failed' => 'red',
+            default => 'gray',
+        };
+    }
+
+    public function getIsEligibleForAppealAttribute(): bool
+    {
+        return $this->status === 'rejected' && $this->appeal_count < 3;
+    }
+
+    public function scopeForUser($query, string $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    public function scopeByStatus($query, string $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeByEvent($query, string $eventId)
+    {
+        return $query->where('event_id', $eventId);
     }
 }
