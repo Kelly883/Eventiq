@@ -32,6 +32,7 @@ class User extends Authenticatable
         'role_id',
         'permissions',
         'emailVerified',
+        'status',
         'lastLoginAt',
         'paystack_customer_code',
         'flutterwave_customer_id',
@@ -184,6 +185,26 @@ class User extends Authenticatable
     public function scopeByStatus($query, string $status)
     {
         return $query->where('status', $status);
+    }
+
+    public function getStatusBadgeColor(): string
+    {
+        return match ($this->status) {
+            'active' => 'green',
+            'suspended' => 'red',
+            'pending' => 'yellow',
+            default => 'gray',
+        };
+    }
+
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            'active' => 'Active',
+            'suspended' => 'Suspended',
+            'pending' => 'Pending',
+            default => ucfirst($this->status),
+        };
     }
 
     public function isPasswordCorrect(string $password): bool

@@ -136,6 +136,11 @@ class Event extends Model
         return $query->where('organizer_id', $organizerId);
     }
 
+    public function scopeByStatus($query, $status)
+    {
+        return $query->where('status', $status);
+    }
+
     public function scopeAvailable($query)
     {
         return $query->whereHas('ticketTiers', function ($q) {
@@ -155,5 +160,27 @@ class Event extends Model
               ->orWhere('venue_name', 'like', "%{$search}%")
               ->orWhere('category', 'like', "%{$search}%");
         });
+    }
+
+    public function getStatusBadgeColor(): string
+    {
+        return match ($this->status) {
+            'published' => 'green',
+            'draft' => 'gray',
+            'cancelled' => 'red',
+            'flagged' => 'orange',
+            default => 'gray',
+        };
+    }
+
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            'published' => 'Published',
+            'draft' => 'Draft',
+            'cancelled' => 'Cancelled',
+            'flagged' => 'Flagged',
+            default => ucfirst($this->status),
+        };
     }
 }
