@@ -25,7 +25,10 @@ export interface AdminUser {
   readonly registeredAt: string;
   readonly lastLoginAt: string;
   readonly emailVerified?: boolean;
+  readonly emailVerifiedAt?: string;
   readonly twoFactorEnabled?: boolean;
+  readonly twoFactorSecret?: boolean;
+  readonly lastLoginIp?: string;
   readonly permissions?: string[];
   readonly suspensionReason?: string;
   readonly suspensionDate?: string;
@@ -37,12 +40,16 @@ export interface AdminEvent {
   readonly organizerId: string;
   readonly organizerName: string;
   readonly status: EventStatus;
+  readonly category?: string;
   readonly attendeeCount: number;
   readonly ticketsSold: number;
   readonly revenue: number;
   readonly startDatetime?: string;
   readonly endDatetime?: string;
   readonly venueName?: string;
+  readonly latitude?: number;
+  readonly longitude?: number;
+  readonly bannerImageUrl?: string;
   readonly capacity?: number;
   readonly description?: string;
   readonly createdAt: string;
@@ -56,14 +63,18 @@ export interface AdminPayment {
   readonly amount: number;
   readonly currency: string;
   readonly paymentMethod: string;
+  readonly gateway?: string;
   readonly status: PaymentStatus;
   readonly gatewayResponseCode: string;
   readonly timestamp: string;
   readonly buyerEmail: string;
+  readonly customerCode?: string;
   readonly fraudRiskScore: number;
   readonly refundedAmount?: number;
   readonly isFullyRefunded?: boolean;
+  readonly refundReason?: string;
   readonly settledAt?: string;
+  readonly paidAt?: string;
   readonly fraudDetectionMethod?: string;
 }
 
@@ -92,6 +103,7 @@ export interface AuditLog {
   readonly targetType: TargetType;
   readonly targetId: string;
   readonly description?: string;
+  readonly status?: string;
   readonly metadata: Record<string, unknown>;
   readonly createdAt: string;
   readonly performedByName: string;
@@ -129,6 +141,7 @@ export interface AdminPayout {
   readonly netRevenue: number;
   readonly platformCommissionAmount: number;
   readonly payoutAmount: number;
+  readonly commissionRate?: number;
   readonly currency: string;
   readonly payoutMethod: string;
   readonly failureReason?: string;
