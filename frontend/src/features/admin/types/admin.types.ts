@@ -73,7 +73,7 @@ export interface AuditLog {
   readonly action: string;
   readonly targetType: TargetType;
   readonly targetId: string;
-  readonly description: string;
+  readonly description?: string;
   readonly metadata: Record<string, unknown>;
   readonly createdAt: string;
   readonly performedByName: string;
@@ -99,4 +99,52 @@ export interface DashboardAlert {
   readonly description: string;
   readonly actionUrl: string;
   readonly timestamp: string;
+}
+
+export interface AdminPayout {
+  readonly id: string;
+  readonly organizerId: string;
+  readonly organizerName: string;
+  readonly status: 'pending' | 'calculated' | 'approved' | 'processing' | 'completed' | 'failed';
+  readonly grossRevenue: number;
+  readonly refundsDeducted: number;
+  readonly netRevenue: number;
+  readonly platformCommissionAmount: number;
+  readonly payoutAmount: number;
+  readonly currency: string;
+  readonly payoutMethod: string;
+  readonly failureReason?: string;
+  readonly retryCount: number;
+  readonly canRetry: boolean;
+  readonly settlementPeriodStart: string;
+  readonly settlementPeriodEnd: string;
+  readonly calculatedAt: string;
+  readonly completedAt?: string;
+}
+
+export interface AdminUserUpdate {
+  readonly role?: UserRole;
+  readonly status?: UserStatus;
+  readonly suspensionReason?: string;
+  readonly suspensionDate?: string;
+}
+
+export interface AdminEventFlagRequest {
+  readonly reason: string;
+}
+
+export interface AdminEventCancelRequest {
+  readonly reason: string;
+}
+
+export interface PaymentRefundRequest {
+  readonly amount: number;
+  readonly reason: string;
+}
+
+export interface TicketPurgeResponse {
+  readonly success: boolean;
+  readonly message: string;
+  readonly ticketId: string;
+  readonly checkInsPreserved: number;
 }

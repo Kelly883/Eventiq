@@ -18,11 +18,13 @@ class AuditLog extends Model
         'action',
         'target_type',
         'target_id',
+        'description',
         'metadata',
         'status',
     ];
 
     protected $casts = [
+        'description' => 'string',
         'metadata' => 'json',
     ];
 

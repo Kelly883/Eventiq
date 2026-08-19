@@ -58,6 +58,7 @@ class Payment extends Model
         'payment_channel',
         'payment_method',
         'gateway_response_code',
+        'fraud_detection_method',
         'idempotency_key',
         'customer_email',
         'customer_code',

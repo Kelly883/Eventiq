@@ -33,6 +33,8 @@ class Event extends Model
         'banner_image_url',
         'capacity',
         'status',
+        'flag_reason',
+        'flag_date',
         'category',
     ];
 

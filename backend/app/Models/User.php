@@ -33,6 +33,8 @@ class User extends Authenticatable
         'permissions',
         'emailVerified',
         'status',
+        'suspension_reason',
+        'suspension_date',
         'lastLoginAt',
         'paystack_customer_code',
         'flutterwave_customer_id',
@@ -175,6 +177,11 @@ class User extends Authenticatable
     public function auditLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(\App\Models\AuditLog::class);
+    }
+
+    public function adminAuditLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Features\admin\Models\AuditLog::class);
     }
 
     public function scopeByRole($query, string $role)
