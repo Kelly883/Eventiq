@@ -2,7 +2,12 @@
 
 namespace App\Features\Compliance\Models;
 
+use App\Features\Compliance\Enums\AuditLogAction;
+use App\Features\Compliance\Enums\AuditLogTargetType;
+use App\Features\Compliance\Enums\AuditLogStatus;
+use App\Features\Compliance\Enums\ComplianceClassification;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AuditLog extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasUuids, SoftDeletes;
 
     protected $table = 'audit_logs';
 

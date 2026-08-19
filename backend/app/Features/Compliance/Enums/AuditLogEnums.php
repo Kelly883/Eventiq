@@ -2,8 +2,6 @@
 
 namespace App\Features\Compliance\Enums;
 
-use Illuminate\Support\Enum;
-
 enum AuditLogAction: string
 {
     case USER_LOGIN = 'user_login';
@@ -15,18 +13,20 @@ enum AuditLogAction: string
     case EVENT_CANCELLED = 'event_cancelled';
     case PAYMENT_PROCESSED = 'payment_processed';
     case PAYMENT_REFUNDED = 'payment_refunded';
-    case REFUND_REQUESTED = 'refund_requested';
+    case REFUND_REQUESTED = 'refund.requested';
     case REFUND_APPROVED = 'refund_approved';
     case REFUND_REJECTED = 'refund_rejected';
     case PAYOUT_APPROVED = 'payout_approved';
     case PAYOUT_REJECTED = 'payout_rejected';
     case TICKET_CHECKED_IN = 'ticket_checked_in';
     case TICKET_VOIDED = 'ticket_voided';
+    case TICKET_PURGED = 'ticket.purged';
     case FRAUD_FLAGGED = 'fraud_flagged';
     case FRAUD_APPROVED = 'fraud_approved';
     case ADMIN_SETTING_CHANGED = 'admin_setting_changed';
     case USER_PERMISSION_CHANGED = 'user_permission_changed';
     case DATA_EXPORT_REQUESTED = 'data_export_requested';
+    case CHECK_IN = 'check_in';
 }
 
 enum AuditLogTargetType: string
@@ -38,6 +38,7 @@ enum AuditLogTargetType: string
     case REFUND = 'refund';
     case PAYMENT = 'payment';
     case SETTING = 'setting';
+    case TICKET = 'ticket';
 }
 
 enum AuditLogStatus: string
