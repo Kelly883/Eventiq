@@ -16,6 +16,9 @@ class Event extends Model
     /**
      * Always eager-load these relationships to prevent N+1 queries on event lists.
      * If you need a lean event query, use Event::without('organizer', 'analyticsEventsMetric')->get().
+     *
+     * Admin controllers may want to call Event::without('organizer', 'analyticsEventsMetric')
+     * for large list pages to reduce query weight, then eager-load only the columns needed.
      */
     protected $with = ['organizer', 'analyticsEventsMetric'];
 

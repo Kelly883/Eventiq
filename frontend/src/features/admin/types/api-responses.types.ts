@@ -31,6 +31,10 @@ export interface AdminPaymentsResponse extends PaginatedResponse<AdminPayment> {
 
 export interface AdminPayoutsResponse extends PaginatedResponse<AdminPayout> {}
 
+export interface AdminPayoutResponse {
+  readonly data: AdminPayout;
+}
+
 export interface AdminSettingsResponse extends PaginatedResponse<AdminSettings> {}
 
 export interface AuditLogsResponse extends PaginatedResponse<AuditLog> {}
