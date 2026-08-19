@@ -24,6 +24,9 @@ export interface AdminUser {
   readonly status: UserStatus;
   readonly registeredAt: string;
   readonly lastLoginAt: string;
+  readonly emailVerified?: boolean;
+  readonly twoFactorEnabled?: boolean;
+  readonly permissions?: string[];
   readonly suspensionReason?: string;
   readonly suspensionDate?: string;
 }
@@ -37,6 +40,11 @@ export interface AdminEvent {
   readonly attendeeCount: number;
   readonly ticketsSold: number;
   readonly revenue: number;
+  readonly startDatetime?: string;
+  readonly endDatetime?: string;
+  readonly venueName?: string;
+  readonly capacity?: number;
+  readonly description?: string;
   readonly createdAt: string;
   readonly flagReason?: string;
   readonly flagDate?: string;
@@ -53,6 +61,9 @@ export interface AdminPayment {
   readonly timestamp: string;
   readonly buyerEmail: string;
   readonly fraudRiskScore: number;
+  readonly refundedAmount?: number;
+  readonly isFullyRefunded?: boolean;
+  readonly settledAt?: string;
   readonly fraudDetectionMethod?: string;
 }
 
@@ -67,6 +78,13 @@ export interface AdminSettings {
   readonly lastModifiedAt?: string;
 }
 
+/**
+ * AuditLog represents an admin-facing audit trail entry.
+ *
+ * Note: `performedByName` is not a direct database column. It must be resolved
+ * on the backend by eager-loading the `user` relationship and mapping `user.name`.
+ * If the relationship is not loaded, this field will be null or a placeholder.
+ */
 export interface AuditLog {
   readonly id: string;
   readonly userId: string;
