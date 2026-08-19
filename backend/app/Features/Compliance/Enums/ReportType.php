@@ -11,18 +11,3 @@ enum ReportType: string
     case DATA_RETENTION = 'data_retention';
     case INCIDENT_REPORT = 'incident_report';
 }
-
-enum ReportFormat: string
-{
-    case PDF = 'pdf';
-    case CSV = 'csv';
-    case JSON = 'json';
-}
-
-enum ReportStatus: string
-{
-    case QUEUED = 'queued';
-    case GENERATING = 'generating';
-    case COMPLETED = 'completed';
-    case FAILED = 'failed';
-}

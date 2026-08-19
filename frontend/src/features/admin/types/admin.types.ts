@@ -24,6 +24,12 @@ export interface AdminUser {
   readonly status: UserStatus;
   readonly registeredAt: string;
   readonly lastLoginAt: string;
+  readonly emailVerified?: boolean;
+  readonly emailVerifiedAt?: string;
+  readonly twoFactorEnabled?: boolean;
+  readonly twoFactorSecret?: boolean;
+  readonly lastLoginIp?: string;
+  readonly permissions?: string[];
   readonly suspensionReason?: string;
   readonly suspensionDate?: string;
 }
@@ -34,9 +40,18 @@ export interface AdminEvent {
   readonly organizerId: string;
   readonly organizerName: string;
   readonly status: EventStatus;
+  readonly category?: string;
   readonly attendeeCount: number;
   readonly ticketsSold: number;
   readonly revenue: number;
+  readonly startDatetime?: string;
+  readonly endDatetime?: string;
+  readonly venueName?: string;
+  readonly latitude?: number;
+  readonly longitude?: number;
+  readonly bannerImageUrl?: string;
+  readonly capacity?: number;
+  readonly description?: string;
   readonly createdAt: string;
   readonly flagReason?: string;
   readonly flagDate?: string;
@@ -48,11 +63,18 @@ export interface AdminPayment {
   readonly amount: number;
   readonly currency: string;
   readonly paymentMethod: string;
+  readonly gateway?: string;
   readonly status: PaymentStatus;
   readonly gatewayResponseCode: string;
   readonly timestamp: string;
   readonly buyerEmail: string;
+  readonly customerCode?: string;
   readonly fraudRiskScore: number;
+  readonly refundedAmount?: number;
+  readonly isFullyRefunded?: boolean;
+  readonly refundReason?: string;
+  readonly settledAt?: string;
+  readonly paidAt?: string;
   readonly fraudDetectionMethod?: string;
 }
 
@@ -67,16 +89,24 @@ export interface AdminSettings {
   readonly lastModifiedAt?: string;
 }
 
+/**
+ * AuditLog represents an admin-facing audit trail entry.
+ *
+ * Note: `performedByName` is not a direct database column. It is resolved
+ * on the backend by eager-loading the `user` relationship and mapping `user.name`.
+ * If the relationship is missing, this field will be `null`.
+ */
 export interface AuditLog {
   readonly id: string;
   readonly userId: string;
   readonly action: string;
   readonly targetType: TargetType;
   readonly targetId: string;
-  readonly description: string;
+  readonly description?: string;
+  readonly status?: string;
   readonly metadata: Record<string, unknown>;
   readonly createdAt: string;
-  readonly performedByName: string;
+  readonly performedByName?: string | null;
 }
 
 export interface DashboardMetrics {
@@ -99,4 +129,53 @@ export interface DashboardAlert {
   readonly description: string;
   readonly actionUrl: string;
   readonly timestamp: string;
+}
+
+export interface AdminPayout {
+  readonly id: string;
+  readonly organizerId: string;
+  readonly organizerName: string;
+  readonly status: 'pending' | 'calculated' | 'approved' | 'processing' | 'completed' | 'failed';
+  readonly grossRevenue: number;
+  readonly refundsDeducted: number;
+  readonly netRevenue: number;
+  readonly platformCommissionAmount: number;
+  readonly payoutAmount: number;
+  readonly commissionRate?: number;
+  readonly currency: string;
+  readonly payoutMethod: string;
+  readonly failureReason?: string;
+  readonly retryCount: number;
+  readonly canRetry: boolean;
+  readonly settlementPeriodStart: string;
+  readonly settlementPeriodEnd: string;
+  readonly calculatedAt: string;
+  readonly completedAt?: string;
+}
+
+export interface AdminUserUpdate {
+  readonly role?: UserRole;
+  readonly status?: UserStatus;
+  readonly suspensionReason?: string;
+  readonly suspensionDate?: string;
+}
+
+export interface AdminEventFlagRequest {
+  readonly reason: string;
+}
+
+export interface AdminEventCancelRequest {
+  readonly reason: string;
+}
+
+export interface PaymentRefundRequest {
+  readonly amount: number;
+  readonly reason: string;
+}
+
+export interface TicketPurgeResponse {
+  readonly success: boolean;
+  readonly message: string;
+  readonly ticketId: string;
+  readonly checkInsPreserved: number;
 }

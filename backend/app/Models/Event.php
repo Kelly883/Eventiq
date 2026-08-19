@@ -16,6 +16,9 @@ class Event extends Model
     /**
      * Always eager-load these relationships to prevent N+1 queries on event lists.
      * If you need a lean event query, use Event::without('organizer', 'analyticsEventsMetric')->get().
+     *
+     * Admin controllers may want to call Event::without('organizer', 'analyticsEventsMetric')
+     * for large list pages to reduce query weight, then eager-load only the columns needed.
      */
     protected $with = ['organizer', 'analyticsEventsMetric'];
 
@@ -33,6 +36,8 @@ class Event extends Model
         'banner_image_url',
         'capacity',
         'status',
+        'flag_reason',
+        'flag_date',
         'category',
     ];
 
@@ -136,6 +141,11 @@ class Event extends Model
         return $query->where('organizer_id', $organizerId);
     }
 
+    public function scopeByStatus($query, $status)
+    {
+        return $query->where('status', $status);
+    }
+
     public function scopeAvailable($query)
     {
         return $query->whereHas('ticketTiers', function ($q) {
@@ -155,5 +165,27 @@ class Event extends Model
               ->orWhere('venue_name', 'like', "%{$search}%")
               ->orWhere('category', 'like', "%{$search}%");
         });
+    }
+
+    public function getStatusBadgeColor(): string
+    {
+        return match ($this->status) {
+            'published' => 'green',
+            'draft' => 'gray',
+            'cancelled' => 'red',
+            'flagged' => 'orange',
+            default => 'gray',
+        };
+    }
+
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            'published' => 'Published',
+            'draft' => 'Draft',
+            'cancelled' => 'Cancelled',
+            'flagged' => 'Flagged',
+            default => ucfirst($this->status),
+        };
     }
 }

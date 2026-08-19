@@ -12,6 +12,7 @@ class WebhookDeliveryLog extends Model
 
     public $incrementing = false;
     protected $keyType = 'string';
+    public $timestamps = false;
 
     protected static function boot()
     {
@@ -34,6 +35,7 @@ class WebhookDeliveryLog extends Model
         'response_body',
         'error_message',
         'duration_ms',
+        'created_at',
     ];
 
     protected $casts = [

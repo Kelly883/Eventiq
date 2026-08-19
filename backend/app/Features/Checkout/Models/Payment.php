@@ -56,6 +56,9 @@ class Payment extends Model
         'status',
         'gateway',
         'payment_channel',
+        'payment_method',
+        'gateway_response_code',
+        'fraud_detection_method',
         'idempotency_key',
         'customer_email',
         'customer_code',
@@ -171,5 +174,33 @@ class Payment extends Model
     public function getNetAmountInMajorUnits(): float
     {
         return (float) $this->net_amount;
+    }
+
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            PaymentStatus::SUCCESS => 'Completed',
+            PaymentStatus::PENDING => 'Pending',
+            PaymentStatus::FAILED => 'Failed',
+            PaymentStatus::REFUNDED => 'Refunded',
+            PaymentStatus::PARTIALLY_REFUNDED => 'Partially Refunded',
+            PaymentStatus::INITIATED => 'Initiated',
+            PaymentStatus::PROCESSING => 'Processing',
+            PaymentStatus::EXPIRED => 'Expired',
+            PaymentStatus::REVERSED => 'Reversed',
+            default => ucfirst($this->status->value),
+        };
+    }
+
+    public function getPaymentMethodLabel(): string
+    {
+        return match ($this->payment_method) {
+            'card' => 'Card',
+            'bank_transfer' => 'Bank Transfer',
+            'ussd' => 'USSD',
+            'qr' => 'QR Code',
+            'mobile_money' => 'Mobile Money',
+            default => ucfirst(str_replace('_', ' ', (string) ($this->payment_method ?? 'unknown'))),
+        };
     }
 }

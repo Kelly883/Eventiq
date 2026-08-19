@@ -6,14 +6,30 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class AdminSettings extends Model
 {
     use HasFactory;
 
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (AdminSettings $setting) {
+            if (empty($setting->{$setting->getKeyName()})) {
+                $setting->{$setting->getKeyName()} = (string) Str::uuid();
+            }
+        });
+    }
+
     protected $table = 'admin_settings';
 
     protected $fillable = [
+        'id',
         'setting_key',
         'setting_value',
         'description',

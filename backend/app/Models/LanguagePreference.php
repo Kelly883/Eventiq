@@ -3,29 +3,17 @@
 namespace App\Models;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Str;
 
-class LocalizationPreference extends Model
+class LanguagePreference extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasUuids, SoftDeletes;
 
-    public $incrementing = false;
-    protected $keyType = 'string';
-
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::creating(function ($model) {
-            if (empty($model->{$model->getKeyName()})) {
-                $model->{$model->getKeyName()} = (string) Str::uuid();
-            }
-        });
-    }
+    protected $table = 'localization_preferences';
 
     protected $fillable = [
         'user_id',

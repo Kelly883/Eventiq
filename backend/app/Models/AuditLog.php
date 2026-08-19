@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AuditLog extends Model
@@ -72,6 +73,58 @@ class AuditLog extends Model
     public function targetUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'target_id');
+    }
+
+    public function scopeByAction($query, string $action)
+    {
+        return $query->where('action', $action);
+    }
+
+    public function scopeByTargetType($query, string $targetType)
+    {
+        return $query->where('target_type', $targetType);
+    }
+
+    public function scopeByStatus($query, string $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeByClassification($query, string $classification)
+    {
+        return $query->where('compliance_classification', $classification);
+    }
+
+    public function scopeByAdmin($query, string $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    public function scopeForDateRange($query, $start, $end)
+    {
+        return $query->whereBetween('created_at', [$start, $end]);
+    }
+
+    public function scopeRecent($query, int $days = 7)
+    {
+        return $query->where('created_at', '>=', now()->subDays($days));
+    }
+
+    public function maskSensitiveData(): array
+    {
+        $data = $this->toArray();
+
+        if (!empty($data['ip_address'])) {
+            $parts = explode('.', $data['ip_address']);
+            if (count($parts) === 4) {
+                $data['ip_address'] = $parts[0] . '.xxx.xxx.xxx';
+            }
+        }
+
+        $data['request_data'] = '[REDACTED]';
+        $data['response_data'] = '[REDACTED]';
+
+        return $data;
     }
 
     public function getActionLabel(): string

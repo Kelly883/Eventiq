@@ -166,4 +166,30 @@ class Payout extends Model
     {
         return '$' . number_format((float) $this->payout_amount, 2);
     }
+
+    public function getStatusBadgeColor(): string
+    {
+        return match ($this->status) {
+            self::STATUS_COMPLETED => 'green',
+            self::STATUS_PENDING => 'yellow',
+            self::STATUS_PROCESSING => 'blue',
+            self::STATUS_FAILED => 'red',
+            self::STATUS_APPROVED => 'green',
+            self::STATUS_CALCULATED => 'gray',
+            default => 'gray',
+        };
+    }
+
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            self::STATUS_COMPLETED => 'Completed',
+            self::STATUS_PENDING => 'Pending',
+            self::STATUS_PROCESSING => 'Processing',
+            self::STATUS_FAILED => 'Failed',
+            self::STATUS_APPROVED => 'Approved',
+            self::STATUS_CALCULATED => 'Calculated',
+            default => ucfirst($this->status),
+        };
+    }
 }

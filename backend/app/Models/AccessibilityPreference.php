@@ -3,29 +3,15 @@
 namespace App\Models;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Str;
 
 class AccessibilityPreference extends Model
 {
-    use HasFactory, SoftDeletes;
-
-    public $incrementing = false;
-    protected $keyType = 'string';
-
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::creating(function ($model) {
-            if (empty($model->{$model->getKeyName()})) {
-                $model->{$model->getKeyName()} = (string) Str::uuid();
-            }
-        });
-    }
+    use HasFactory, HasUuids, SoftDeletes;
 
     protected $fillable = [
         'user_id',

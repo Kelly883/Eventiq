@@ -228,6 +228,30 @@ class FraudEvent extends Model
         };
     }
 
+    public function getStatusBadgeColor(): string
+    {
+        return match ($this->status) {
+            'approved' => 'green',
+            'flagged' => 'red',
+            'reviewed' => 'blue',
+            'rejected' => 'gray',
+            'auto_blocked' => 'red',
+            default => 'gray',
+        };
+    }
+
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            'approved' => 'Approved',
+            'flagged' => 'Flagged',
+            'reviewed' => 'Reviewed',
+            'rejected' => 'Rejected',
+            'auto_blocked' => 'Auto Blocked',
+            default => ucfirst($this->status),
+        };
+    }
+
     public function scopeFlagged($query)
     {
         return $query->where('status', 'flagged');
@@ -278,9 +302,9 @@ class FraudEvent extends Model
         return $query->where('risk_score', '>=', $threshold);
     }
 
-    public function scopeRecent($query, int $hours = 24)
+    public function scopeRecent($query, int $days = 7)
     {
-        return $query->where('created_at', '>=', now()->subHours($hours));
+        return $query->where('created_at', '>=', now()->subDays($days));
     }
 
     /**

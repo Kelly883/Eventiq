@@ -32,6 +32,9 @@ class User extends Authenticatable
         'role_id',
         'permissions',
         'emailVerified',
+        'status',
+        'suspension_reason',
+        'suspension_date',
         'lastLoginAt',
         'paystack_customer_code',
         'flutterwave_customer_id',
@@ -176,6 +179,11 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\AuditLog::class);
     }
 
+    public function adminAuditLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Features\admin\Models\AuditLog::class);
+    }
+
     public function scopeByRole($query, string $role)
     {
         return $query->where('role', $role);
@@ -184,6 +192,26 @@ class User extends Authenticatable
     public function scopeByStatus($query, string $status)
     {
         return $query->where('status', $status);
+    }
+
+    public function getStatusBadgeColor(): string
+    {
+        return match ($this->status) {
+            'active' => 'green',
+            'suspended' => 'red',
+            'pending' => 'yellow',
+            default => 'gray',
+        };
+    }
+
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            'active' => 'Active',
+            'suspended' => 'Suspended',
+            'pending' => 'Pending',
+            default => ucfirst($this->status),
+        };
     }
 
     public function isPasswordCorrect(string $password): bool
