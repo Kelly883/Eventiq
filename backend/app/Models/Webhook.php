@@ -43,7 +43,7 @@ class Webhook extends Model
 
     public function organizer(): BelongsTo
     {
-        return $this->belongsTo(Organizer::class);
+        return $this->belongsTo(User::class);
     }
 
     public function deliveryLogs(): HasMany

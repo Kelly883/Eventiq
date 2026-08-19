@@ -35,11 +35,7 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        },
-        "classmap": [
-            "app/Features/Payment/Enums/PaymentEnums.php",
-            "app/Features/Compliance/Enums/AuditLogEnums.php"
-        ]
+        }
     },
     "autoload-dev": {
         "psr-4": {

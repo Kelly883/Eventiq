@@ -28,31 +28,3 @@ enum AuditLogAction: string
     case DATA_EXPORT_REQUESTED = 'data_export_requested';
     case CHECK_IN = 'check_in';
 }
-
-enum AuditLogTargetType: string
-{
-    case USER = 'user';
-    case EVENT = 'event';
-    case ORDER = 'order';
-    case PAYOUT = 'payout';
-    case REFUND = 'refund';
-    case PAYMENT = 'payment';
-    case SETTING = 'setting';
-    case TICKET = 'ticket';
-}
-
-enum AuditLogStatus: string
-{
-    case SUCCESS = 'success';
-    case FAILURE = 'failure';
-    case WARNING = 'warning';
-    case PENDING = 'pending';
-}
-
-enum ComplianceClassification: string
-{
-    case PUBLIC = 'public';
-    case INTERNAL = 'internal';
-    case CONFIDENTIAL = 'confidential';
-    case RESTRICTED = 'restricted';
-}
