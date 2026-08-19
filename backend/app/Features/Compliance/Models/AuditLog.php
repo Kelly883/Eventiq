@@ -20,7 +20,6 @@ class AuditLog extends Model
     protected $table = 'audit_logs';
 
     protected $fillable = [
-        'user_id',
         'action',
         'target_type',
         'target_id',
@@ -51,6 +50,16 @@ class AuditLog extends Model
         static::creating(function ($model) {
             if (empty($model->user_id)) {
                 throw new \InvalidArgumentException('user_id is required and immutable.');
+            }
+        });
+
+        static::updating(function ($model) {
+            if ($model->isDirty('user_id')) {
+                throw new \RuntimeException('user_id is immutable and cannot be changed.');
+            }
+
+            if ($model->isDirty('created_at')) {
+                throw new \RuntimeException('created_at is immutable and cannot be changed.');
             }
         });
     }
