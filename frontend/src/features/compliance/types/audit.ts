@@ -27,6 +27,15 @@ export type AuditLogTargetType = 'user' | 'event' | 'order' | 'payout' | 'refund
 
 export type AuditLogStatus = 'success' | 'failure' | 'warning' | 'pending';
 
+export interface AuditLogGeolocation {
+  readonly ip_address?: string;
+  readonly [key: string]: unknown;
+}
+
+export interface AuditLogJsonData {
+  readonly [key: string]: unknown;
+}
+
 export interface AuditLog {
   readonly id: string;
   readonly userId: string;
@@ -35,13 +44,13 @@ export interface AuditLog {
   readonly targetId: string;
   readonly description?: string;
   readonly targetName?: string | null;
-  readonly geolocation: Record<string, unknown> | null;
-  readonly requestData: Record<string, unknown> | null;
-  readonly responseData: Record<string, unknown> | null;
-  readonly changedFields: Record<string, unknown> | null;
+  readonly geolocation: AuditLogGeolocation | null;
+  readonly requestData: AuditLogJsonData | null;
+  readonly responseData: AuditLogJsonData | null;
+  readonly changedFields: AuditLogJsonData | null;
   readonly status: AuditLogStatus;
   readonly complianceClassification: ComplianceClassification;
-  readonly metadata: Record<string, unknown>;
+  readonly metadata: AuditLogJsonData;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly deletedAt?: string;
@@ -56,6 +65,8 @@ export interface AuditLogFilter {
   readonly targetType?: AuditLogTargetType;
   readonly status?: AuditLogStatus;
   readonly classification?: ComplianceClassification;
+  readonly search?: string;
+  readonly perPage?: number;
 }
 
 export interface AuditLogMetrics {
@@ -68,6 +79,15 @@ export interface AuditLogMetrics {
 export interface AuditLogListResponse {
   readonly data: AuditLog[];
   readonly metrics: AuditLogMetrics;
+}
+
+export interface AuditLogPaginatedListResponse {
+  readonly data: AuditLog[];
+  readonly metrics: AuditLogMetrics;
+  readonly total: number;
+  readonly perPage: number;
+  readonly currentPage: number;
+  readonly lastPage: number;
 }
 
 export interface AuditLogDetailsResponse {

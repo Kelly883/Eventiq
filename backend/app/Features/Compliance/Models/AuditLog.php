@@ -6,6 +6,13 @@ use App\Features\Compliance\Enums\AuditLogAction;
 use App\Features\Compliance\Enums\AuditLogTargetType;
 use App\Features\Compliance\Enums\AuditLogStatus;
 use App\Features\Compliance\Enums\ComplianceClassification;
+use App\Features\Checkout\Models\Order;
+use App\Features\Checkout\Models\Payment;
+use App\Features\Payouts\Models\Payout;
+use App\Features\Refunds\Models\RefundRequest;
+use App\Features\Ticketing\Models\Ticket;
+use App\Features\admin\Models\AdminSettings;
+use App\Models\Event;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -98,17 +105,52 @@ class AuditLog extends Model
         return $this->belongsTo(User::class, 'target_id');
     }
 
+    public function targetEvent(): BelongsTo
+    {
+        return $this->belongsTo(Event::class, 'target_id');
+    }
+
+    public function targetOrder(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'target_id');
+    }
+
+    public function targetPayment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class, 'target_id');
+    }
+
+    public function targetPayout(): BelongsTo
+    {
+        return $this->belongsTo(Payout::class, 'target_id');
+    }
+
+    public function targetRefund(): BelongsTo
+    {
+        return $this->belongsTo(RefundRequest::class, 'target_id');
+    }
+
+    public function targetTicket(): BelongsTo
+    {
+        return $this->belongsTo(Ticket::class, 'target_id');
+    }
+
+    public function targetSetting(): BelongsTo
+    {
+        return $this->belongsTo(AdminSettings::class, 'target_id');
+    }
+
     public function getTargetName(): ?string
     {
         return match ($this->target_type) {
             'user' => $this->targetUser->name ?? null,
-            'event' => \App\Models\Event::find($this->target_id)?->title,
-            'order' => \App\Features\Checkout\Models\Order::find($this->target_id)?->order_number,
-            'payout' => \App\Features\Payouts\Models\Payout::find($this->target_id)?->id,
-            'refund' => \App\Features\Refunds\Models\RefundRequest::find($this->target_id)?->id,
-            'payment' => \App\Features\Checkout\Models\Payment::find($this->target_id)?->id,
-            'setting' => \App\Features\admin\Models\AdminSettings::find($this->target_id)?->setting_key,
-            'ticket' => \App\Features\Ticketing\Models\Ticket::find($this->target_id)?->ticket_id,
+            'event' => $this->targetEvent->title ?? null,
+            'order' => $this->targetOrder->order_number ?? null,
+            'payout' => $this->targetPayout->id ?? null,
+            'refund' => $this->targetRefund->id ?? null,
+            'payment' => $this->targetPayment->id ?? null,
+            'setting' => $this->targetSetting->setting_key ?? null,
+            'ticket' => $this->targetTicket->ticket_id ?? null,
             default => null,
         };
     }
@@ -118,7 +160,7 @@ class AuditLog extends Model
         return $query->where('created_at', '>=', now()->subDays($days));
     }
 
-    public function scopeFilter($query, array $filters = [])
+    public function scopeFilter($query, array $filters = [], ?int $perPage = null)
     {
         if (!empty($filters['action'])) {
             $query->byAction($filters['action']);
@@ -140,7 +182,23 @@ class AuditLog extends Model
             $query->forDateRange($filters['start_date'], $filters['end_date']);
         }
 
+        if (!empty($filters['search'])) {
+            $query->search($filters['search']);
+        }
+
+        if (!empty($perPage)) {
+            $query->paginate($perPage);
+        }
+
         return $query;
+    }
+
+    public function scopeSearch($query, string $term)
+    {
+        return $query->where(function ($q) use ($term) {
+            $q->where('description', 'like', "%{$term}%")
+              ->orWhere('changed_fields', 'like', "%{$term}%");
+        });
     }
 
     public function scopeForDateRange($query, $startDate, $endDate)
