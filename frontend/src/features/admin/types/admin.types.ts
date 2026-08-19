@@ -92,9 +92,9 @@ export interface AdminSettings {
 /**
  * AuditLog represents an admin-facing audit trail entry.
  *
- * Note: `performedByName` is not a direct database column. It must be resolved
+ * Note: `performedByName` is not a direct database column. It is resolved
  * on the backend by eager-loading the `user` relationship and mapping `user.name`.
- * If the relationship is not loaded, this field will be null or a placeholder.
+ * If the relationship is missing, this field will be `null`.
  */
 export interface AuditLog {
   readonly id: string;
@@ -106,7 +106,7 @@ export interface AuditLog {
   readonly status?: string;
   readonly metadata: Record<string, unknown>;
   readonly createdAt: string;
-  readonly performedByName: string;
+  readonly performedByName?: string | null;
 }
 
 export interface DashboardMetrics {
