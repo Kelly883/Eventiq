@@ -33,7 +33,8 @@ export interface AuditLog {
   readonly action: AuditLogAction;
   readonly targetType: AuditLogTargetType;
   readonly targetId: string;
-  readonly description: string;
+  readonly description?: string;
+  readonly targetName?: string | null;
   readonly geolocation: Record<string, unknown> | null;
   readonly requestData: Record<string, unknown> | null;
   readonly responseData: Record<string, unknown> | null;
