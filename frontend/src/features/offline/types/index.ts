@@ -7,13 +7,13 @@ export interface DeviceToken {
 export interface OfflineTicket {
   readonly id: string;
   readonly eventId: string;
-  readonly eventName: string;
-  readonly eventStartDate: string;
+  readonly eventName: string | null;
+  readonly eventStartDate: string | null;
   readonly ticketTierId: string;
-  readonly tierName: string;
+  readonly tierName: string | null;
   readonly qrCodeData: string;
   readonly orderId: string;
-  readonly orderNumber: string;
+  readonly orderNumber: string | null;
 }
 
 export interface OfflineSyncState {
