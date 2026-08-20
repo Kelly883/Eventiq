@@ -142,16 +142,18 @@ class AuditLog extends Model
 
     public function getTargetName(): ?string
     {
-        return match ($this->target_type) {
-            'user' => $this->targetUser->name ?? null,
-            'event' => $this->targetEvent->title ?? null,
-            'order' => $this->targetOrder->order_number ?? null,
-            'payout' => $this->targetPayout->id ?? null,
-            'refund' => $this->targetRefund->id ?? null,
-            'payment' => $this->targetPayment->id ?? null,
-            'setting' => $this->targetSetting->setting_key ?? null,
-            'ticket' => $this->targetTicket->ticket_id ?? null,
-            default => null,
+        $type = $this->target_type instanceof \BackedEnum ? $this->target_type->value : (string) $this->target_type;
+
+        return match ($type) {
+            'user' => $this->targetUser->name ?? $this->targetUser()->value('name'),
+            'event' => $this->targetEvent->title ?? $this->targetEvent()->value('title'),
+            'order' => $this->targetOrder->order_number ?? $this->targetOrder()->value('order_number'),
+            'payout' => $this->targetPayout->id ?? $this->targetPayout()->value('id'),
+            'refund' => $this->targetRefund->id ?? $this->targetRefund()->value('id'),
+            'payment' => $this->targetPayment->id ?? $this->targetPayment()->value('id'),
+            'setting' => $this->targetSetting->setting_key ?? $this->targetSetting()->value('setting_key'),
+            'ticket' => $this->targetTicket->ticket_id ?? $this->targetTicket()->value('ticket_id'),
+            default => (string) $this->target_id,
         };
     }
 
@@ -226,13 +228,52 @@ class AuditLog extends Model
         return $query->where('compliance_classification', $classification);
     }
 
+    public function scopeByUser($query, string $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    public function scopeLatest($query)
+    {
+        return $query->orderByDesc('created_at');
+    }
+
+    public function scopeOldest($query)
+    {
+        return $query->orderBy('created_at');
+    }
+
+    public function scopeWithTargetDetails($query)
+    {
+        return $query->with([
+            'user',
+            'targetUser',
+            'targetEvent',
+            'targetOrder',
+            'targetPayment',
+            'targetPayout',
+            'targetRefund',
+            'targetTicket',
+            'targetSetting',
+        ]);
+    }
+
     public function maskSensitiveData(): array
     {
         $data = $this->toArray();
 
-        if (isset($data['geolocation']['ip_address'])) {
-            $parts = explode('.', $data['geolocation']['ip_address']);
-            $data['geolocation']['ip_address'] = $parts[0] . '.xxx.xxx.xxx';
+        if (!empty($data['geolocation']['ip_address'])) {
+            $ip = $data['geolocation']['ip_address'];
+
+            if (str_contains($ip, ':')) {
+                $parts = explode(':', $ip);
+                $data['geolocation']['ip_address'] = $parts[0] . ':xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx';
+            } else {
+                $parts = explode('.', $ip);
+                if (count($parts) === 4) {
+                    $data['geolocation']['ip_address'] = $parts[0] . '.xxx.xxx.xxx';
+                }
+            }
         }
 
         unset($data['request_data']);
