@@ -23,6 +23,7 @@ class OfflineSyncResponse extends JsonResource
             'syncError' => null,
             'syncVersion' => $this->resource['syncVersion'] ?? null,
             'serverTime' => now()->toIso8601String(),
+            'deletedTicketIds' => $this->resource['deletedTicketIds'] ?? [],
         ];
     }
 }

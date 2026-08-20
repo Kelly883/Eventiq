@@ -16,8 +16,10 @@ class OfflineTicketResource extends JsonResource
             'eventId' => (string) $ticket->event_id,
             'eventName' => $ticket->event->title ?? null,
             'eventStartDate' => $ticket->event->start_datetime?->toIso8601String(),
+            'eventUpdatedAt' => $ticket->event->updated_at?->toIso8601String(),
             'ticketTierId' => (string) $ticket->ticket_tier_id,
             'tierName' => $ticket->ticketTier->name ?? null,
+            'tierUpdatedAt' => $ticket->ticketTier->updated_at?->toIso8601String(),
             'qrCodeData' => $ticket->qr_code_data,
             'orderId' => (string) $ticket->order_id,
             'orderNumber' => $ticket->order?->payment_intent_id ?? null,
@@ -26,6 +28,9 @@ class OfflineTicketResource extends JsonResource
             'status' => $ticket->status ?? 'valid',
             'checkedInAt' => $ticket->checked_in_at?->toIso8601String(),
             'qrCodeExpiresAt' => $ticket->qr_code_expires_at?->toIso8601String(),
+            'ticketType' => $ticket->tier ?? null,
+            'pricePaid' => $ticket->ticketTier->price ?? null,
+            'paymentStatus' => $ticket->order?->status ?? null,
         ];
     }
 }
