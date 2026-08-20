@@ -10,18 +10,20 @@ export type AuditLogAction =
   | 'event_cancelled'
   | 'payment_processed'
   | 'payment_refunded'
-  | 'refund_requested'
+  | 'refund.requested'
   | 'refund_approved'
   | 'refund_rejected'
   | 'payout_approved'
   | 'payout_rejected'
   | 'ticket_checked_in'
   | 'ticket_voided'
+  | 'ticket.purged'
   | 'fraud_flagged'
   | 'fraud_approved'
   | 'admin_setting_changed'
   | 'user_permission_changed'
-  | 'data_export_requested';
+  | 'data_export_requested'
+  | 'check_in';
 
 export type AuditLogTargetType = 'user' | 'event' | 'order' | 'payout' | 'refund' | 'payment' | 'setting';
 
@@ -102,18 +104,20 @@ export function isAuditLogAction(value: string): value is AuditLogAction {
     'event_cancelled',
     'payment_processed',
     'payment_refunded',
-    'refund_requested',
+    'refund.requested',
     'refund_approved',
     'refund_rejected',
     'payout_approved',
     'payout_rejected',
     'ticket_checked_in',
     'ticket_voided',
+    'ticket.purged',
     'fraud_flagged',
     'fraud_approved',
     'admin_setting_changed',
     'user_permission_changed',
     'data_export_requested',
+    'check_in',
   ].includes(value);
 }
 
