@@ -25,7 +25,7 @@ export type AuditLogAction =
   | 'data_export_requested'
   | 'check_in';
 
-export type AuditLogTargetType = 'user' | 'event' | 'order' | 'payout' | 'refund' | 'payment' | 'setting';
+export type AuditLogTargetType = 'user' | 'event' | 'order' | 'payout' | 'refund' | 'payment' | 'setting' | 'ticket';
 
 export type AuditLogStatus = 'success' | 'failure' | 'warning' | 'pending';
 

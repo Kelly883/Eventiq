@@ -1,0 +1,12 @@
+{
+  "name": "enum-sync-check",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check:enums": "tsx check-enum-sync.ts"
+  },
+  "dependencies": {
+    "tsx": "^4.7.0"
+  }
+}
