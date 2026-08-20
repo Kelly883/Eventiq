@@ -12,56 +12,56 @@ use App\Features\Pricing\Controllers\PricingController;
 use App\Features\Delivery\Controllers\DeliveryController;
 
 // Include Push Notifications routes
-require base_path('app/Features/PushNotifications/Routes/api.php');
+require base_path('app/Features/push-notifications/Routes/api.php');
 
 // Include QR Code Ticketing routes
-require base_path('app/Features/QRCodeTicketing/Routes/api.php');
+require base_path('app/Features/qr-code-ticketing/Routes/api.php');
 
 // Include Check-In routes
-require base_path('app/Features/CheckIn/Routes/api.php');
+require base_path('app/Features/check-in/Routes/api.php');
 
 // Include Email Notifications routes
-require base_path('app/Features/EmailNotifications/Routes/api.php');
+require base_path('app/Features/email-notifications/Routes/api.php');
 
 // Include Inventory routes
-require base_path('app/Features/Inventory/Routes/api.php');
+require base_path('app/Features/inventory/Routes/api.php');
 
 // Include Checkout routes
-require base_path('app/Features/Checkout/Routes/api.php');
+require base_path('app/Features/checkout/Routes/api.php');
 
 // Include Organizer Profile routes
-require base_path('app/Features/OrganizerProfile/Routes/api.php');
+require base_path('app/Features/organizer-profile/Routes/api.php');
 
 // Include Refunds routes
-require base_path('app/Features/Refunds/Routes/api.php');
+require base_path('app/Features/refunds/Routes/api.php');
 
 // Include Payouts routes
-require base_path('app/Features/Payouts/Routes/api.php');
+require base_path('app/Features/payouts/Routes/api.php');
 
 // Include Analytics routes
-require base_path('app/Features/Analytics/Routes/api.php');
+require base_path('app/Features/analytics/Routes/api.php');
 
 // Include Events Calendar routes
-require base_path('app/Features/EventsCalendar/Routes/api.php');
+require base_path('app/Features/events-calendar/Routes/api.php');
 
 // Include Compliance routes
-require base_path('app/Features/Compliance/Routes/api.php');
+require base_path('app/Features/compliance/Routes/api.php');
 
 // Include Fraud detection routes
-require base_path('app/Features/Fraud/Routes/api.php');
+require base_path('app/Features/fraud/Routes/api.php');
 
 
 // Include Admin routes (platform management)
 require base_path('routes/admin.php');
 
 // Include Payment routes
-require base_path('app/Features/Payment/Routes/api.php');
+require base_path('app/Features/payment/Routes/api.php');
 
 // Include OfflineSync routes
-require base_path('app/Features/OfflineSync/Routes/api.php');
+require base_path('app/Features/offline-sync/Routes/api.php');
 
 // Include API Keys routes
-require base_path('app/Features/ApiKeys/Routes/api.php');
+require base_path('app/Features/api-keys/Routes/api.php');
 
 
 

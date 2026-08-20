@@ -25,14 +25,14 @@
 - `sold_count` present in `$fillable` and cast as `integer` ✅
 
 ### [x] 3. Add Concurrency Protection in `CheckoutController`
-- **File:** `backend/app/Features/Checkout/Http/Controllers/CheckoutController.php`
+- **File:** `backend/app/Features/checkout/Http/Controllers/CheckoutController.php`
 - Uses `TicketTier::where('id', ...)->lockForUpdate()->firstOrFail()` to lock tier row ✅
 - Uses `TicketInventory::where('ticket_tier_id', ...)->lockForUpdate()->first()` to lock inventory row ✅
 - Availability check uses real-time `quantity - sold_count` (DB-level enforcement) ✅
 - Entire order creation wrapped in `DB::transaction()` ✅
 
 ### [x] 4. Add Concurrency Protection in `WebhookController`
-- **File:** `backend/app/Features/Checkout/Http/Controllers/WebhookController.php`
+- **File:** `backend/app/Features/checkout/Http/Controllers/WebhookController.php`
 - `TicketTier` imported and used ✅
 - `TicketTier::where('id', ...)->lockForUpdate()->first()` when incrementing `sold_count` ✅
 - `TicketInventory::where('ticket_tier_id', ...)->lockForUpdate()->first()` when incrementing `total_sold` ✅
@@ -41,7 +41,7 @@
 - All processing wrapped in `DB::transaction()` ✅
 
 ### [x] 5. Add Validation in `UpdateTicketTiersRequest`
-- **File:** `backend/app/Features/Ticketing/Requests/UpdateTicketTiersRequest.php`
+- **File:** `backend/app/Features/ticketing/Requests/UpdateTicketTiersRequest.php`
 - `withValidator()` method implements custom after-validation hook ✅
 - **NEW tiers validation:** `sales_start_date` cannot be in the past (`$startDate->isPast()`) ✅
 - **EXISTING tiers validation:** Ensures `sold_count <= quantity` when both are provided ✅

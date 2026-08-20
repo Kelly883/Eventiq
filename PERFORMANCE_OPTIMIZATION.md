@@ -16,7 +16,7 @@ Added indexes:
 
 ## Checkout query optimization
 
-File: `backend/app/Features/Checkout/Http/Controllers/CheckoutController.php`
+File: `backend/app/Features/checkout/Http/Controllers/CheckoutController.php`
 
 `createPaymentIntent()` now:
 - Groups request items by tier before validation
@@ -29,9 +29,9 @@ This removes per-item lock/query churn and improves performance under multi-item
 ## Payment + fraud HTTP resilience
 
 Files:
-- `backend/app/Features/Payment/Services/PaystackService.php`
-- `backend/app/Features/Payment/Services/FlutterwaveService.php`
-- `backend/app/Features/Fraud/Services/FraudDetectionService.php`
+- `backend/app/Features/payment/Services/PaystackService.php`
+- `backend/app/Features/payment/Services/FlutterwaveService.php`
+- `backend/app/Features/fraud/Services/FraudDetectionService.php`
 
 Added:
 - `timeout(5)` default for outbound payment/fraud HTTP calls
@@ -53,6 +53,6 @@ Default behavior now avoids aggressive refetch-on-focus for non-critical queries
 
 ## Offline sync batching
 
-File: `backend/app/Features/OfflineSync/Services/OfflineSyncEngine.php`
+File: `backend/app/Features/offline-sync/Services/OfflineSyncEngine.php`
 
 `applyDueQueue()` now processes due records in chunks (`offline_sync.apply_batch_size`, default `25`) and logs progress metrics for long-running queue drains.

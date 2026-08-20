@@ -8,5 +8,5 @@ Goals:
 - **Maintainability**: separate offline infrastructure (queue/retry/storage/sync engine)
   from offline domain workflows (what operations get queued/synced).
 
-See `backend/app/Features/OfflineSync/docs/` (to be added).
+See `backend/app/Features/offline-sync/docs/` (to be added).
 
