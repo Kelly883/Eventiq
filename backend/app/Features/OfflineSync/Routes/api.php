@@ -6,5 +6,6 @@ use App\Features\OfflineSync\Controllers\OfflineSyncController;
 Route::prefix('offline-sync')->middleware('auth:sanctum')->group(function () {
     Route::post('/enqueue', [OfflineSyncController::class, 'enqueue']);
     Route::post('/apply-due', [OfflineSyncController::class, 'applyDue']);
+    Route::get('/tickets', [OfflineSyncController::class, 'sync']);
 });
 

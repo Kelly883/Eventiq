@@ -2,7 +2,10 @@
 
 namespace App\Features\OfflineSync\Controllers;
 
+use App\Features\OfflineSync\Resources\OfflineSyncResponse;
+use App\Features\OfflineSync\Resources\OfflineTicketResource;
 use App\Features\OfflineSync\Services\OfflineSyncEngine;
+use App\Models\PushNotificationDevice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
@@ -75,6 +78,53 @@ class OfflineSyncController
         $results = $engine->applyDueQueue($limit);
 
         return response()->json(['results' => $results]);
+    }
+
+    public function sync(Request $request)
+    {
+        $deviceToken = $this->deviceToken($request);
+
+        $device = PushNotificationDevice::where('token', $deviceToken)
+            ->where('offline_enabled', true)
+            ->firstOrFail();
+
+        $user = $device->user;
+        $lastSyncAt = $request->query('last_sync_at');
+        $syncVersion = (int) $request->query('sync_version', 0);
+
+        $eventsQuery = \App\Models\Event::where('organizer_id', $user->id)
+            ->orWhere('user_id', $user->id);
+
+        $eventIds = $eventsQuery->pluck('id')->all();
+
+        $ticketsQuery = \App\Features\Checkout\Models\Ticket::whereIn('event_id', $eventIds)
+            ->with(['event', 'ticketTier', 'order']);
+
+        if ($lastSyncAt) {
+            $ticketsQuery->where('updated_at', '>', $lastSyncAt);
+        }
+
+        $tickets = $ticketsQuery->get();
+
+        $ticketResources = OfflineTicketResource::collection($tickets)->toArray($request);
+
+        $deletedTicketIds = [];
+        if ($lastSyncAt) {
+            $deletedTicketIds = \App\Features\Checkout\Models\Ticket::whereIn('event_id', $eventIds)
+                ->whereIn('status', ['void', 'cancelled'])
+                ->where('updated_at', '>', $lastSyncAt)
+                ->pluck('id')
+                ->map(fn ($id) => (string) $id)
+                ->all();
+        }
+
+        $payload = [
+            'tickets' => $ticketResources,
+            'syncVersion' => $syncVersion + 1,
+            'deletedTicketIds' => $deletedTicketIds,
+        ];
+
+        return new OfflineSyncResponse($payload);
     }
 }
 
