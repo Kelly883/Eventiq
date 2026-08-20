@@ -7,7 +7,6 @@ import type {
   AuditLog,
   DashboardMetrics,
   DashboardAlert,
-  TicketPurgeResponse,
 } from './admin.types';
 
 export interface PaginatedResponse<T> {
@@ -45,11 +44,4 @@ export interface DashboardMetricsResponse {
 
 export interface DashboardAlertsResponse {
   readonly data: DashboardAlert[];
-}
-
-export interface TicketPurgeResponse {
-  readonly success: boolean;
-  readonly message: string;
-  readonly ticketId: string;
-  readonly checkInsPreserved: number;
 }

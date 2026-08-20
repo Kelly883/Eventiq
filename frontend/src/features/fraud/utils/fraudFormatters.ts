@@ -1,4 +1,4 @@
-import type { DetectionMethod, EventType, FraudEventStatus, RiskLevel } from './fraud';
+import type { DetectionMethod, EventType, FraudEventStatus, RiskLevel } from '../types/fraud';
 import { formatCurrency as formatCurrencyValue } from '@/lib/currencyUtils';
 
 export function formatRiskScore(score: number): string {

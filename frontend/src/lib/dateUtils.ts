@@ -54,10 +54,13 @@ export function normalizeSalesDate(input: string | Date | null | undefined): Dat
 export function formatSalesWindow(salesStartDate: string | Date | null | undefined, salesEndDate: string | Date | null | undefined, pattern = 'MMM d, yyyy HH:mm'): string {
   const start = normalizeSalesDate(salesStartDate);
   const end = normalizeSalesDate(salesEndDate);
+  if (start && end) {
+    return `${format(start, pattern)} — ${format(end, pattern)}`;
+  }
   if (!start && !end) return 'No sales window';
   if (start && !end) return `Starts ${format(start, pattern)}`;
   if (!start && end) return `Until ${format(end, pattern)}`;
-  return `${format(start, pattern)} — ${format(end, pattern)}`;
+  return '';
 }
 
 export function isSalesWindowActive(salesStartDate: string | Date | null | undefined, salesEndDate: string | Date | null | undefined, now: Date = new Date()): boolean {

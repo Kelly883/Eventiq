@@ -53,9 +53,9 @@ function getDB(): Promise<IDBPDatabase> {
         let ticketStore: IDBPObjectStore<unknown, ArrayLike<string>, string, 'versionchange'>;
 
         if (!db.objectStoreNames.contains(TICKETS_STORE)) {
-          ticketStore = db.createObjectStore(TICKETS_STORE, { keyPath: 'id' });
+          ticketStore = db.createObjectStore(TICKETS_STORE, { keyPath: 'id' }) as IDBPObjectStore<unknown, ArrayLike<string>, string, 'versionchange'>;
         } else {
-          ticketStore = transaction.objectStore(TICKETS_STORE);
+          ticketStore = transaction.objectStore(TICKETS_STORE) as IDBPObjectStore<unknown, ArrayLike<string>, string, 'versionchange'>;
         }
 
         if (oldVersion < 2) {

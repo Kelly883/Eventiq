@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import mixpanel from 'mixpanel-browser';
 
 const token = import.meta.env.VITE_MIXPANEL_TOKEN;
