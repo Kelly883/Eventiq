@@ -21,6 +21,8 @@ class OfflineSyncResponse extends JsonResource
             'lastSyncedAt' => now()->toIso8601String(),
             'isSyncing' => false,
             'syncError' => null,
+            'syncVersion' => $this->resource['syncVersion'] ?? null,
+            'serverTime' => now()->toIso8601String(),
         ];
     }
 }

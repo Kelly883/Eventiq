@@ -11,9 +11,14 @@ export interface OfflineTicket {
   readonly eventStartDate: string | null;
   readonly ticketTierId: string;
   readonly tierName: string | null;
-  readonly qrCodeData: string;
+  readonly qrCodeData: string | null;
   readonly orderId: string;
   readonly orderNumber: string | null;
+  readonly attendeeName: string | null;
+  readonly attendeeEmail: string | null;
+  readonly status: string;
+  readonly checkedInAt: string | null;
+  readonly qrCodeExpiresAt: string | null;
 }
 
 export interface OfflineSyncState {
@@ -21,4 +26,6 @@ export interface OfflineSyncState {
   readonly lastSyncedAt: string;
   readonly isSyncing: boolean;
   readonly syncError?: string;
+  readonly syncVersion?: number;
+  readonly serverTime?: string;
 }
