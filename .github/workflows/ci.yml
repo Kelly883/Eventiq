@@ -34,7 +34,7 @@ jobs:
         run: php artisan test --no-interaction
 
   frontend:
-    name: Frontend Lint
+    name: Frontend Lint and Type Checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -54,3 +54,7 @@ jobs:
       - name: Run lint
         working-directory: frontend
         run: npm run lint
+
+      - name: Run enum sync check
+        working-directory: frontend
+        run: npm run check:enums
