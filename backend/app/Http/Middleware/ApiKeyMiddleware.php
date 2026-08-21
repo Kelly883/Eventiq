@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\ApiKey;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -24,11 +25,15 @@ class ApiKeyMiddleware
             return $this->unauthorized();
         }
 
-        $apiKey->forceFill(['last_used_at' => now()])->save();
-
         $request->attributes->set('api_key', $apiKey);
         $request->attributes->set('api_key_scopes', $apiKey->scopes ?? []);
         $request->attributes->set('organizer', $apiKey->organizer);
+
+        if ($this->isRateLimited($apiKey)) {
+            return $this->rateLimited();
+        }
+
+        $apiKey->use($request->ip());
 
         return $next($request);
     }
@@ -60,10 +65,38 @@ class ApiKeyMiddleware
         return $prefix !== '' ? $prefix : null;
     }
 
+    private function isRateLimited(ApiKey $apiKey): bool
+    {
+        if (! $apiKey->rate_limit || ! $apiKey->rate_limit_period) {
+            return false;
+        }
+
+        $windowSeconds = match ($apiKey->rate_limit_period) {
+            'minute', 'minutes' => 60,
+            'hour', 'hours' => 3600,
+            'day', 'days' => 86400,
+            'month', 'months' => 2592000,
+            default => (int) $apiKey->rate_limit_period,
+        };
+
+        $key = "api_key_rate_limit:{$apiKey->id}:" . (int) (now()->timestamp / $windowSeconds);
+
+        $current = Cache::increment($key, 1, $windowSeconds);
+
+        return $apiKey->isRateLimited($current);
+    }
+
     private function unauthorized(): Response
     {
         return response()->json([
             'message' => 'Unauthenticated. Invalid, revoked, or expired API key.',
         ], 401);
+    }
+
+    private function rateLimited(): Response
+    {
+        return response()->json([
+            'message' => 'Rate limit exceeded. Try again later.',
+        ], 429);
     }
 }
