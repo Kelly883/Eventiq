@@ -124,8 +124,22 @@ function App() {
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/dashboard/organizer" element={<OrganizerDashboardPage />} />
-            <Route path="/organizer/events/:eventId/inventory" element={<TicketInventoryDashboardPage />} />
-            <Route path="/organizer/events/:eventId/inventory/adjust" element={<AdjustInventoryModal />} />
+            <Route
+              path="/organizer/events/:eventId/inventory"
+              element={
+                <ProtectedRoute>
+                  <TicketInventoryDashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/events/:eventId/inventory/adjust"
+              element={
+                <ProtectedRoute>
+                  <AdjustInventoryModal />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/check-in" element={<CheckInDashboardPage />} />
             <Route path="/venue-scan" element={<VenueCheckInPage />} />
             <Route path="/dashboard/user" element={<UserDashboardPage />} />

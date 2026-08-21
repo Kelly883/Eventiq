@@ -49,6 +49,9 @@ class Organizer extends Model
         'flutterwave_business_reference',
         'flutterwave_connect_status',
         'flutterwave_connected_at',
+        'stripe_account_id',
+        'stripe_connect_status',
+        'stripe_connected_at',
     ];
 
     protected $casts = [
@@ -66,6 +69,7 @@ class Organizer extends Model
         'deletedAt' => 'datetime',
         'paystack_connected_at' => 'datetime',
         'flutterwave_connected_at' => 'datetime',
+        'stripe_connected_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -118,6 +122,16 @@ class Organizer extends Model
     public function payouts(): HasMany
     {
         return $this->hasMany(\App\Features\Payment\Models\OrganizerPayout::class);
+    }
+
+    public function isStripeConnected(): bool
+    {
+        return $this->stripe_connect_status === 'enabled';
+    }
+
+    public function getConnectionStatus(): string
+    {
+        return $this->stripe_connect_status ?? 'not_connected';
     }
 
     public function setSocialLinksAttribute($value): ?array

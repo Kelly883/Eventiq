@@ -146,6 +146,11 @@ class User extends Authenticatable
             ->first();
     }
 
+    public function isStripeCustomer(): bool
+    {
+        return ! empty($this->stripe_account_id);
+    }
+
     public function hasPaystackCustomer(): bool
     {
         return ! empty($this->paystack_customer_code);

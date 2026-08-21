@@ -13,6 +13,8 @@ class LanguagePreference extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
 
+    protected $keyType = 'string';
+
     protected $table = 'localization_preferences';
 
     protected $fillable = [

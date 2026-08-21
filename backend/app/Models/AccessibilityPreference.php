@@ -13,6 +13,8 @@ class AccessibilityPreference extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
 
+    protected $keyType = 'string';
+
     protected $fillable = [
         'user_id',
         'font_size',

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class ApiKey extends Model
@@ -62,7 +63,7 @@ class ApiKey extends Model
 
     public function checkKey(string $rawKey): bool
     {
-        return hash('sha256', $rawKey) === $this->hashed_key;
+        return Hash::check($rawKey, $this->hashed_key);
     }
 
     public function scopeForOrganizer($query, string $organizerId)

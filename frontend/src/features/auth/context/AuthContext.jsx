@@ -7,19 +7,24 @@ const AUTH_TOKEN_STORAGE_KEY = 'authToken';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(() => localStorage.getItem(AUTH_TOKEN_STORAGE_KEY));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-    if (!token) {
+    const storedToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    if (!storedToken) {
       setLoading(false);
       return;
     }
 
     api.get('/auth/me')
-      .then((res) => setUser(res.data))
+      .then((res) => {
+        setUser(res.data);
+        setToken(storedToken);
+      })
       .catch(() => {
         localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+        setToken(null);
         setUser(null);
       })
       .finally(() => setLoading(false));
@@ -29,6 +34,7 @@ export const AuthProvider = ({ children }) => {
     const response = await api.post('/auth/login', { email, password });
     const { token, user } = response.data;
     localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+    setToken(token);
     setUser(user);
     return user;
   }, []);
@@ -37,12 +43,14 @@ export const AuthProvider = ({ children }) => {
     const response = await api.post('/auth/register', { email, password, name });
     const { token, user } = response.data;
     localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+    setToken(token);
     setUser(user);
     return user;
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    setToken(null);
     setUser(null);
   }, []);
 
@@ -53,6 +61,7 @@ export const AuthProvider = ({ children }) => {
   const resetPassword = useCallback(async (token, newPassword) => {
     await api.post('/auth/reset-password', { token, newPassword });
     localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    setToken(null);
     setUser(null);
   }, []);
 
@@ -61,7 +70,7 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, checkAdminAccess, login, register, logout, forgotPassword, resetPassword }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated: Boolean(user), loading, checkAdminAccess, login, register, logout, forgotPassword, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );
