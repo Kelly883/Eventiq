@@ -62,4 +62,14 @@ class WebhookDeliveryLog extends Model
     {
         return $query->whereIn('status', ['failed', 'error']);
     }
+
+    public function scopeByAttempt($query, int $attemptNumber)
+    {
+        return $query->where('attempt_number', $attemptNumber);
+    }
+
+    public function scopeLatestAttempt($query)
+    {
+        return $query->orderByDesc('attempt_number');
+    }
 }

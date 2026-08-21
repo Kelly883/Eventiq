@@ -55,10 +55,25 @@ class ApiKey extends Model
 
     public function use(string $ipAddress = null): void
     {
-        $this->update([
-            'last_used_at' => now(),
-            'last_used_ip' => $ipAddress,
-        ]);
+        $query = self::whereKey($this->getKey());
+
+        if (! $this->usesTimestamps) {
+            $query->update([
+                'last_used_at' => now(),
+                'last_used_ip' => $ipAddress,
+            ]);
+        } else {
+            $query->update([
+                'last_used_at' => now(),
+                'last_used_ip' => $ipAddress,
+                'updated_at' => now(),
+            ]);
+
+            $this->last_used_at = now();
+            $this->last_used_ip = $ipAddress;
+            $this->updated_at = now();
+            $this->syncOriginal();
+        }
     }
 
     public function scopeForOrganizer($query, string $organizerId)
