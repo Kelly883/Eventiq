@@ -67,6 +67,16 @@ class PaymentMethod extends Model
         'exp_year' => 'integer',
     ];
 
+    protected $hidden = [
+        'details',
+        'paystack_customer_code',
+        'flutterwave_customer_id',
+        'last_four',
+        'account_number_last4',
+        'bank_name',
+        'account_name',
+    ];
+
     protected static array $validationRules = [
         'gateway' => 'required|in:paystack,flutterwave',
         'type' => 'required|in:card,bank_transfer,ussd,qr,mobile_money',
@@ -110,6 +120,20 @@ class PaymentMethod extends Model
     public function isDefault(): bool
     {
         return (bool) $this->is_default;
+    }
+
+    public function isExpired(): bool
+    {
+        if (! $this->exp_month || ! $this->exp_year) {
+            return false;
+        }
+
+        $now = now();
+        $expiry = \Carbon\Carbon::create($this->exp_year, $this->exp_month, 1, 0, 0, 0)
+            ->addMonth()
+            ->endOfMonth();
+
+        return $now->greaterThan($expiry);
     }
 
     public function getProviderCustomerReference(): ?string

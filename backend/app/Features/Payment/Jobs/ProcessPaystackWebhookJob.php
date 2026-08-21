@@ -35,6 +35,15 @@ class ProcessPaystackWebhookJob implements ShouldQueue
             return;
         }
 
+        $webhookEventId = (string) data_get($this->payload, 'data.id', '');
+        if ($webhookEventId !== '' && $payment->webhook_event_id === $webhookEventId) {
+            return;
+        }
+
+        if (in_array($payment->status, ['success', 'failed', 'cancelled', 'refunded'], true)) {
+            return;
+        }
+
         try {
             $verification = $paystack->verifyTransaction($reference);
         } catch (\Throwable $e) {
@@ -54,6 +63,7 @@ class ProcessPaystackWebhookJob implements ShouldQueue
         $payment->update([
             'status' => $status,
             'gateway_response' => $verification,
+            'webhook_event_id' => $webhookEventId,
         ]);
 
         Order::query()->whereKey($payment->order_id)->update([

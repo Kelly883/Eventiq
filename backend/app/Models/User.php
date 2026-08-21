@@ -151,6 +151,11 @@ class User extends Authenticatable
         return $this->paymentMethods()->whereNull('deleted_at')->exists();
     }
 
+    public function hasPaymentMethod(): bool
+    {
+        return $this->hasPaymentMethods();
+    }
+
     public function hasPaystackPaymentMethod(): bool
     {
         return $this->paymentMethods()->where('gateway', 'paystack')->whereNull('deleted_at')->exists();

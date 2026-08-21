@@ -96,6 +96,15 @@ class Payment extends Model
         'status' => PaymentStatus::class,
     ];
 
+    protected $hidden = [
+        'gateway_response',
+        'authorization_code',
+        'customer_code',
+        'last_error',
+        'webhook_event_id',
+        'webhook_idempotency_key',
+    ];
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);

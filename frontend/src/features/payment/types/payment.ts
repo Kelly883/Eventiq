@@ -9,6 +9,8 @@ export interface PaymentMethod {
   readonly expiryYear?: number;
   readonly details?: Record<string, unknown>;
   readonly isDefault: boolean;
+  readonly paystackCustomerCode?: string;
+  readonly flutterwaveCustomerId?: string;
   readonly createdAt?: string;
   readonly updatedAt?: string;
 }
@@ -27,6 +29,26 @@ export interface Payment {
   readonly paidAt?: string;
   readonly createdAt?: string;
   readonly updatedAt?: string;
+}
+
+export interface Transaction extends Payment {
+  readonly organizerId?: string;
+  readonly orderId?: string;
+  readonly eventId?: string;
+  readonly ticketId?: string;
+  readonly gatewayReference?: string;
+  readonly authorizationCode?: string;
+  readonly authorizationType?: string;
+  readonly fees?: number;
+  readonly netAmount?: number;
+  readonly paymentChannel?: string;
+  readonly customerEmail?: string;
+  readonly customerCode?: string;
+  readonly lastError?: string;
+  readonly refundedAmount?: number;
+  readonly refundReference?: string;
+  readonly isFullyRefunded?: boolean;
+  readonly attempts?: number;
 }
 
 export interface PaystackPaymentResponse {

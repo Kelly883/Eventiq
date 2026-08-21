@@ -38,6 +38,17 @@ class ProcessFlutterwaveWebhookJob implements ShouldQueue
             return;
         }
 
+        $webhookEventId = (string) (data_get($this->payload, 'data.id')
+            ?? data_get($this->payload, 'id')
+            ?? '');
+        if ($webhookEventId !== '' && $payment->webhook_event_id === $webhookEventId) {
+            return;
+        }
+
+        if (in_array($payment->status, ['success', 'failed', 'cancelled', 'refunded'], true)) {
+            return;
+        }
+
         try {
             $verification = $flutterwave->verifyTransaction($reference);
         } catch (\Throwable $e) {
@@ -57,6 +68,7 @@ class ProcessFlutterwaveWebhookJob implements ShouldQueue
         $payment->update([
             'status' => $status,
             'gateway_response' => $verification,
+            'webhook_event_id' => $webhookEventId,
         ]);
 
         Order::query()->whereKey($payment->order_id)->update([

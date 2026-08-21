@@ -75,6 +75,15 @@ class Transaction extends Model
         'gateway_response' => 'array',
     ];
 
+    protected $hidden = [
+        'gateway_response',
+        'authorization_code',
+        'customer_code',
+        'last_error',
+        'webhook_event_id',
+        'webhook_idempotency_key',
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
