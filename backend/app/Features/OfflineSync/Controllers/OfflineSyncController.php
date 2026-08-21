@@ -5,7 +5,7 @@ namespace App\Features\OfflineSync\Controllers;
 use App\Features\OfflineSync\Resources\OfflineSyncResponse;
 use App\Features\OfflineSync\Resources\OfflineTicketResource;
 use App\Features\OfflineSync\Services\OfflineSyncEngine;
-use App\Models\PushNotificationDevice;
+use App\Features\PushNotifications\Models\PushNotificationDevice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
