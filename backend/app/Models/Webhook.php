@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Organizer;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -43,7 +44,7 @@ class Webhook extends Model
 
     public function organizer(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Organizer::class);
     }
 
     public function deliveryLogs(): HasMany

@@ -139,19 +139,21 @@ class AuditLog extends Model
             'event_cancelled' => 'Event Cancelled',
             'payment_processed' => 'Payment Processed',
             'payment_refunded' => 'Payment Refunded',
-            'refund_requested' => 'Refund Requested',
+            'refund.requested' => 'Refund Requested',
             'refund_approved' => 'Refund Approved',
             'refund_rejected' => 'Refund Rejected',
             'payout_approved' => 'Payout Approved',
             'payout_rejected' => 'Payout Rejected',
             'ticket_checked_in' => 'Ticket Checked In',
             'ticket_voided' => 'Ticket Voided',
+            'ticket.purged' => 'Ticket Purged',
             'fraud_flagged' => 'Fraud Flagged',
             'fraud_approved' => 'Fraud Approved',
             'admin_setting_changed' => 'Admin Setting Changed',
             'user_permission_changed' => 'User Permission Changed',
             'data_export_requested' => 'Data Export Requested',
-            default => ucfirst(str_replace('_', ' ', $this->action)),
+            'check_in' => 'Check In',
+            default => ucfirst(str_replace(['_', '.'], ' ', $this->action)),
         };
     }
 }
