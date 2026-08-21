@@ -30,6 +30,7 @@ class OfflineTicketResource extends JsonResource
             'attendeeName' => $ticket->attendee_name ?? null,
             'attendeeEmail' => $ticket->attendee_email ?? null,
             'status' => $ticket->status ?? 'valid',
+            'refundStatus' => $ticket->refund_status ?? null,
             'checkedInAt' => $ticket->checked_in_at?->toIso8601String(),
             'checkedInBy' => $ticket->checked_in_by ?? null,
             'qrCodeExpiresAt' => $ticket->qr_code_expires_at?->toIso8601String(),

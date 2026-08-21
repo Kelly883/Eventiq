@@ -23,6 +23,7 @@ export interface OfflineTicket {
   readonly attendeeName: string | null;
   readonly attendeeEmail: string | null;
   readonly status: string;
+  readonly refundStatus: string | null;
   readonly checkedInAt: string | null;
   readonly checkedInBy: string | null;
   readonly qrCodeExpiresAt: string | null;

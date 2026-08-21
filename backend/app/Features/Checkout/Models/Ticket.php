@@ -53,6 +53,7 @@ class Ticket extends Model
         'attendee_email',
         'tier',
         'status',
+        'refund_status',
         'qr_code_data',
         'qr_code_secret',
         'qr_code_generated_at',
