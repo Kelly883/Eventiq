@@ -14,25 +14,46 @@ return new class extends Migration
         }
 
         $columnsToAdd = [
-            'user_id' => 'uuid NULL AFTER order_id',
-            'organizer_id' => 'uuid NULL AFTER user_id',
-            'event_id' => 'uuid NULL AFTER organizer_id',
-            'ticket_id' => 'uuid NULL AFTER event_id',
-            'gateway_transaction_id' => 'varchar(255) NULL AFTER gateway_reference',
-            'authorization_code' => 'varchar(255) NULL AFTER gateway_transaction_id',
-            'authorization_type' => 'varchar(100) NULL AFTER authorization_code',
-            'customer_email' => 'varchar(255) NULL AFTER payment_channel',
-            'customer_code' => 'varchar(255) NULL AFTER customer_email',
-            'paid_at' => 'datetime NULL AFTER last_error',
-            'refund_reference' => 'varchar(255) NULL AFTER refund_reason',
-            'webhook_event_id' => 'varchar(255) NULL AFTER webhook_idempotency_key',
-            'webhook_idempotency_key' => 'varchar(255) NULL AFTER attempts',
+            'user_id' => 'uuid',
+            'organizer_id' => 'uuid',
+            'event_id' => 'uuid',
+            'ticket_id' => 'uuid',
+            'gateway_transaction_id' => 'string',
+            'authorization_code' => 'string',
+            'authorization_type' => 'string',
+            'customer_email' => 'string',
+            'customer_code' => 'string',
+            'paid_at' => 'dateTime',
+            'refund_reference' => 'string',
+            'webhook_event_id' => 'string',
+            'webhook_idempotency_key' => 'string',
         ];
 
-        foreach ($columnsToAdd as $column => $definition) {
+        $lengths = [
+            'gateway_transaction_id' => 255,
+            'authorization_code' => 255,
+            'authorization_type' => 100,
+            'customer_email' => 255,
+            'customer_code' => 255,
+            'refund_reference' => 255,
+            'webhook_event_id' => 255,
+            'webhook_idempotency_key' => 255,
+        ];
+
+        foreach ($columnsToAdd as $column => $type) {
             if (! Schema::hasColumn('payments', $column)) {
                 try {
-                    DB::statement("ALTER TABLE payments ADD COLUMN {$column} {$definition}");
+                    Schema::table('payments', function (Blueprint $table) use ($column, $type, $lengths) {
+                        if ($type === 'uuid') {
+                            $table->uuid($column)->nullable();
+                        } elseif ($type === 'dateTime') {
+                            $table->dateTime($column)->nullable();
+                        } elseif ($type === 'string' && isset($lengths[$column])) {
+                            $table->string($column, $lengths[$column])->nullable();
+                        } else {
+                            $table->string($column)->nullable();
+                        }
+                    });
                 } catch (\Throwable $e) {
                     // Column may already exist
                 }
@@ -46,19 +67,19 @@ return new class extends Migration
                 $existingIndexes[] = $index->name;
             }
 
-            if (! in_array('idx_payments_organizer_id', $existingIndexes)) {
+            if (Schema::hasColumn('payments', 'organizer_id') && ! in_array('idx_payments_organizer_id', $existingIndexes)) {
                 Schema::table('payments', function (Blueprint $table) {
                     $table->index('organizer_id', 'idx_payments_organizer_id');
                 });
             }
 
-            if (! in_array('idx_payments_event_id', $existingIndexes)) {
+            if (Schema::hasColumn('payments', 'event_id') && ! in_array('idx_payments_event_id', $existingIndexes)) {
                 Schema::table('payments', function (Blueprint $table) {
                     $table->index('event_id', 'idx_payments_event_id');
                 });
             }
 
-            if (! in_array('idx_payments_webhook_idempotency_key', $existingIndexes)) {
+            if (Schema::hasColumn('payments', 'webhook_idempotency_key') && ! in_array('idx_payments_webhook_idempotency_key', $existingIndexes)) {
                 Schema::table('payments', function (Blueprint $table) {
                     $table->unique('webhook_idempotency_key', 'idx_payments_webhook_idempotency_key');
                 });
