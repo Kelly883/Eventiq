@@ -98,7 +98,7 @@ class OfflineSyncController
         $eventIds = $eventsQuery->pluck('id')->all();
 
         $ticketsQuery = \App\Features\Checkout\Models\Ticket::whereIn('event_id', $eventIds)
-            ->with(['event', 'ticketTier', 'order']);
+            ->with(['event', 'event.organizer', 'ticketTier', 'order']);
 
         if ($lastSyncAt) {
             $ticketsQuery->where('updated_at', '>', $lastSyncAt);
