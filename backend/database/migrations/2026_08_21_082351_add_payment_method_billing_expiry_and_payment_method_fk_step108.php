@@ -10,14 +10,30 @@ return new class extends Migration
     {
         if (Schema::hasTable('payment_methods')) {
             Schema::table('payment_methods', function (Blueprint $table) {
-                $table->dateTime('expires_at')->nullable()->after('exp_year');
-                $table->string('billing_name')->nullable()->after('account_name');
-                $table->string('billing_email')->nullable()->after('billing_name');
-                $table->string('billing_phone')->nullable()->after('billing_email');
-                $table->string('billing_address')->nullable()->after('billing_phone');
-                $table->string('billing_city')->nullable()->after('billing_address');
-                $table->string('billing_country', 2)->nullable()->after('billing_city');
-                $table->string('billing_zip')->nullable()->after('billing_country');
+                if (! Schema::hasColumn('payment_methods', 'expires_at')) {
+                    $table->dateTime('expires_at')->nullable()->after('exp_year');
+                }
+                if (! Schema::hasColumn('payment_methods', 'billing_name')) {
+                    $table->string('billing_name')->nullable()->after('account_name');
+                }
+                if (! Schema::hasColumn('payment_methods', 'billing_email')) {
+                    $table->string('billing_email')->nullable()->after('billing_name');
+                }
+                if (! Schema::hasColumn('payment_methods', 'billing_phone')) {
+                    $table->string('billing_phone')->nullable()->after('billing_email');
+                }
+                if (! Schema::hasColumn('payment_methods', 'billing_address')) {
+                    $table->string('billing_address')->nullable()->after('billing_phone');
+                }
+                if (! Schema::hasColumn('payment_methods', 'billing_city')) {
+                    $table->string('billing_city')->nullable()->after('billing_address');
+                }
+                if (! Schema::hasColumn('payment_methods', 'billing_country')) {
+                    $table->string('billing_country', 2)->nullable()->after('billing_city');
+                }
+                if (! Schema::hasColumn('payment_methods', 'billing_zip')) {
+                    $table->string('billing_zip')->nullable()->after('billing_country');
+                }
             });
         }
 

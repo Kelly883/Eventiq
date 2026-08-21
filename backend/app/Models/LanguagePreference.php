@@ -35,10 +35,18 @@ class LanguagePreference extends Model
 
     protected static array $validationRules = [
         'user_id' => 'required|string|exists:users,id',
-        'language' => 'required|string|size:2',
+        'language' => 'required|string|size:2|in:en,es,fr,de,it,pt,ru,ar,he,ur,zh,ja,ko,hi,bn,tr,pl,nl,sv,da,fi,no,cs,el,th,vi,id,ms,fil',
         'date_format' => 'in:MM/DD/YYYY,DD/MM/YYYY,YYYY-MM-DD',
         'time_format' => 'in:12-hour,24-hour',
         'number_format' => 'in:comma,period',
+    ];
+
+    public const RTL_LANGUAGES = ['ar', 'he', 'ur'];
+
+    public const SUPPORTED_LANGUAGES = [
+        'en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ar', 'he', 'ur',
+        'zh', 'ja', 'ko', 'hi', 'bn', 'tr', 'pl', 'nl', 'sv', 'da',
+        'fi', 'no', 'cs', 'el', 'th', 'vi', 'id', 'ms', 'fil',
     ];
 
     public function user(): BelongsTo
@@ -92,6 +100,28 @@ class LanguagePreference extends Model
 
     public function detectRTL(): bool
     {
-        return in_array($this->language, ['ar', 'he', 'ur'], true);
+        return in_array($this->language, self::RTL_LANGUAGES, true);
+    }
+
+    public function shouldUseRTL(): bool
+    {
+        return $this->rtl_enabled && $this->detectRTL();
+    }
+
+    public function isPreferredLanguage(string $lang): bool
+    {
+        return strtolower($this->language) === strtolower($lang);
+    }
+
+    public function getLocaleCode(): string
+    {
+        return $this->region
+            ? strtolower($this->language) . '-' . strtoupper($this->region)
+            : strtolower($this->language);
+    }
+
+    public function isRtlLanguage(): bool
+    {
+        return $this->detectRTL();
     }
 }
