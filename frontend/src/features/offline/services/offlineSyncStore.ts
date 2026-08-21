@@ -220,7 +220,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
       syncTickets: async () => {
         if (!get().isOnline) return;
 
-        const { lastSyncAt, syncVersion } = get();
+        const { lastSyncAt, syncVersion, clockDriftOffset } = get();
         set({ isSyncing: true });
 
         try {
@@ -239,6 +239,13 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
           }
 
           await offlineTicketStore.cacheTickets(allTickets);
+
+          if (response.serverTime) {
+            const serverTime = new Date(response.serverTime).getTime();
+            const localTime = Date.now();
+            const drift = serverTime - localTime;
+            set({ clockDriftOffset: drift });
+          }
 
           set({
             lastSyncAt: response.lastSyncedAt,
