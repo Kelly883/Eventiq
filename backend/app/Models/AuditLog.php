@@ -140,6 +140,12 @@ class AuditLog extends Model
         });
     }
 
+    public function scopeGroupByAction($query)
+    {
+        return $query->selectRaw('action, COUNT(*) as count, SUM(CASE WHEN status = "success" THEN 1 ELSE 0 END) as success_count, SUM(CASE WHEN status = "failure" THEN 1 ELSE 0 END) as failure_count')
+            ->groupBy('action');
+    }
+
     public function maskSensitiveData(): array
     {
         $data = $this->toArray();

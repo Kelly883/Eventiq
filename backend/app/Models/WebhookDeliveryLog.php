@@ -72,4 +72,15 @@ class WebhookDeliveryLog extends Model
     {
         return $query->orderByDesc('attempt_number');
     }
+
+    public function scopeByEvent($query, string $event)
+    {
+        return $query->where('event', $event);
+    }
+
+    public function scopeGroupedByEvent($query)
+    {
+        return $query->selectRaw('event, COUNT(*) as total, SUM(CASE WHEN status = "success" THEN 1 ELSE 0 END) as success_count, SUM(CASE WHEN status IN ("failed", "error") THEN 1 ELSE 0 END) as failure_count, AVG(duration_ms) as avg_duration_ms')
+            ->groupBy('event');
+    }
 }

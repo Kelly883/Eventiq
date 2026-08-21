@@ -56,6 +56,16 @@ class Webhook extends Model
         return hash_equals($expected, $signature);
     }
 
+    public function hasSubscribed(string $event): bool
+    {
+        return in_array($event, $this->subscribed_events ?? [], true);
+    }
+
+    public static function validateUrl(string $url): bool
+    {
+        return filter_var($url, FILTER_VALIDATE_URL) !== false;
+    }
+
     public function recordSuccess(): void
     {
         $this->update([

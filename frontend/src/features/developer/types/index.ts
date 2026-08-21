@@ -42,6 +42,30 @@ export interface ApiLog {
   readonly createdAt: string;
 }
 
+export interface ApiKeyListResponse {
+  readonly data: ApiKey[];
+  readonly total: number;
+  readonly perPage: number;
+  readonly currentPage: number;
+  readonly lastPage: number;
+}
+
+export interface WebhookListResponse {
+  readonly data: Webhook[];
+  readonly total: number;
+  readonly perPage: number;
+  readonly currentPage: number;
+  readonly lastPage: number;
+}
+
+export interface WebhookDeliveryLogListResponse {
+  readonly data: WebhookDeliveryLog[];
+  readonly total: number;
+  readonly perPage: number;
+  readonly currentPage: number;
+  readonly lastPage: number;
+}
+
 export interface WebhookDeliveryLog {
   readonly id: string;
   readonly webhookId: string;

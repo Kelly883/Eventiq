@@ -53,6 +53,15 @@ class ApiKey extends Model
         return Hash::check($rawKey, $this->hashed_key);
     }
 
+    public function isRateLimited(int $requestCount): bool
+    {
+        if (! $this->rate_limit || ! $this->rate_limit_period) {
+            return false;
+        }
+
+        return $requestCount >= $this->rate_limit;
+    }
+
     public function use(string $ipAddress = null): void
     {
         $query = self::whereKey($this->getKey());
