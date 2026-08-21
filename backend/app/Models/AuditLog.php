@@ -60,6 +60,7 @@ class AuditLog extends Model
         'retention_date',
         'retention_reason',
         'metadata',
+        'description',
     ];
 
     protected $casts = [
@@ -144,6 +145,89 @@ class AuditLog extends Model
     {
         return $query->selectRaw('action, COUNT(*) as count, SUM(CASE WHEN status = "success" THEN 1 ELSE 0 END) as success_count, SUM(CASE WHEN status = "failure" THEN 1 ELSE 0 END) as failure_count')
             ->groupBy('action');
+    }
+
+    public function scopeLatest($query)
+    {
+        return $query->orderByDesc('created_at');
+    }
+
+    public function scopeOldest($query)
+    {
+        return $query->orderBy('created_at');
+    }
+
+    public function scopeFilter($query, array $filters = [], ?int $perPage = null)
+    {
+        if (! empty($filters['action'])) {
+            $query->byAction($filters['action']);
+        }
+
+        if (! empty($filters['target_type'])) {
+            $query->byTargetType($filters['target_type']);
+        }
+
+        if (! empty($filters['status'])) {
+            $query->byStatus($filters['status']);
+        }
+
+        if (! empty($filters['classification'])) {
+            $query->byClassification($filters['classification']);
+        }
+
+        if (! empty($filters['from']) && ! empty($filters['to'])) {
+            $query->forDateRange($filters['from'], $filters['to']);
+        }
+
+        if (! empty($filters['search'])) {
+            $query->search($filters['search']);
+        }
+
+        if (! empty($filters['user_id'])) {
+            $query->forUser($filters['user_id']);
+        }
+
+        if (! empty($perPage)) {
+            $query->paginate($perPage);
+        }
+
+        return $query;
+    }
+
+    public function getStatusBadgeColor(): string
+    {
+        return match ($this->status) {
+            'success' => 'green',
+            'failure' => 'red',
+            'warning' => 'amber',
+            default => 'gray',
+        };
+    }
+
+    public function getStatusLabel(): string
+    {
+        return match ($this->status) {
+            'success' => 'Success',
+            'failure' => 'Failed',
+            'warning' => 'Warning',
+            default => ucfirst($this->status ?? ''),
+        };
+    }
+
+    public function getTargetName(): ?string
+    {
+        $type = $this->target_type;
+        $targetId = $this->target_id;
+
+        if (empty($type) || empty($targetId)) {
+            return null;
+        }
+
+        return match ($type) {
+            'user' => User::where('id', $targetId)->value('name'),
+            'event' => Event::where('id', $targetId)->value('title'),
+            default => (string) $targetId,
+        };
     }
 
     public function maskSensitiveData(): array
