@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Organizer;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,7 +14,6 @@ class Webhook extends Model
     use HasFactory, HasUuids;
 
     protected $fillable = [
-        'user_id',
         'organizer_id',
         'url',
         'description',
@@ -37,11 +34,6 @@ class Webhook extends Model
         'last_success_at' => 'datetime',
     ];
 
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
     public function organizer(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -57,6 +49,36 @@ class Webhook extends Model
         return hash('sha256', Str::random(32));
     }
 
+    public function isValidSignature(string $payload, string $signature): bool
+    {
+        $expected = hash_hmac('sha256', $payload, $this->secret);
+
+        return hash_equals($expected, $signature);
+    }
+
+    public function recordSuccess(): void
+    {
+        $this->update([
+            'status' => 'active',
+            'failure_count' => 0,
+            'last_success_at' => now(),
+            'last_failure_at' => null,
+        ]);
+    }
+
+    public function recordFailure(string $errorMessage): void
+    {
+        $newCount = $this->failure_count + 1;
+        $retryPolicy = $this->retry_policy ?? [];
+        $maxFailures = $retryPolicy['max_failures'] ?? 10;
+
+        $this->update([
+            'failure_count' => $newCount,
+            'last_failure_at' => now(),
+            'status' => $newCount >= $maxFailures ? 'failed' : 'active',
+        ]);
+    }
+
     public function scopeForOrganizer($query, string $organizerId)
     {
         return $query->where('organizer_id', $organizerId);
@@ -65,5 +87,15 @@ class Webhook extends Model
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
+    }
+
+    public function scopeByEvent($query, string $event)
+    {
+        return $query->whereJsonContains('subscribed_events', $event);
+    }
+
+    public function scopeByStatus($query, string $status)
+    {
+        return $query->where('status', $status);
     }
 }

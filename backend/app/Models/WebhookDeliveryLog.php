@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class WebhookDeliveryLog extends Model
 {
@@ -40,10 +40,26 @@ class WebhookDeliveryLog extends Model
 
     protected $casts = [
         'payload' => 'array',
+        'created_at' => 'datetime',
     ];
 
     public function webhook(): BelongsTo
     {
         return $this->belongsTo(Webhook::class);
+    }
+
+    public function scopeByWebhook($query, string $webhookId)
+    {
+        return $query->where('webhook_id', $webhookId);
+    }
+
+    public function scopeByStatus($query, string $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeFailed($query)
+    {
+        return $query->whereIn('status', ['failed', 'error']);
     }
 }

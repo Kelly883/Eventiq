@@ -2,11 +2,9 @@
 
 namespace App\Models;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -15,7 +13,6 @@ class ApiKey extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
         'organizer_id',
         'name',
         'description',
@@ -41,19 +38,9 @@ class ApiKey extends Model
         'hashed_key',
     ];
 
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
     public function organizer(): BelongsTo
     {
         return $this->belongsTo(Organizer::class);
-    }
-
-    public function auditLogs(): HasMany
-    {
-        return $this->hasMany(AuditLog::class);
     }
 
     public static function generateKey(): string
@@ -64,6 +51,14 @@ class ApiKey extends Model
     public function checkKey(string $rawKey): bool
     {
         return Hash::check($rawKey, $this->hashed_key);
+    }
+
+    public function use(string $ipAddress = null): void
+    {
+        $this->update([
+            'last_used_at' => now(),
+            'last_used_ip' => $ipAddress,
+        ]);
     }
 
     public function scopeForOrganizer($query, string $organizerId)
@@ -77,5 +72,10 @@ class ApiKey extends Model
             ->where(function ($q) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
             });
+    }
+
+    public function scopeByScope($query, string $scope)
+    {
+        return $query->whereJsonContains('scopes', $scope);
     }
 }

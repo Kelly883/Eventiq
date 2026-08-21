@@ -6,7 +6,9 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 class AuditLog extends Model
 {
@@ -19,6 +21,11 @@ class AuditLog extends Model
     {
         parent::boot();
 
+        Relation::morphMap([
+            'user' => User::class,
+            'event' => Event::class,
+        ]);
+
         static::creating(function ($model) {
             if (empty($model->{$model->getKeyName()})) {
                 $model->{$model->getKeyName()} = (string) \Illuminate\Support\Str::uuid();
@@ -26,7 +33,11 @@ class AuditLog extends Model
         });
 
         static::updating(function ($model) {
-            throw new \RuntimeException('audit_logs is immutable and cannot be updated.');
+            $dirty = $model->getDirty();
+            unset($dirty['updated_at'], $dirty['deleted_at']);
+            if (!empty($dirty)) {
+                throw new \RuntimeException('audit_logs is immutable and cannot be updated.');
+            }
         });
     }
 
@@ -65,14 +76,9 @@ class AuditLog extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function admin(): BelongsTo
+    public function target(): MorphTo
     {
-        return $this->belongsTo(User::class, 'user_id');
-    }
-
-    public function targetUser(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'target_id');
+        return $this->morphTo();
     }
 
     public function scopeByAction($query, string $action)
@@ -100,6 +106,11 @@ class AuditLog extends Model
         return $query->where('user_id', $userId);
     }
 
+    public function scopeForUser($query, string $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
     public function scopeForDateRange($query, $start, $end)
     {
         return $query->whereBetween('created_at', [$start, $end]);
@@ -108,6 +119,25 @@ class AuditLog extends Model
     public function scopeRecent($query, int $days = 7)
     {
         return $query->where('created_at', '>=', now()->subDays($days));
+    }
+
+    public function scopeWithRetentionExpired($query, $before = null)
+    {
+        $before = $before ?? now();
+
+        return $query->where('retention_date', '<', $before);
+    }
+
+    public function scopeSearch($query, string $term)
+    {
+        return $query->where(function ($q) use ($term) {
+            $q->where('action', 'like', '%'.$term.'%')
+                ->orWhere('target_type', 'like', '%'.$term.'%')
+                ->orWhere('ip_address', 'like', '%'.$term.'%')
+                ->orWhere('source', 'like', '%'.$term.'%')
+                ->orWhere('error_message', 'like', '%'.$term.'%')
+                ->orWhere('error_code', 'like', '%'.$term.'%');
+        });
     }
 
     public function maskSensitiveData(): array
