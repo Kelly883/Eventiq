@@ -49,9 +49,6 @@ class Organizer extends Model
         'flutterwave_business_reference',
         'flutterwave_connect_status',
         'flutterwave_connected_at',
-        'stripe_account_id',
-        'stripe_connect_status',
-        'stripe_connected_at',
     ];
 
     protected $casts = [
@@ -69,7 +66,6 @@ class Organizer extends Model
         'deletedAt' => 'datetime',
         'paystack_connected_at' => 'datetime',
         'flutterwave_connected_at' => 'datetime',
-        'stripe_connected_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -124,14 +120,24 @@ class Organizer extends Model
         return $this->hasMany(\App\Features\Payment\Models\OrganizerPayout::class);
     }
 
-    public function isStripeConnected(): bool
+    public function isPaystackConnected(): bool
     {
-        return $this->stripe_connect_status === 'enabled';
+        return $this->paystack_connect_status === 'enabled';
     }
 
-    public function getConnectionStatus(): string
+    public function isFlutterwaveConnected(): bool
     {
-        return $this->stripe_connect_status ?? 'not_connected';
+        return $this->flutterwave_connect_status === 'enabled';
+    }
+
+    public function getPaystackConnectionStatus(): string
+    {
+        return $this->paystack_connect_status ?? 'not_connected';
+    }
+
+    public function getFlutterwaveConnectionStatus(): string
+    {
+        return $this->flutterwave_connect_status ?? 'not_connected';
     }
 
     public function setSocialLinksAttribute($value): ?array
@@ -254,26 +260,6 @@ class Organizer extends Model
             'totalEventsCreated' => $this->events()->count(),
             'totalTicketsSold' => $this->tickets()->count(),
         ]);
-    }
-
-    public function isPaystackConnected(): bool
-    {
-        return $this->paystack_connect_status === 'enabled';
-    }
-
-    public function isFlutterwaveConnected(): bool
-    {
-        return $this->flutterwave_connect_status === 'enabled';
-    }
-
-    public function getPaystackConnectionStatus(): string
-    {
-        return $this->paystack_connect_status ?? 'not_connected';
-    }
-
-    public function getFlutterwaveConnectionStatus(): string
-    {
-        return $this->flutterwave_connect_status ?? 'not_connected';
     }
 
     public function hasPaymentProviderConfigured(): bool

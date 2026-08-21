@@ -146,9 +146,19 @@ class User extends Authenticatable
             ->first();
     }
 
-    public function isStripeCustomer(): bool
+    public function hasPaymentMethods(): bool
     {
-        return ! empty($this->stripe_account_id);
+        return $this->paymentMethods()->whereNull('deleted_at')->exists();
+    }
+
+    public function hasPaystackPaymentMethod(): bool
+    {
+        return $this->paymentMethods()->where('gateway', 'paystack')->whereNull('deleted_at')->exists();
+    }
+
+    public function hasFlutterwavePaymentMethod(): bool
+    {
+        return $this->paymentMethods()->where('gateway', 'flutterwave')->whereNull('deleted_at')->exists();
     }
 
     public function hasPaystackCustomer(): bool

@@ -120,6 +120,11 @@ class Transaction extends Model
         return $query->where('organizer_id', $organizerId);
     }
 
+    public function scopeForUser($query, string $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
     public function scopeByGateway($query, string $gateway)
     {
         return $query->where('gateway', $gateway);
