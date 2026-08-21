@@ -17,6 +17,12 @@ return new class extends Migration
             Schema::table('payment_methods', function (Blueprint $table) {
                 $table->string('gateway_payment_method_id')->nullable()->after('gateway');
             });
+
+            DB::table('payment_methods')->whereNull('gateway_payment_method_id')->update(['gateway_payment_method_id' => '']);
+
+            Schema::table('payment_methods', function (Blueprint $table) {
+                $table->string('gateway_payment_method_id')->nullable(false)->default('')->after('gateway')->change();
+            });
         }
 
         try {
