@@ -5,6 +5,8 @@ export type OfflineTicketRecord = {
   event_id?: string | number;
   ticket_code?: string;
   updated_at?: string;
+  eventUpdatedAt?: string;
+  tierUpdatedAt?: string;
   [key: string]: unknown;
 };
 
@@ -101,6 +103,14 @@ export const offlineTicketStore = {
   async getTicketsUpdatedSince(updatedAt: string): Promise<OfflineTicketRecord[]> {
     const db = await getDB();
     return db.getAllFromIndex(TICKETS_STORE, UPDATED_AT_INDEX, IDBKeyRange.lowerBound(updatedAt, true));
+  },
+
+  async removeTickets(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    const db = await getDB();
+    const tx = db.transaction(TICKETS_STORE, 'readwrite');
+    await Promise.all(ids.map((id) => tx.store.delete(id)));
+    await tx.done;
   },
 
   async clearTickets(): Promise<void> {

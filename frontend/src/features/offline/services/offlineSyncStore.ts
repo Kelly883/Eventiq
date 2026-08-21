@@ -3,6 +3,11 @@ import { persist } from 'zustand/middleware';
 import { onlineManager } from '@tanstack/react-query';
 import { api } from '../../../lib/api';
 import { indexedDbStore } from './indexedDbStore';
+import { offlineTicketStore } from './offlineTicketStore';
+import type { OfflineTicketRecord } from './offlineTicketStore';
+import { syncOfflineTickets } from './offlineSyncClient';
+import { computeStaleTickets } from './offlineCacheInvalidation';
+import type { OfflineTicket } from '../types';
 
 export interface QueuedCheckIn {
   id: string; // client-side generated UUID or timestamp
@@ -20,11 +25,14 @@ interface OfflineSyncState {
   isOnline: boolean;
   isSyncing: boolean;
   clockDriftOffset: number;
+  lastSyncAt?: string;
+  syncVersion: number;
   
   // Actions
   setOnlineStatus: (isOnline: boolean) => void;
   enqueueScan: (ticketCode: string, eventId: number | string) => Promise<void>;
   syncQueue: () => Promise<void>;
+  syncTickets: () => Promise<void>;
   clearSyncedHistory: () => void;
   removeFailedScan: (id: string) => Promise<void>;
   loadOfflineQueue: () => Promise<void>;
@@ -42,6 +50,8 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
       isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
       isSyncing: false,
       clockDriftOffset: 0,
+      lastSyncAt: undefined,
+      syncVersion: 0,
 
       setOnlineStatus: (isOnline) => {
         // Sync with React Query onlineManager
@@ -207,6 +217,40 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         set({ isSyncing: false });
       },
 
+      syncTickets: async () => {
+        if (!get().isOnline) return;
+
+        const { lastSyncAt, syncVersion } = get();
+        set({ isSyncing: true });
+
+        try {
+          const response = await syncOfflineTickets(lastSyncAt, syncVersion);
+          const cached = await offlineTicketStore.getTickets();
+          const cachedAsTickets = cached as unknown as OfflineTicket[];
+          const { invalidate } = computeStaleTickets(response.tickets, cachedAsTickets);
+
+          if (invalidate.length > 0) {
+            await offlineTicketStore.removeTickets(invalidate);
+          }
+
+          const allTickets = response.tickets as unknown as OfflineTicketRecord[];
+          if (response.deletedTicketIds && response.deletedTicketIds.length > 0) {
+            await offlineTicketStore.removeTickets(response.deletedTicketIds);
+          }
+
+          await offlineTicketStore.cacheTickets(allTickets);
+
+          set({
+            lastSyncAt: response.lastSyncedAt,
+            syncVersion: response.syncVersion ?? syncVersion,
+            isSyncing: false,
+          });
+        } catch (err) {
+          console.error('Failed to sync tickets:', err);
+          set({ isSyncing: false });
+        }
+      },
+
       clearSyncedHistory: () => {
         set((state) => ({
           history: state.history.filter((h) => h.status !== 'synced'),
@@ -230,6 +274,8 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
       partialize: (state) => ({
         queue: state.queue,
         history: state.history,
+        lastSyncAt: state.lastSyncAt,
+        syncVersion: state.syncVersion,
       }),
     }
   )
@@ -239,6 +285,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
     useOfflineSyncStore.getState().setOnlineStatus(true);
+    useOfflineSyncStore.getState().syncTickets();
   });
   window.addEventListener('offline', () => {
     useOfflineSyncStore.getState().setOnlineStatus(false);
