@@ -1,6 +1,15 @@
 export type PaymentGatewayName = 'flutterwave' | 'paystack';
 
-export type PaymentVerificationStatus = 'pending' | 'verified' | 'failed';
+export type PaymentStatus =
+  | 'initiated'
+  | 'pending'
+  | 'processing'
+  | 'success'
+  | 'failed'
+  | 'refunded'
+  | 'partially_refunded'
+  | 'expired'
+  | 'reversed';
 
 export type PaymentTransactionState =
   | 'initiated'
@@ -12,9 +21,9 @@ export type PaymentTransactionState =
 export interface Transaction {
   readonly id: string;
   readonly userId: string;
-  readonly organizerId: string;
-  readonly orderId: string;
-  readonly eventId: string;
+  readonly organizerId?: string;
+  readonly orderId?: string;
+  readonly eventId?: string;
   readonly ticketId?: string;
   readonly gateway: PaymentGatewayName;
   readonly reference: string;
@@ -22,24 +31,24 @@ export interface Transaction {
   readonly gatewayReference?: string;
   readonly authorizationCode?: string;
   readonly authorizationType?: string;
-  readonly amount: number;
+  readonly amount: string;
   readonly currency: string;
-  readonly fees: number;
-  readonly netAmount: number;
-  readonly status: PaymentVerificationStatus;
-  readonly state?: PaymentTransactionState;
+  readonly fees?: string;
+  readonly netAmount?: string;
   readonly paymentChannel?: string;
   readonly customerEmail?: string;
   readonly customerCode?: string;
   readonly gatewayResponse?: Record<string, unknown>;
   readonly lastError?: string;
   readonly paidAt?: string;
-  readonly refundedAmount: number;
+  readonly refundedAmount?: string;
   readonly refundReference?: string;
-  readonly isFullyRefunded: boolean;
+  readonly isFullyRefunded?: boolean;
   readonly webhookEventId?: string;
   readonly webhookIdempotencyKey?: string;
-  readonly attempts: number;
+  readonly attempts?: number;
+  readonly status: PaymentStatus;
+  readonly state?: PaymentTransactionState;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -49,10 +58,10 @@ export interface Payout {
   readonly organizerId: string;
   readonly gateway: PaymentGatewayName;
   readonly reference: string;
-  readonly status: PaymentVerificationStatus;
-  readonly amount: number;
-  readonly fees: number;
-  readonly netAmount: number;
+  readonly status: PaymentStatus;
+  readonly amount: string;
+  readonly fees: string;
+  readonly netAmount: string;
   readonly currency: string;
   readonly metadata?: Record<string, unknown>;
   readonly paidAt?: string;
@@ -77,7 +86,7 @@ export interface VerifyPaymentDTO {
 export interface PaymentVerifiedDTO {
   readonly gateway: PaymentGatewayName;
   readonly reference: string;
-  readonly status: PaymentVerificationStatus;
+  readonly status: PaymentStatus;
   readonly transactionState: PaymentTransactionState;
   readonly metadata?: Record<string, any>;
 }

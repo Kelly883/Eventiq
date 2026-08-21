@@ -9,6 +9,7 @@ export interface PaymentMethod {
   readonly expiryYear?: number;
   readonly details?: Record<string, unknown>;
   readonly isDefault: boolean;
+  readonly isExpired: boolean;
   readonly paystackCustomerCode?: string;
   readonly flutterwaveCustomerId?: string;
   readonly createdAt?: string;
@@ -29,26 +30,6 @@ export interface Payment {
   readonly paidAt?: string;
   readonly createdAt?: string;
   readonly updatedAt?: string;
-}
-
-export interface Transaction extends Payment {
-  readonly organizerId?: string;
-  readonly orderId?: string;
-  readonly eventId?: string;
-  readonly ticketId?: string;
-  readonly gatewayReference?: string;
-  readonly authorizationCode?: string;
-  readonly authorizationType?: string;
-  readonly fees?: number;
-  readonly netAmount?: number;
-  readonly paymentChannel?: string;
-  readonly customerEmail?: string;
-  readonly customerCode?: string;
-  readonly lastError?: string;
-  readonly refundedAmount?: number;
-  readonly refundReference?: string;
-  readonly isFullyRefunded?: boolean;
-  readonly attempts?: number;
 }
 
 export interface PaystackPaymentResponse {
@@ -113,10 +94,16 @@ export interface FlutterwavePaymentResponse {
 }
 
 export interface OrganizerPaymentSettings {
-  readonly paystackSubaccountCode?: string;
-  readonly paystackConnectStatus?: 'enabled' | 'pending' | 'not_connected' | 'disabled';
-  readonly flutterwaveSubaccountId?: string;
-  readonly flutterwaveConnectStatus?: 'enabled' | 'pending' | 'not_connected' | 'disabled';
-  readonly defaultGateway?: 'paystack' | 'flutterwave';
-  readonly connectedAt?: string;
+  readonly paystackSubaccountCode?: string | null;
+  readonly paystackBusinessName?: string | null;
+  readonly paystackRecipientCode?: string | null;
+  readonly paystackConnectStatus?: 'enabled' | 'pending' | 'not_connected' | 'disabled' | null;
+  readonly paystackConnectedAt?: string | null;
+  readonly flutterwaveSubaccountId?: string | null;
+  readonly flutterwaveBusinessReference?: string | null;
+  readonly flutterwaveConnectStatus?: 'enabled' | 'pending' | 'not_connected' | 'disabled' | null;
+  readonly flutterwaveConnectedAt?: string | null;
+  readonly defaultGateway?: 'paystack' | 'flutterwave' | null;
+  readonly isPaystackConnected: boolean;
+  readonly isFlutterwaveConnected: boolean;
 }
