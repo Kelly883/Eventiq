@@ -24,6 +24,7 @@ export interface OfflineTicket {
   readonly ticketType: string | null;
   readonly pricePaid: string | null;
   readonly paymentStatus: string | null;
+  readonly barcodeType: 'qr' | 'barcode';
 }
 
 export interface OfflineSyncState {

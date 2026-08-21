@@ -31,6 +31,7 @@ class OfflineTicketResource extends JsonResource
             'ticketType' => $ticket->tier ?? null,
             'pricePaid' => $ticket->ticketTier->price ?? null,
             'paymentStatus' => $ticket->order?->status ?? null,
+            'barcodeType' => 'qr',
         ];
     }
 }
