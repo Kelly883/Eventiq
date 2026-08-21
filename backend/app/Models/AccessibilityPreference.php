@@ -34,9 +34,9 @@ class AccessibilityPreference extends Model
         'screen_reader_optimized' => 'boolean',
         'focus_indicator_enhanced' => 'boolean',
         'motion_reduced' => 'boolean',
-        'line_height' => 'decimal:2',
-        'letter_spacing' => 'decimal:3',
-        'word_spacing' => 'decimal:3',
+        'line_height' => 'string',
+        'letter_spacing' => 'string',
+        'word_spacing' => 'string',
     ];
 
     protected static array $validationRules = [
@@ -51,6 +51,36 @@ class AccessibilityPreference extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function isHighContrast(): bool
+    {
+        return (bool) $this->high_contrast;
+    }
+
+    public function isMotionReduced(): bool
+    {
+        return (bool) $this->motion_reduced;
+    }
+
+    public function isScreenReaderOptimized(): bool
+    {
+        return (bool) $this->screen_reader_optimized;
+    }
+
+    public function isFocusIndicatorEnhanced(): bool
+    {
+        return (bool) $this->focus_indicator_enhanced;
+    }
+
+    public function getFontMultiplier(): float
+    {
+        return match (true) {
+            $this->font_size <= 14 => 0.875,
+            $this->font_size <= 18 => 1.0,
+            $this->font_size <= 24 => 1.25,
+            default => 1.5,
+        };
     }
 
     protected static function booted(): void
