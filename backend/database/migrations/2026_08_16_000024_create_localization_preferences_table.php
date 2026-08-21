@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('date_format')->default('MM/DD/YYYY');
             $table->string('time_format')->default('12-hour');
             $table->string('currency')->nullable();
-            $table->string('number_format')->default('comma');
+            $table->string('number_format')->default('period');
             $table->boolean('rtl_enabled')->default(false);
             $table->timestamps();
             $table->softDeletes();

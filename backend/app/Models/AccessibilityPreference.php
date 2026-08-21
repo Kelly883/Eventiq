@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Validator;
 
 class AccessibilityPreference extends Model
 {
@@ -39,6 +40,7 @@ class AccessibilityPreference extends Model
     ];
 
     protected static array $validationRules = [
+        'user_id' => 'required|string|exists:users,id',
         'font_size' => 'integer|min:12|max:24',
         'line_height' => 'numeric|min:1.0|max:2.0',
         'letter_spacing' => 'numeric|min:0|max:0.2',
@@ -51,33 +53,40 @@ class AccessibilityPreference extends Model
         return $this->belongsTo(User::class);
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function ($model) {
+            $rules = static::$validationRules;
+            $validator = Validator::make($model->attributesToArray(), $rules);
+            if ($validator->fails()) {
+                throw new \InvalidArgumentException($validator->errors()->first());
+            }
+        });
+    }
+
     public static function getOrCreateForUser(string $userId): static
     {
-        $preference = static::where('user_id', $userId)->first();
-
-        if ($preference) {
-            return $preference;
-        }
-
-        return static::create([
-            'user_id' => $userId,
-            'font_size' => 16,
-            'high_contrast' => false,
-            'screen_reader_optimized' => false,
-            'focus_indicator_enhanced' => false,
-            'motion_reduced' => false,
-            'line_height' => 1.5,
-            'letter_spacing' => 0.0,
-            'word_spacing' => 0.0,
-            'color_blindness_mode' => 'none',
-        ]);
+        return static::firstOrCreate(
+            ['user_id' => $userId],
+            [
+                'font_size' => 16,
+                'high_contrast' => false,
+                'screen_reader_optimized' => false,
+                'focus_indicator_enhanced' => false,
+                'motion_reduced' => false,
+                'line_height' => 1.5,
+                'letter_spacing' => 0.0,
+                'word_spacing' => 0.0,
+                'color_blindness_mode' => 'none',
+            ]
+        );
     }
 
     public function toArray(): array
     {
         return [
             'id' => $this->id,
-            'userId' => $this->user_id,
+            'userId' => (string) $this->user_id,
             'fontSize' => (int) $this->font_size,
             'highContrast' => (bool) $this->high_contrast,
             'screenReaderOptimized' => (bool) $this->screen_reader_optimized,
@@ -87,6 +96,8 @@ class AccessibilityPreference extends Model
             'letterSpacing' => (float) $this->letter_spacing,
             'wordSpacing' => (float) $this->word_spacing,
             'colorBlindnessMode' => $this->color_blindness_mode,
+            'createdAt' => $this->created_at?->toDateTimeString(),
+            'updatedAt' => $this->updated_at?->toDateTimeString(),
         ];
     }
 }

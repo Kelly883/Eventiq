@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Validator;
 
 class LanguagePreference extends Model
 {
@@ -33,7 +34,8 @@ class LanguagePreference extends Model
     ];
 
     protected static array $validationRules = [
-        'language' => 'string|size:2',
+        'user_id' => 'required|string|exists:users,id',
+        'language' => 'required|string|size:2',
         'date_format' => 'in:MM/DD/YYYY,DD/MM/YYYY,YYYY-MM-DD',
         'time_format' => 'in:12-hour,24-hour',
         'number_format' => 'in:comma,period',
@@ -44,31 +46,38 @@ class LanguagePreference extends Model
         return $this->belongsTo(User::class);
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function ($model) {
+            $rules = static::$validationRules;
+            $validator = Validator::make($model->attributesToArray(), $rules);
+            if ($validator->fails()) {
+                throw new \InvalidArgumentException($validator->errors()->first());
+            }
+        });
+    }
+
     public static function getOrCreateForUser(string $userId): static
     {
-        $preference = static::where('user_id', $userId)->first();
-
-        if ($preference) {
-            return $preference;
-        }
-
-        return static::create([
-            'user_id' => $userId,
-            'language' => 'en',
-            'region' => 'US',
-            'date_format' => 'MM/DD/YYYY',
-            'time_format' => '12-hour',
-            'currency' => 'USD',
-            'number_format' => 'period',
-            'rtl_enabled' => false,
-        ]);
+        return static::firstOrCreate(
+            ['user_id' => $userId],
+            [
+                'language' => 'en',
+                'region' => 'US',
+                'date_format' => 'MM/DD/YYYY',
+                'time_format' => '12-hour',
+                'currency' => 'USD',
+                'number_format' => 'period',
+                'rtl_enabled' => false,
+            ]
+        );
     }
 
     public function toArray(): array
     {
         return [
             'id' => $this->id,
-            'userId' => $this->user_id,
+            'userId' => (string) $this->user_id,
             'language' => $this->language,
             'region' => $this->region,
             'dateFormat' => $this->date_format,
@@ -76,6 +85,8 @@ class LanguagePreference extends Model
             'currency' => $this->currency,
             'numberFormat' => $this->number_format,
             'rtlEnabled' => (bool) $this->rtl_enabled,
+            'createdAt' => $this->created_at?->toDateTimeString(),
+            'updatedAt' => $this->updated_at?->toDateTimeString(),
         ];
     }
 
