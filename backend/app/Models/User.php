@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -125,6 +126,16 @@ class User extends Authenticatable
     public function organizer(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Organizer::class);
+    }
+
+    public function accessibilityPreference(): HasOne
+    {
+        return $this->hasOne(AccessibilityPreference::class);
+    }
+
+    public function languagePreference(): HasOne
+    {
+        return $this->hasOne(LanguagePreference::class);
     }
 
     public function paymentMethods(): \Illuminate\Database\Eloquent\Relations\HasMany
