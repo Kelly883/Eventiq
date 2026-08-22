@@ -108,4 +108,9 @@ class Webhook extends Model
     {
         return $query->where('status', $status);
     }
+
+    public function scopeCreatedBetween($query, $start, $end)
+    {
+        return $query->whereBetween('created_at', [$start, $end]);
+    }
 }

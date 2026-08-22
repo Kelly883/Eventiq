@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\HasApiTokens;
 
 class ApiKey extends Model
 {
-    use HasFactory;
+    use HasFactory, HasApiTokens;
 
     protected $fillable = [
         'organizer_id',
@@ -62,6 +63,11 @@ class ApiKey extends Model
         return $requestCount >= $this->rate_limit;
     }
 
+    public function revoke(): void
+    {
+        $this->forceFill(['revoked_at' => now()])->save();
+    }
+
     public function use(string $ipAddress = null): void
     {
         $query = self::whereKey($this->getKey());
@@ -101,5 +107,25 @@ class ApiKey extends Model
     public function scopeByScope($query, string $scope)
     {
         return $query->whereJsonContains('scopes', $scope);
+    }
+
+    public static function findByRawKey(string $rawKey): ?static
+    {
+        $prefix = substr($rawKey, 0, 8);
+
+        return self::where('key_prefix', $prefix)
+            ->whereNull('revoked_at')
+            ->where(function ($q) {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->get()
+            ->first(function (self $key) use ($rawKey) {
+                return $key->checkKey($rawKey);
+            });
+    }
+
+    public function scopeCreatedBetween($query, $start, $end)
+    {
+        return $query->whereBetween('created_at', [$start, $end]);
     }
 }

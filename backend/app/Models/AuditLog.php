@@ -35,6 +35,9 @@ class AuditLog extends Model
         static::updating(function ($model) {
             $dirty = $model->getDirty();
             unset($dirty['updated_at'], $dirty['deleted_at']);
+            if ($model->isDirty('deleted_at') && $model->deleted_at !== null) {
+                return;
+            }
             if (!empty($dirty)) {
                 throw new \RuntimeException('audit_logs is immutable and cannot be updated.');
             }
@@ -224,8 +227,8 @@ class AuditLog extends Model
         }
 
         return match ($type) {
-            'user' => User::where('id', $targetId)->value('name'),
-            'event' => Event::where('id', $targetId)->value('title'),
+            'user' => User::select('id', 'name')->where('id', $targetId)->value('name'),
+            'event' => Event::select('id', 'title')->where('id', $targetId)->value('title'),
             default => (string) $targetId,
         };
     }
