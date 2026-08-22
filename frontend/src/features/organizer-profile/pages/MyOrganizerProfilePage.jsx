@@ -1,15 +1,22 @@
 import React, { useEffect, useState } from 'react';
+import { useAuthContext } from '../../../features/auth/context/AuthContext';
 import { useParams } from 'react-router-dom';
 import { api } from '../../../lib/api';
 
-const OrganizerPublicProfilePage = () => {
-  const { organizerId } = useParams();
+const MyOrganizerProfilePage = () => {
+  const { organizerId, user } = useAuthContext();
+  const { organizerId: paramOrganizerId } = useParams();
+
+  // Use organizerId from auth context (the logged-in organizer's ID)
+  // Fall back to paramOrganizerId if available (for viewing other organizers)
+  const targetOrganizerId = organizerId || paramOrganizerId;
+
   const [organizer, setOrganizer] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (organizerId) {
-      api.get(`/organizers/${organizerId}`)
+    if (targetOrganizerId) {
+      api.get(`/organizers/${targetOrganizerId}`)
         .then((res) => {
           setOrganizer(res.data.data);
         })
@@ -20,7 +27,7 @@ const OrganizerPublicProfilePage = () => {
     } else {
       setLoading(false);
     }
-  }, [organizerId]);
+  }, [targetOrganizerId]);
 
   if (loading) {
     return <div>Loading organizer profile...</div>;
@@ -28,7 +35,7 @@ const OrganizerPublicProfilePage = () => {
 
   return (
     <div>
-      <h1>Organizer Public Profile</h1>
+      <h1>{organizer ? organizer.displayName : 'My Organizer Profile'}</h1>
       {organizer && (
         <div>
           {organizer.displayName && <h2>{organizer.displayName}</h2>}
@@ -44,4 +51,4 @@ const OrganizerPublicProfilePage = () => {
   );
 };
 
-export default OrganizerPublicProfilePage;
+export default MyOrganizerProfilePage;

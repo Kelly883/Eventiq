@@ -1,25 +1,44 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
+import { api } from '../../../lib/api';
 
 export const ProtectedRoute = ({ children, requiredRole = null }) => {
-  const { user, loading, checkAdminAccess } = useAuthContext();
+  const { user, loading, checkAdminAccess, sessionExpired, refreshAuth } = useAuthContext();
   const location = useLocation();
+  const navigate = useNavigate();
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location, message: 'Session expired', messageType: 'warning' }} />;
+    api.showToast(
+      'Session Expired',
+      'Your session has expired. Please log in again.',
+      'warning'
+    );
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   if (requiredRole === 'admin' && !checkAdminAccess()) {
-    return <Navigate to="/settings/permissions" replace state={{ message: 'Access Denied — only admins can manage roles', messageType: 'warning' }} />;
+    api.showToast(
+      'Access Denied',
+      'Only admins can manage roles',
+      'warning',
+      5000
+    );
+    return <Navigate to="/settings/permissions" replace />;
   }
 
   if (requiredRole === 'organizer' && !user?.roles?.some((r) => r.name === 'organizer')) {
-    return <Navigate to="/dashboard/user" replace state={{ message: 'Access Denied — organizers only', messageType: 'warning' }} />;
+    api.showToast(
+      'Access Denied',
+      'Organizers only',
+      'warning',
+      5000
+    );
+    return <Navigate to="/dashboard/user" replace />;
   }
 
   return children;

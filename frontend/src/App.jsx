@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import SalesAnalyticsDashboardPage from './features/analytics/pages/SalesAnalyticsDashboardPage';
 import { OrganizerDashboardPage, UserDashboardPage } from './features/dashboard/pages';
 import { CheckInDashboardPage } from './features/check-in';
@@ -38,13 +38,63 @@ const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password'
 function App() {
   useFCMTokenSync();
   const location = useLocation();
-  const { user, logout } = useAuthContext();
+  const navigate = useNavigate();
+  const { user, logout, sessionExpired, refreshAuth } = useAuthContext();
   const isAuthPage = AUTH_PAGES.some((path) => location.pathname === path);
+
+  // Session warning toast: show at 55s before auto-expire (60s interval)
+  const [sessionWarningShown, setSessionWarningShown] = useState(false);
+  useEffect(() => {
+    if (user && !sessionWarningShown) {
+      const timeout = setTimeout(() => {
+        setSessionWarningShown(true);
+        api.showToast(
+          'Session Expiring',
+          'Your session will expire soon. Save your work or continue activity to stay logged in.',
+          'warning',
+          8000
+        );
+      }, 55000;
+      return () => clearTimeout(timeout);
+    }
+  }, [user, sessionWarningShown]);
+
+  useEffect(() => {
+    if (user && location.state?.from) {
+      navigate(location.state.from, { replace: true });
+    }
+  }, [user, location.state?.from, navigate]);
+
+  // Show banner when deep-link recovery is active
+  const recoveryBanner = user && location.state?.from ? (
+    <div
+      key="recovery-banner"
+      className="fixed top-0 left-0 right-0 z-50 bg-indigo-100 border-b border-indigo-200 p-4 text-indigo-800 shadow-sm animate-slide-in-down"
+      role="alert"
+    >
+      <div className="max-w-7xl mx-auto text-center">
+        <p className="text-sm font-medium">
+          <span className="font-bold">Remembering where you wanted to go&hellip;</span>
+          navigating back to {location.state.from.replace('/', '/')}…
+        </p>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <BrowserRouter>
       <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
+        <noscript>
+          <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200/80 p-4 text-slate-900 shadow-sm">
+            <div className="max-w-2xl mx-auto text-center">
+              <h2 className="text-2xl font-bold text-red-600">JavaScript Required</h2>
+              <p className="text-slate-700 mt-2">Eventiq requires JavaScript to function properly. Please enable JavaScript in your browser settings to access all features including admin route protection, session management, and interactive elements.</p>
+              <p className="text-slate-600 mt-4 text-sm">If JavaScript is disabled, the server-side authentication middleware will still protect admin routes, but the interactive user interface will not be available.</p>
+            </div>
+          </div>
+        </noscript>
         <ToastContainer />
+        {recoveryBanner}
         {/* Navigation Bar — hidden on auth pages */}
         {!isAuthPage && (
           <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 shadow-sm backdrop-blur-md bg-white/90">
@@ -123,6 +173,34 @@ function App() {
                   >
                     📦 Events
                   </NavLink>
+                  {user?.roles?.some((r) => r.name === 'organizer') && (
+                    <NavLink
+                      to="/organizer/profile/edit"
+                      className={({ isActive }) =>
+                        `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                          isActive
+                            ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                        }`
+                      }
+                    >
+                      ⚙️ Profile
+                    </NavLink>
+                  )}
+                  {user?.roles?.some((r) => r.name === 'organizer') && (
+                    <NavLink
+                      to="/organizer/profile/settings"
+                      className={({ isActive }) =>
+                        `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                          isActive
+                            ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                        }`
+                      }
+                    >
+                      🛠️ Settings
+                    </NavLink>
+                  )}
                 </nav>
 
                 {/* Auth buttons */}
@@ -183,6 +261,7 @@ function App() {
             <Route path="/organizer/events/:eventId/pricing" element={<ProtectedRoute requiredRole="organizer"><EventPricingConfigPage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId/pricing/preview" element={<ProtectedRoute requiredRole="organizer"><PricingPreviewModal /></ProtectedRoute>} />
             <Route path="/organizer/:organizerId" element={<OrganizerPublicProfilePage />} />
+            <Route path="/my/profile" element={<MyOrganizerProfilePage />} />
             <Route path="/organizer/profile/edit" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileEditPage /></ProtectedRoute>} />
             <Route path="/organizer/profile/settings" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileSettingsPage /></ProtectedRoute>} />
             <Route path="/check-in" element={<CheckInDashboardPage />} />
