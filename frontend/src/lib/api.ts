@@ -175,6 +175,13 @@ api.interceptors.response.use(
       }
 
       if (typeof window !== 'undefined') {
+        // Store intended destination so LoginPage can redirect after re-auth
+        const currentPath = window.location.pathname + window.location.search;
+        if (currentPath && currentPath !== '/login') {
+          const returnTo = window.location.pathname + window.location.search;
+          try { sessionStorage.setItem('session-expired-return', returnTo); } catch { /* ignore */ }
+        }
+
         // Broadcast session-end to all tabs via BroadcastChannel + storage event
         if ('BroadcastChannel' in window) {
           try {

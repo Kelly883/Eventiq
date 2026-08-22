@@ -164,7 +164,7 @@ function App() {
             <Route path="/events" element={<EventBrowsePage />} />
             <Route path="/events/calendar" element={<EventCalendarPage />} />
             <Route path="/tickets/:ticketId/status" element={<TicketStatusPage />} />
-            <Route path="/admin/email-templates" element={<AdminEmailTemplateManagementPage />} />
+            <Route path="/admin/email-templates" element={<ProtectedRoute requiredRole="admin"><AdminEmailTemplateManagementPage /></ProtectedRoute>} />
             <Route path="/admin/roles" element={<ProtectedRoute requiredRole="admin"><AdminRoleManagementPage /></ProtectedRoute>} />
             <Route path="/settings/permissions" element={<ProtectedRoute><UserPermissionsPage /></ProtectedRoute>} />
             <Route path="/events/category/:categoryId" element={<CategoryBrowsePage />} />

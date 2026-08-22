@@ -19,7 +19,7 @@ export const ProtectedRoute = ({ children, requiredRole = null }) => {
     return <Navigate to="/settings/permissions" replace state={{
       message: 'Access Denied — only admins can manage roles',
       from: location.pathname,
-      messageType: 'warning',
+      messageType: 'error',
     }} />;
   }
 
