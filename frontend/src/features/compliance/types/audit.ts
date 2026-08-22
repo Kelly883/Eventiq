@@ -44,15 +44,22 @@ export interface AuditLog {
   readonly performedByName?: string | null;
   readonly action: AuditLogAction;
   readonly targetType: AuditLogTargetType;
-  readonly targetId: string;
+  readonly targetId: string | null;
   readonly targetName?: string | null;
-  readonly description?: string;
+  readonly description: string | null;
+  readonly source: string | null;
+  readonly ipAddress: string | null;
+  readonly userAgent: string | null;
   readonly geolocation: AuditLogGeolocation | null;
   readonly requestData: AuditLogJsonData | null;
   readonly responseData: AuditLogJsonData | null;
   readonly changedFields: AuditLogJsonData | null;
+  readonly errorMessage: string | null;
+  readonly errorCode: string | null;
   readonly status: AuditLogStatus;
   readonly complianceClassification: ComplianceClassification;
+  readonly retentionDate: string | null;
+  readonly retentionReason: string | null;
   readonly metadata: AuditLogJsonData;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -147,15 +154,22 @@ export function normalizeAuditLog(raw: Partial<AuditLog> & { id: string }): Audi
     performedByName: raw.performedByName ?? null,
     action,
     targetType,
-    targetId: raw.targetId ?? '',
+    targetId: raw.targetId ?? null,
     targetName: raw.targetName ?? null,
-    description: raw.description,
+    description: raw.description ?? null,
+    source: raw.source ?? null,
+    ipAddress: raw.ipAddress ?? null,
+    userAgent: raw.userAgent ?? null,
     geolocation: raw.geolocation ?? null,
     requestData: raw.requestData ?? null,
     responseData: raw.responseData ?? null,
     changedFields: raw.changedFields ?? null,
+    errorMessage: raw.errorMessage ?? null,
+    errorCode: raw.errorCode ?? null,
     status,
     complianceClassification,
+    retentionDate: raw.retentionDate ?? null,
+    retentionReason: raw.retentionReason ?? null,
     metadata: raw.metadata ?? {},
     createdAt: raw.createdAt ?? new Date().toISOString(),
     updatedAt: raw.updatedAt ?? new Date().toISOString(),

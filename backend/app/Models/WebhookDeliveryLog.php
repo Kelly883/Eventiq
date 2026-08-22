@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class WebhookDeliveryLog extends Model
 {
@@ -40,10 +40,59 @@ class WebhookDeliveryLog extends Model
 
     protected $casts = [
         'payload' => 'array',
+        'created_at' => 'datetime',
     ];
 
     public function webhook(): BelongsTo
     {
         return $this->belongsTo(Webhook::class);
+    }
+
+    public function scopeWithWebhook($query)
+    {
+        return $query->with('webhook:id,url,status,failure_count,last_success_at,last_failure_at,retry_policy,timeout_seconds');
+    }
+
+    public function scopeByWebhook($query, string $webhookId)
+    {
+        return $query->where('webhook_id', $webhookId);
+    }
+
+    public function scopeByStatus($query, string $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeFailed($query)
+    {
+        return $query->whereIn('status', ['failed', 'error']);
+    }
+
+    public function scopeByAttempt($query, int $attemptNumber)
+    {
+        return $query->where('attempt_number', $attemptNumber);
+    }
+
+    public function scopeLatestAttempt($query)
+    {
+        return $query->orderByDesc('attempt_number');
+    }
+
+    public function scopeByEvent($query, string $event)
+    {
+        return $query->where('event', $event);
+    }
+
+    public function scopeGroupedByEvent($query)
+    {
+        return $query->selectRaw('event, COUNT(*) as total, SUM(CASE WHEN status = "success" THEN 1 ELSE 0 END) as success_count, SUM(CASE WHEN status IN ("failed", "error") THEN 1 ELSE 0 END) as failure_count, AVG(duration_ms) as avg_duration_ms')
+            ->groupBy('event');
+    }
+
+    public function isFinalAttempt(): bool
+    {
+        $maxAttempts = $this->webhook?->retry_policy['max_attempts'] ?? 5;
+
+        return $this->attempt_number >= $maxAttempts;
     }
 }
