@@ -30,7 +30,7 @@ const RegisterPage = () => {
 
     try {
       await register(email, password, name);
-      navigate('/login', { state: { message: 'Account created successfully. Please log in.' } });
+      navigate('/login', { state: { message: 'Account created successfully. Please log in.', messageType: 'success' } });
     } catch (err) {
       setError(
         err.response?.data?.message ||
