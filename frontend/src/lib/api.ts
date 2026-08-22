@@ -175,6 +175,20 @@ api.interceptors.response.use(
       }
 
       if (typeof window !== 'undefined') {
+        // Broadcast session-end to all tabs via BroadcastChannel + storage event
+        if ('BroadcastChannel' in window) {
+          try {
+            const channel = new BroadcastChannel('auth-sync');
+            channel.postMessage({ type: 'session-ended' });
+            channel.close();
+          } catch {
+            // Fallback
+          }
+        }
+        const SESSION_EVENT_KEY = 'eventiq-session-event';
+        localStorage.setItem(SESSION_EVENT_KEY, JSON.stringify({ type: 'session-ended', ts: Date.now() }));
+        setTimeout(() => localStorage.removeItem(SESSION_EVENT_KEY), 1000);
+
         window.location.href = '/login';
       }
     }

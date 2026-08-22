@@ -1,9 +1,30 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { api } from '../../../lib/api';
+import { api, showToast } from '../../../lib/api';
 
 const AuthContext = createContext(null);
 
 const REMEMBER_ME_KEY = 'rememberMe';
+const SESSION_EVENT_KEY = 'eventiq-session-event';
+
+function broadcastAuthEvent(type) {
+  const payload = JSON.stringify({ type, ts: Date.now() });
+
+  // BroadcastChannel API — works across tabs and windows
+  if ('BroadcastChannel' in window) {
+    try {
+      const channel = new BroadcastChannel('auth-sync');
+      channel.postMessage({ type });
+      channel.close();
+    } catch {
+      // Fallback to storage event
+    }
+  }
+
+  // Fallback / additional sync: localStorage storage event fires on other tabs
+  // (not the tab that wrote it — that tab uses window.dispatchEvent instead)
+  localStorage.setItem(SESSION_EVENT_KEY, payload);
+  setTimeout(() => localStorage.removeItem(SESSION_EVENT_KEY), 1000);
+}
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -19,17 +40,24 @@ export const AuthProvider = ({ children }) => {
         if (prev && prevRoles !== newRoles) {
           // Dispatch within same document
           window.dispatchEvent(new Event('role-change'));
-          // Broadcast across tabs/windows
-          if ('BroadcastChannel' in window) {
-            const channel = new BroadcastChannel('auth-sync');
-            channel.postMessage({ type: 'role-change' });
-            channel.close();
+          // Broadcast role-change to all tabs
+          if (BroadcastChannel) {
+            broadcastAuthEvent('role-change');
           }
         }
         return fetchedUser;
       });
-    } catch {
-      setUser(null);
+    } catch (err) {
+      // If /auth/me fails with 401, session is expired — clear locally and sync
+      const status = err?.response?.status;
+      if (status === 401) {
+        setUser(null);
+        broadcastAuthEvent('session-ended');
+        throw err;
+      } else {
+        setUser(null);
+        throw err;
+      }
     }
   }, []);
 
@@ -40,7 +68,6 @@ export const AuthProvider = ({ children }) => {
 
     const scheduleRefresh = () => {
       clearTimeout(idleTimer);
-      // Poll every 5 minutes of activity, but stop if page is hidden
       idleTimer = setTimeout(async () => {
         if (!document.hidden) {
           await fetchCurrentUser();
@@ -48,51 +75,90 @@ export const AuthProvider = ({ children }) => {
       }, 300000);
     };
 
-    // Only resume polling when tab becomes visible again
-    const handleVisibility = () => {
-      if (document.visible && !document.hidden) {
-        fetchCurrentUser().catch(() => {});
+    // Immediate session check when tab gains focus — catches expired sessions
+    // from logout in another tab or server-side session expiry
+    const handleFocus = async () => {
+      try {
+        await fetchCurrentUser();
+      } catch {
+        showToast('Session expired', 'Please log in again to continue.', 'warning');
+      }
+    };
+
+    const handleVisibility = async () => {
+      if (!document.hidden) {
+        try {
+          await fetchCurrentUser();
+        } catch {
+          showToast('Session expired', 'Please log in again to continue.', 'warning');
+        }
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('focus', scheduleRefresh);
+    window.addEventListener('focus', handleFocus);
     window.addEventListener('mousemove', scheduleRefresh);
 
-    // Initial schedule
     scheduleRefresh();
 
     return () => {
       clearTimeout(idleTimer);
       document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('focus', scheduleRefresh);
+      window.removeEventListener('focus', handleFocus);
       window.removeEventListener('mousemove', scheduleRefresh);
     };
   }, [fetchCurrentUser]);
 
-  // Listen for role changes across tabs (cross-browser via BroadcastChannel, fallback to window event)
+  // Listen for session/role changes across tabs (full cross-tab sync)
   useEffect(() => {
-    const handleRoleChange = () => {
-      fetchCurrentUser();
+    const handleBroadcastMessage = (event) => {
+      if (event?.data?.type === 'role-change') {
+        fetchCurrentUser();
+      } else if (event?.data?.type === 'session-ended') {
+        setUser(null);
+        showToast('Session ended', 'Your session was terminated in another tab.', 'info');
+        window.location.href = '/login';
+      } else if (event?.data?.type === 'session-established') {
+        fetchCurrentUser();
+      }
     };
-    window.addEventListener('role-change', handleRoleChange);
 
-    // BroadcastChannel API provides cross-tab, cross-window communication
-    // Works across different browser windows, not just same-document
+    const handleStorageEvent = (e) => {
+      if (e.key === SESSION_EVENT_KEY && e.newValue) {
+        try {
+          const eventData = JSON.parse(e.newValue);
+          if (eventData.type === 'role-change') {
+            fetchCurrentUser();
+          } else if (eventData.type === 'session-ended') {
+            setUser(null);
+            showToast('Session ended', 'Your session was terminated in another tab.', 'info');
+            window.location.href = '/login';
+          } else if (eventData.type === 'session-established') {
+            fetchCurrentUser();
+          }
+        } catch {
+          // ignore parse errors
+        }
+      }
+    };
+
+    window.addEventListener('role-change', () => fetchCurrentUser());
+    window.addEventListener('storage', handleStorageEvent);
+
     if ('BroadcastChannel' in window) {
       const channel = new BroadcastChannel('auth-sync');
-      channel.addEventListener('message', (event) => {
-        if (event.data?.type === 'role-change') {
-          fetchCurrentUser();
-        }
-      });
+      channel.addEventListener('message', handleBroadcastMessage);
       return () => {
-        window.removeEventListener('role-change', handleRoleChange);
         channel.close();
+        window.removeEventListener('storage', handleStorageEvent);
+        window.removeEventListener('role-change', () => fetchCurrentUser());
       };
     }
 
-    return () => window.removeEventListener('role-change', handleRoleChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageEvent);
+      window.removeEventListener('role-change', () => fetchCurrentUser());
+    };
   }, [fetchCurrentUser]);
 
   const login = useCallback(async (email, password, rememberMe = false) => {
@@ -103,6 +169,8 @@ export const AuthProvider = ({ children }) => {
 
     const res = await api.get('/auth/me');
     setUser(res.data);
+    // Broadcast session change to all tabs
+    broadcastAuthEvent('session-established');
     return { user: res.data, remember_me: response.data?.remember_me ?? false };
   }, []);
 
@@ -112,6 +180,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(REMEMBER_ME_KEY);
     const res = await api.get('/auth/me');
     setUser(res.data);
+    broadcastAuthEvent('session-established');
     return res.data;
   }, []);
 
@@ -119,6 +188,8 @@ export const AuthProvider = ({ children }) => {
     await api.post('/auth/logout');
     localStorage.removeItem(REMEMBER_ME_KEY);
     setUser(null);
+    // Broadcast session invalidation to all tabs
+    broadcastAuthEvent('session-ended');
   }, []);
 
   const forgotPassword = useCallback(async (email) => {
@@ -130,6 +201,8 @@ export const AuthProvider = ({ children }) => {
     await api.post('/auth/reset-password', { token, newPassword });
     localStorage.removeItem(REMEMBER_ME_KEY);
     setUser(null);
+    // Broadcast session invalidation to all tabs
+    broadcastAuthEvent('session-ended');
   }, []);
 
   const checkAdminAccess = useCallback(() => {
