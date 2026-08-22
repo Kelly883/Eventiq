@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
+import { showToast } from '../../../lib/api';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -10,6 +11,12 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuthContext();
+
+  useEffect(() => {
+    if (location.state?.message) {
+      showToast(location.state.message, 'success', 'success');
+    }
+  }, [location.state?.message]);
 
   const from = location.state?.from?.pathname || '/dashboard/organizer';
 
@@ -84,7 +91,11 @@ const LoginPage = () => {
           </button>
         </form>
 
-        <div className="mt-4 flex justify-between text-sm text-slate-600">
+        <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <span>Remember me</span>
+          </label>
           <button
             type="button"
             onClick={() => navigate('/forgot-password')}
