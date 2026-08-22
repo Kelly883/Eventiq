@@ -30,11 +30,15 @@ const LoginPage = () => {
       await login(email, password, rememberMe);
       navigate(from, { replace: true });
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        err.message ||
-        'Invalid email or password.'
-      );
+      if (err.response?.status === 419) {
+        setError('Security token expired. Please refresh the page and try again.');
+      } else {
+        setError(
+          err.response?.data?.message ||
+          err.message ||
+          'Invalid email or password.'
+        );
+      }
     } finally {
       setLoading(false);
     }

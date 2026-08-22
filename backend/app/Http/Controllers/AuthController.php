@@ -48,8 +48,14 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
+        if ($request->boolean('remember_me')) {
+            $request->session()->put('_remember_me', true);
+            $request->session()->getCookie()->setMaxAge(config('session.lifetime', 120) * 60 * 2);
+        }
+
         return response()->json([
             'user' => UserResource::make($request->user()),
+            'remember_me' => $request->boolean('remember_me'),
         ]);
     }
 
