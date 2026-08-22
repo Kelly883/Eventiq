@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom';
 import SalesAnalyticsDashboardPage from './features/analytics/pages/SalesAnalyticsDashboardPage';
 import { OrganizerDashboardPage, UserDashboardPage } from './features/dashboard/pages';
 import { CheckInDashboardPage } from './features/check-in';
@@ -10,6 +10,14 @@ import CategoryBrowsePage from './features/events/pages/CategoryBrowsePage';
 import EventCalendarPage from './features/events-calendar/pages/EventCalendarPage';
 import TicketStatusPage from './features/ticket-delivery/pages/TicketStatusPage';
 import AdminEmailTemplateManagementPage from './features/email-notifications/pages/AdminEmailTemplateManagementPage';
+import AdminRoleManagementPage from './features/roles/pages/AdminRoleManagementPage';
+import UserPermissionsPage from './features/roles/pages/UserPermissionsPage';
+import OrganizerPublicProfilePage from './features/organizer-profile/pages/OrganizerPublicProfilePage';
+import OrganizerProfileEditPage from './features/organizer-profile/pages/OrganizerProfileEditPage';
+import OrganizerProfileSettingsPage from './features/organizer-profile/pages/OrganizerProfileSettingsPage';
+import OrganizerEventListPage from './features/events/pages/OrganizerEventListPage';
+import EventCreatePage from './features/events/pages/EventCreatePage';
+import EventEditPage from './features/events/pages/EventEditPage';
 import ToastContainer from './features/notifications/components/ToastContainer';
 import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
 import { ProtectedRoute, PublicRoute } from './features/auth/components/RouteGuards';
@@ -119,62 +127,28 @@ function App() {
             <Route path="/events/calendar" element={<EventCalendarPage />} />
             <Route path="/tickets/:ticketId/status" element={<TicketStatusPage />} />
             <Route path="/admin/email-templates" element={<AdminEmailTemplateManagementPage />} />
+            <Route path="/admin/roles" element={<ProtectedRoute requiredRole="admin"><AdminRoleManagementPage /></ProtectedRoute>} />
+            <Route path="/settings/permissions" element={<ProtectedRoute><UserPermissionsPage /></ProtectedRoute>} />
             <Route path="/events/category/:categoryId" element={<CategoryBrowsePage />} />
             <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/dashboard/organizer" element={<OrganizerDashboardPage />} />
-            <Route
-              path="/organizer/events/:eventId/inventory"
-              element={
-                <ProtectedRoute>
-                  <TicketInventoryDashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/organizer/events/:eventId/inventory/adjust"
-              element={
-                <ProtectedRoute>
-                  <AdjustInventoryModal />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/dashboard/user" element={<UserDashboardPage />} />
+            <Route path="/organizer/events" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventListPage /></ProtectedRoute>} />
+            <Route path="/organizer/events/create" element={<ProtectedRoute requiredRole="organizer"><EventCreatePage /></ProtectedRoute>} />
+            <Route path="/organizer/events/:eventId/edit" element={<ProtectedRoute requiredRole="organizer"><EventEditPage /></ProtectedRoute>} />
+            <Route path="/organizer/events/:eventId/inventory" element={<ProtectedRoute requiredRole="organizer"><TicketInventoryDashboardPage /></ProtectedRoute>} />
+            <Route path="/organizer/events/:eventId/inventory/adjust" element={<ProtectedRoute requiredRole="organizer"><AdjustInventoryModal /></ProtectedRoute>} />
+            <Route path="/organizer/:organizerId" element={<OrganizerPublicProfilePage />} />
+            <Route path="/organizer/profile/edit" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileEditPage /></ProtectedRoute>} />
+            <Route path="/organizer/profile/settings" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileSettingsPage /></ProtectedRoute>} />
             <Route path="/check-in" element={<CheckInDashboardPage />} />
             <Route path="/venue-scan" element={<VenueCheckInPage />} />
-            <Route path="/dashboard/user" element={<UserDashboardPage />} />
-            <Route
-              path="/login"
-              element={
-                <PublicRoute>
-                  <LoginPage />
-                </PublicRoute>
-              }
-            />
-            <Route
-              path="/register"
-              element={
-                <PublicRoute>
-                  <RegisterPage />
-                </PublicRoute>
-              }
-            />
-            <Route
-              path="/forgot-password"
-              element={
-                <PublicRoute>
-                  <ForgotPasswordPage />
-                </PublicRoute>
-              }
-            />
-            <Route
-              path="/reset-password"
-              element={
-                <PublicRoute>
-                  <ResetPasswordPage />
-                </PublicRoute>
-              }
-            />
+            <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+            <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+            <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+            <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
             <Route path="*" element={<Navigate to="/analytics" replace />} />
           </Routes>
         </main>
