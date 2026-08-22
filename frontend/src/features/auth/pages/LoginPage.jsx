@@ -14,7 +14,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (location.state?.message) {
-      showToast(location.state.message, 'success', 'success');
+      showToast('Success', location.state.message, 'success');
     }
   }, [location.state?.message]);
 

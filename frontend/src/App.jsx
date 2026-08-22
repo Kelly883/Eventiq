@@ -21,6 +21,7 @@ import EventEditPage from './features/events/pages/EventEditPage';
 import ToastContainer from './features/notifications/components/ToastContainer';
 import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
 import { ProtectedRoute, PublicRoute } from './features/auth/components/RouteGuards';
+import { useAuthContext } from './features/auth/context/AuthContext';
 import {
   LoginPage,
   RegisterPage,
@@ -30,94 +31,128 @@ import {
 import { TicketInventoryDashboardPage, AdjustInventoryModal } from './features/ticket-inventory/pages';
 import './App.css';
 
+const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password'];
+
 function App() {
   useFCMTokenSync();
+  const location = useLocation();
+  const { user, logout } = useAuthContext();
+  const isAuthPage = AUTH_PAGES.some((path) => location.pathname === path);
 
   return (
     <BrowserRouter>
       <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
         <ToastContainer />
-        {/* Navigation Bar */}
-        <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 shadow-sm backdrop-blur-md bg-white/90">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex h-16 items-center justify-between">
-              {/* Logo */}
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white font-black text-lg shadow-md shadow-indigo-200">
-                  E
+        {/* Navigation Bar — hidden on auth pages */}
+        {!isAuthPage && (
+          <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 shadow-sm backdrop-blur-md bg-white/90">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="flex h-16 items-center justify-between">
+                {/* Logo */}
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white font-black text-lg shadow-md shadow-indigo-200">
+                    E
+                  </div>
+                  <span className="text-xl font-black text-slate-900 tracking-tight">Eventiq</span>
+                  <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                    v1.0
+                  </span>
                 </div>
-                <span className="text-xl font-black text-slate-900 tracking-tight">Eventiq</span>
-                <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-                  v1.0
-                </span>
-              </div>
 
-              {/* Navigation Links */}
-              <nav className="flex space-x-1 sm:space-x-3">
-                <NavLink
-                  to="/analytics"
-                  className={({ isActive }) =>
-                    `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                      isActive
-                        ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                    }`
-                  }
-                >
-                  📈 Analytics
-                </NavLink>
-                <NavLink
-                  to="/dashboard/organizer"
-                  className={({ isActive }) =>
-                    `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                      isActive
-                        ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                    }`
-                  }
-                >
-                  💼 Organizer
-                </NavLink>
-                <NavLink
-                  to="/check-in"
-                  className={({ isActive }) =>
-                    `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                      isActive
-                        ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                    }`
-                  }
-                >
-                  🎟️ Check-In Desk
-                </NavLink>
-                <NavLink
-                  to="/venue-scan"
-                  className={({ isActive }) =>
-                    `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                      isActive
-                        ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                    }`
-                  }
-                >
-                  📷 Gate Scanner
-                </NavLink>
-                <NavLink
-                  to="/organizer/events"
-                  className={({ isActive }) =>
-                    `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                      isActive
-                        ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                    }`
-                  }
-                >
-                  📦 Events
-                </NavLink>
-              </nav>
+                {/* Navigation Links */}
+                <nav className="flex space-x-1 sm:space-x-3">
+                  <NavLink
+                    to="/analytics"
+                    className={({ isActive }) =>
+                      `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                      }`
+                    }
+                  >
+                    📈 Analytics
+                  </NavLink>
+                  <NavLink
+                    to="/dashboard/organizer"
+                    className={({ isActive }) =>
+                      `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                      }`
+                    }
+                  >
+                    💼 Organizer
+                  </NavLink>
+                  <NavLink
+                    to="/check-in"
+                    className={({ isActive }) =>
+                      `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                      }`
+                    }
+                  >
+                    🎟️ Check-In Desk
+                  </NavLink>
+                  <NavLink
+                    to="/venue-scan"
+                    className={({ isActive }) =>
+                      `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                      }`
+                    }
+                  >
+                    📷 Gate Scanner
+                  </NavLink>
+                  <NavLink
+                    to="/organizer/events"
+                    className={({ isActive }) =>
+                      `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                      }`
+                    }
+                  >
+                    📦 Events
+                  </NavLink>
+                </nav>
+
+                {/* Auth buttons */}
+                {user ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      window.location.href = '/login';
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 transition-colors"
+                  >
+                    🔓 Logout
+                  </button>
+                ) : (
+                  <NavLink
+                    to="/login"
+                    className={({ isActive }) =>
+                      `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                      }`
+                    }
+                  >
+                    🔒 Sign In
+                  </NavLink>
+                )}
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         {/* Page Content */}
         <main className="flex-1">
