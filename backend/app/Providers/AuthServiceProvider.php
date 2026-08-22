@@ -6,6 +6,8 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Policies\PermissionPolicy;
 use App\Policies\RolePolicy;
+use App\Policies\ApiKeyPolicy;
+use App\Policies\WebhookPolicy;
 use App\Features\EmailNotifications\Models\EmailTemplate;
 use App\Features\EmailNotifications\Policies\EmailTemplatePolicy;
 use App\Features\OrganizerProfile\Models\OrganizerProfile;
@@ -19,6 +21,8 @@ class AuthServiceProvider extends ServiceProvider
         Permission::class => PermissionPolicy::class,
         EmailTemplate::class => EmailTemplatePolicy::class,
         OrganizerProfile::class => OrganizerProfilePolicy::class,
+        ApiKey::class => ApiKeyPolicy::class,
+        Webhook::class => WebhookPolicy::class,
     ];
 
     public function register(): void

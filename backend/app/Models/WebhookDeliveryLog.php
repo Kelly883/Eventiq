@@ -48,6 +48,11 @@ class WebhookDeliveryLog extends Model
         return $this->belongsTo(Webhook::class);
     }
 
+    public function scopeWithWebhook($query)
+    {
+        return $query->with('webhook:id,url,status,failure_count,last_success_at,last_failure_at,retry_policy,timeout_seconds');
+    }
+
     public function scopeByWebhook($query, string $webhookId)
     {
         return $query->where('webhook_id', $webhookId);

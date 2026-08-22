@@ -83,6 +83,23 @@ class ApiKey extends Model
         $this->forceFill(['revoked_at' => now()])->save();
     }
 
+    public function rotate(): self
+    {
+        $this->revoke();
+
+        return self::create([
+            'organizer_id' => $this->organizer_id,
+            'name' => $this->name,
+            'description' => $this->description,
+            'key_prefix' => substr(Str::random(32), 0, 8),
+            'hashed_key' => Hash::make(Str::random(32)),
+            'scopes' => $this->scopes,
+            'expires_at' => $this->expires_at,
+            'rate_limit' => $this->rate_limit,
+            'rate_limit_period' => $this->rate_limit_period,
+        ]);
+    }
+
     public function use(string $ipAddress = null): void
     {
         $query = self::whereKey($this->getKey());

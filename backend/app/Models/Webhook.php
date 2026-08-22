@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class Webhook extends Model
@@ -120,5 +121,35 @@ class Webhook extends Model
     public function scopeCreatedBetween($query, $start, $end)
     {
         return $query->whereBetween('created_at', [$start, $end]);
+    }
+
+    public function testEndpoint(array $payload = []): array
+    {
+        $payload = empty($payload) ? ['test' => true, 'timestamp' => now()->toIso8601String()] : $payload;
+        $signature = hash_hmac('sha256', json_encode($payload), $this->secret);
+
+        try {
+            $response = Http::timeout($this->timeout_seconds ?? 30)
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'X-Webhook-Signature' => $signature,
+                    'X-Webhook-Event' => 'test',
+                ])
+                ->post($this->url, $payload);
+
+            return [
+                'success' => $response->successful(),
+                'status_code' => $response->status(),
+                'response_body' => $response->body(),
+                'error' => $response->failed() ? $response->body() : null,
+            ];
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            return [
+                'success' => false,
+                'status_code' => null,
+                'response_body' => null,
+                'error' => $e->getMessage(),
+            ];
+        }
     }
 }
