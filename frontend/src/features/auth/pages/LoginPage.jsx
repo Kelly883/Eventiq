@@ -13,6 +13,26 @@ const LoginPage = () => {
   const location = useLocation();
   const { login } = useAuthContext();
 
+  // Check for session-expired-return (set by api.ts 401 handler)
+  const sessionExpiredReturn = (() => {
+    try {
+      return sessionStorage.getItem('session-expired-return');
+    } catch {
+      return null;
+    }
+  })();
+
+  // Determine redirect target after login.
+  // If the redirect was due to role-based denial (state.from points to a
+  // role-protected route like /admin/roles), don't redirect back to it.
+  // Only use location.state.from for auth-based redirects (unauthenticated).
+  const fromState = location.state?.from;
+  const fromPathname = typeof fromState === 'string' ? fromState : fromState?.pathname || '';
+  const isFromRoleProtectedRoute = fromPathname.startsWith('/admin/');
+  const authRedirectFrom = isFromRoleProtectedRoute ? null : (fromState?.pathname || '');
+
+  const from = authRedirectFrom || sessionExpiredReturn || '/dashboard/organizer';
+
   useEffect(() => {
     if (location.state?.message && location.state?.from) {
       const fromPath = location.state.from.pathname || '';
@@ -31,17 +51,6 @@ const LoginPage = () => {
       showToast('Session expired', 'Please log in again to continue.', 'warning');
     }
   }, [location.state?.message, location.state?.messageType, location.state?.from, sessionExpiredReturn]);
-
-  // Check for session-expired-return (set by api.ts 401 handler)
-  const sessionExpiredReturn = (() => {
-    try {
-      return sessionStorage.getItem('session-expired-return');
-    } catch {
-      return null;
-    }
-  })();
-
-  const from = location.state?.from?.pathname || sessionExpiredReturn || '/dashboard/organizer';
 
   // Clean up session-expired-return after consuming it
   useEffect(() => {
