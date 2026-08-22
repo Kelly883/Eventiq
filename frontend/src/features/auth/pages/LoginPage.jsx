@@ -25,9 +25,30 @@ const LoginPage = () => {
         showToast('Notice', location.state.message, location.state.messageType || 'warning');
       }
     }
-  }, [location.state?.message, location.state?.messageType, location.state?.from]);
 
-  const from = location.state?.from?.pathname || '/dashboard/organizer';
+    // Show toast if redirecting due to session expiry
+    if (sessionExpiredReturn) {
+      showToast('Session expired', 'Please log in again to continue.', 'warning');
+    }
+  }, [location.state?.message, location.state?.messageType, location.state?.from, sessionExpiredReturn]);
+
+  // Check for session-expired-return (set by api.ts 401 handler)
+  const sessionExpiredReturn = (() => {
+    try {
+      return sessionStorage.getItem('session-expired-return');
+    } catch {
+      return null;
+    }
+  })();
+
+  const from = location.state?.from?.pathname || sessionExpiredReturn || '/dashboard/organizer';
+
+  // Clean up session-expired-return after consuming it
+  useEffect(() => {
+    if (sessionExpiredReturn) {
+      try { sessionStorage.removeItem('session-expired-return'); } catch { /* ignore */ }
+    }
+  }, [sessionExpiredReturn]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
