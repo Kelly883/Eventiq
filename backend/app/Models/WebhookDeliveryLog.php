@@ -83,4 +83,11 @@ class WebhookDeliveryLog extends Model
         return $query->selectRaw('event, COUNT(*) as total, SUM(CASE WHEN status = "success" THEN 1 ELSE 0 END) as success_count, SUM(CASE WHEN status IN ("failed", "error") THEN 1 ELSE 0 END) as failure_count, AVG(duration_ms) as avg_duration_ms')
             ->groupBy('event');
     }
+
+    public function isFinalAttempt(): bool
+    {
+        $maxAttempts = $this->webhook?->retry_policy['max_attempts'] ?? 5;
+
+        return $this->attempt_number >= $maxAttempts;
+    }
 }

@@ -66,6 +66,14 @@ class Webhook extends Model
         return filter_var($url, FILTER_VALIDATE_URL) !== false;
     }
 
+    public function isHttpError(int $statusCode): bool
+    {
+        $policy = $this->retry_policy ?? [];
+        $retryable = $policy['retryable_status_codes'] ?? [408, 429, 500, 502, 503, 504];
+
+        return ! in_array($statusCode, $retryable, true) || $statusCode >= 400;
+    }
+
     public function recordSuccess(): void
     {
         $this->update([

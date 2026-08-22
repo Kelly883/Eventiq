@@ -24,6 +24,9 @@ class AuditLog extends Model
         Relation::morphMap([
             'user' => User::class,
             'event' => Event::class,
+            'order' => \App\Features\Checkout\Models\Order::class,
+            'payment' => \App\Features\Checkout\Models\Payment::class,
+            'payout' => \App\Features\Payouts\Models\Payout::class,
         ]);
 
         static::creating(function ($model) {
@@ -229,6 +232,9 @@ class AuditLog extends Model
         return match ($type) {
             'user' => User::select('id', 'name')->where('id', $targetId)->value('name'),
             'event' => Event::select('id', 'title')->where('id', $targetId)->value('title'),
+            'order' => \App\Features\Checkout\Models\Order::select('id', 'order_number')->where('id', $targetId)->value('order_number'),
+            'payment' => \App\Features\Checkout\Models\Payment::select('id', 'reference')->where('id', $targetId)->value('reference'),
+            'payout' => \App\Features\Payouts\Models\Payout::select('id', 'reference')->where('id', $targetId)->value('reference'),
             default => (string) $targetId,
         };
     }

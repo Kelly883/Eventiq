@@ -63,6 +63,21 @@ class ApiKey extends Model
         return $requestCount >= $this->rate_limit;
     }
 
+    public function isExpired(): bool
+    {
+        return $this->expires_at !== null && $this->expires_at->isPast();
+    }
+
+    public function isRevoked(): bool
+    {
+        return $this->revoked_at !== null;
+    }
+
+    public function isActive(): bool
+    {
+        return ! $this->isRevoked() && ! $this->isExpired();
+    }
+
     public function revoke(): void
     {
         $this->forceFill(['revoked_at' => now()])->save();
@@ -113,7 +128,8 @@ class ApiKey extends Model
     {
         $prefix = substr($rawKey, 0, 8);
 
-        return self::where('key_prefix', $prefix)
+        return self::query()
+            ->where('key_prefix', $prefix)
             ->whereNull('revoked_at')
             ->where(function ($q) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
