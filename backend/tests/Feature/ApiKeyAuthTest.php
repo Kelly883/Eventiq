@@ -34,6 +34,7 @@ class ApiKeyAuthTest extends TestCase
         $apiKey = ApiKey::factory()->for($organizer)->create(array_merge([
             'key_prefix' => $prefix,
             'hashed_key' => Hash::make($rawKey),
+            'key_hash_index' => hash('sha256', $rawKey),
             'scopes' => ['events:read'],
         ], $keyOverrides));
 
