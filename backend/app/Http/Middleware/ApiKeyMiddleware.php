@@ -40,6 +40,20 @@ class ApiKeyMiddleware
 
     private function findMatchingKey(string $rawKey): ?ApiKey
     {
+        $hashIndex = hash('sha256', $rawKey);
+
+        if (ApiKey::where('key_hash_index', $hashIndex)->exists()) {
+            return ApiKey::query()
+                ->with('organizer')
+                ->where('key_hash_index', $hashIndex)
+                ->whereNull('revoked_at')
+                ->where(function ($query) {
+                    $query->whereNull('expires_at')
+                        ->orWhere('expires_at', '>', now());
+                })
+                ->first();
+        }
+
         $prefix = $this->extractPrefix($rawKey);
 
         return ApiKey::query()

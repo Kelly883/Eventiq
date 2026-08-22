@@ -19,6 +19,7 @@ class ApiKey extends Model
         'description',
         'key_prefix',
         'hashed_key',
+        'key_hash_index',
         'scopes',
         'revoked_at',
         'expires_at',
@@ -47,6 +48,25 @@ class ApiKey extends Model
     public static function generateKey(): string
     {
         return Str::random(32);
+    }
+
+    public static function createKey(string $name, string $organizerId, array $scopes = [], ?\DateTimeInterface $expiresAt = null, ?int $rateLimit = null, ?string $rateLimitPeriod = null): array
+    {
+        $rawKey = self::generateKey();
+
+        $apiKey = self::create([
+            'organizer_id' => $organizerId,
+            'name' => $name,
+            'key_prefix' => substr($rawKey, 0, 8),
+            'hashed_key' => Hash::make($rawKey),
+            'key_hash_index' => hash('sha256', $rawKey),
+            'scopes' => $scopes,
+            'expires_at' => $expiresAt,
+            'rate_limit' => $rateLimit,
+            'rate_limit_period' => $rateLimitPeriod,
+        ]);
+
+        return [$apiKey, $rawKey];
     }
 
     public function checkKey(string $rawKey): bool
@@ -87,12 +107,15 @@ class ApiKey extends Model
     {
         $this->revoke();
 
+        $rawKey = self::generateKey();
+
         return self::create([
             'organizer_id' => $this->organizer_id,
             'name' => $this->name,
             'description' => $this->description,
-            'key_prefix' => substr(Str::random(32), 0, 8),
-            'hashed_key' => Hash::make(Str::random(32)),
+            'key_prefix' => substr($rawKey, 0, 8),
+            'hashed_key' => Hash::make($rawKey),
+            'key_hash_index' => hash('sha256', $rawKey),
             'scopes' => $this->scopes,
             'expires_at' => $this->expires_at,
             'rate_limit' => $this->rate_limit,
@@ -143,6 +166,18 @@ class ApiKey extends Model
 
     public static function findByRawKey(string $rawKey): ?static
     {
+        $hashIndex = hash('sha256', $rawKey);
+
+        if (self::where('key_hash_index', $hashIndex)->exists()) {
+            return self::query()
+                ->where('key_hash_index', $hashIndex)
+                ->whereNull('revoked_at')
+                ->where(function ($q) {
+                    $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                })
+                ->first();
+        }
+
         $prefix = substr($rawKey, 0, 8);
 
         return self::query()

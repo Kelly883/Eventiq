@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { inventoryService } from '../services';
 
 const TicketInventoryDashboardPage = () => {
   const { eventId } = useParams();
+  const navigate = useNavigate();
   const [summary, setSummary] = useState(null);
   const [inventory, setInventory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     if (!eventId) return;
@@ -21,6 +23,10 @@ const TicketInventoryDashboardPage = () => {
         setSummary(summaryData);
         setInventory(inventoryData);
       } catch (err) {
+        const status = err.response?.status;
+        if (status === 401 || status === 403) {
+          setAccessDenied(true);
+        }
         setError(err.message);
       } finally {
         setLoading(false);
@@ -31,6 +37,28 @@ const TicketInventoryDashboardPage = () => {
   }, [eventId]);
 
   if (loading) return <div className="p-6">Loading inventory...</div>;
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-6 md:p-10">
+        <div className="mx-auto max-w-7xl">
+          <div className="bg-white p-8 rounded-xl border border-red-100 shadow-sm text-center">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
+            <p className="text-slate-600 mb-6">
+              You do not have permission to view the inventory for this event.
+            </p>
+            <button
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
+            >
+              ← Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
 
   return (

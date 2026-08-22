@@ -1,16 +1,25 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 
-export const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuthContext();
+export const ProtectedRoute = ({ children, requiredRole = null }) => {
+  const { user, loading, checkAdminAccess } = useAuthContext();
+  const location = useLocation();
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ message: 'Session expired' }} />;
+    return <Navigate to="/login" replace state={{ from: location, message: 'Session expired' }} />;
+  }
+
+  if (requiredRole === 'admin' && !checkAdminAccess()) {
+    return <Navigate to="/settings/permissions" replace state={{ message: 'Access Denied — only admins can manage roles' }} />;
+  }
+
+  if (requiredRole === 'organizer' && !user?.roles?.some((r) => r.name === 'organizer')) {
+    return <Navigate to="/dashboard/user" replace state={{ message: 'Access Denied — organizers only' }} />;
   }
 
   return children;

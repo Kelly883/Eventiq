@@ -44,6 +44,7 @@ class ApiKeyMiddlewareTest extends TestCase
             'name' => 'Test Key',
             'key_prefix' => $prefix,
             'hashed_key' => Hash::make($rawKey),
+            'key_hash_index' => hash('sha256', $rawKey),
             'scopes' => ['events:read'],
             'revoked_at' => null,
             'expires_at' => null,
