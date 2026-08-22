@@ -75,6 +75,19 @@ class Webhook extends Model
         return ! in_array($statusCode, $retryable, true) || $statusCode >= 400;
     }
 
+    public function shouldRetry(int $statusCode, int $currentAttempt = 1): bool
+    {
+        $policy = $this->retry_policy ?? [];
+        $retryable = $policy['retryable_status_codes'] ?? [408, 429, 500, 502, 503, 504];
+        $maxAttempts = $policy['max_attempts'] ?? 3;
+
+        if ($currentAttempt >= $maxAttempts) {
+            return false;
+        }
+
+        return in_array($statusCode, $retryable, true);
+    }
+
     public function recordSuccess(): void
     {
         $this->update([

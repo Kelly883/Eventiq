@@ -98,6 +98,17 @@ class AuditLog extends Model
         return $query->where('target_type', $targetType);
     }
 
+    public function scopeByTargetId($query, string $targetId)
+    {
+        return $query->where('target_id', $targetId);
+    }
+
+    public function scopeByTarget($query, string $targetType, string $targetId)
+    {
+        return $query->where('target_type', $targetType)
+            ->where('target_id', $targetId);
+    }
+
     public function scopeByStatus($query, string $status)
     {
         return $query->where('status', $status);

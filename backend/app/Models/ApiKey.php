@@ -151,6 +151,7 @@ class ApiKey extends Model
             ->where(function ($q) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
             })
+            ->select(['id', 'organizer_id', 'name', 'key_prefix', 'hashed_key', 'scopes', 'expires_at', 'revoked_at', 'rate_limit', 'rate_limit_period'])
             ->get()
             ->first(function (self $key) use ($rawKey) {
                 return $key->checkKey($rawKey);
