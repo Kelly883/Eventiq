@@ -7,9 +7,9 @@ const UserPermissionsPage = () => {
 
   useEffect(() => {
     if (location.state?.message) {
-      showToast('Notice', location.state.message, 'warning');
+      showToast('Notice', location.state.message, location.state.messageType || 'warning');
     }
-  }, [location.state?.message]);
+  }, [location.state?.message, location.state?.messageType]);
 
   return (
     <div>

@@ -36,7 +36,7 @@ const ResetPasswordPage = () => {
 
     try {
       await resetPassword(token, password);
-      navigate('/login', { state: { message: 'Password reset successful. Please log in.' } });
+      navigate('/login', { state: { message: 'Password reset successful. Please log in.', messageType: 'success' } });
     } catch (err) {
       setError(err.message || 'Failed to reset password.');
     } finally {

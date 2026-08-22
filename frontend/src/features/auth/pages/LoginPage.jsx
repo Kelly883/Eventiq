@@ -14,9 +14,9 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (location.state?.message) {
-      showToast('Success', location.state.message, 'success');
+      showToast('Notice', location.state.message, location.state.messageType || 'warning');
     }
-  }, [location.state?.message]);
+  }, [location.state?.message, location.state?.messageType]);
 
   const from = location.state?.from?.pathname || '/dashboard/organizer';
 

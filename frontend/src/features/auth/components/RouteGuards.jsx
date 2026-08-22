@@ -11,15 +11,15 @@ export const ProtectedRoute = ({ children, requiredRole = null }) => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location, message: 'Session expired' }} />;
+    return <Navigate to="/login" replace state={{ from: location, message: 'Session expired', messageType: 'warning' }} />;
   }
 
   if (requiredRole === 'admin' && !checkAdminAccess()) {
-    return <Navigate to="/settings/permissions" replace state={{ message: 'Access Denied — only admins can manage roles' }} />;
+    return <Navigate to="/settings/permissions" replace state={{ message: 'Access Denied — only admins can manage roles', messageType: 'warning' }} />;
   }
 
   if (requiredRole === 'organizer' && !user?.roles?.some((r) => r.name === 'organizer')) {
-    return <Navigate to="/dashboard/user" replace state={{ message: 'Access Denied — organizers only' }} />;
+    return <Navigate to="/dashboard/user" replace state={{ message: 'Access Denied — organizers only', messageType: 'warning' }} />;
   }
 
   return children;
