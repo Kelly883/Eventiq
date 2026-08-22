@@ -9,16 +9,42 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    api.get('/auth/me')
-      .then((res) => {
-        setUser(res.data);
-      })
-      .catch(() => {
-        setUser(null);
-      })
-      .finally(() => setLoading(false));
+  const fetchCurrentUser = useCallback(async () => {
+    try {
+      const res = await api.get('/auth/me');
+      const fetchedUser = res.data;
+      setUser((prev) => {
+        const prevRoles = prev?.roles?.map((r) => r.name).sort().join(',') || '';
+        const newRoles = (fetchedUser?.roles || []).map((r) => r.name).sort().join(',') || '';
+        if (prev && prevRoles !== newRoles) {
+          window.dispatchEvent(new Event('role-change'));
+        }
+        return fetchedUser;
+      });
+    } catch {
+      setUser(null);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchCurrentUser().finally(() => setLoading(false));
+
+    // Periodic session refresh (every 5 minutes) to detect role changes
+    const interval = setInterval(async () => {
+      await fetchCurrentUser();
+    }, 300000);
+
+    return () => clearInterval(interval);
+  }, [fetchCurrentUser]);
+
+  // Listen for role changes across tabs (BroadcastChannel API)
+  useEffect(() => {
+    const handleRoleChange = () => {
+      fetchCurrentUser();
+    };
+    window.addEventListener('role-change', handleRoleChange);
+    return () => window.removeEventListener('role-change', handleRoleChange);
+  }, [fetchCurrentUser]);
 
   const login = useCallback(async (email, password, rememberMe = false) => {
     await api.get('/sanctum/csrf-cookie');

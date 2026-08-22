@@ -28,6 +28,9 @@ const LoginPage = () => {
 
     try {
       await login(email, password, rememberMe);
+      if (rememberMe) {
+        showToast('Session Extended', 'Your session will remain active for 30 days.', 'info');
+      }
       navigate(from, { replace: true });
     } catch (err) {
       if (err.response?.status === 419) {
