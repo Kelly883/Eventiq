@@ -15,7 +15,15 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (location.state?.message && location.state?.from) {
-      showToast('Notice', location.state.message, location.state.messageType || 'warning');
+      const fromPath = location.state.from.pathname || '';
+      const isProtectedRoute = fromPath.startsWith('/admin/') ||
+        fromPath.startsWith('/dashboard/') ||
+        fromPath.startsWith('/organizer/');
+      if (isProtectedRoute) {
+        showToast('Authentication Required', 'Please log in to access ' + fromPath + '.', 'info');
+      } else if (location.state.message) {
+        showToast('Notice', location.state.message, location.state.messageType || 'warning');
+      }
     }
   }, [location.state?.message, location.state?.messageType, location.state?.from]);
 

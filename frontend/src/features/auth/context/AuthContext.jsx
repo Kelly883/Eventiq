@@ -17,7 +17,14 @@ export const AuthProvider = ({ children }) => {
         const prevRoles = prev?.roles?.map((r) => r.name).sort().join(',') || '';
         const newRoles = (fetchedUser?.roles || []).map((r) => r.name).sort().join(',') || '';
         if (prev && prevRoles !== newRoles) {
+          // Dispatch within same document
           window.dispatchEvent(new Event('role-change'));
+          // Broadcast across tabs/windows
+          if ('BroadcastChannel' in window) {
+            const channel = new BroadcastChannel('auth-sync');
+            channel.postMessage({ type: 'role-change' });
+            channel.close();
+          }
         }
         return fetchedUser;
       });
@@ -29,20 +36,62 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     fetchCurrentUser().finally(() => setLoading(false));
 
-    // Periodic session refresh (every 5 minutes) to detect role changes
-    const interval = setInterval(async () => {
-      await fetchCurrentUser();
-    }, 300000);
+    let idleTimer;
 
-    return () => clearInterval(interval);
+    const scheduleRefresh = () => {
+      clearTimeout(idleTimer);
+      // Poll every 5 minutes of activity, but stop if page is hidden
+      idleTimer = setTimeout(async () => {
+        if (!document.hidden) {
+          await fetchCurrentUser();
+        }
+      }, 300000);
+    };
+
+    // Only resume polling when tab becomes visible again
+    const handleVisibility = () => {
+      if (document.visible && !document.hidden) {
+        fetchCurrentUser().catch(() => {});
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', scheduleRefresh);
+    window.addEventListener('mousemove', scheduleRefresh);
+
+    // Initial schedule
+    scheduleRefresh();
+
+    return () => {
+      clearTimeout(idleTimer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', scheduleRefresh);
+      window.removeEventListener('mousemove', scheduleRefresh);
+    };
   }, [fetchCurrentUser]);
 
-  // Listen for role changes across tabs (BroadcastChannel API)
+  // Listen for role changes across tabs (cross-browser via BroadcastChannel, fallback to window event)
   useEffect(() => {
     const handleRoleChange = () => {
       fetchCurrentUser();
     };
     window.addEventListener('role-change', handleRoleChange);
+
+    // BroadcastChannel API provides cross-tab, cross-window communication
+    // Works across different browser windows, not just same-document
+    if ('BroadcastChannel' in window) {
+      const channel = new BroadcastChannel('auth-sync');
+      channel.addEventListener('message', (event) => {
+        if (event.data?.type === 'role-change') {
+          fetchCurrentUser();
+        }
+      });
+      return () => {
+        window.removeEventListener('role-change', handleRoleChange);
+        channel.close();
+      };
+    }
+
     return () => window.removeEventListener('role-change', handleRoleChange);
   }, [fetchCurrentUser]);
 
