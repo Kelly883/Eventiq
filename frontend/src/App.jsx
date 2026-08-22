@@ -103,7 +103,7 @@ function App() {
                   📷 Gate Scanner
                 </NavLink>
                 <NavLink
-                  to="/dashboard/user"
+                  to="/organizer/events"
                   className={({ isActive }) =>
                     `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
                       isActive
@@ -112,7 +112,7 @@ function App() {
                     }`
                   }
                 >
-                  👤 User
+                  📦 Events
                 </NavLink>
               </nav>
             </div>
@@ -133,8 +133,9 @@ function App() {
             <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
-            <Route path="/dashboard/organizer" element={<OrganizerDashboardPage />} />
-            <Route path="/dashboard/user" element={<UserDashboardPage />} />
+            <Route path="/dashboard/organizer" element={<ProtectedRoute><OrganizerDashboardPage /></ProtectedRoute>} />
+            <Route path="/dashboard/user" element={<ProtectedRoute><UserDashboardPage /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<Navigate to="/dashboard/organizer" replace />} />
             <Route path="/organizer/events" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventListPage /></ProtectedRoute>} />
             <Route path="/organizer/events/create" element={<ProtectedRoute requiredRole="organizer"><EventCreatePage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId/edit" element={<ProtectedRoute requiredRole="organizer"><EventEditPage /></ProtectedRoute>} />
