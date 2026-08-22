@@ -73,7 +73,6 @@ Route::middleware('throttle:auth')->group(function () {
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 });
-Route::post('/auth/refresh', [AuthController::class, 'refresh']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {

@@ -3,54 +3,39 @@ import { api } from '../../../lib/api';
 
 const AuthContext = createContext(null);
 
-const AUTH_TOKEN_STORAGE_KEY = 'authToken';
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem(AUTH_TOKEN_STORAGE_KEY));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-    if (!storedToken) {
-      setLoading(false);
-      return;
-    }
-
     api.get('/auth/me')
       .then((res) => {
         setUser(res.data);
-        setToken(storedToken);
       })
       .catch(() => {
-        localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
-        setToken(null);
         setUser(null);
       })
       .finally(() => setLoading(false));
   }, []);
 
   const login = useCallback(async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
-    const { token, user } = response.data;
-    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
-    setToken(token);
-    setUser(user);
-    return user;
+    await api.get('/sanctum/csrf-cookie');
+    await api.post('/auth/login', { email, password });
+    const res = await api.get('/auth/me');
+    setUser(res.data);
+    return res.data;
   }, []);
 
   const register = useCallback(async (email, password, name) => {
-    const response = await api.post('/auth/register', { email, password, name });
-    const { token, user } = response.data;
-    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
-    setToken(token);
-    setUser(user);
-    return user;
+    await api.get('/sanctum/csrf-cookie');
+    await api.post('/auth/register', { email, password, name });
+    const res = await api.get('/auth/me');
+    setUser(res.data);
+    return res.data;
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
-    setToken(null);
+  const logout = useCallback(async () => {
+    await api.post('/auth/logout');
     setUser(null);
   }, []);
 
@@ -59,9 +44,8 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const resetPassword = useCallback(async (token, newPassword) => {
+    await api.get('/sanctum/csrf-cookie');
     await api.post('/auth/reset-password', { token, newPassword });
-    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
-    setToken(null);
     setUser(null);
   }, []);
 
@@ -70,7 +54,7 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: Boolean(user), loading, checkAdminAccess, login, register, logout, forgotPassword, resetPassword }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: Boolean(user), loading, checkAdminAccess, login, register, logout, forgotPassword, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );
