@@ -29,6 +29,8 @@ import {
   ResetPasswordPage,
 } from './features/auth/pages';
 import { TicketInventoryDashboardPage, AdjustInventoryModal } from './features/ticket-inventory/pages';
+import { TicketTierManagementPage } from './features/ticketing/pages';
+import { EventPricingConfigPage, PricingPreviewModal } from './features/pricing/pages';
 import './App.css';
 
 const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password'];
@@ -176,6 +178,10 @@ function App() {
             <Route path="/organizer/events/:eventId/edit" element={<ProtectedRoute requiredRole="organizer"><EventEditPage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId/inventory" element={<ProtectedRoute requiredRole="organizer"><TicketInventoryDashboardPage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId/inventory/adjust" element={<ProtectedRoute requiredRole="organizer"><AdjustInventoryModal /></ProtectedRoute>} />
+            <Route path="/organizer/events/:eventId/ticketing" element={<ProtectedRoute requiredRole="organizer"><TicketTierManagementPage /></ProtectedRoute>} />
+            <Route path="/organizer/events/:eventId/ticketing/tier/:tierId/edit" element={<ProtectedRoute requiredRole="organizer"><TicketTierManagementPage /></ProtectedRoute>} />
+            <Route path="/organizer/events/:eventId/pricing" element={<ProtectedRoute requiredRole="organizer"><EventPricingConfigPage /></ProtectedRoute>} />
+            <Route path="/organizer/events/:eventId/pricing/preview" element={<ProtectedRoute requiredRole="organizer"><PricingPreviewModal /></ProtectedRoute>} />
             <Route path="/organizer/:organizerId" element={<OrganizerPublicProfilePage />} />
             <Route path="/organizer/profile/edit" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileEditPage /></ProtectedRoute>} />
             <Route path="/organizer/profile/settings" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileSettingsPage /></ProtectedRoute>} />
