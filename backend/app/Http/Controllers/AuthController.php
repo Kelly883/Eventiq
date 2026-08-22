@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Resources\AuthResource;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,28 +12,6 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    /**
-     * Refresh access token.
-     *
-     * Current token storage approach in the repo is using Sanctum personal access tokens.
-     * This endpoint can only work if the caller is authenticated (i.e. bearer token is valid).
-     */
-    public function refresh(Request $request)
-    {
-        $user = $request->user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthenticated.'], 401);
-        }
-
-        // Re-issue a new token. (You may want to revoke the old token(s) depending on your policy.)
-        $token = $user->createToken('auth-token')->plainTextToken;
-
-        return new AuthResource([
-            'token' => $token,
-            'user' => $user,
-        ]);
-    }
-
     public function register(Request $request)
     {
         $validated = $request->validate([
@@ -50,9 +28,8 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        return new AuthResource([
-            'token' => $user->createToken('auth-token')->plainTextToken,
-            'user' => $user,
+        return response()->json([
+            'user' => UserResource::make($user),
         ]);
     }
 
@@ -69,17 +46,18 @@ class AuthController extends Controller
             ]);
         }
 
-        $user = Auth::user();
+        $request->session()->regenerate();
 
-        return new AuthResource([
-            'token' => $user->createToken('auth-token')->plainTextToken,
-            'user' => $user,
+        return response()->json([
+            'user' => UserResource::make($request->user()),
         ]);
     }
 
     public function logout(Request $request)
     {
-        $request->user()->tokens()->delete();
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json(['message' => 'Logged out successfully']);
     }

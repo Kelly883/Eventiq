@@ -17,50 +17,25 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-
 let isRefreshing = false;
-let refreshPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<boolean> | null = null;
 let queuedRequests: Array<{
-  resolve: (token: string | null) => void;
+  resolve: (result: boolean) => void;
   reject: (err: unknown) => void;
 }> = [];
 
-const AUTH_TOKEN_STORAGE_KEY = 'authToken';
-
-
-function getToken(): string | null {
+async function refreshCsrf(): Promise<boolean> {
   try {
-    return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    await api.get('/sanctum/csrf-cookie');
+    return true;
   } catch {
-    return null;
+    return false;
   }
 }
 
-function setToken(token: string | null) {
-  try {
-    if (!token) {
-      localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
-      return;
-    }
-    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
-  } catch {
-    // ignore
-  }
-}
-
-
-
-async function refreshAccessToken(): Promise<string | null> {
-  // If your backend uses Sanctum/session refresh, replace this endpoint accordingly.
-  // Expected response shape: { accessToken: string }.
-  const response = await api.post('/auth/refresh');
-  const accessToken = response.data?.accessToken ?? null;
-  return accessToken;
-}
-
-function resolveQueuedRequests(token: string | null) {
+function resolveQueuedRequests(result: boolean) {
   for (const waiter of queuedRequests) {
-    waiter.resolve(token);
+    waiter.resolve(result);
   }
   queuedRequests = [];
 }
@@ -72,15 +47,7 @@ function rejectQueuedRequests(err: unknown) {
   queuedRequests = [];
 }
 
-
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = getToken();
-  if (token) {
-    config.headers = config.headers ?? {};
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (config.headers as any).Authorization = `Bearer ${token}`;
-  }
-
   config.headers = config.headers ?? {};
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (config.headers as any)['X-Device-Token'] = getDeviceToken();
@@ -144,13 +111,13 @@ api.interceptors.response.use(
       const serverMessage = responseData?.message || '';
 
       // Check for database connection loss (usually 500 Internal Server Error with database/SQL error messages, or 503 Service Unavailable)
-      const isDatabaseError = 
-        status === 500 && 
-        (serverMessage.toLowerCase().includes('database') || 
-         serverMessage.toLowerCase().includes('sqlstate') || 
-         serverMessage.toLowerCase().includes('connection') ||
-         JSON.stringify(responseData).toLowerCase().includes('sqlstate') ||
-         JSON.stringify(responseData).toLowerCase().includes('database'));
+      const isDatabaseError =
+        status === 500 &&
+        (serverMessage.toLowerCase().includes('database') ||
+          serverMessage.toLowerCase().includes('sqlstate') ||
+          serverMessage.toLowerCase().includes('connection') ||
+          JSON.stringify(responseData).toLowerCase().includes('sqlstate') ||
+          JSON.stringify(responseData).toLowerCase().includes('database'));
 
       if (isDatabaseError) {
         showToast(
@@ -183,43 +150,31 @@ api.interceptors.response.use(
       _retry?: boolean;
     }) | null;
 
-    // Avoid refresh loops: if the failing request *is* the refresh endpoint,
-    // don't attempt another refresh.
     const requestUrl = (originalRequest?.url ?? '').toString();
-    const isRefreshRequest = requestUrl.includes('/auth/refresh');
+    const isAuthRequest = requestUrl.includes('/auth/') || requestUrl.includes('/sanctum/');
 
-    if (!isRefreshRequest && status === 401 && originalRequest && !originalRequest._retry) {
+    if (!isAuthRequest && status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
 
       if (!refreshPromise) {
         refreshPromise = (async () => {
           try {
-            const newToken = await refreshAccessToken();
-            return newToken;
-          } catch {
-            return null;
+            const ok = await refreshCsrf();
+            return ok;
           } finally {
             isRefreshing = false;
           }
         })();
       }
 
-      // Wait for refresh to complete (single-flight)
-      const newToken = await refreshPromise;
+      const refreshed = await refreshPromise;
       refreshPromise = null;
 
-      if (newToken) {
-        setToken(newToken);
-        // Update auth header for retried request
-        originalRequest.headers = originalRequest.headers ?? {};
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (originalRequest.headers as any).Authorization = `Bearer ${newToken}`;
+      if (refreshed) {
         return api.request(originalRequest);
       }
 
-      // Refresh failed: fall back to logout
       if (typeof window !== 'undefined') {
-        localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
         window.location.href = '/login';
       }
     }
@@ -227,7 +182,3 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-
-
-
-
