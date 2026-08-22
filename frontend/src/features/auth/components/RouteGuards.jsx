@@ -16,7 +16,10 @@ export const ProtectedRoute = ({ children, requiredRole = null }) => {
   }
 
   if (requiredRole === 'admin' && !checkAdminAccess()) {
-    return <Navigate to="/settings/permissions" replace state={{
+    // Preserve query params from the original URL to avoid losing state
+    const searchParams = location.search;
+    const redirectTo = searchParams ? `/settings/permissions${searchParams}` : '/settings/permissions';
+    return <Navigate to={redirectTo} replace state={{
       message: 'Access Denied — only admins can manage roles',
       from: location.pathname,
       messageType: 'error',
