@@ -31,9 +31,10 @@ import {
 import { TicketInventoryDashboardPage, AdjustInventoryModal } from './features/ticket-inventory/pages';
 import { TicketTierManagementPage } from './features/ticketing/pages';
 import { EventPricingConfigPage, PricingPreviewModal } from './features/pricing/pages';
+import { AccessDeniedPage } from './features/common';
 import './App.css';
 
-const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password'];
+const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password', '/access-denied'];
 
 function App() {
   useFCMTokenSync();
@@ -191,6 +192,7 @@ function App() {
             <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
             <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
             <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
+            <Route path="/access-denied" element={<AccessDeniedPage />} />
             <Route path="*" element={<Navigate to="/analytics" replace />} />
           </Routes>
         </main>

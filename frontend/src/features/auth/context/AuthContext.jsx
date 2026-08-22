@@ -3,6 +3,8 @@ import { api } from '../../../lib/api';
 
 const AuthContext = createContext(null);
 
+const REMEMBER_ME_KEY = 'rememberMe';
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -18,9 +20,16 @@ export const AuthProvider = ({ children }) => {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (email, password, rememberMe = false) => {
     await api.get('/sanctum/csrf-cookie');
     await api.post('/auth/login', { email, password });
+
+    if (rememberMe) {
+      localStorage.setItem(REMEMBER_ME_KEY, 'true');
+    } else {
+      localStorage.removeItem(REMEMBER_ME_KEY);
+    }
+
     const res = await api.get('/auth/me');
     setUser(res.data);
     return res.data;
@@ -29,6 +38,7 @@ export const AuthProvider = ({ children }) => {
   const register = useCallback(async (email, password, name) => {
     await api.get('/sanctum/csrf-cookie');
     await api.post('/auth/register', { email, password, name });
+    localStorage.removeItem(REMEMBER_ME_KEY);
     const res = await api.get('/auth/me');
     setUser(res.data);
     return res.data;
@@ -36,6 +46,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(async () => {
     await api.post('/auth/logout');
+    localStorage.removeItem(REMEMBER_ME_KEY);
     setUser(null);
   }, []);
 
@@ -46,6 +57,7 @@ export const AuthProvider = ({ children }) => {
   const resetPassword = useCallback(async (token, newPassword) => {
     await api.get('/sanctum/csrf-cookie');
     await api.post('/auth/reset-password', { token, newPassword });
+    localStorage.removeItem(REMEMBER_ME_KEY);
     setUser(null);
   }, []);
 

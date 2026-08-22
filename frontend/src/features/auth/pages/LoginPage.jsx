@@ -6,6 +6,7 @@ import { showToast } from '../../../lib/api';
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -13,10 +14,10 @@ const LoginPage = () => {
   const { login } = useAuthContext();
 
   useEffect(() => {
-    if (location.state?.message) {
+    if (location.state?.message && location.state?.from) {
       showToast('Notice', location.state.message, location.state.messageType || 'warning');
     }
-  }, [location.state?.message, location.state?.messageType]);
+  }, [location.state?.message, location.state?.messageType, location.state?.from]);
 
   const from = location.state?.from?.pathname || '/dashboard/organizer';
 
@@ -26,7 +27,7 @@ const LoginPage = () => {
     setError('');
 
     try {
-      await login(email, password);
+      await login(email, password, rememberMe);
       navigate(from, { replace: true });
     } catch (err) {
       setError(
@@ -93,7 +94,12 @@ const LoginPage = () => {
 
         <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
             <span>Remember me</span>
           </label>
           <button
