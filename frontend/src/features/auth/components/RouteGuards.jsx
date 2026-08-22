@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
-import { AccessDeniedPage, LoadingSpinner } from '../../common';
+import { LoadingSpinner } from '../../common';
 
 export const ProtectedRoute = ({ children, requiredRole = null }) => {
   const { user, loading, checkAdminAccess } = useAuthContext();
