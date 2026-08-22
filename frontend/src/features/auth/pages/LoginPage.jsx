@@ -6,6 +6,7 @@ import { showToast } from '../../../lib/api';
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -13,10 +14,18 @@ const LoginPage = () => {
   const { login } = useAuthContext();
 
   useEffect(() => {
-    if (location.state?.message) {
-      showToast('Notice', location.state.message, location.state.messageType || 'warning');
+    if (location.state?.message && location.state?.from) {
+      const fromPath = location.state.from.pathname || '';
+      const isProtectedRoute = fromPath.startsWith('/admin/') ||
+        fromPath.startsWith('/dashboard/') ||
+        fromPath.startsWith('/organizer/');
+      if (isProtectedRoute) {
+        showToast('Authentication Required', 'Please log in to access ' + fromPath + '.', 'info');
+      } else if (location.state.message) {
+        showToast('Notice', location.state.message, location.state.messageType || 'warning');
+      }
     }
-  }, [location.state?.message, location.state?.messageType]);
+  }, [location.state?.message, location.state?.messageType, location.state?.from]);
 
   const from = location.state?.from?.pathname || '/dashboard/organizer';
 
@@ -26,14 +35,21 @@ const LoginPage = () => {
     setError('');
 
     try {
-      await login(email, password);
+      await login(email, password, rememberMe);
+      if (rememberMe) {
+        showToast('Session Extended', 'Your session will remain active for 30 days.', 'info');
+      }
       navigate(from, { replace: true });
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        err.message ||
-        'Invalid email or password.'
-      );
+      if (err.response?.status === 419) {
+        setError('Security token expired. Please refresh the page and try again.');
+      } else {
+        setError(
+          err.response?.data?.message ||
+          err.message ||
+          'Invalid email or password.'
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -93,7 +109,12 @@ const LoginPage = () => {
 
         <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
             <span>Remember me</span>
           </label>
           <button
