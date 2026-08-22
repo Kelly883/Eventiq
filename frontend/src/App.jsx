@@ -15,6 +15,7 @@ import UserPermissionsPage from './features/roles/pages/UserPermissionsPage';
 import OrganizerPublicProfilePage from './features/organizer-profile/pages/OrganizerPublicProfilePage';
 import OrganizerProfileEditPage from './features/organizer-profile/pages/OrganizerProfileEditPage';
 import OrganizerProfileSettingsPage from './features/organizer-profile/pages/OrganizerProfileSettingsPage';
+import OrganizerPublicEventsPage from './features/organizer-profile/pages/OrganizerPublicEventsPage';
 import OrganizerEventListPage from './features/events/pages/OrganizerEventListPage';
 import EventCreatePage from './features/events/pages/EventCreatePage';
 import EventEditPage from './features/events/pages/EventEditPage';
@@ -123,6 +124,18 @@ function App() {
                   >
                     📦 Events
                   </NavLink>
+                  <NavLink
+                    to="/organizer/profile/edit"
+                    className={({ isActive }) =>
+                      `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                      }`
+                    }
+                  >
+                    👤 My Profile
+                  </NavLink>
                 </nav>
 
                 {/* Auth buttons */}
@@ -181,10 +194,12 @@ function App() {
             <Route path="/organizer/events/:eventId/ticketing" element={<ProtectedRoute requiredRole="organizer"><TicketTierManagementPage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId/ticketing/tier/:tierId/edit" element={<ProtectedRoute requiredRole="organizer"><TicketTierManagementPage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId/pricing" element={<ProtectedRoute requiredRole="organizer"><EventPricingConfigPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/pricing/preview" element={<ProtectedRoute requiredRole="organizer"><PricingPreviewModal /></ProtectedRoute>} />
-            <Route path="/organizer/:organizerId" element={<OrganizerPublicProfilePage />} />
-            <Route path="/organizer/profile/edit" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileEditPage /></ProtectedRoute>} />
-            <Route path="/organizer/profile/settings" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileSettingsPage /></ProtectedRoute>} />
+             <Route path="/organizer/events/:eventId/pricing/preview" element={<ProtectedRoute requiredRole="organizer"><PricingPreviewModal /></ProtectedRoute>} />
+             <Route path="/organizer/:organizerId" element={<OrganizerPublicProfilePage />} />
+             <Route path="/organizers/:organizerId/events" element={<OrganizerPublicEventsPage />} />
+             <Route path="/organizer/me" element={<ProtectedRoute requiredRole="organizer"><OrganizerPublicProfilePage /></ProtectedRoute>} />
+             <Route path="/organizer/profile/edit" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileEditPage /></ProtectedRoute>} />
+             <Route path="/organizer/profile/settings" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileSettingsPage /></ProtectedRoute>} />
             <Route path="/check-in" element={<CheckInDashboardPage />} />
             <Route path="/venue-scan" element={<VenueCheckInPage />} />
             <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />

@@ -18,8 +18,8 @@ class OrganizerProfileController extends Controller
 
         if (! $organizer->isPublic) {
             return response()->json([
-                'data' => new OrganizerPublicResource($organizer),
-            ], Response::HTTP_OK);
+                'message' => 'This organizer profile is private.',
+            ], Response::HTTP_FORBIDDEN);
         }
 
         return response()->json([
@@ -29,10 +29,19 @@ class OrganizerProfileController extends Controller
 
     public function edit()
     {
-        $organizer = Organizer::where('user_id', auth()->id())->firstOrFail();
+        $organizer = Organizer::where('user_id', auth()->id())->first();
+
+        if (! $organizer) {
+            return response()->json([
+                'data' => null,
+                'profile_exists' => false,
+                'message' => 'No organizer profile found. Create one to get started.',
+            ], Response::HTTP_OK);
+        }
 
         return response()->json([
             'data' => new OrganizerPrivateResource($organizer),
+            'profile_exists' => true,
         ]);
     }
 
@@ -62,5 +71,14 @@ class OrganizerProfileController extends Controller
         $organizer = Organizer::where('user_id', auth()->id())->firstOrFail();
 
         return response()->json(['data' => []]);
+    }
+
+    public function me()
+    {
+        $organizer = Organizer::where('user_id', auth()->id())->firstOrFail();
+
+        return response()->json([
+            'data' => new OrganizerPublicResource($organizer),
+        ]);
     }
 }

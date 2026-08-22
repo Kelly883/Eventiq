@@ -104,10 +104,7 @@ Route::middleware('auth:sanctum')->group(function () {
 // Public event pricing (attendee)
 Route::get('/events/{event}/pricing', [PricingController::class, 'show']);
 
-// Public organizer profile
-Route::get('/organizers/{organizer}', [OrganizerController::class, 'show']);
 
-// Ticket Delivery Endpoints
 Route::middleware('auth:sanctum')->group(function () {
     // User delivery routes
     Route::prefix('delivery')->group(function () {

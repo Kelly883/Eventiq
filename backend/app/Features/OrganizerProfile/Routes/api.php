@@ -13,5 +13,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/profile', [OrganizerProfileController::class, 'edit']);
         Route::put('/profile', [OrganizerProfileController::class, 'update']);
         Route::get('/profile/audit-log', [OrganizerProfileController::class, 'auditLog']);
+        Route::get('/me', [OrganizerProfileController::class, 'me']);
     });
 });

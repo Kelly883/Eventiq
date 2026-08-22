@@ -144,6 +144,18 @@ const OrganizerDashboardPage = () => {
 
           {/* Right Sidebar: Preferences inspection */}
           <div className="space-y-6">
+            {/* Profile Link */}
+            <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+              <h2 className="text-lg font-bold text-slate-800 mb-2">Your Profile</h2>
+              <p className="text-xs text-slate-500 mb-4">Edit your public organizer profile and settings.</p>
+              <Link
+                to="/organizer/profile/edit"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-xs font-bold shadow-sm hover:bg-indigo-700 transition-colors"
+              >
+                👤 Edit Profile
+              </Link>
+            </div>
+
             {/* Inventory Link */}
             <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
               <h2 className="text-lg font-bold text-slate-800 mb-2">Ticket Inventory</h2>
