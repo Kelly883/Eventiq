@@ -16,9 +16,10 @@ export const ProtectedRoute = ({ children, requiredRole = null }) => {
   }
 
   if (requiredRole === 'admin' && !checkAdminAccess()) {
-    return <Navigate to="/access-denied" replace state={{
+    return <Navigate to="/settings/permissions" replace state={{
       message: 'Access Denied — only admins can manage roles',
       from: location.pathname,
+      messageType: 'warning',
     }} />;
   }
 
