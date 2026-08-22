@@ -60,9 +60,24 @@ function App() {
     }
   }, [user, sessionWarningShown]);
 
+  const getRedirectPath = (to: string) => {
+    const userRoles = user?.roles?.map((r: { name: string }) => r.name) || [];
+    if (to === '/dashboard/organizer' && !userRoles.includes('organizer')) {
+      return '/dashboard/user';
+    }
+    if (to.startsWith('/admin/') && !userRoles.includes('admin')) {
+      return '/dashboard/user';
+    }
+    if (to.startsWith('/organizer/') && !userRoles.includes('organizer')) {
+      return '/dashboard/user';
+    }
+    return to;
+  };
+
   useEffect(() => {
     if (user && location.state?.from) {
-      navigate(location.state.from, { replace: true });
+      const safePath = getRedirectPath(location.state.from.pathname);
+      navigate(safePath, { replace: true });
     }
   }, [user, location.state?.from, navigate]);
 
