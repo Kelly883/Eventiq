@@ -58,11 +58,11 @@ const OrganizerProfileSettingsPage = () => {
 
   return (
     <div>
-      <div className="flex items-center justify-between max-w-2xl">
-        <h1>Organizer Profile Settings</h1>
+      <div className="flex items-center justify-between max-w-2xl mb-6">
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Organizer Profile Settings</h1>
         {organizerId && (
           <Link
-            to={`/organizer/${organizerId}`}
+            to={`/o/${organizerId}`}
             className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
           >
             View public profile →

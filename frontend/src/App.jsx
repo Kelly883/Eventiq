@@ -254,7 +254,7 @@ function App() {
             <Route path="/organizer/events/:eventId/ticketing/tier/:tierId/edit" element={<ProtectedRoute requiredRole="organizer"><TicketTierManagementPage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId/pricing" element={<ProtectedRoute requiredRole="organizer"><EventPricingConfigPage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId/pricing/preview" element={<ProtectedRoute requiredRole="organizer"><PricingPreviewModal /></ProtectedRoute>} />
-            <Route path="/organizer/:organizerId" element={<OrganizerPublicProfilePage />} />
+            <Route path="/o/:organizerId" element={<OrganizerPublicProfilePage />} />
             <Route path="/my/profile" element={<ProtectedRoute requiredRole="organizer"><MyOrganizerProfilePage /></ProtectedRoute>} />
             <Route path="/organizer/profile/edit" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileEditPage /></ProtectedRoute>} />
             <Route path="/organizer/profile/settings" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileSettingsPage /></ProtectedRoute>} />

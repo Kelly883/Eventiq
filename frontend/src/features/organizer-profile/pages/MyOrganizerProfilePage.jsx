@@ -27,7 +27,7 @@ const MyOrganizerProfilePage = () => {
       </Link>
       {organizerId && (
         <Link
-          to={`/organizer/${organizerId}`}
+          to={`/o/${organizerId}`}
           className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
         >
           View public profile →

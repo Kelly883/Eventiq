@@ -66,21 +66,50 @@ const OrganizerProfileView = ({ organizerId, actions = null }) => {
   return (
     <div>
       {actions && <div className="mb-6">{actions}</div>}
-      <h1>Organizer Public Profile</h1>
-      <div>
-        {organizer.displayName && <h2>{organizer.displayName}</h2>}
-        {organizer.bio && <p>{organizer.bio}</p>}
-        {organizer.avatarUrl && (
-          <img
-            src={organizer.avatarUrl}
-            alt={`${organizer.displayName || 'Organizer'} avatar`}
-            className="w-20 h-20 rounded-full object-cover"
-          />
-        )}
-        <p>Organizer ID: {organizer.organizerId}</p>
-        <hr />
-        <p>Total Events Created: {organizer.totalEventsCreated}</p>
-        <p>Total Tickets Sold: {organizer.totalTicketsSold}</p>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
+        <div className="flex items-start gap-5">
+          {organizer.avatarUrl ? (
+            <img
+              src={organizer.avatarUrl}
+              alt={`${organizer.displayName || 'Organizer'} avatar`}
+              className="w-20 h-20 rounded-full object-cover border border-slate-200"
+            />
+          ) : (
+            <div
+              aria-hidden="true"
+              className="w-20 h-20 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-2xl"
+            >
+              {(organizer.displayName || 'O').charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              {organizer.displayName || 'Organizer'}
+            </h1>
+            {organizer.bio && (
+              <p className="mt-2 text-sm text-slate-600 leading-relaxed">{organizer.bio}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-4">
+          <div className="bg-slate-50 border border-slate-100 rounded-lg p-4">
+            <span className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Events Created
+            </span>
+            <span className="block mt-1 text-2xl font-extrabold text-slate-900">
+              {organizer.totalEventsCreated ?? 0}
+            </span>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 rounded-lg p-4">
+            <span className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Tickets Sold
+            </span>
+            <span className="block mt-1 text-2xl font-extrabold text-slate-900">
+              {organizer.totalTicketsSold ?? 0}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
