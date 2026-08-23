@@ -49,6 +49,7 @@ export const ProtectedRoute = ({ children, requiredRole = null }) => {
         to="/settings/permissions"
         state={{
           deniedByRole: 'admin',
+          attemptedPath: location.pathname,
           message: 'Admin access is required for that page. You have been taken to your permissions instead.',
           messageType: 'warning',
         }}
@@ -91,7 +92,7 @@ export const PublicRoute = ({ children }) => {
       return <Navigate to="/dashboard/organizer" replace />;
     }
     if (role === 'admin') {
-      return <Navigate to="/settings/permissions" replace />;
+      return <Navigate to="/admin/roles" replace />;
     }
     return <Navigate to="/dashboard/user" replace />;
   }

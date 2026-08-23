@@ -32,7 +32,9 @@ const UserPermissionsPage = () => {
                 Admin access required
               </h2>
               <p className="text-sm text-amber-700">
-                The page you tried to open is only available to administrators.
+                {location.state?.attemptedPath
+                  ? `The page ${location.state.attemptedPath} is only available to administrators.`
+                  : 'That page is only available to administrators.'}{' '}
                 You have been taken to your permissions instead.
               </p>
             </div>
@@ -79,8 +81,11 @@ const UserPermissionsPage = () => {
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
             <h3 className="text-lg font-semibold text-amber-800 mb-2">Need different access?</h3>
             <p className="text-sm text-amber-700 mb-4">
-              If you need administrator access or want to request a role change,
-              please contact your organization's system administrator.
+              Role changes are handled by your platform administrators. Ask them to
+              assign you the <span className="font-semibold">admin</span> or{' '}
+              <span className="font-semibold">organizer</span> role — they can do this
+              from the Admin Roles console. Once updated, your access changes here
+              automatically.
             </p>
             <Link
               to="/dashboard/organizer"
