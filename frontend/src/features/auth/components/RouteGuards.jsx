@@ -1,23 +1,21 @@
 import React from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import { api } from '../../../lib/api';
+import { LoadingSpinner } from '../../common';
 
-const getUserRole = (): string | null => {
-  const user = useAuthContext().user;
-  return user?.roles?.some((r: { name: string }) => r.name === 'organizer')
-    ? 'organizer'
-    : user?.roles?.some((r: { name: string }) => r.name === 'admin')
-      ? 'admin'
-      : null;
+const getUserRole = (user) => {
+  if (user?.roles?.some((r) => r.name === 'organizer')) return 'organizer';
+  if (user?.roles?.some((r) => r.name === 'admin')) return 'admin';
+  return null;
 };
 
 export const ProtectedRoute = ({ children, requiredRole = null }) => {
-  const { user, loading, checkAdminAccess, sessionExpired, refreshAuth, navigate } = useAuthContext();
+  const { user, loading, checkAdminAccess } = useAuthContext();
   const location = useLocation();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <LoadingSpinner message="Checking authentication..." />;
   }
 
   if (!user) {
@@ -60,12 +58,12 @@ export const PublicRoute = ({ children }) => {
   }
 
   if (user) {
-    const role = getUserRole();
+    const role = getUserRole(user);
     if (role === 'organizer') {
       return <Navigate to="/dashboard/organizer" replace />;
     }
     if (role === 'admin') {
-      return <Navigate to="/admin/roles" replace />;
+      return <Navigate to="/settings/permissions" replace />;
     }
     return <Navigate to="/dashboard/user" replace />;
   }

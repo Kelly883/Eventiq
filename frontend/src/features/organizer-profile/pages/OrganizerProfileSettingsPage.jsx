@@ -103,7 +103,7 @@ const OrganizerProfileSettingsPage = () => {
               required
             />
           </div>
-        </div>
+        </form>
         <div className="flex justify-end space-x-2 pt-4">
           <button
             type="submit"

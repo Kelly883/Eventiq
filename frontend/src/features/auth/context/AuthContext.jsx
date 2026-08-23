@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api, showToast } from '../../../lib/api';
 
-const AuthContext = createContext(null;
+const AuthContext = createContext(null);
 
 const REMEMBER_ME_KEY = 'rememberMe';
 const SESSION_EVENT_KEY = 'eventiq-session-event';
@@ -195,14 +195,10 @@ export const AuthProvider = ({ children }) => {
 
     const res = await api.get('/auth/me');
     setUser(res.data);
-<<<<<<< HEAD
     setSessionExpired(false);
-    return res.data;
-=======
     // Broadcast session change to all tabs
     broadcastAuthEvent('session-established');
     return { user: res.data, remember_me: response.data?.remember_me ?? false };
->>>>>>> origin/main
   }, []);
 
   const register = useCallback(async (email, password, name) => {
@@ -211,11 +207,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(REMEMBER_ME_KEY);
     const res = await api.get('/auth/me');
     setUser(res.data);
-<<<<<<< HEAD
     setSessionExpired(false);
-=======
     broadcastAuthEvent('session-established');
->>>>>>> origin/main
     return res.data;
   }, []);
 
@@ -223,12 +216,9 @@ export const AuthProvider = ({ children }) => {
     await api.post('/auth/logout');
     localStorage.removeItem(REMEMBER_ME_KEY);
     setUser(null);
-<<<<<<< HEAD
     setOrganizerId(null);
-=======
     // Broadcast session invalidation to all tabs
     broadcastAuthEvent('session-ended');
->>>>>>> origin/main
   }, []);
 
   const forgotPassword = useCallback(async (email) => {
@@ -253,10 +243,6 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuthContext = () => {
-  return useContext(AuthContext);
 };
 
 export const useAuthContext = () => {

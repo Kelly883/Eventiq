@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import SalesAnalyticsDashboardPage from './features/analytics/pages/SalesAnalyticsDashboardPage';
 import { OrganizerDashboardPage, UserDashboardPage } from './features/dashboard/pages';
@@ -32,6 +32,8 @@ import { TicketInventoryDashboardPage, AdjustInventoryModal } from './features/t
 import { TicketTierManagementPage } from './features/ticketing/pages';
 import { EventPricingConfigPage, PricingPreviewModal } from './features/pricing/pages';
 import { AccessDeniedPage } from './features/common';
+import MyOrganizerProfilePage from './features/organizer-profile/pages/MyOrganizerProfilePage';
+import { api } from './lib/api';
 import './App.css';
 
 const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password', '/access-denied'];
@@ -55,13 +57,13 @@ function App() {
           'warning',
           8000
         );
-      }, 55000;
+      }, 55000);
       return () => clearTimeout(timeout);
     }
   }, [user, sessionWarningShown]);
 
-  const getRedirectPath = (to: string) => {
-    const userRoles = user?.roles?.map((r: { name: string }) => r.name) || [];
+  const getRedirectPath = (to) => {
+    const userRoles = user?.roles?.map((r) => r.name) || [];
     if (to === '/dashboard/organizer' && !userRoles.includes('organizer')) {
       return '/dashboard/user';
     }
