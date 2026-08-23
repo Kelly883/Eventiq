@@ -7,32 +7,30 @@ use App\Features\EmailNotifications\Models\EmailTemplate;
 
 class EmailTemplatePolicy
 {
-    // TODO: tighten once role/permission conventions for this project are
-    // confirmed (an is_admin flag vs a role/permission system) - defaulting
-    // to "any authenticated user" is deliberately permissive rather than
-    // guessing at a specific role name that may not exist.
+    // Platform-wide email templates are an admin-only resource: any user who
+    // can edit them can inject content into the platform mail channel.
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->hasRole('admin');
     }
 
     public function view(User $user, EmailTemplate $emailTemplate): bool
     {
-        return true;
+        return $user->hasRole('admin');
     }
 
     public function create(User $user): bool
     {
-        return true;
+        return $user->hasRole('admin');
     }
 
     public function update(User $user, EmailTemplate $emailTemplate): bool
     {
-        return true;
+        return $user->hasRole('admin');
     }
 
     public function delete(User $user, EmailTemplate $emailTemplate): bool
     {
-        return true;
+        return $user->hasRole('admin');
     }
 }

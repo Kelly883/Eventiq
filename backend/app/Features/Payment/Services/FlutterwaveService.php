@@ -22,9 +22,13 @@ class FlutterwaveService implements PaymentGatewayContract
         $this->baseUrl = $baseUrl;
         // Flutterwave lets you configure a dedicated "Secret Hash" in the
         // dashboard specifically for webhook verification, separate from
-        // the API secret key. Falls back to secretKey only if no dedicated
-        // hash is configured, so existing setups don't silently break.
-        $this->webhookSecretHash = $webhookSecretHash !== '' ? $webhookSecretHash : $secretKey;
+        // the API secret key. Fail closed when it is missing: reusing the
+        // API secret key as the webhook secret weakens key isolation and
+        // breaks silently on independent rotation.
+        if ($webhookSecretHash === '') {
+            Log::warning('FLUTTERWAVE_WEBHOOK_SECRET_HASH is not configured; webhook verification will reject all callbacks.');
+        }
+        $this->webhookSecretHash = $webhookSecretHash;
     }
 
     /**

@@ -15,7 +15,31 @@ class PricingWindowController extends Controller
 {
     public function __construct()
     {
-        $this->authorizeResource(PricingWindow::class, 'pricingWindow');
+        // store/update/destroy are authorized per-method below because they
+        // need the URL event scope, which authorizeResource cannot provide.
+        $this->authorizeResource(PricingWindow::class, 'pricingWindow', [
+            'except' => ['create', 'store', 'update', 'destroy'],
+        ]);
+    }
+
+    /**
+     * Only the owning organizer (or an admin) may mutate an event's windows.
+     */
+    private function authorizeEventOwner(Request $request, $eventId): void
+    {
+        $user = $request->user();
+
+        if ($user->hasRole('admin') || $user->hasRole('super-admin')) {
+            return;
+        }
+
+        abort_unless($user->hasRole('organizer'), 403, 'Only organizers can manage pricing windows.');
+
+        $ownsEvent = \App\Models\Event::where('id', $eventId)
+            ->whereHas('organizer', fn ($q) => $q->where('user_id', $user->id))
+            ->exists();
+
+        abort_unless($ownsEvent, 403, 'You do not own this event.');
     }
 
     /**
@@ -46,6 +70,8 @@ class PricingWindowController extends Controller
      */
     public function store(StorePricingWindowRequest $request, $eventId): JsonResponse
     {
+        $this->authorizeEventOwner($request, $eventId);
+
         $data = $request->validated();
         $data['event_id'] = $eventId;
         $data['quantity_sold'] = 0; // Always start at 0, managed atomically via incrementSold()
@@ -71,6 +97,9 @@ class PricingWindowController extends Controller
      */
     public function update(UpdatePricingWindowRequest $request, $eventId, PricingWindow $pricingWindow): JsonResponse
     {
+        $this->authorizeEventOwner($request, $eventId);
+        abort_unless((string) $pricingWindow->event_id === (string) $eventId, 404);
+
         $pricingWindow->update($request->validated());
 
         return response()->json([
@@ -84,6 +113,9 @@ class PricingWindowController extends Controller
      */
     public function destroy($eventId, PricingWindow $pricingWindow): JsonResponse
     {
+        $this->authorizeEventOwner(request(), $eventId);
+        abort_unless((string) $pricingWindow->event_id === (string) $eventId, 404);
+
         $pricingWindow->delete();
 
         return response()->json([

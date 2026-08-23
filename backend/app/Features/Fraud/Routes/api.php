@@ -3,7 +3,9 @@
 use App\Features\Fraud\Http\Controllers\FraudController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth:sanctum')->prefix('fraud')->group(function () {
+// Fraud tooling exposes payment-gateway transaction lookups and cross-user
+// velocity data — restricted to admins.
+Route::middleware(['auth:sanctum', 'role:admin'])->prefix('fraud')->group(function () {
     Route::post('/detect', [FraudController::class, 'detect']);
     Route::get('/transactions/paystack/{reference}', [FraudController::class, 'verifyPaystack']);
     Route::get('/transactions/flutterwave/{transactionId}', [FraudController::class, 'verifyFlutterwave']);

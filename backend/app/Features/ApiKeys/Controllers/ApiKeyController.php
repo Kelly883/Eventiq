@@ -40,6 +40,10 @@ class ApiKeyController extends Controller
     {
         $organizer = $request->user()->organizer;
 
+        if (! $organizer) {
+            return response()->json(['message' => 'Not an organizer account.'], 403);
+        }
+
         $result = $this->apiKeyService->generate(
             $organizer,
             $request->validated('name'),
@@ -60,6 +64,11 @@ class ApiKeyController extends Controller
     public function destroy(Request $request, int $id)
     {
         $organizer = $request->user()->organizer;
+
+        if (! $organizer) {
+            return response()->json(['message' => 'Not an organizer account.'], 403);
+        }
+
         $apiKey = ApiKey::where('id', $id)->where('organizer_id', $organizer->id)->firstOrFail();
 
         $this->apiKeyService->revoke($apiKey);

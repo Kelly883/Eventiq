@@ -71,11 +71,12 @@ class OfflineSyncController
 
     public function applyDue(Request $request)
     {
-        $this->deviceToken($request);
+        $deviceToken = $this->deviceToken($request);
 
         $limit = (int) $request->query('limit', 50);
         $engine = new OfflineSyncEngine();
-        $results = $engine->applyDueQueue($limit);
+        // Only apply operations queued by the caller's own device.
+        $results = $engine->applyDueQueue($limit, $deviceToken);
 
         return response()->json(['results' => $results]);
     }

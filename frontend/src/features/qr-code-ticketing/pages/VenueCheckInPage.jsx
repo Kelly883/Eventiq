@@ -49,7 +49,7 @@ const VenueCheckInPage = () => {
     const channelName = `event.${eventId}.stats`;
     const channel = echo.channel(channelName)
       .listen('.CheckInProcessed', (data) => {
-        console.log(`Real-time check-in stats received on channel ${channelName}:`, data);
+        if (import.meta.env.DEV) console.log(`Real-time check-in stats received on channel ${channelName}:`, data);
         if (data && data.stats) {
           setStats((prev) => ({
             ...prev,
@@ -146,7 +146,7 @@ const VenueCheckInPage = () => {
         isValidPayload = true;
         // Generate a fast client-side checksum with SHA256 using crypto-js
         const hash = CryptoJS.SHA256(payloadString).toString(CryptoJS.enc.Hex);
-        console.log('Scanned payload local checksum:', hash);
+        if (import.meta.env.DEV) console.log('Scanned payload local checksum:', hash);
       } else if (payloadString.includes('-') && payloadString.length > 8) {
         // Standard ticket format (e.g. TCK-SUM-9281)
         isValidPayload = true;
