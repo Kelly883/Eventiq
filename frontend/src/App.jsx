@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import SalesAnalyticsDashboardPage from './features/analytics/pages/SalesAnalyticsDashboardPage';
 import DetailedAnalyticsPage from './features/analytics/pages/DetailedAnalyticsPage';
 import AnalyticsComparisonPage from './features/analytics/pages/AnalyticsComparisonPage';
@@ -39,6 +39,17 @@ import { api, showToast } from './lib/api';
 import './App.css';
 
 const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password', '/access-denied'];
+
+/**
+ * Backward compatibility: public profiles moved from /organizer/:id to
+ * /o/:id. Previously shared links keep working; query strings survive.
+ */
+const OrganizerProfileCompatRedirect = () => {
+  const { organizerId } = useParams();
+  const location = useLocation();
+
+  return <Navigate to={`/o/${organizerId}${location.search}`} replace />;
+};
 
 const hasAnyRole = (roles, ...names) => names.some((n) => roles.includes(n));
 
@@ -255,6 +266,7 @@ function App() {
             <Route path="/organizer/events/:eventId/pricing" element={<ProtectedRoute requiredRole="organizer"><EventPricingConfigPage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId/pricing/preview" element={<ProtectedRoute requiredRole="organizer"><PricingPreviewModal /></ProtectedRoute>} />
             <Route path="/o/:organizerId" element={<OrganizerPublicProfilePage />} />
+            <Route path="/organizer/:organizerId" element={<OrganizerProfileCompatRedirect />} />
             <Route path="/my/profile" element={<ProtectedRoute requiredRole="organizer"><MyOrganizerProfilePage /></ProtectedRoute>} />
             <Route path="/organizer/profile/edit" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileEditPage /></ProtectedRoute>} />
             <Route path="/organizer/profile/settings" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileSettingsPage /></ProtectedRoute>} />
