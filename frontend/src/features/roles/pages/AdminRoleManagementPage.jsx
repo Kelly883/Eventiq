@@ -11,7 +11,7 @@ const AdminRoleManagementPage = () => {
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        const res = await api.get('/api/admin/roles');
+        const res = await api.get('/admin/roles');
         setRoles(res.data.data || res.data || []);
         setError(null);
       } catch (err) {

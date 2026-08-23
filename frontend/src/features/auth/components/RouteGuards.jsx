@@ -1,13 +1,26 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
-import { api } from '../../../lib/api';
+import { showToast } from '../../../lib/api';
 import { LoadingSpinner } from '../../common';
 
 const getUserRole = (user) => {
   if (user?.roles?.some((r) => r.name === 'organizer')) return 'organizer';
   if (user?.roles?.some((r) => r.name === 'admin')) return 'admin';
   return null;
+};
+
+/**
+ * Redirects while firing a toast once, from an effect — never during render
+ * (keeps the guard pure under StrictMode double-rendering).
+ */
+const ToastRedirect = ({ to, state = undefined, title, description, type }) => {
+  useEffect(() => {
+    showToast(title, description, type, 5000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return <Navigate to={to} replace state={state} />;
 };
 
 export const ProtectedRoute = ({ children, requiredRole = null }) => {
@@ -19,32 +32,37 @@ export const ProtectedRoute = ({ children, requiredRole = null }) => {
   }
 
   if (!user) {
-    api.showToast(
-      'Session Expired',
-      'Your session has expired. Please log in again.',
-      'warning'
+    return (
+      <ToastRedirect
+        to="/login"
+        state={{ from: location }}
+        title="Session Expired"
+        description="Your session has expired. Please log in again."
+        type="warning"
+      />
     );
-    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   if (requiredRole === 'admin' && !checkAdminAccess()) {
-    api.showToast(
-      'Access Denied',
-      'Only admins can manage roles',
-      'warning',
-      5000
+    return (
+      <ToastRedirect
+        to="/settings/permissions"
+        title="Access Denied"
+        description="Only admins can manage roles"
+        type="warning"
+      />
     );
-    return <Navigate to="/settings/permissions" replace />;
   }
 
   if (requiredRole === 'organizer' && !user?.roles?.some((r) => r.name === 'organizer')) {
-    api.showToast(
-      'Access Denied',
-      'Organizers only',
-      'warning',
-      5000
+    return (
+      <ToastRedirect
+        to="/dashboard/user"
+        title="Access Denied"
+        description="Organizers only"
+        type="warning"
+      />
     );
-    return <Navigate to="/dashboard/user" replace />;
   }
 
   return children;

@@ -33,7 +33,7 @@ import { TicketTierManagementPage } from './features/ticketing/pages';
 import { EventPricingConfigPage, PricingPreviewModal } from './features/pricing/pages';
 import { AccessDeniedPage } from './features/common';
 import MyOrganizerProfilePage from './features/organizer-profile/pages/MyOrganizerProfilePage';
-import { api } from './lib/api';
+import { api, showToast } from './lib/api';
 import './App.css';
 
 const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password', '/access-denied'];
@@ -51,7 +51,7 @@ function App() {
     if (user && !sessionWarningShown) {
       const timeout = setTimeout(() => {
         setSessionWarningShown(true);
-        api.showToast(
+        showToast(
           'Session Expiring',
           'Your session will expire soon. Save your work or continue activity to stay logged in.',
           'warning',
