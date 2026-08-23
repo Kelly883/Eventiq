@@ -236,7 +236,7 @@ export const AuthProvider = ({ children }) => {
 
   const checkAdminAccess = useCallback(() => {
     return Boolean(user?.roles?.some((role) => role.name === 'admin'));
-  }, [user, user?.roles]);
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: Boolean(user) && !sessionExpired, loading, checkAdminAccess, login, register, logout, forgotPassword, resetPassword, refreshAuth, sessionExpired, organizerId }}>

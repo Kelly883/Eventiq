@@ -5,7 +5,16 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 
 export default [
-  { ignores: ["dist", "node_modules"] },
+  {
+    ignores: [
+      "dist",
+      "node_modules",
+      // Type-declaration stubs written in TS/JSDoc-typedef syntax ahead of a
+      // planned TS migration. They are intentionally outside the Vite build
+      // graph (never imported at runtime) and cannot parse as plain JS.
+      "src/features/*/types/**",
+    ],
+  },
   {
     // Service workers run in a different global scope than the rest of
     // the app (importScripts, self, clients - no window/document), and

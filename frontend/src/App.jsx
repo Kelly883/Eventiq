@@ -102,22 +102,22 @@ function App() {
     }
   }, [user, sessionWarningShown]);
 
-  const getRedirectPath = (to) => {
-    const userRoles = user?.roles?.map((r) => r.name) || [];
-    if (to === '/dashboard/organizer' && !userRoles.includes('organizer')) {
-      return '/dashboard/user';
-    }
-    if (to.startsWith('/admin/') && !userRoles.includes('admin')) {
-      return '/dashboard/user';
-    }
-    if (to.startsWith('/organizer/') && !userRoles.includes('organizer')) {
-      return '/dashboard/user';
-    }
-    return to;
-  };
-
   useEffect(() => {
     if (user && location.state?.from) {
+      const getRedirectPath = (to) => {
+        const userRoles = user?.roles?.map((r) => r.name) || [];
+        if (to === '/dashboard/organizer' && !userRoles.includes('organizer')) {
+          return '/dashboard/user';
+        }
+        if (to.startsWith('/admin/') && !userRoles.includes('admin')) {
+          return '/dashboard/user';
+        }
+        if (to.startsWith('/organizer/') && !userRoles.includes('organizer')) {
+          return '/dashboard/user';
+        }
+        return to;
+      };
+
       const safePath = getRedirectPath(location.state.from.pathname);
       navigate(safePath, { replace: true });
     }
