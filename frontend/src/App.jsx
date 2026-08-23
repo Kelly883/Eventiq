@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import SalesAnalyticsDashboardPage from './features/analytics/pages/SalesAnalyticsDashboardPage';
+import DetailedAnalyticsPage from './features/analytics/pages/DetailedAnalyticsPage';
+import AnalyticsComparisonPage from './features/analytics/pages/AnalyticsComparisonPage';
 import { OrganizerDashboardPage, UserDashboardPage } from './features/dashboard/pages';
 import { CheckInDashboardPage } from './features/check-in';
 import VenueCheckInPage from './features/qr-code-ticketing/pages/VenueCheckInPage';
@@ -62,6 +64,11 @@ const NAV_ITEMS = [
   {
     to: '/organizer/events',
     label: '📦 Events',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
+  },
+  {
+    to: '/organizer/profile/edit',
+    label: '⚙️ Edit Profile',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
   },
   {
@@ -237,6 +244,9 @@ function App() {
             <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
+            <Route path="/organizer/events/:eventId/analytics" element={<ProtectedRoute requiredRole="organizer"><SalesAnalyticsDashboardPage /></ProtectedRoute>} />
+            <Route path="/organizer/events/:eventId/analytics/detailed" element={<ProtectedRoute requiredRole="organizer"><DetailedAnalyticsPage /></ProtectedRoute>} />
+            <Route path="/organizer/analytics/compare" element={<ProtectedRoute requiredRole="organizer"><AnalyticsComparisonPage /></ProtectedRoute>} />
             <Route path="/dashboard/organizer" element={<ProtectedRoute><OrganizerDashboardPage /></ProtectedRoute>} />
             <Route path="/dashboard/user" element={<ProtectedRoute><UserDashboardPage /></ProtectedRoute>} />
             <Route path="/dashboard" element={<Navigate to="/dashboard/organizer" replace />} />

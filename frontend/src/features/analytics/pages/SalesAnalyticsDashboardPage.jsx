@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import {
   SalesVelocityChart,
   LazyChart
@@ -8,7 +8,10 @@ import {
 const SalesAnalyticsDashboardPage = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const selectedEventId = eventId ? parseInt(eventId, 10) : 1;
+  // Under /organizer/events/:eventId/analytics the organizer tools are in scope.
+  const isOrganizerView = location.pathname.startsWith('/organizer/events/');
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">
@@ -41,6 +44,23 @@ const SalesAnalyticsDashboardPage = () => {
               <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse" />
               Pre-Aggregated Server Feed
             </span>
+
+            {isOrganizerView && eventId && (
+              <>
+                <Link
+                  to={`/organizer/events/${eventId}/analytics/detailed`}
+                  className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm transition-colors"
+                >
+                  View Detailed Analytics
+                </Link>
+                <Link
+                  to="/organizer/analytics/compare"
+                  className="text-xs font-semibold text-slate-600 hover:text-slate-800 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm transition-colors"
+                >
+                  Compare Events
+                </Link>
+              </>
+            )}
           </div>
         </div>
 
