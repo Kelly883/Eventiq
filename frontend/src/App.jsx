@@ -284,7 +284,7 @@ function App() {
             <Route path="/o/:organizerId" element={<OrganizerPublicProfilePage />} />
             <Route path="/organizer/:organizerId" element={<OrganizerProfileCompatRedirect />} />
             <Route path="/my/profile" element={<ProtectedRoute requiredRole="organizer"><MyOrganizerProfilePage /></ProtectedRoute>} />
-            <Route path="/organizer/profile" element={<OrganizerProfileNotSetUpPage />} />
+            <Route path="/organizer/profile" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileNotSetUpPage /></ProtectedRoute>} />
             <Route path="/organizer/profile/edit" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileEditPage /></ProtectedRoute>} />
             <Route path="/organizer/profile/settings" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileSettingsPage /></ProtectedRoute>} />
             <Route path="/check-in" element={<CheckInDashboardPage />} />
