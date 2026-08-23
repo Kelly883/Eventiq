@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuthContext } from '../../auth/context/AuthContext';
 import { showToast } from '../../../lib/api';
@@ -6,6 +6,9 @@ import { showToast } from '../../../lib/api';
 const UserPermissionsPage = () => {
   const location = useLocation();
   const { user } = useAuthContext();
+  const [showDeniedBanner, setShowDeniedBanner] = useState(
+    Boolean(location.state?.deniedByRole)
+  );
 
   useEffect(() => {
     if (location.state?.message) {
@@ -19,6 +22,31 @@ const UserPermissionsPage = () => {
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">
       <div className="mx-auto max-w-3xl">
+        {showDeniedBanner && (
+          <div
+            role="alert"
+            className="mb-6 flex items-start justify-between gap-4 bg-amber-50 border border-amber-200 rounded-xl p-4"
+          >
+            <div>
+              <h2 className="text-sm font-bold text-amber-800 mb-1">
+                Admin access required
+              </h2>
+              <p className="text-sm text-amber-700">
+                The page you tried to open is only available to administrators.
+                You have been taken to your permissions instead.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowDeniedBanner(false)}
+              aria-label="Dismiss message"
+              className="text-amber-500 hover:text-amber-700 font-bold text-lg leading-none"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Your Permissions</h1>
           <p className="mt-2 text-sm text-slate-500">

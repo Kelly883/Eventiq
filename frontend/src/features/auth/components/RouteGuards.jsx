@@ -47,6 +47,11 @@ export const ProtectedRoute = ({ children, requiredRole = null }) => {
     return (
       <ToastRedirect
         to="/settings/permissions"
+        state={{
+          deniedByRole: 'admin',
+          message: 'Admin access is required for that page. You have been taken to your permissions instead.',
+          messageType: 'warning',
+        }}
         title="Access Denied"
         description="Only admins can manage roles"
         type="warning"
@@ -58,6 +63,11 @@ export const ProtectedRoute = ({ children, requiredRole = null }) => {
     return (
       <ToastRedirect
         to="/dashboard/user"
+        state={{
+          deniedByRole: 'organizer',
+          message: 'That page is for organizers only.',
+          messageType: 'warning',
+        }}
         title="Access Denied"
         description="Organizers only"
         type="warning"

@@ -38,11 +38,51 @@ import './App.css';
 
 const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password', '/access-denied'];
 
+const hasAnyRole = (roles, ...names) => names.some((n) => roles.includes(n));
+
+// Visibility rules keep the nav honest: users only see destinations they can
+// actually reach. Public routes stay visible to everyone.
+const NAV_ITEMS = [
+  { to: '/analytics', label: '📈 Analytics', visible: () => true },
+  {
+    to: '/dashboard/organizer',
+    label: '💼 Organizer',
+    visible: (isLoggedIn) => isLoggedIn,
+  },
+  {
+    to: '/check-in',
+    label: '🎟️ Check-In Desk',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer', 'admin'),
+  },
+  {
+    to: '/venue-scan',
+    label: '📷 Gate Scanner',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer', 'admin'),
+  },
+  {
+    to: '/organizer/events',
+    label: '📦 Events',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
+  },
+  {
+    to: '/my/profile',
+    label: '👤 My Profile',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
+  },
+  {
+    to: '/admin/roles',
+    label: '🛡️ Admin Roles',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
+  },
+];
+
 function App() {
   useFCMTokenSync();
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, sessionExpired, refreshAuth } = useAuthContext();
+  const isLoggedIn = Boolean(user);
+  const roles = user?.roles?.map((r) => r.name) || [];
   const isAuthPage = AUTH_PAGES.some((path) => location.pathname === path);
 
   // Session warning toast: show at 55s before auto-expire (60s interval)
@@ -129,110 +169,27 @@ function App() {
                   </span>
                 </div>
 
-                {/* Navigation Links */}
+                {/* Navigation Links — filtered by auth state and role so users
+                    never see destinations they cannot access */}
                 <nav className="flex space-x-1 sm:space-x-3">
-                  <NavLink
-                    to="/analytics"
-                    className={({ isActive }) =>
-                      `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                        isActive
-                          ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                      }`
-                    }
-                  >
-                    📈 Analytics
-                  </NavLink>
-                  <NavLink
-                    to="/dashboard/organizer"
-                    className={({ isActive }) =>
-                      `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                        isActive
-                          ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                      }`
-                    }
-                  >
-                    💼 Organizer
-                  </NavLink>
-                  <NavLink
-                    to="/check-in"
-                    className={({ isActive }) =>
-                      `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                        isActive
-                          ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                      }`
-                    }
-                  >
-                    🎟️ Check-In Desk
-                  </NavLink>
-                  <NavLink
-                    to="/venue-scan"
-                    className={({ isActive }) =>
-                      `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                        isActive
-                          ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                      }`
-                    }
-                  >
-                    📷 Gate Scanner
-                  </NavLink>
-                  <NavLink
-                    to="/organizer/events"
-                    className={({ isActive }) =>
-                      `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                        isActive
-                          ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                      }`
-                    }
-                  >
-                    📦 Events
-                  </NavLink>
-                  {user?.roles?.some((r) => r.name === 'organizer') && (
-                    <NavLink
-                      to="/organizer/profile/edit"
-                      className={({ isActive }) =>
-                        `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                          isActive
-                            ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                        }`
-                      }
-                    >
-                      ⚙️ Profile
-                    </NavLink>
-                  )}
-{user?.roles?.some((r) => r.name === 'organizer') && (
-                    <NavLink
-                      to="/my/profile"
-                      className={({ isActive }) =>
-                        `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                          isActive
-                            ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                        }`
-                      }
-                    >
-                      👤 My Profile
-                    </NavLink>
-                  )}
-                  {user?.roles?.some((r) => r.name === 'organizer') && (
-                    <NavLink
-                      to="/organizer/profile/edit"
-                      className={({ isActive }) =>
-                        `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                          isActive
-                            ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                        }`
-                      }
-                    >
-                      ⚙️ Profile
-                    </NavLink>
-                  )}
+                  {NAV_ITEMS.map((item) => {
+                    if (!item.visible(isLoggedIn, roles)) return null;
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        className={({ isActive }) =>
+                          `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                            isActive
+                              ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
+                              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                          }`
+                        }
+                      >
+                        {item.label}
+                      </NavLink>
+                    );
+                  })}
                 </nav>
 
                 {/* Auth buttons */}
