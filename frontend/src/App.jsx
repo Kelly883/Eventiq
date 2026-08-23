@@ -67,13 +67,8 @@ const NAV_ITEMS = [
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
   },
   {
-    to: '/organizer/profile/edit',
-    label: '⚙️ Edit Profile',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
-  },
-  {
     to: '/my/profile',
-    label: '👤 My Profile',
+    label: '👤 Profile',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
   },
   {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthContext } from '../../../features/auth/context/AuthContext';
 import { api } from '../../../lib/api';
 
@@ -57,7 +58,17 @@ const OrganizerProfileSettingsPage = () => {
 
   return (
     <div>
-      <h1>Organizer Profile Settings</h1>
+      <div className="flex items-center justify-between max-w-2xl">
+        <h1>Organizer Profile Settings</h1>
+        {organizerId && (
+          <Link
+            to={`/organizer/${organizerId}`}
+            className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+          >
+            View public profile →
+          </Link>
+        )}
+      </div>
       <div className="space-y-4">
         <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
           <div>
