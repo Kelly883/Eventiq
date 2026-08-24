@@ -15,7 +15,7 @@ export const ticketingService = {
         id: t.id || null,
         event_id: Number(eventId),
         name: t.name,
-        description: t.description || t.name || `Tier ${idx + 1}`,
+        description: t.description, // required — surfaced explicitly in UI (UpdateTicketTiersRequest.php:21), no silent fallback
         price: Number(t.price) || 0,
         quantity: t.quantity ? Number(t.quantity) : null,
         sales_start_date: t.sales_start_date || null,

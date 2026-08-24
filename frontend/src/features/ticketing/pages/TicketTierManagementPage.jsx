@@ -20,6 +20,7 @@ const TicketTierManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const fetchData = useCallback(async () => {
     if (!eventId) {
@@ -96,6 +97,13 @@ const TicketTierManagementPage = () => {
 
   const updateTier = useCallback((idx, field, value) => {
     setTiers((prev) => prev.map((t, i) => (i === idx ? { ...t, [field]: value } : t)));
+    // clear per-field error as user types
+    setFieldErrors((prev) => {
+      const copy = { ...prev };
+      delete copy[`${field}-${idx}`];
+      // map price -> price, name -> name, description -> description
+      return copy;
+    });
   }, []);
 
   const addTier = useCallback(() => {
@@ -121,16 +129,19 @@ const TicketTierManagementPage = () => {
   }, []);
 
   const handleSave = useCallback(async () => {
-    // Basic validation
-    for (let i = 0; i < tiers.length; i++) {
-      if (!tiers[i].name.trim()) {
-        showToast('Validation failed', `Tier ${i + 1}: name is required`, 'error');
-        return;
-      }
-      if (tiers[i].price === '' || Number(tiers[i].price) < 0) {
-        showToast('Validation failed', `Tier "${tiers[i].name || i + 1}": price must be ≥ 0`, 'error');
-        return;
-      }
+    // Explicit validation — mirrors UpdateTicketTiersRequest.php rules (name/description/price required)
+    const nextErrors = {};
+    tiers.forEach((t, i) => {
+      if (!t.name.trim()) nextErrors[`name-${i}`] = 'Name is required';
+      if (!t.description.trim()) nextErrors[`description-${i}`] = 'Description is required (max 2000 chars)';
+      if (t.description && t.description.length > 2000) nextErrors[`description-${i}`] = 'Max 2000 characters';
+      if (t.price === '' || Number(t.price) < 0.01) nextErrors[`price-${i}`] = 'Price ≥ 0.01 required';
+    });
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length) {
+      const first = Object.values(nextErrors)[0];
+      showToast('Validation failed', first, 'error');
+      return;
     }
     setSaving(true);
     try {
@@ -217,6 +228,32 @@ const TicketTierManagementPage = () => {
           </div>
         </div>
 
+        {/* Event management tabs — clarifies ticketing vs inventory vs pricing */}
+        <div className="bg-white rounded-xl border border-[#E3E4E6] p-1.5 mb-6 shadow-sm flex flex-wrap gap-1">
+          <Link
+            to={`/organizer/events/${eventId}/ticketing`}
+            className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#FF6B6B] text-white shadow-sm"
+            aria-current="page"
+          >
+            🎟️ Ticket Tiers
+          </Link>
+          <Link
+            to={`/organizer/events/${eventId}/inventory`}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-[#333333] hover:bg-[#F7F8FA] border border-transparent"
+          >
+            📦 Inventory
+          </Link>
+          <Link
+            to={`/organizer/events/${eventId}/pricing`}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-[#333333] hover:bg-[#F7F8FA] border border-transparent"
+          >
+            💰 Pricing
+          </Link>
+          <span className="ml-auto hidden md:inline-flex items-center text-xs text-[#999999] px-2">
+            Tiers = what you sell • Inventory = how many / adjustments • Pricing = windows & rules
+          </span>
+        </div>
+
         {/* Event summary card */}
         {event && (
           <div className="bg-white rounded-xl border border-[#E3E4E6] p-4 mb-6 shadow-sm flex items-center justify-between">
@@ -275,8 +312,9 @@ const TicketTierManagementPage = () => {
                           value={tier.name}
                           onChange={(e) => updateTier(idx, 'name', e.target.value)}
                           placeholder="e.g. Regular, VIP, Early Bird"
-                          className="w-full rounded-lg border border-[#D1D2D4] bg-white py-2 px-3 text-sm focus:outline-none focus:border-[#FF6B6B] focus:ring-2 focus:ring-[#FF6B6B]/20"
+                          className={`w-full rounded-lg border bg-white py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF6B6B]/20 ${fieldErrors[`name-${idx}`] ? 'border-[#FF6B6B] focus:border-[#FF6B6B]' : 'border-[#D1D2D4] focus:border-[#FF6B6B]'}`}
                         />
+                        {fieldErrors[`name-${idx}`] && <p className="mt-1 text-xs text-[#FF6B6B]">{fieldErrors[`name-${idx}`]}</p>}
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-[#333333] mb-1">Price (NGN) *</label>
@@ -287,21 +325,27 @@ const TicketTierManagementPage = () => {
                           value={tier.price}
                           onChange={(e) => updateTier(idx, 'price', e.target.value)}
                           placeholder="2500"
-                          className="w-full rounded-lg border border-[#D1D2D4] bg-white py-2 px-3 text-sm focus:outline-none focus:border-[#FF6B6B]"
+                          className={`w-full rounded-lg border bg-white py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF6B6B]/20 ${fieldErrors[`price-${idx}`] ? 'border-[#FF6B6B] focus:border-[#FF6B6B]' : 'border-[#D1D2D4] focus:border-[#FF6B6B]'}`}
                         />
+                        {fieldErrors[`price-${idx}`] && <p className="mt-1 text-xs text-[#FF6B6B]">{fieldErrors[`price-${idx}`]}</p>}
                       </div>
                       <div className="md:col-span-2">
-                        <label className="block text-xs font-medium text-[#333333] mb-1">Description</label>
+                        <label className="block text-xs font-medium text-[#333333] mb-1">Description *</label>
                         <textarea
                           value={tier.description}
                           onChange={(e) => updateTier(idx, 'description', e.target.value)}
-                          placeholder="What's included? Benefits, perks..."
+                          placeholder="What's included? Benefits, perks... (required, max 2000)"
                           rows={2}
-                          className="w-full rounded-lg border border-[#D1D2D4] bg-white py-2 px-3 text-sm focus:outline-none focus:border-[#FF6B6B] focus:ring-2 focus:ring-[#FF6B6B]/20"
+                          className={`w-full rounded-lg border bg-white py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF6B6B]/20 ${fieldErrors[`description-${idx}`] ? 'border-[#FF6B6B] focus:border-[#FF6B6B]' : 'border-[#D1D2D4] focus:border-[#FF6B6B]'}`}
                         />
+                        {fieldErrors[`description-${idx}`] ? (
+                          <p className="mt-1 text-xs text-[#FF6B6B]">{fieldErrors[`description-${idx}`]}</p>
+                        ) : (
+                          <p className="mt-1 text-xs text-[#B3B3B3]">{tier.description.length}/2000</p>
+                        )}
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-[#333333] mb-1">Quantity</label>
+                        <label className="block text-xs font-medium text-[#333333] mb-1">Quantity (initial stock)</label>
                         <input
                           type="number"
                           min="1"
@@ -310,9 +354,9 @@ const TicketTierManagementPage = () => {
                           placeholder="100"
                           className="w-full rounded-lg border border-[#D1D2D4] bg-white py-2 px-3 text-sm focus:outline-none focus:border-[#FF6B6B]"
                         />
-                        {tier.id && (
-                          <p className="mt-1 text-xs text-[#999999]">Leave blank for unlimited</p>
-                        )}
+                        <p className="mt-1 text-xs text-[#999999]">
+                          {tier.id ? 'Use Inventory tab to adjust sold/remaining stock' : 'Set initial available tickets'}
+                        </p>
                       </div>
                       <div className="flex items-end gap-3">
                         <label className="flex items-center gap-2 text-sm text-[#333333]">
