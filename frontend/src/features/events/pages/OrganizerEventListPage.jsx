@@ -149,7 +149,7 @@ const OrganizerEventListPage = () => {
                   <p className="mt-1 text-sm text-[#B3B3B3]">
                     Tickets sold: {event.ticketsSold ?? 0} / {event.capacity ?? 0}
                   </p>
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     <Link
                       to={`/organizer/events/${event.id}/edit`}
                       className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-[#FF6B6B] border border-[#FF6B6B] hover:bg-[#FF6B6B] hover:text-white transition-colors"
@@ -158,9 +158,15 @@ const OrganizerEventListPage = () => {
                     </Link>
                     <Link
                       to={`/organizer/events/${event.id}/ticketing`}
-                      className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-[#FF6B6B] text-white hover:bg-[#D94545] transition-colors"
+                      className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-[#FF6B6B] text-white hover:bg-[#D94545] transition-colors"
                     >
                       🎟️ Ticket Tiers
+                    </Link>
+                    <Link
+                      to={`/organizer/events/${event.id}/pricing`}
+                      className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-[#333333] bg-white border border-[#E3E4E6] hover:bg-[#F7F8FA] transition-colors"
+                    >
+                      💰 Pricing
                     </Link>
                     <button
                       type="button"
