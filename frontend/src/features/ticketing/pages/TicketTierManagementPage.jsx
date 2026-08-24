@@ -1,26 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link, useParams, useNavigate, useBlocker } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { api, showToast } from '../../../lib/api';
 import Skeleton from '../../../components/Skeleton';
 import { ticketingService } from '../services/ticketingService';
-
-function useSafeBlocker(shouldBlock) {
-  try {
-    return useBlocker(shouldBlock);
-  } catch {
-    return { state: 'unblocked', proceed: () => {}, reset: () => {} };
-  }
-}
 
 /**
  * Ticket Tier Management — /organizer/events/:eventId/ticketing
  * Loads event + tiers, allows inline editing of tiers, tracks dirty state,
  * saves via PUT /organizer/events/:eventId/ticketing, shows success toast + refresh,
- * and blocks navigation when unsaved changes exist (beforeunload + useBlocker).
+ * and blocks navigation when unsaved changes exist (beforeunload + manual interceptor).
  */
 const TicketTierManagementPage = () => {
   const { eventId, tierId } = useParams();
-  const navigate = useNavigate();
 
   const [event, setEvent] = useState(null);
   const [tiers, setTiers] = useState([]);
@@ -92,26 +83,11 @@ const TicketTierManagementPage = () => {
     return () => window.removeEventListener('beforeunload', handler);
   }, [isDirty]);
 
-  // SPA navigation blocker — safe for BrowserRouter (see helper above)
-  const blocker = useSafeBlocker(isDirty && !saving);
-  useEffect(() => {
-    if (blocker.state === 'blocked' && isDirty) {
-      const ok = window.confirm('You have unsaved changes. Leave without saving?');
-      if (ok) blocker.proceed();
-      else blocker.reset();
-    }
-  }, [blocker, isDirty]);
-
-  // Fallback for BrowserRouter (App.jsx:172 uses BrowserRouter, not data router) — useBlocker throws there,
-  // so also intercept clicks + popstate manually when blocker is no-op.
+  // Manual navigation interceptor — covers all BrowserRouter and data-router cases:
+  // link clicks, browser back/forward, and address bar navigation.
   useEffect(() => {
     if (!isDirty || saving) return;
-    // If useBlocker is active (data router), let it handle; otherwise manual
-    // We detect data router by checking blocker has proceed; if useBlocker threw, it would not have been set,
-    // but in BrowserRouter it throws, so we catch via window error? Instead just always add manual as backup:
     const handleClick = (e) => {
-      // Only intercept if blocker is not in blocked state (means useBlocker not handling)
-      if (blocker.state === 'blocked') return;
       const a = e.target.closest('a');
       if (!a) return;
       const href = a.getAttribute('href');
@@ -133,7 +109,7 @@ const TicketTierManagementPage = () => {
       document.removeEventListener('click', handleClick, true);
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [isDirty, saving, blocker.state]);
+  }, [isDirty, saving]);
 
   const updateTier = useCallback((idx, field, value) => {
     setTiers((prev) => prev.map((t, i) => (i === idx ? { ...t, [field]: value } : t)));
