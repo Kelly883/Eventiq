@@ -135,12 +135,19 @@ const OrganizerEventOverviewPage = () => {
             <p className="mt-1 text-xs text-[#999999]">When and how much — sales windows & rules. Preview how buyers see prices.</p>
             <span className="mt-3 inline-flex text-xs font-medium text-[#FF6B6B]">Configure →</span>
           </Link>
+          <Link to={`/organizer/events/${eventId}/analytics`} className="bg-white rounded-xl border border-[#E3E4E6] p-6 shadow-sm hover:border-[#FF6B6B]/50 hover:shadow-md transition-all group">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#F7F8FA] border border-[#E3E4E6] group-hover:bg-[#FF6B6B] group-hover:text-white transition-colors">📈</div>
+            <h3 className="mt-3 text-sm font-semibold text-[#333333]">Analytics</h3>
+            <p className="mt-1 text-xs text-[#999999]">Sales velocity, conversion rates, and performance metrics.</p>
+            <span className="mt-3 inline-flex text-xs font-medium text-[#FF6B6B]">View →</span>
+          </Link>
         </div>
 
         <div className="mt-6 bg-white rounded-xl border border-[#E3E4E6] p-1.5 shadow-sm flex flex-wrap gap-1">
           <Link to={`/organizer/events/${eventId}/ticketing`} className="px-4 py-2 rounded-lg text-sm font-medium text-[#333333] hover:bg-[#F7F8FA] border border-transparent">🎟️ Ticket Tiers</Link>
           <Link to={`/organizer/events/${eventId}/inventory`} className="px-4 py-2 rounded-lg text-sm font-medium text-[#333333] hover:bg-[#F7F8FA] border border-transparent">📦 Inventory</Link>
           <Link to={`/organizer/events/${eventId}/pricing`} className="px-4 py-2 rounded-lg text-sm font-medium text-[#333333] hover:bg-[#F7F8FA] border border-transparent">💰 Pricing</Link>
+          <Link to={`/organizer/events/${eventId}/analytics`} className="px-4 py-2 rounded-lg text-sm font-medium text-[#333333] hover:bg-[#F7F8FA] border border-transparent">📈 Analytics</Link>
           <Link to={`/organizer/events/${eventId}/edit`} className="px-4 py-2 rounded-lg text-sm font-medium text-[#333333] hover:bg-[#F7F8FA] border border-transparent">✎ Edit</Link>
           <span className="ml-auto hidden md:inline-flex items-center text-xs text-[#999999] px-2">Overview hub — reduces tab hopping</span>
         </div>

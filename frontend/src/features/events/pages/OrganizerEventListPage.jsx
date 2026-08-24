@@ -168,6 +168,12 @@ const OrganizerEventListPage = () => {
                     >
                       💰 Pricing
                     </Link>
+                    <Link
+                      to={`/organizer/events/${event.id}/analytics`}
+                      className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-[#333333] bg-white border border-[#E3E4E6] hover:bg-[#F7F8FA] transition-colors"
+                    >
+                      📈 Analytics
+                    </Link>
                     <button
                       type="button"
                       onClick={() => handleDelete(event.id)}
