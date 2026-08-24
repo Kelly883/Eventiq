@@ -76,6 +76,12 @@ const PricingPreviewModal = () => {
       />
       {/* Modal */}
       <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-[#E3E4E6] max-h-[90vh] overflow-auto">
+        {/* Tab bar — always visible so organizer knows where they are */}
+        <div className="bg-white border-b border-[#E3E4E6] px-6 py-2 flex flex-wrap gap-1 rounded-t-2xl">
+          <Link to={`/organizer/events/${eventId}/ticketing`} className="px-4 py-2 rounded-lg text-sm font-medium text-[#333333] hover:bg-[#F7F8FA] border border-transparent">🎟️ Ticket Tiers</Link>
+          <Link to={`/organizer/events/${eventId}/inventory`} className="px-4 py-2 rounded-lg text-sm font-medium text-[#333333] hover:bg-[#F7F8FA] border border-transparent">📦 Inventory</Link>
+          <Link to={`/organizer/events/${eventId}/pricing`} className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#FF6B6B] text-white shadow-sm" aria-current="page">💰 Pricing</Link>
+        </div>
         <div className="sticky top-0 bg-white border-b border-[#E3E4E6] px-6 py-4 flex items-center justify-between rounded-t-2xl">
           <div>
             <h2 className="text-lg font-bold text-[#333333]">Pricing Preview</h2>
