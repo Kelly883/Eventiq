@@ -292,6 +292,11 @@ const TicketTierManagementPage = () => {
             <div className="text-sm">
               <p className="font-semibold text-[#333333]">{event.title}</p>
               <p className="text-xs text-[#999999]">{event.venue_name || event.venueName || 'No venue'} • {event.start_date || event.startDate || ''}</p>
+              {(event.updated_at || event.updatedAt) && (
+                <p className="mt-1 text-xs text-[#B3B3B3]">
+                  Last saved: {new Date(event.updated_at || event.updatedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
             </div>
             <span className={`px-2 py-1 rounded text-xs font-medium border ${event.status === 'draft' ? 'bg-[#FFDA6B]/30 text-[#333333] border-[#FFDA6B]' : 'bg-[#4ECDC4]/10 text-[#333333] border-[#4ECDC4]/20'}`}>
               {event.status || 'published'}
