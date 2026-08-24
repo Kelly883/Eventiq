@@ -21,6 +21,7 @@ import OrganizerProfileView from './features/organizer-profile/components/Organi
 import OrganizerEventListPage from './features/events/pages/OrganizerEventListPage';
 import EventCreatePage from './features/events/pages/EventCreatePage';
 import EventEditPage from './features/events/pages/EventEditPage';
+import OrganizerEventOverviewPage from './features/events/pages/OrganizerEventOverviewPage';
 import ToastContainer from './features/notifications/components/ToastContainer';
 import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
 import { ProtectedRoute, PublicRoute } from './features/auth/components/RouteGuards';
@@ -274,6 +275,7 @@ function App() {
             <Route path="/dashboard" element={<Navigate to="/dashboard/organizer" replace />} />
             <Route path="/organizer/events" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventListPage /></ProtectedRoute>} />
             <Route path="/organizer/events/create" element={<ProtectedRoute requiredRole="organizer"><EventCreatePage /></ProtectedRoute>} />
+            <Route path="/organizer/events/:eventId" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventOverviewPage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId/edit" element={<ProtectedRoute requiredRole="organizer"><EventEditPage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId/inventory" element={<ProtectedRoute requiredRole="organizer"><TicketInventoryDashboardPage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId/inventory/adjust" element={<ProtectedRoute requiredRole="organizer"><AdjustInventoryModal /></ProtectedRoute>} />

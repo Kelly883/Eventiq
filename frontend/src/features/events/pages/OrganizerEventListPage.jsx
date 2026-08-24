@@ -130,9 +130,9 @@ const OrganizerEventListPage = () => {
                   className="border border-[#E3E4E6] rounded-lg p-4 md:p-6 hover:bg-[#F7F8FA] transition-colors"
                 >
                   <div className="flex justify-between items-start">
-                    <h3 className="text-lg font-semibold text-[#333333]">
+                    <Link to={`/organizer/events/${event.id}`} className="text-lg font-semibold text-[#333333] hover:text-[#FF6B6B] hover:underline">
                       {event.title}
-                    </h3>
+                    </Link>
                     <span
                       className={`inline-flex items-center gap-2 px-2 py-1 rounded text-xs font-medium ${
                         event.status === 'past'
