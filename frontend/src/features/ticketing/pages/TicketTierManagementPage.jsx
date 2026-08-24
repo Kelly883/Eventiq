@@ -29,6 +29,7 @@ const TicketTierManagementPage = () => {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [savedAt, setSavedAt] = useState(null);
 
   const fetchData = useCallback(async () => {
     if (!eventId) {
@@ -136,6 +137,7 @@ const TicketTierManagementPage = () => {
 
   const updateTier = useCallback((idx, field, value) => {
     setTiers((prev) => prev.map((t, i) => (i === idx ? { ...t, [field]: value } : t)));
+    setSavedAt(null);
     // clear per-field error as user types
     setFieldErrors((prev) => {
       const copy = { ...prev };
@@ -150,6 +152,7 @@ const TicketTierManagementPage = () => {
       showToast('Limit reached', 'Maximum 20 tiers per event.', 'warning');
       return;
     }
+    setSavedAt(null);
     setTiers((prev) => [...prev, {
       name: '',
       description: '',
@@ -164,7 +167,20 @@ const TicketTierManagementPage = () => {
 
   const removeTier = useCallback((idx) => {
     if (!window.confirm('Delete this tier? This cannot be undone.')) return;
+    setSavedAt(null);
     setTiers((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const moveTier = useCallback((idx, direction) => {
+    setSavedAt(null);
+    setTiers((prev) => {
+      const next = [...prev];
+      const targetIdx = idx + direction;
+      if (targetIdx < 0 || targetIdx >= next.length) return prev;
+      const [moved] = next.splice(idx, 1);
+      next.splice(targetIdx, 0, moved);
+      return next.map((t, i) => ({ ...t, tier_order: i }));
+    });
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -186,6 +202,7 @@ const TicketTierManagementPage = () => {
     try {
       await ticketingService.updateTicketTiers(eventId, tiers);
       showToast('Ticket tiers saved', 'Ticket tiers updated successfully!', 'success');
+      setSavedAt(new Date());
       // Refresh list from backend to get IDs/normalized data
       await fetchData();
     } catch (err) {
@@ -327,17 +344,27 @@ const TicketTierManagementPage = () => {
                   >
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-semibold text-[#333333] flex items-center gap-2">
+                        <span className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => moveTier(idx, -1)}
+                            disabled={idx === 0}
+                            className="inline-flex items-center justify-center w-5 h-5 rounded text-[#999999] hover:text-[#333333] hover:bg-[#E3E4E6] disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Move up"
+                          >▲</button>
+                          <button
+                            type="button"
+                            onClick={() => moveTier(idx, 1)}
+                            disabled={idx === tiers.length - 1}
+                            className="inline-flex items-center justify-center w-5 h-5 rounded text-[#999999] hover:text-[#333333] hover:bg-[#E3E4E6] disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Move down"
+                          >▼</button>
+                        </span>
                         Tier {idx + 1}
                         {isFocused && <span className="text-xs font-normal text-[#FF6B6B] bg-white border border-[#FF6B6B]/20 px-2 py-0.5 rounded-full">editing</span>}
                         {!tier.is_active && <span className="text-xs text-[#999999]">(inactive)</span>}
                       </h3>
                       <div className="flex gap-2">
-                        <Link
-                          to={`/organizer/events/${eventId}/ticketing/tier/${tier.id || idx}/edit`}
-                          className="text-xs font-medium text-[#FF6B6B] hover:text-[#D94545] border border-transparent hover:border-[#E3E4E6] bg-white px-2 py-1 rounded"
-                        >
-                          Edit
-                        </Link>
                         <button type="button" onClick={() => removeTier(idx)} className="text-xs font-medium text-[#FF6B6B] hover:bg-white border border-transparent hover:border-[#FF6B6B]/20 px-2 py-1 rounded">
                           Delete
                         </button>
@@ -384,17 +411,20 @@ const TicketTierManagementPage = () => {
                         )}
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-[#333333] mb-1">Quantity (initial stock)</label>
+                        <label className="block text-xs font-medium text-[#333333] mb-1">
+                          {tier.id ? 'Quantity (read-only)' : 'Quantity (initial stock)'}
+                        </label>
                         <input
                           type="number"
                           min="1"
                           value={tier.quantity}
-                          onChange={(e) => updateTier(idx, 'quantity', e.target.value)}
-                          placeholder="100"
-                          className="w-full rounded-lg border border-[#D1D2D4] bg-white py-2 px-3 text-sm focus:outline-none focus:border-[#FF6B6B]"
+                          readOnly={!!tier.id}
+                          onChange={(e) => { if (!tier.id) updateTier(idx, 'quantity', e.target.value); }}
+                          placeholder={tier.id ? '—' : '100'}
+                          className={`w-full rounded-lg border bg-white py-2 px-3 text-sm ${tier.id ? 'border-[#E3E4E6] text-[#999999] cursor-not-allowed' : 'border-[#D1D2D4] focus:outline-none focus:border-[#FF6B6B]'}`}
                         />
                         <p className="mt-1 text-xs text-[#999999]">
-                          {tier.id ? 'Use Inventory tab to adjust sold/remaining stock' : 'Set initial available tickets'}
+                          {tier.id ? 'Use the Inventory tab to adjust stock for existing tiers' : 'Set initial available tickets for this new tier'}
                         </p>
                       </div>
                       <div className="flex items-end gap-3">
@@ -439,6 +469,11 @@ const TicketTierManagementPage = () => {
             {isDirty && !saving && (
               <span className="inline-flex items-center text-xs font-medium text-[#FF6B6B] bg-[#FF6B6B]/10 border border-[#FF6B6B]/20 px-3 py-2 rounded-lg">
                 ● Unsaved changes
+              </span>
+            )}
+            {!isDirty && savedAt && !saving && (
+              <span className="inline-flex items-center text-xs font-medium text-[#4ECDC4] bg-[#4ECDC4]/10 border border-[#4ECDC4]/20 px-3 py-2 rounded-lg">
+                ✓ Saved at {savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
           </div>
