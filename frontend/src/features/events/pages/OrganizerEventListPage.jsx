@@ -152,14 +152,20 @@ const OrganizerEventListPage = () => {
                   <div className="mt-3 flex gap-2">
                     <Link
                       to={`/organizer/events/${event.id}/edit`}
-                      className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-[#FF6B6B] border border-[#FF6B6B] hover:bg-[#FF6B6B] hover:text-white transition-colors"
+                      className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-[#FF6B6B] border border-[#FF6B6B] hover:bg-[#FF6B6B] hover:text-white transition-colors"
                     >
                       Edit
+                    </Link>
+                    <Link
+                      to={`/organizer/events/${event.id}/ticketing`}
+                      className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-[#FF6B6B] text-white hover:bg-[#D94545] transition-colors"
+                    >
+                      🎟️ Ticket Tiers
                     </Link>
                     <button
                       type="button"
                       onClick={() => handleDelete(event.id)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-[#FF6B6B] hover:bg-[#F7F8FA] border border-transparent hover:border-[#E3E4E6] transition-colors"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-[#999999] hover:bg-[#F7F8FA] border border-transparent hover:border-[#E3E4E6] transition-colors"
                     >
                       Delete
                     </button>

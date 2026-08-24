@@ -63,14 +63,15 @@ export const ProtectedRoute = ({ children, requiredRole = null }) => {
   if (requiredRole === 'organizer' && !user?.roles?.some((r) => r.name === 'organizer')) {
     return (
       <ToastRedirect
-        to="/dashboard/user"
+        to="/access-denied"
         state={{
           deniedByRole: 'organizer',
-          message: 'That page is for organizers only.',
+          attemptedPath: location.pathname,
+          message: 'That page is for organizers only. You need organizer privileges to manage ticket tiers.',
           messageType: 'warning',
         }}
         title="Access Denied"
-        description="Organizers only"
+        description="Organizers only — 403"
         type="warning"
       />
     );
