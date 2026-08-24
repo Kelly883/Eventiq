@@ -4,6 +4,14 @@ import { api, showToast } from '../../../lib/api';
 import Skeleton from '../../../components/Skeleton';
 import { ticketingService } from '../services/ticketingService';
 
+function useSafeBlocker(shouldBlock) {
+  try {
+    return useBlocker(shouldBlock);
+  } catch {
+    return { state: 'unblocked', proceed: () => {}, reset: () => {} };
+  }
+}
+
 /**
  * Ticket Tier Management — /organizer/events/:eventId/ticketing
  * Loads event + tiers, allows inline editing of tiers, tracks dirty state,
@@ -83,8 +91,8 @@ const TicketTierManagementPage = () => {
     return () => window.removeEventListener('beforeunload', handler);
   }, [isDirty]);
 
-  // SPA navigation blocker (react-router v7)
-  const blocker = useBlocker(isDirty && !saving);
+  // SPA navigation blocker — safe for BrowserRouter (see helper above)
+  const blocker = useSafeBlocker(isDirty && !saving);
   useEffect(() => {
     if (blocker.state === 'blocked' && isDirty) {
       const ok = window.confirm('You have unsaved changes. Leave without saving?');
@@ -93,7 +101,38 @@ const TicketTierManagementPage = () => {
     }
   }, [blocker, isDirty]);
 
-  // Also intercept Link clicks? useBlocker handles navigation via router.
+  // Fallback for BrowserRouter (App.jsx:172 uses BrowserRouter, not data router) — useBlocker throws there,
+  // so also intercept clicks + popstate manually when blocker is no-op.
+  useEffect(() => {
+    if (!isDirty || saving) return;
+    // If useBlocker is active (data router), let it handle; otherwise manual
+    // We detect data router by checking blocker has proceed; if useBlocker threw, it would not have been set,
+    // but in BrowserRouter it throws, so we catch via window error? Instead just always add manual as backup:
+    const handleClick = (e) => {
+      // Only intercept if blocker is not in blocked state (means useBlocker not handling)
+      if (blocker.state === 'blocked') return;
+      const a = e.target.closest('a');
+      if (!a) return;
+      const href = a.getAttribute('href');
+      if (!href || href.startsWith('#') || a.target === '_blank' || href.startsWith('http')) return;
+      if (!href.startsWith('/')) return;
+      if (!window.confirm('You have unsaved changes. Leave without saving?')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    const handlePopState = () => {
+      if (isDirty && !window.confirm('You have unsaved changes. Leave without saving?')) {
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+    document.addEventListener('click', handleClick, true);
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      document.removeEventListener('click', handleClick, true);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isDirty, saving, blocker.state]);
 
   const updateTier = useCallback((idx, field, value) => {
     setTiers((prev) => prev.map((t, i) => (i === idx ? { ...t, [field]: value } : t)));
