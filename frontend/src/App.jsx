@@ -75,6 +75,16 @@ const hasAnyRole = (roles, ...names) => names.some((n) => roles.includes(n));
 const NAV_ITEMS = [
   { to: '/analytics', label: '📈 Analytics', visible: () => true },
   {
+    to: '/events',
+    label: '📋 Browse Events',
+    visible: () => true,
+  },
+  {
+    to: '/events/calendar',
+    label: '🗓️ Calendar',
+    visible: () => true,
+  },
+  {
     to: '/dashboard/organizer',
     label: '💼 Organizer',
     visible: (isLoggedIn) => isLoggedIn,
@@ -93,6 +103,11 @@ const NAV_ITEMS = [
     to: '/organizer/events',
     label: '📦 Events',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
+  },
+  {
+    to: '/dashboard',
+    label: 'Dashboard',
+    visible: (isLoggedIn, roles) => isLoggedIn && hasAnyRole(roles, 'organizer'),
   },
   {
     to: '/my/profile',
@@ -270,7 +285,7 @@ function App() {
             <Route path="/organizer/events/:eventId/analytics" element={<ProtectedRoute requiredRole="organizer"><SalesAnalyticsDashboardPage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId/analytics/detailed" element={<ProtectedRoute requiredRole="organizer"><DetailedAnalyticsPage /></ProtectedRoute>} />
             <Route path="/organizer/analytics/compare" element={<ProtectedRoute requiredRole="organizer"><AnalyticsComparisonPage /></ProtectedRoute>} />
-            <Route path="/dashboard/organizer" element={<ProtectedRoute><OrganizerDashboardPage /></ProtectedRoute>} />
+            <Route path="/dashboard/organizer" element={<ProtectedRoute requiredRole="organizer"><OrganizerDashboardPage /></ProtectedRoute>} />
             <Route path="/dashboard/user" element={<ProtectedRoute><UserDashboardPage /></ProtectedRoute>} />
             <Route path="/dashboard" element={<Navigate to="/dashboard/organizer" replace />} />
             <Route path="/organizer/events" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventListPage /></ProtectedRoute>} />
