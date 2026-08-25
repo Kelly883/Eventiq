@@ -9,7 +9,6 @@ RUN apk add --no-cache \
     curl \
     libpq-dev \
     icu-dev \
-    gmp-dev \
     libxml2-dev \
     freetype-dev \
     libjpeg-turbo-dev \
@@ -17,10 +16,12 @@ RUN apk add --no-cache \
     supervisor \
     nginx \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-configure zip \
     && docker-php-ext-install -j$(nproc) \
     gd \
     mbstring \
     xml \
+    zip \
     bcmath \
     intl \
     pdo \
@@ -33,6 +34,7 @@ RUN apk add --no-cache \
     gd \
     mbstring \
     xml \
+    zip \
     bcmath \
     intl \
     pdo \
@@ -78,10 +80,6 @@ RUN chown -R www-data:www-data storage bootstrap/cache && \
 COPY docker/php.ini /usr/local/etc/php/conf.d/app.ini
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# Create users (nginx user for Nginx, www-data already exists for PHP-FPM)
-RUN addgroup -g 1000 nginx 2>/dev/null || true && \
-    adduser -u 1000 -D -G nginx nginx 2>/dev/null || true
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
