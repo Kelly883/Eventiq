@@ -22,6 +22,10 @@ import OrganizerEventListPage from './features/events/pages/OrganizerEventListPa
 import EventCreatePage from './features/events/pages/EventCreatePage';
 import EventEditPage from './features/events/pages/EventEditPage';
 import OrganizerEventOverviewPage from './features/events/pages/OrganizerEventOverviewPage';
+import CartPage from './features/checkout/pages/CartPage';
+import CheckoutPage from './features/checkout/pages/CheckoutPage';
+import OrderConfirmationPage from './features/checkout/pages/OrderConfirmationPage';
+import UserTicketsPage from './features/checkout/pages/UserTicketsPage';
 import ToastContainer from './features/notifications/components/ToastContainer';
 import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
 import { ProtectedRoute, PublicRoute } from './features/auth/components/RouteGuards';
@@ -85,6 +89,11 @@ const NAV_ITEMS = [
     visible: () => true,
   },
   {
+    to: '/cart',
+    label: '🛒 Cart',
+    visible: () => true,
+  },
+  {
     to: '/dashboard/organizer',
     label: '💼 Organizer',
     visible: (isLoggedIn) => isLoggedIn,
@@ -113,6 +122,11 @@ const NAV_ITEMS = [
     to: '/my/profile',
     label: '👤 Profile',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
+  },
+  {
+    to: '/my-tickets',
+    label: '🎫 My Tickets',
+    visible: (isLoggedIn) => isLoggedIn,
   },
   {
     to: '/admin/roles',
@@ -274,6 +288,10 @@ function App() {
             <Route path="/" element={<Navigate to="/analytics" replace />} />
             <Route path="/events" element={<EventBrowsePage />} />
             <Route path="/events/calendar" element={<EventCalendarPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+            <Route path="/order/:orderId/confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
+            <Route path="/my-tickets" element={<ProtectedRoute><UserTicketsPage /></ProtectedRoute>} />
             <Route path="/tickets/:ticketId/status" element={<TicketStatusPage />} />
             <Route path="/admin/email-templates" element={<ProtectedRoute requiredRole="admin"><AdminEmailTemplateManagementPage /></ProtectedRoute>} />
             <Route path="/admin/roles" element={<ProtectedRoute requiredRole="admin"><AdminRoleManagementPage /></ProtectedRoute>} />
