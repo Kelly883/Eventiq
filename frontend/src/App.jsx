@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation, useNaviga
 import SalesAnalyticsDashboardPage from './features/analytics/pages/SalesAnalyticsDashboardPage';
 import DetailedAnalyticsPage from './features/analytics/pages/DetailedAnalyticsPage';
 import AnalyticsComparisonPage from './features/analytics/pages/AnalyticsComparisonPage';
-import { OrganizerDashboardPage, UserDashboardPage } from './features/dashboard/pages';
+import { OrganizerDashboardPage } from './features/dashboard/pages';
 import { CheckInDashboardPage } from './features/check-in';
 import VenueCheckInPage from './features/qr-code-ticketing/pages/VenueCheckInPage';
 import EventBrowsePage from './features/events/pages/EventBrowsePage';
@@ -11,6 +11,8 @@ import EventDetailPage from './features/events/pages/EventDetailPage';
 import CategoryBrowsePage from './features/events/pages/CategoryBrowsePage';
 import EventCalendarPage from './features/events-calendar/pages/EventCalendarPage';
 import TicketStatusPage from './features/ticket-delivery/pages/TicketStatusPage';
+import DeliverySettingsPage from './features/ticket-delivery/pages/DeliverySettingsPage';
+import AdminDeliveryDashboardPage from './features/ticket-delivery/pages/AdminDeliveryDashboardPage';
 import AdminEmailTemplateManagementPage from './features/email-notifications/pages/AdminEmailTemplateManagementPage';
 import AdminRoleManagementPage from './features/roles/pages/AdminRoleManagementPage';
 import UserPermissionsPage from './features/roles/pages/UserPermissionsPage';
@@ -25,7 +27,11 @@ import OrganizerEventOverviewPage from './features/events/pages/OrganizerEventOv
 import CartPage from './features/checkout/pages/CartPage';
 import CheckoutPage from './features/checkout/pages/CheckoutPage';
 import OrderConfirmationPage from './features/checkout/pages/OrderConfirmationPage';
-import UserTicketsPage from './features/checkout/pages/UserTicketsPage';
+import UserTicketsDashboardPage from './features/tickets/pages/UserTicketsDashboardPage';
+import TicketDetailPage from './features/tickets/pages/TicketDetailPage';
+import UserDashboardPage from './features/dashboard/pages/UserDashboardPage';
+import FraudDetectionDashboardPage from './features/fraud/pages/FraudDetectionDashboardPage';
+import FraudTransactionReviewModal from './features/fraud/pages/FraudTransactionReviewModal';
 import ToastContainer from './features/notifications/components/ToastContainer';
 import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
 import { ProtectedRoute, PublicRoute } from './features/auth/components/RouteGuards';
@@ -131,6 +137,11 @@ const NAV_ITEMS = [
   {
     to: '/admin/roles',
     label: '🛡️ Admin Roles',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
+  },
+  {
+    to: '/admin/fraud/dashboard',
+    label: '🕵️ Fraud Detection',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
   },
 ];
@@ -291,11 +302,16 @@ function App() {
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
             <Route path="/order/:orderId/confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
-            <Route path="/my-tickets" element={<ProtectedRoute><UserTicketsPage /></ProtectedRoute>} />
-            <Route path="/tickets/:ticketId/status" element={<TicketStatusPage />} />
+            <Route path="/my-tickets" element={<ProtectedRoute unauthenticatedToast={true}><UserTicketsDashboardPage /></ProtectedRoute>} />
+            <Route path="/my-tickets/:ticketId" element={<ProtectedRoute unauthenticatedToast={true}><TicketDetailPage /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute unauthenticatedToast={true}><UserDashboardPage /></ProtectedRoute>} />
+            <Route path="/my-tickets/:ticketId/status" element={<ProtectedRoute><TicketStatusPage /></ProtectedRoute>} />
             <Route path="/admin/email-templates" element={<ProtectedRoute requiredRole="admin"><AdminEmailTemplateManagementPage /></ProtectedRoute>} />
             <Route path="/admin/roles" element={<ProtectedRoute requiredRole="admin"><AdminRoleManagementPage /></ProtectedRoute>} />
+            <Route path="/admin/fraud/dashboard" element={<ProtectedRoute requiredRole="admin"><FraudDetectionDashboardPage /></ProtectedRoute>} />
+            <Route path="/admin/delivery" element={<ProtectedRoute requiredRole="admin"><AdminDeliveryDashboardPage /></ProtectedRoute>} />
             <Route path="/settings/permissions" element={<ProtectedRoute><UserPermissionsPage /></ProtectedRoute>} />
+            <Route path="/settings/delivery-preferences" element={<ProtectedRoute><DeliverySettingsPage /></ProtectedRoute>} />
             <Route path="/events/category/:categoryId" element={<CategoryBrowsePage />} />
             <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
@@ -305,7 +321,6 @@ function App() {
             <Route path="/organizer/analytics/compare" element={<ProtectedRoute requiredRole="organizer"><AnalyticsComparisonPage /></ProtectedRoute>} />
             <Route path="/dashboard/organizer" element={<ProtectedRoute requiredRole="organizer"><OrganizerDashboardPage /></ProtectedRoute>} />
             <Route path="/dashboard/user" element={<ProtectedRoute><UserDashboardPage /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<Navigate to="/dashboard/organizer" replace />} />
             <Route path="/organizer/events" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventListPage /></ProtectedRoute>} />
             <Route path="/organizer/events/create" element={<ProtectedRoute requiredRole="organizer"><EventCreatePage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventOverviewPage /></ProtectedRoute>} />

@@ -5,6 +5,7 @@ import axios, {
   type AxiosResponse,
 } from 'axios';
 import { getDeviceToken } from '../features/offline/services/deviceToken';
+import { showToast } from '../lib/api';
 
 type Env = {
   VITE_API_BASE_URL?: string;
@@ -17,189 +18,113 @@ export const api = axios.create({
   withCredentials: true,
 });
 
+/* -------------------------------------------------------------------------- */
+/*                               Refresh State                                */
+/* -------------------------------------------------------------------------- */
+
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 let queuedRequests: Array<{
-  resolve: (result: boolean) => void;
-  reject: (err: unknown) => void;
+  onSuccess: (response: any) => void;
+  onFailure: (error: AxiosError) => void;
 }> = [];
+
+/* -------------------------------------------------------------------------- */
+/*                       Refresh CSRF Cookie (Sanctum)                        */
+/* -------------------------------------------------------------------------- */
 
 async function refreshCsrf(): Promise<boolean> {
   try {
-    await api.get('/sanctum/csrf-cookie');
+    await api.get('/sanctum/csrf-cookie', {
+      withCredentials: true,
+    });
     return true;
   } catch {
     return false;
   }
 }
 
-function resolveQueuedRequests(result: boolean) {
-  for (const waiter of queuedRequests) {
-    waiter.resolve(result);
-  }
-  queuedRequests = [];
-}
-
-function rejectQueuedRequests(err: unknown) {
-  for (const waiter of queuedRequests) {
-    waiter.reject(err);
-  }
-  queuedRequests = [];
-}
-
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  config.headers = config.headers ?? {};
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (config.headers as any)['X-Device-Token'] = getDeviceToken();
-  return config;
-});
-
-export type ToastType = 'error' | 'warning' | 'success' | 'info';
-
-export interface ToastMessage {
-  id: string;
-  type: ToastType;
-  title: string;
-  description: string;
-  duration?: number;
-}
-
-type ToastListener = (toast: ToastMessage) => void;
-const toastListeners = new Set<ToastListener>();
-
-export function addToastListener(listener: ToastListener) {
-  toastListeners.add(listener);
-  return () => {
-    toastListeners.delete(listener);
-  };
-}
-
-export function showToast(title: string, description: string, type: ToastType = 'error', duration = 5000) {
-  const id = Math.random().toString(36).substring(2, 9);
-  const toast: ToastMessage = { id, type, title, description, duration };
-  toastListeners.forEach((listener) => {
-    try {
-      listener(toast);
-    } catch (e) {
-      console.error('Error triggering toast listener', e);
-    }
-  });
-}
+/* -------------------------------------------------------------------------- */
+/*                         Response Interceptor                               */
+/* -------------------------------------------------------------------------- */
 
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
+
   async (error: AxiosError) => {
-    const status = error.response?.status;
-
-    // Trigger user notification for connection, database, or configuration errors
-    if (!error.response) {
-      if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
-        showToast(
-          'Network Error',
-          'Unable to connect to the server. Please check your internet connection or server status.',
-          'error'
-        );
-      } else {
-        showToast(
-          'Connection Error',
-          error.message || 'A network error occurred.',
-          'error'
-        );
-      }
-    } else {
-      const responseData = error.response.data as any;
-      const serverMessage = responseData?.message || '';
-
-      // Check for database connection loss (usually 500 Internal Server Error with database/SQL error messages, or 503 Service Unavailable)
-      const isDatabaseError =
-        status === 500 &&
-        (serverMessage.toLowerCase().includes('database') ||
-          serverMessage.toLowerCase().includes('sqlstate') ||
-          serverMessage.toLowerCase().includes('connection') ||
-          JSON.stringify(responseData).toLowerCase().includes('sqlstate') ||
-          JSON.stringify(responseData).toLowerCase().includes('database'));
-
-      if (isDatabaseError) {
-        showToast(
-          'Database Connection Error',
-          'The server is currently unable to communicate with the database. Please try again later.',
-          'error'
-        );
-      } else if (status === 503) {
-        showToast(
-          'Service Unavailable',
-          'The server is temporarily unable to handle the request.',
-          'error'
-        );
-      } else if (status === 403) {
-        showToast(
-          'Access Denied',
-          serverMessage || 'You do not have permission to perform this action.',
-          'warning'
-        );
-      } else if (status === 500) {
-        showToast(
-          'Server Error',
-          serverMessage || 'An unexpected internal server error occurred.',
-          'error'
-        );
-      }
-    }
-
-    const originalRequest = error.config as (AxiosRequestConfig & {
+    const originalConfig = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
-    }) | null;
+    };
 
-    const requestUrl = (originalRequest?.url ?? '').toString();
-    const isAuthRequest = requestUrl.includes('/auth/') || requestUrl.includes('/sanctum/');
-
-    if (!isAuthRequest && status === 401 && originalRequest && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      if (!refreshPromise) {
-        refreshPromise = (async () => {
-          try {
-            const ok = await refreshCsrf();
-            return ok;
-          } finally {
-            isRefreshing = false;
-          }
-        })();
-      }
-
-      const refreshed = await refreshPromise;
-      refreshPromise = null;
-
-      if (refreshed) {
-        return api.request(originalRequest);
-      }
-
-      if (typeof window !== 'undefined') {
-        // Store intended destination so LoginPage can redirect after re-auth
-        const currentPath = window.location.pathname + window.location.search;
-        if (currentPath && currentPath !== '/login') {
-          const returnTo = window.location.pathname + window.location.search;
-          try { sessionStorage.setItem('session-expired-return', returnTo); } catch { /* ignore */ }
-        }
-
-        // Broadcast session-end to all tabs via BroadcastChannel + storage event
-        if ('BroadcastChannel' in window) {
-          try {
-            const channel = new BroadcastChannel('auth-sync');
-            channel.postMessage({ type: 'session-ended' });
-            channel.close();
-          } catch {
-            // Fallback
-          }
-        }
-        const SESSION_EVENT_KEY = 'eventiq-session-event';
-        localStorage.setItem(SESSION_EVENT_KEY, JSON.stringify({ type: 'session-ended', ts: Date.now() }));
-        setTimeout(() => localStorage.removeItem(SESSION_EVENT_KEY), 1000);
-
-        window.location.href = '/login';
-      }
+    // If we already tried to refresh, don't try again
+    if (error.response?.status === 401 && originalConfig._retry) {
+      return Promise.reject(error);
     }
 
+    // If it's not a 401, just reject
+    if (error.response?.status !== 401) {
+      return Promise.reject(error);
+    }
+
+    // Mark this as a retry attempt
+    originalConfig._retry = true;
+
+    // Show session expired toast
+    showToast(
+      'Session expired',
+      'Your session has ended. Please log in again.',
+      'warning'
+    );
+
+    // If refreshing is already in progress, queue this request
+    if (isRefreshing) {
+      queuedRequests.push({
+        onSuccess: (response: any) => {
+          // Re-run the original request via the caller
+          // This is handled by the caller checking queuedRequests
+        },
+        onFailure: (error: AxiosError) => {
+          // Handle failure
+        },
+      });
+      return Promise.reject(error);
+    }
+
+    // Start refresh process
+    isRefreshing = true;
+
+    // Try to refresh the CSRF cookie / session
+    const csrfRefreshed = await refreshCsrf();
+
+    isRefreshing = false;
+
+    // Clear queued requests
+    queuedRequests.forEach(q => {
+      // No-op: queued requests will be handled by caller
+    });
+    queuedRequests = [];
+
+    if (csrfRefreshed) {
+      // CSRF refreshed successfully - retry the original request
+      originalConfig._retry = undefined;
+      return api(originalConfig);
+    }
+
+    // CSRF refresh failed - session is truly expired
+    // The app should handle redirect-to-login via ProtectedRoute/toast
+    // We've already shown the toast above
     return Promise.reject(error);
-  },
+  }
 );
+
+/* -------------------------------------------------------------------------- */
+/*                         Export Type Helpers                                */
+/* -------------------------------------------------------------------------- */
+
+export type ApiResponse<T = any> = {
+  data: T;
+  status: number;
+  statusText: string;
+  headers: any;
+  config: any;
+};

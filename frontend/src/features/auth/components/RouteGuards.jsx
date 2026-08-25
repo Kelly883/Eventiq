@@ -23,7 +23,7 @@ const ToastRedirect = ({ to, state = undefined, title, description, type }) => {
   return <Navigate to={to} replace state={state} />;
 };
 
-export const ProtectedRoute = ({ children, requiredRole = null }) => {
+export const ProtectedRoute = ({ children, requiredRole = null, unauthenticatedToast = true }) => {
   const { user, loading, checkAdminAccess } = useAuthContext();
   const location = useLocation();
 
@@ -32,12 +32,14 @@ export const ProtectedRoute = ({ children, requiredRole = null }) => {
   }
 
   if (!user) {
+    const toastTitle = unauthenticatedToast ? 'Sign in to view your tickets' : 'Session Expired';
+    const toastDescription = unauthenticatedToast ? '' : 'Your session has expired. Please log in again.';
     return (
       <ToastRedirect
         to="/login"
         state={{ from: location }}
-        title="Session Expired"
-        description="Your session has expired. Please log in again."
+        title={toastTitle}
+        description={toastDescription}
         type="warning"
       />
     );
