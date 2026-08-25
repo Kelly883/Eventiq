@@ -5,14 +5,14 @@ echo "=== EventIQ Laravel Bootstrap ==="
 
 cd /var/www/html
 
+# Set default PORT if not provided by Render
+export PORT="${PORT:-80}"
+
 # Verify critical environment variables
 if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "" ]; then
     echo "FATAL: APP_KEY is not set. Generate one with: php artisan key:generate --show"
     exit 1
 fi
-
-# Set default PORT if not provided by Render
-export PORT="${PORT:-80}"
 
 # Prepare writable directories
 mkdir -p storage/framework/sessions
@@ -22,14 +22,17 @@ mkdir -p storage/framework/cache/locks
 mkdir -p storage/logs
 mkdir -p bootstrap/cache
 
+# Set permissions (php-fpm runs as www-data, nginx runs as www-data)
 chown -R www-data:www-data storage bootstrap/cache
+chmod -R 775 storage bootstrap/cache
 
 # Ensure storage link exists (for public uploads/QR codes)
+# This must run at startup since storage/ is not persisted in the image
 if [ ! -L public/storage ]; then
     php artisan storage:link 2>/dev/null || true
 fi
 
-# Clear stale caches
+# Clear stale cached configuration that might reference old environment
 php artisan config:clear 2>/dev/null || true
 php artisan route:clear 2>/dev/null || true
 php artisan view:clear 2>/dev/null || true

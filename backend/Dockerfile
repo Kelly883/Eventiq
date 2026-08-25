@@ -66,26 +66,26 @@ RUN composer install --no-dev --prefer-dist --optimize-autoloader --no-interacti
 # Create required directories
 RUN mkdir -p storage/framework/{sessions,views,cache/data,cache/locks} \
     storage/logs \
-    bootstrap/cache
+    bootstrap/cache \
+    /run/nginx
 
-# Set permissions
-RUN chown -R www-data:www-data storage bootstrap/cache
-
-# Symlink public storage
-RUN php artisan storage:link
+# Set permissions — both www-data (php-fpm) and nginx need access
+RUN chown -R www-data:www-data storage bootstrap/cache && \
+    chmod -R 775 storage bootstrap/cache && \
+    chmod -R 775 /var/log/nginx 2>/dev/null || true
 
 # Copy configurations
 COPY docker/php.ini /usr/local/etc/php/conf.d/app.ini
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Create nginx user (matches nginx.conf `user nginx;`)
+# Create users (nginx user for Nginx, www-data already exists for PHP-FPM)
 RUN addgroup -g 1000 nginx 2>/dev/null || true && \
     adduser -u 1000 -D -G nginx nginx 2>/dev/null || true
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-80}/health || exit 1
+    CMD curl -fsS http://localhost:${PORT:-80}/health > /dev/null 2>&1 || exit 1
 
 # Copy entrypoint
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
