@@ -1,0 +1,47 @@
+# Version control
+.git
+.gitignore
+
+# Development / testing
+tests/
+phpunit.xml
+*.phpunit.result.cache
+test_*.php
+verify_*.php
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.exvim
+
+# Node / npm
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Build artifacts
+build/
+coverage/
+
+# Logs
+*.log
+storage/logs/*.log
+
+# Docker-related (we don't want to copy these into the image)
+Dockerfile
+docker-compose.yml
+*.dockerfile
+
+# Database
+database/database.sqlite
+
+# Environment
+.env
+.env.testing
+.env.local
+
+# Temp / cache
+/tmp/*
