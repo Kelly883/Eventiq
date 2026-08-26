@@ -48,7 +48,7 @@ export const ProtectedRoute = ({ children, requiredRole = null, unauthenticatedT
   if (requiredRole === 'admin' && !checkAdminAccess()) {
     return (
       <ToastRedirect
-        to="/dashboard/user"
+        to="/dashboard"
         state={{
           deniedByRole: 'admin',
           attemptedPath: location.pathname,
@@ -65,7 +65,7 @@ export const ProtectedRoute = ({ children, requiredRole = null, unauthenticatedT
   if (requiredRole === 'organizer' && !user?.roles?.some((r) => r.name === 'organizer')) {
     return (
       <ToastRedirect
-        to="/dashboard/user"
+        to="/dashboard"
         state={{
           deniedByRole: 'organizer',
           attemptedPath: location.pathname,
@@ -97,7 +97,7 @@ export const PublicRoute = ({ children }) => {
     if (role === 'admin') {
       return <Navigate to="/admin/roles" replace />;
     }
-    return <Navigate to="/dashboard/user" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;

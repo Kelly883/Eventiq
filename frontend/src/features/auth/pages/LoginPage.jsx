@@ -10,7 +10,7 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuthContext();
+  const { login, user } = useAuthContext();
 
   useEffect(() => {
     if (location.state?.message && location.state?.from) {
@@ -40,7 +40,18 @@ const LoginPage = () => {
     }
   })();
 
-  const from = location.state?.from?.pathname || sessionExpiredReturn || '/dashboard/organizer';
+  // Clean up session-expired-return after consuming it
+  useEffect(() => {
+    if (sessionExpiredReturn) {
+      try { sessionStorage.removeItem('session-expired-return'); } catch { /* ignore */ }
+    }
+  }, [sessionExpiredReturn]);
+
+  const getDefaultRedirect = () => {
+    const userRoles = user?.roles?.map((r) => r.name) || [];
+    if (userRoles.includes('organizer')) return '/dashboard/organizer';
+    return '/dashboard';
+  };
 
   // Clean up session-expired-return after consuming it
   useEffect(() => {
@@ -57,7 +68,9 @@ const LoginPage = () => {
     try {
       await login(email, password);
       showToast('Session Extended', 'Your session will remain active.', 'info');
-      navigate(from, { replace: true });
+      // Compute redirect after login when user roles are available
+      const redirectTo = location.state?.from?.pathname || sessionExpiredReturn || getDefaultRedirect();
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       if (err.response?.status === 419) {
         setError('Security token expired. Please refresh the page and try again.');
