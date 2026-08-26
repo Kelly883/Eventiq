@@ -46,6 +46,7 @@ const ResetPasswordPage = lazy(() => import('./features/auth/pages').then(m => (
 const TicketInventoryDashboardPage = lazy(() => import('./features/ticket-inventory/pages').then(m => ({ default: m.TicketInventoryDashboardPage })));
 const TicketTierManagementPage = lazy(() => import('./features/ticketing/pages').then(m => ({ default: m.TicketTierManagementPage })));
 const EventPricingConfigPage = lazy(() => import('./features/pricing/pages').then(m => ({ default: m.EventPricingConfigPage })));
+const AdminAnalyticsPage = lazy(() => import('./features/analytics/pages').then(m => ({ default: m.AdminAnalyticsPage })));
 const AccessDeniedPage = lazy(() => import('./features/common').then(m => ({ default: m.AccessDeniedPage })));
 const MyOrganizerProfilePage = lazy(() => import('./features/organizer-profile/pages/MyOrganizerProfilePage'));
 
@@ -151,6 +152,11 @@ const NAV_ITEMS = [
   {
     to: '/admin/fraud/dashboard',
     label: '🕵️ Fraud Detection',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
+  },
+  {
+    to: '/admin/analytics',
+    label: '📊 Analytics',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
   },
 ];
@@ -321,6 +327,7 @@ function App() {
             <Route path="/admin/roles" element={<ProtectedRoute requiredRole="admin"><AdminRoleManagementPage /></ProtectedRoute>} />
             <Route path="/admin/fraud/dashboard" element={<ProtectedRoute requiredRole="admin"><FraudDetectionDashboardPage /></ProtectedRoute>} />
             <Route path="/admin/delivery/dashboard" element={<ProtectedRoute requiredRole="admin"><AdminDeliveryDashboardPage /></ProtectedRoute>} />
+            <Route path="/admin/analytics" element={<ProtectedRoute requiredRole="admin"><AdminAnalyticsPage /></ProtectedRoute>} />
             <Route path="/settings/permissions" element={<ProtectedRoute><UserPermissionsPage /></ProtectedRoute>} />
             <Route path="/settings/delivery-preferences" element={<ProtectedRoute><DeliverySettingsPage /></ProtectedRoute>} />
             <Route path="/events/category/:categoryId" element={<CategoryBrowsePage />} />
