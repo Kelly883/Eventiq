@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import jsQR from 'jsqr';
 import CryptoJS from 'crypto-js';
 import { useOfflineSyncStore } from '../../offline/services/offlineSyncStore';
 import { getEchoInstance } from '../services/echoService';
 import Skeleton from '../../../components/Skeleton';
 import EmptyState from '../../../components/EmptyState';
+import EventSelector from '../../analytics/components/EventSelector';
 
 const VenueCheckInPage = () => {
   const { eventId } = useParams();
@@ -300,6 +301,37 @@ const VenueCheckInPage = () => {
             >
               {activeCamera ? '⏸️ Stop Camera' : '▶️ Resume Camera'}
             </button>
+          </div>
+        </div>
+
+        {/* Event Context Indicator */}
+        <div className={`p-4 rounded-xl border ${
+          highContrast ? 'bg-zinc-900 border-zinc-700' : 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-100'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${highContrast ? 'bg-zinc-800' : 'bg-white shadow-sm'}`}>
+                <span className="text-xl">🎪</span>
+              </div>
+              <div>
+                <div className={`text-xs font-medium ${highContrast ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Currently Scanning For
+                </div>
+                <div className={`text-lg font-bold ${highContrast ? 'text-white' : 'text-slate-900'}`}>
+                  Event #{eventId}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                Live
+              </span>
+              <span className={`text-xs ${highContrast ? 'text-slate-400' : 'text-slate-500'}`}>
+                Change event:
+              </span>
+              <EventSelector compact />
+            </div>
           </div>
         </div>
 

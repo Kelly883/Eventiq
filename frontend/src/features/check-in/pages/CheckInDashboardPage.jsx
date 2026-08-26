@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { NavLink, useLocation, Link } from 'react-router-dom';
 import {
   CheckInStatsDisplay,
   CheckInQRScanner,
@@ -8,6 +8,7 @@ import {
 import { useOfflineSyncStore } from '../../offline/services/offlineSyncStore';
 import Skeleton from '../../../components/Skeleton';
 import EmptyState from '../../../components/EmptyState';
+import EventSelector from '../../analytics/components/EventSelector';
 
 const CheckInDashboardPage = () => {
   const [isPageLoading, setIsPageLoading] = useState(true);
@@ -104,40 +105,134 @@ const CheckInDashboardPage = () => {
               Process attendee check-ins, view queue logs, and monitor attendance metrics offline or online.
             </p>
           </div>
+          <div className="flex-shrink-0">
+            <EventSelector compact />
+          </div>
+        </div>
+
+        {/* Mode Selection Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link
+            to="/venue-scan"
+            className="group p-5 bg-white border border-slate-200 rounded-xl hover:border-indigo-300 hover:shadow-md transition-all"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-indigo-100 rounded-xl group-hover:bg-indigo-200 transition-colors">
+                <span className="text-2xl">📷</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">
+                  Gate Scanner
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  High-speed camera-based QR scanning for fast entry processing at venue gates.
+                </p>
+                <div className="flex items-center gap-2 mt-3">
+                  <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                    Camera Required
+                  </span>
+                  <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    Fastest
+                  </span>
+                </div>
+              </div>
+              <svg className="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </Link>
+
+          <div className="p-5 bg-indigo-50 border-2 border-indigo-200 rounded-xl">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-indigo-200 rounded-xl">
+                <span className="text-2xl">⌨️</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-indigo-900">
+                  Check-In Desk
+                  <span className="ml-2 text-xs font-medium bg-indigo-600 text-white px-2 py-0.5 rounded-full">
+                    Current
+                  </span>
+                </h3>
+                <p className="text-sm text-slate-600 mt-1">
+                  Manual ticket entry, search, and stats tracking. Use this desk for customer service and lookups.
+                </p>
+                <div className="flex items-center gap-2 mt-3">
+                  <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                    No Camera Needed
+                  </span>
+                  <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                    Full Features
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
-          <Link
+          <NavLink
             to="/check-in"
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white"
+            end
+            className={({ isActive }) =>
+              `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`
+            }
           >
             Quick Check-In
-          </Link>
-          <Link
+          </NavLink>
+          <NavLink
             to="/check-in/search"
-            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
+            className={({ isActive }) =>
+              `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`
+            }
           >
             Search
-          </Link>
-          <Link
+          </NavLink>
+          <NavLink
             to="/check-in/stats"
-            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
+            className={({ isActive }) =>
+              `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`
+            }
           >
             Statistics
-          </Link>
-          <Link
+          </NavLink>
+          <NavLink
             to="/check-in/export"
-            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
+            className={({ isActive }) =>
+              `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`
+            }
           >
             Export
-          </Link>
-          <Link
+          </NavLink>
+          <NavLink
             to="/check-in/history"
-            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
+            className={({ isActive }) =>
+              `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`
+            }
           >
             History
-          </Link>
+          </NavLink>
         </div>
 
         {/* Metrics display */}
