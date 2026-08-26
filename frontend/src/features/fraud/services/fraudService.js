@@ -245,9 +245,3 @@ export const fraudService = {
     statsCache.expiresAt = 0;
   },
 };
-
-// Named exports for direct import usage in components
-export const getAlert = fraudService.getAlert.bind(fraudService);
-export const resolveAlert = fraudService.resolveAlert.bind(fraudService);
-export const listAlerts = fraudService.listAlerts.bind(fraudService);
-export const getDashboardStats = fraudService.getDashboardStats.bind(fraudService);

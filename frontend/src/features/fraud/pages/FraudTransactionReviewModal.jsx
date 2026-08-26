@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthContext } from '../../auth/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { getAlert, resolveAlert } from '../services/fraudService';
+import { fraudService } from '../services/fraudService';
 
 const FraudTransactionReviewModal = ({ alertId, onClose }) => {
   const { user } = useAuthContext();
@@ -14,7 +14,7 @@ const FraudTransactionReviewModal = ({ alertId, onClose }) => {
     if (!alertId) return;
     async function loadAlert() {
       try {
-        const result = await getAlert(alertId);
+        const result = await fraudService.getAlert(alertId);
         setAlert(result);
         setLoading(false);
       } catch (err) {
@@ -42,7 +42,7 @@ const FraudTransactionReviewModal = ({ alertId, onClose }) => {
 
   const handleResolve = async (decision) => {
     try {
-      await resolveAlert(alertId, decision);
+      await fraudService.resolveAlert(alertId, decision);
       onClose();
     } catch (err) {
       console.error('Failed to resolve alert', err);

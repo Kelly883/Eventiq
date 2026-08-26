@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthContext } from '../../auth/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { listAlerts, resolveAlert, getDashboardStats } from '../services/fraudService';
+import { fraudService } from '../services/fraudService';
 import FraudTransactionReviewModal from '../pages/FraudTransactionReviewModal';
 
 const FraudDetectionDashboardPage = () => {
@@ -25,8 +25,8 @@ const FraudDetectionDashboardPage = () => {
     async function loadData() {
       try {
         const [alertsResult, statsResult] = await Promise.all([
-          listAlerts(),
-          getDashboardStats(),
+          fraudService.listAlerts(),
+          fraudService.getDashboardStats(),
         ]);
         setAlerts(alertsResult || []);
         setStats(statsResult || {

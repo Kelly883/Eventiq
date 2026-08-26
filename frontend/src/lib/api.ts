@@ -6,41 +6,28 @@ import axios, {
 } from 'axios';
 import { getDeviceToken } from '../features/offline/services/deviceToken';
 
-export type ToastPayload = {
-  title: string;
-  message: string;
-  type: string;
-  id: string;
-};
+/* -------------------------------------------------------------------------- */
+/*                              Toast System                                  */
+/* -------------------------------------------------------------------------- */
 
-type ToastListener = (toast: ToastPayload) => void;
+type Toast = { id: number; title: string; description: string; type: string; duration?: number };
+type ToastListener = (toast: Toast) => void;
 
-const toastListeners: ToastListener[] = [];
-let toastIdCounter = 0;
+let _toastId = 0;
+const _toastListeners = new Set<ToastListener>();
 
 export function addToastListener(listener: ToastListener): () => void {
-  toastListeners.push(listener);
-  return () => {
-    const index = toastListeners.indexOf(listener);
-    if (index > -1) toastListeners.splice(index, 1);
-  };
+  _toastListeners.add(listener);
+  return () => { _toastListeners.delete(listener); };
 }
 
-export function showToast(title: string, message: string, type: string = 'info') {
-  const toast: ToastPayload = {
-    title,
-    message,
-    type,
-    id: `toast-${++toastIdCounter}`,
-  };
-
-  if (typeof window !== 'undefined' && (window as any).__eiShowToast) {
-    (window as any).__eiShowToast(toast);
-  } else {
-    console.warn(`[toast:${type}] ${title}: ${message}`);
+export function showToast(title: string, description: string, type: string = 'info', duration?: number) {
+  const toast: Toast = { id: ++_toastId, title, description, type, duration };
+  if (_toastListeners.size > 0) {
+    _toastListeners.forEach((fn) => fn(toast));
+  } else if (typeof window !== 'undefined') {
+    console.warn(`[toast:${type}] ${title}: ${description}`);
   }
-
-  toastListeners.forEach((listener) => listener(toast));
 }
 
 type Env = {

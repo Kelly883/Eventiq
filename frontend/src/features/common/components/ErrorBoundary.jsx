@@ -6,7 +6,7 @@ import React, { ReactNode } from 'react';
  * preserves a correlation ID for diagnostics, and offers
  * a reload action. Class-only, no type annotations.
  */
-export class GlobalErrorBoundary extends React.Component {
+export default class GlobalErrorBoundary extends React.Component {
   state = {
     hasError: false,
     error: null,

@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import EnvValidator from './src/env'
 
 export default defineConfig({
   plugins: [react()],

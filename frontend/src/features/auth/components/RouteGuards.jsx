@@ -1,9 +1,29 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
+import { showToast } from '../../../lib/api';
 import { LoadingSpinner } from '../../common';
 
-export const ProtectedRoute = ({ children, requiredRole = null }) => {
+const getUserRole = (user) => {
+  if (user?.roles?.some((r) => r.name === 'organizer')) return 'organizer';
+  if (user?.roles?.some((r) => r.name === 'admin')) return 'admin';
+  return null;
+};
+
+/**
+ * Redirects while firing a toast once, from an effect — never during render
+ * (keeps the guard pure under StrictMode double-rendering).
+ */
+const ToastRedirect = ({ to, state = undefined, title, description, type }) => {
+  useEffect(() => {
+    showToast(title, description, type, 5000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return <Navigate to={to} replace state={state} />;
+};
+
+export const ProtectedRoute = ({ children, requiredRole = null, unauthenticatedToast = true }) => {
   const { user, loading, checkAdminAccess } = useAuthContext();
   const location = useLocation();
 
@@ -12,25 +32,51 @@ export const ProtectedRoute = ({ children, requiredRole = null }) => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    const toastTitle = unauthenticatedToast ? 'Sign in to view your tickets' : 'Session Expired';
+    const toastDescription = unauthenticatedToast ? '' : 'Your session has expired. Please log in again.';
+    return (
+      <ToastRedirect
+        to="/login"
+        state={{ from: location }}
+        title={toastTitle}
+        description={toastDescription}
+        type="warning"
+      />
+    );
   }
 
   if (requiredRole === 'admin' && !checkAdminAccess()) {
-    // Preserve query params from the original URL to avoid losing state
-    const searchParams = location.search;
-    const redirectTo = searchParams ? `/settings/permissions${searchParams}` : '/settings/permissions';
-    return <Navigate to={redirectTo} replace state={{
-      message: 'Access Denied — only admins can manage roles',
-      from: location.pathname,
-      messageType: 'error',
-    }} />;
+    return (
+      <ToastRedirect
+        to="/settings/permissions"
+        state={{
+          deniedByRole: 'admin',
+          attemptedPath: location.pathname,
+          message: 'Admin access is required for that page. You have been taken to your permissions instead.',
+          messageType: 'warning',
+        }}
+        title="Access Denied"
+        description="Only admins can manage roles"
+        type="warning"
+      />
+    );
   }
 
   if (requiredRole === 'organizer' && !user?.roles?.some((r) => r.name === 'organizer')) {
-    return <Navigate to="/access-denied" replace state={{
-      message: 'Access Denied — organizers only',
-      from: location.pathname,
-    }} />;
+    return (
+      <ToastRedirect
+        to="/access-denied"
+        state={{
+          deniedByRole: 'organizer',
+          attemptedPath: location.pathname,
+          message: 'That page is for organizers only. You need organizer privileges to manage ticket tiers.',
+          messageType: 'warning',
+        }}
+        title="Access Denied"
+        description="Organizers only — 403"
+        type="warning"
+      />
+    );
   }
 
   return children;
@@ -44,7 +90,14 @@ export const PublicRoute = ({ children }) => {
   }
 
   if (user) {
-    return <Navigate to="/dashboard/organizer" replace />;
+    const role = getUserRole(user);
+    if (role === 'organizer') {
+      return <Navigate to="/dashboard/organizer" replace />;
+    }
+    if (role === 'admin') {
+      return <Navigate to="/admin/roles" replace />;
+    }
+    return <Navigate to="/dashboard/user" replace />;
   }
 
   return children;
