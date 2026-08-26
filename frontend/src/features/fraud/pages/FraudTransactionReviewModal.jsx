@@ -42,7 +42,7 @@ const FraudTransactionReviewModal = ({ alertId, onClose }) => {
 
   const handleResolve = async (decision) => {
     try {
-      await window.alertsService.resolveAlert(alertId, decision);
+      await fraudService.resolveAlert(alertId, decision);
       onClose();
     } catch (err) {
       console.error('Failed to resolve alert', err);
