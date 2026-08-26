@@ -23,7 +23,7 @@ const ToastRedirect = ({ to, state = undefined, title, description, type }) => {
   return <Navigate to={to} replace state={state} />;
 };
 
-export const ProtectedRoute = ({ children, requiredRole = null, unauthenticatedToast = true }) => {
+export const ProtectedRoute = ({ children, requiredRole = null, requiredRoles = null, unauthenticatedToast = true }) => {
   const { user, loading, checkAdminAccess } = useAuthContext();
   const location = useLocation();
 
@@ -43,6 +43,28 @@ export const ProtectedRoute = ({ children, requiredRole = null, unauthenticatedT
         type="warning"
       />
     );
+  }
+
+  // Check multiple roles (OR logic - any one role grants access)
+  if (requiredRoles && requiredRoles.length > 0) {
+    const userRoles = user?.roles?.map((r) => r.name) || [];
+    const hasRequiredRole = requiredRoles.some((role) => userRoles.includes(role));
+    if (!hasRequiredRole) {
+      return (
+        <ToastRedirect
+          to="/dashboard"
+          state={{
+            deniedByRole: requiredRoles.join('|'),
+            attemptedPath: location.pathname,
+            message: `Access denied. Required roles: ${requiredRoles.join(' or ')}.`,
+            messageType: 'warning',
+          }}
+          title="Access Denied"
+          description={`You need one of these roles: ${requiredRoles.join(', ')}`}
+          type="warning"
+        />
+      );
+    }
   }
 
   if (requiredRole === 'admin' && !checkAdminAccess()) {

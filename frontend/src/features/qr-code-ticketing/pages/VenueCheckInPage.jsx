@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import jsQR from 'jsqr';
 import CryptoJS from 'crypto-js';
 import { useOfflineSyncStore } from '../../offline/services/offlineSyncStore';
@@ -7,6 +8,7 @@ import Skeleton from '../../../components/Skeleton';
 import EmptyState from '../../../components/EmptyState';
 
 const VenueCheckInPage = () => {
+  const { eventId } = useParams();
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
   const [activeCamera, setActiveCamera] = useState(true);
   const [scannedResult, setScannedResult] = useState(null);
@@ -20,10 +22,6 @@ const VenueCheckInPage = () => {
   const canvasRef = useRef(null);
   const requestRef = useRef(null);
   const audioContextRef = useRef(null);
-
-  // Get dynamic Event ID from URL query parameters (default to '1')
-  const queryParams = new URLSearchParams(window.location.search);
-  const eventId = queryParams.get('event_id') || '1';
 
   const isOnline = useOfflineSyncStore((state) => state.isOnline);
   const enqueueScan = useOfflineSyncStore((state) => state.enqueueScan);
@@ -254,7 +252,21 @@ const VenueCheckInPage = () => {
       highContrast ? 'bg-black text-white' : 'bg-slate-50 text-slate-800'
     }`}>
       <div className="max-w-7xl mx-auto space-y-8">
-        
+
+        {/* Breadcrumb / Back Navigation */}
+        <div className="flex items-center gap-2 text-sm">
+          <Link
+            to="/check-in"
+            className={`font-medium ${highContrast ? 'text-indigo-400 hover:text-indigo-300' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            ← Check-In Desk
+          </Link>
+          <span className="text-slate-400">/</span>
+          <span className={highContrast ? 'text-slate-300' : 'text-slate-600'}>
+            Event {eventId}
+          </span>
+        </div>
+
         {/* Banner Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
