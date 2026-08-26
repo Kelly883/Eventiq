@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import './env'
 import App from './App.jsx'
@@ -19,11 +20,13 @@ async function bootstrap() {
   root.render(
     <GlobalErrorBoundary>
       <StrictMode>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </QueryClientProvider>
+        <BrowserRouter>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </QueryClientProvider>
+        </BrowserRouter>
       </StrictMode>
     </GlobalErrorBoundary>,
   )

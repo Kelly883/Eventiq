@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Routes, Route, NavLink, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { LoadingSpinner, ErrorBoundary } from './features/common';
 import ToastContainer from './features/notifications/components/ToastContainer';
 import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
@@ -231,8 +231,7 @@ function App() {
   ) : null;
 
   return (
-    <BrowserRouter>
-      <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
+    <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
         <noscript>
           <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200/80 p-4 text-slate-900 shadow-sm">
             <div className="max-w-2xl mx-auto text-center">
@@ -383,7 +382,6 @@ function App() {
           </ErrorBoundary>
         </main>
       </div>
-    </BrowserRouter>
   );
 }
 
