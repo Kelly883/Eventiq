@@ -39,6 +39,7 @@ const UserTicketsDashboardPage = lazy(() => import('./features/tickets/pages/Use
 const TicketDetailPage = lazy(() => import('./features/tickets/pages/TicketDetailPage'));
 const UserDashboardPage = lazy(() => import('./features/dashboard/pages/UserDashboardPage'));
 const FraudDetectionDashboardPage = lazy(() => import('./features/fraud/pages/FraudDetectionDashboardPage'));
+const DeliveryStatusPage = lazy(() => import('./features/ticket-delivery/pages').then(m => ({ default: m.DeliveryStatusPage })));
 const LoginPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.RegisterPage })));
 const ForgotPasswordPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.ForgotPasswordPage })));
@@ -47,6 +48,7 @@ const TicketInventoryDashboardPage = lazy(() => import('./features/ticket-invent
 const TicketTierManagementPage = lazy(() => import('./features/ticketing/pages').then(m => ({ default: m.TicketTierManagementPage })));
 const EventPricingConfigPage = lazy(() => import('./features/pricing/pages').then(m => ({ default: m.EventPricingConfigPage })));
 const AdminAnalyticsPage = lazy(() => import('./features/analytics/pages').then(m => ({ default: m.AdminAnalyticsPage })));
+const OrganizerEventLayout = lazy(() => import('./features/events/components/OrganizerEventLayout'));
 const AccessDeniedPage = lazy(() => import('./features/common').then(m => ({ default: m.AccessDeniedPage })));
 const MyOrganizerProfilePage = lazy(() => import('./features/organizer-profile/pages/MyOrganizerProfilePage'));
 
@@ -322,6 +324,7 @@ function App() {
             <Route path="/my-tickets/:ticketId" element={<ProtectedRoute unauthenticatedToast={true}><TicketDetailPage /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute unauthenticatedToast={true}><UserDashboardPage /></ProtectedRoute>} />
             <Route path="/my-tickets/:ticketId/status" element={<ProtectedRoute><TicketStatusPage /></ProtectedRoute>} />
+            <Route path="/my-tickets/:ticketId/delivery" element={<ProtectedRoute><DeliveryStatusPage /></ProtectedRoute>} />
             <Route path="/my-tickets/status" element={<ProtectedRoute><TicketStatusPage /></ProtectedRoute>} />
             <Route path="/admin/email-templates" element={<ProtectedRoute requiredRole="admin"><AdminEmailTemplateManagementPage /></ProtectedRoute>} />
             <Route path="/admin/roles" element={<ProtectedRoute requiredRole="admin"><AdminRoleManagementPage /></ProtectedRoute>} />
@@ -334,19 +337,21 @@ function App() {
             <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
-            <Route path="/organizer/events/:eventId/analytics" element={<ProtectedRoute requiredRole="organizer"><SalesAnalyticsDashboardPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/analytics/detailed" element={<ProtectedRoute requiredRole="organizer"><DetailedAnalyticsPage /></ProtectedRoute>} />
             <Route path="/organizer/analytics/compare" element={<ProtectedRoute requiredRole="organizer"><AnalyticsComparisonPage /></ProtectedRoute>} />
             <Route path="/dashboard/organizer" element={<ProtectedRoute requiredRole="organizer"><OrganizerDashboardPage /></ProtectedRoute>} />
             <Route path="/dashboard/user" element={<ProtectedRoute><UserDashboardPage /></ProtectedRoute>} />
             <Route path="/organizer/events" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventListPage /></ProtectedRoute>} />
             <Route path="/organizer/events/create" element={<ProtectedRoute requiredRole="organizer"><EventCreatePage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventOverviewPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/edit" element={<ProtectedRoute requiredRole="organizer"><EventEditPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/inventory" element={<ProtectedRoute requiredRole="organizer"><TicketInventoryDashboardPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/ticketing" element={<ProtectedRoute requiredRole="organizer"><TicketTierManagementPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/ticketing/tier/:tierId/edit" element={<ProtectedRoute requiredRole="organizer"><TicketTierManagementPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/pricing" element={<ProtectedRoute requiredRole="organizer"><EventPricingConfigPage /></ProtectedRoute>} />
+            <Route path="/organizer/events/:eventId" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventLayout /></ProtectedRoute>}>
+              <Route index element={<OrganizerEventOverviewPage />} />
+              <Route path="edit" element={<EventEditPage />} />
+              <Route path="inventory" element={<TicketInventoryDashboardPage />} />
+              <Route path="ticketing" element={<TicketTierManagementPage />} />
+              <Route path="ticketing/tier/:tierId/edit" element={<TicketTierManagementPage />} />
+              <Route path="pricing" element={<EventPricingConfigPage />} />
+              <Route path="analytics" element={<SalesAnalyticsDashboardPage />} />
+              <Route path="analytics/detailed" element={<DetailedAnalyticsPage />} />
+            </Route>
             <Route path="/o/:organizerId" element={<OrganizerPublicProfilePage />} />
             <Route path="/organizer/:organizerId" element={<OrganizerProfileCompatRedirect />} />
             <Route path="/my/profile" element={<ProtectedRoute requiredRole="organizer"><MyOrganizerProfilePage /></ProtectedRoute>} />
