@@ -142,12 +142,12 @@ const NAV_ITEMS = [
   },
   {
     to: '/my-tickets/status',
-    label: '🔍 Ticket Status',
+    label: '🔍 Check Ticket',
     visible: (isLoggedIn) => isLoggedIn,
   },
   {
-    to: '/settings/delivery-preferences',
-    label: '⚙️ Delivery Settings',
+    to: '/settings',
+    label: '⚙️ Settings',
     visible: (isLoggedIn) => isLoggedIn,
   },
   {

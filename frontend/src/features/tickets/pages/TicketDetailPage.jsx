@@ -26,17 +26,32 @@ const TicketDetailPage = () => {
   );
 
   if (isError || !data) {
+    const isNotFound = error?.response?.status === 404;
     return (
-      <div className="text-center py-8 px-4 bg-white rounded-xl border border-slate-200">
-        <p className="text-lg text-slate-500">
-          {isError ? 'Failed to load ticket' : 'Ticket not found'}
+      <div className="text-center py-12 px-4 bg-white rounded-xl border border-slate-200">
+        <div className="text-5xl mb-4">{isNotFound ? '🔍' : '⚠️'}</div>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">
+          {isNotFound ? 'Ticket Not Found' : 'Something Went Wrong'}
+        </h2>
+        <p className="text-slate-500 mb-6 max-w-sm mx-auto">
+          {isNotFound
+            ? `We couldn't find a ticket with ID "${ticketId}". It may have been removed or the ID might be incorrect.`
+            : 'We were unable to load the ticket details. Please try again later.'}
         </p>
-        <button
-          onClick={() => navigate('/my-tickets', { replace: true })}
-          className="mt-4 px-3 py-1 text-sm text-slate-600 hover:text-slate-800"
-        >
-          Go back to my tickets
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <button
+            onClick={() => navigate('/my-tickets', { replace: true })}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
+          >
+            ← Back to My Tickets
+          </button>
+          <Link
+            to="/my-tickets/status"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-white border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            🔍 Look Up by Code
+          </Link>
+        </div>
       </div>
     );
   }

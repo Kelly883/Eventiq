@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 const settingsNavItems = [
   { to: '/settings/permissions', label: 'Permissions', icon: '🛡️', description: 'View and request access roles' },
-  { to: '/settings/delivery-preferences', label: 'Delivery', icon: '📧', description: 'Email and notification preferences' },
+  { to: '/settings/delivery-preferences', label: 'Delivery Preferences', icon: '📧', description: 'Email and notification settings' },
 ];
 
 const SettingsLayout = () => {
