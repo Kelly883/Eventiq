@@ -1,0 +1,104 @@
+services:
+  # Backend API (Laravel)
+  - type: web
+    name: eventiq-api
+    runtime: php
+    buildCommand: |
+      cd backend
+      composer install --no-interaction --prefer-dist --no-progress
+      php artisan migrate --force
+      php artisan config:cache
+      php artisan route:cache
+    startCommand: cd backend && php artisan serve --host=0.0.0.0 --port=$PORT
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_URL
+        sync: false
+      - key: APP_KEY
+        generateValue: true
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: eventiq-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: eventiq-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: eventiq-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: eventiq-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: eventiq-db
+          property: password
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: SANCTUM_STATEFUL_DOMAINS
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: FLUTTERWAVE_PUBLIC_KEY
+        sync: false
+      - key: FLUTTERWAVE_SECRET_KEY
+        sync: false
+      - key: FLUTTERWAVE_ENCRYPTION_KEY
+        sync: false
+      - key: FLUTTERWAVE_WEBHOOK_SECRET_HASH
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: SIFT_API_KEY
+        sync: false
+      - key: SIFT_ACCOUNT_ID
+        sync: false
+      - key: TERMII_API_KEY
+        sync: false
+      - key: MJML_ENABLED
+        value: false
+
+  # Frontend (React SPA)
+  - type: static
+    name: eventiq-frontend
+    buildCommand: |
+      cd frontend
+      npm install
+      npm run build
+    staticPublishPath: ./frontend/dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: VITE_API_BASE_URL
+        fromService:
+          name: eventiq-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+
+databases:
+  - name: eventiq-db
+    plan: starter
+    databaseName: eventiq
+    user: eventiq
