@@ -1,8 +1,8 @@
 # ─── Eventiq Laravel Backend — Production Dockerfile ─────────────────────────
-# Multi-stage build for Render deployment.
+# Single-stage build for Render deployment.
 #
-# Stage 1 (build): Install PHP extensions, Composer, Node.js, dependencies
-# Stage 2 (runtime): PHP-FPM + Nginx + Node.js (MJML runtime dependency)
+# PHP 8.2 FPM + Nginx + Node.js 20 LTS (MJML runtime dependency)
+# Supervisord manages nginx + php-fpm processes.
 #
 # Render configuration:
 #   Root Directory: backend
@@ -10,13 +10,11 @@
 #   Port:           8080 (mapped to Render's $PORT via sed in entrypoint)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Stage 1: Build dependencies
-# ══════════════════════════════════════════════════════════════════════════════
-FROM php:8.2-fpm-bookworm AS build
+FROM php:8.2-fpm-bookworm
 
-# System dependencies for building PHP extensions
+# System dependencies for PHP extensions + runtime services
 RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
+    # PHP extension build deps (also serves as runtime libs)
     libzip-dev \
     libpng-dev \
     libjpeg62-turbo-dev \
@@ -26,11 +24,13 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
     libpq-dev \
     libcurl4-openssl-dev \
     libssl-dev \
-    unzip \
-    git \
-    curl \
+    # Runtime services
+    nginx \
+    supervisor \
     ca-certificates \
-    gnupg \
+    curl \
+    sed \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions required by Eventiq
@@ -44,7 +44,6 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
 # - iconv:     character encoding (Laravel requirement)
 # - opcache:   bytecode caching (production performance)
 # - intl:      internationalization
-# - fileinfo:  file type detection (Laravel requirement)
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
     pdo_pgsql \
@@ -91,49 +90,7 @@ COPY . .
 # Finalize composer autoloader
 RUN composer dump-autoload --optimize --no-dev
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Stage 2: Runtime image
-# ══════════════════════════════════════════════════════════════════════════════
-FROM php:8.2-fpm-bookworm AS runtime
-
-# Runtime system dependencies
-RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
-    nginx \
-    supervisor \
-    libzip5 \
-    libpng16-16 \
-    libjpeg62-turbo \
-    libfreetype6 \
-    libonig5 \
-    libxml2 \
-    libpq5 \
-    libcurl4 \
-    libssl3 \
-    libicu72 \
-    ca-certificates \
-    curl \
-    sed \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install PHP extensions in runtime (same as build stage)
-COPY --from=build /usr/local/lib/php/extensions/no-debug-non-zts-*/ /usr/local/lib/php/extensions/no-debug-non-zts-*/
-COPY --from=build /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
-
-# Install Node.js 20 LTS for MJML rendering
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y -qq nodejs \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /var/www/html
-
-# Copy application from build stage
-COPY --from=build --chown=www-data:www-data /var/www/html .
-
-# Create www-data user if not exists (some PHP images don't have it)
-RUN id -u www-data >/dev/null 2>&1 || \
-    useradd -r -u 33 -g www-data -d /var/www/html -s /sbin/nologin www-data
-
-# Create required directories
+# Create required directories with correct ownership
 RUN mkdir -p \
     storage/logs \
     storage/framework/cache/data \
