@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTrendingEvents } from '../hooks/useHomepageData';
 
 const EventCard = ({ event }) => {
   const getAvailabilityStatus = (tickets) => {
@@ -8,24 +9,49 @@ const EventCard = ({ event }) => {
     return { label: `${tickets} tickets remaining`, className: 'available' };
   };
 
-  const availability = getAvailabilityStatus(event.ticketsRemaining);
+  const availability = getAvailabilityStatus(event.tickets_remaining ?? event.ticketsRemaining);
+  const imageUrl = event.image_url || event.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&h=400&fit=crop';
+  const organizerName = event.organizer?.name || event.organizer || 'Organizer';
+  const organizerAvatar = event.organizer?.avatar_url || event.organizerAvatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop';
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  };
+
+  const getBadge = () => {
+    const tickets = event.tickets_remaining ?? event.ticketsRemaining ?? 0;
+    if (tickets === 0) return 'Sold Out';
+    if (tickets <= 30) return 'Trending';
+    if (event.is_featured || event.isFeatured) return 'Featured';
+    return null;
+  };
+
+  const badge = getBadge();
 
   return (
     <article className="event-card">
       <Link to={`/events/${event.id}`} className="event-card-link">
         <div className="event-image-container">
-          <div className="event-image" style={{ backgroundImage: `url(${event.image})` }} />
-          {event.badge && (
-            <span className={`event-badge ${event.badge.toLowerCase()}`}>
-              {event.badge}
+          <div className="event-image" style={{ backgroundImage: `url(${imageUrl})` }} />
+          {badge && (
+            <span className={`event-badge ${badge.toLowerCase().replace(' ', '-')}`}>
+              {badge}
             </span>
           )}
         </div>
         <div className="event-details">
-          <h3 className="event-title">{event.title}</h3>
+          <h3 className="event-title">{event.name || event.title || 'Untitled Event'}</h3>
           <div className="event-organizer">
-            <div className="organizer-avatar" style={{ backgroundImage: `url(${event.organizerAvatar})` }} />
-            <span className="organizer-name">{event.organizer}</span>
+            <div className="organizer-avatar" style={{ backgroundImage: `url(${organizerAvatar})` }} />
+            <span className="organizer-name">{organizerName}</span>
           </div>
           <div className="event-meta">
             <div className="meta-row">
@@ -35,20 +61,22 @@ const EventCard = ({ event }) => {
                 <line x1="8" y1="2" x2="8" y2="6" />
                 <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
-              <span>{event.date} · {event.time}</span>
+              <span>{formatDate(event.start_date || event.date)} · {formatTime(event.start_date || event.date)}</span>
             </div>
             <div className="meta-row">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
                 <circle cx="12" cy="10" r="3" />
               </svg>
-              <span>{event.venue} · {event.location}</span>
+              <span>{event.venue?.name || event.venue || 'TBA'} · {event.location || event.city || ''}</span>
             </div>
           </div>
           <div className="event-footer">
             <div className="event-price">
               <span className="price-label">From</span>
-              <span className="price-value">{event.price}</span>
+              <span className="price-value">
+                {event.ticket_price ? `₦${Number(event.ticket_price).toLocaleString()}` : 'Free'}
+              </span>
             </div>
             <span className={`availability ${availability.className}`}>
               {availability.label}
@@ -64,50 +92,36 @@ const EventCard = ({ event }) => {
 };
 
 const TrendingSection = () => {
-  const trendingEvents = [
-    {
-      id: 1,
-      title: 'Afrobeats Summer Festival 2026',
-      organizer: 'Live Nation Africa',
-      organizerAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop',
-      image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&h=400&fit=crop',
-      date: 'Sat, 15 Nov',
-      time: '4:00 PM',
-      venue: 'Eko Convention Center',
-      location: 'Lagos, Nigeria',
-      price: '₦15,000',
-      ticketsRemaining: 132,
-      badge: 'Trending',
-    },
-    {
-      id: 2,
-      title: 'Tech Summit Africa',
-      organizer: 'TechCabal',
-      organizerAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop',
-      image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=400&fit=crop',
-      date: 'Mon, 17 Nov',
-      time: '9:00 AM',
-      venue: 'Landmark Centre',
-      location: 'Lagos, Nigeria',
-      price: '₦25,000',
-      ticketsRemaining: 28,
-      badge: 'Popular',
-    },
-    {
-      id: 3,
-      title: 'Comedy Night: Fresh Laughs',
-      organizer: 'Basketmouth',
-      organizerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop',
-      image: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=600&h=400&fit=crop',
-      date: 'Fri, 21 Nov',
-      time: '7:00 PM',
-      venue: 'Eko Hotels',
-      location: 'Lagos, Nigeria',
-      price: '₦10,000',
-      ticketsRemaining: 0,
-      badge: 'Hot',
-    },
-  ];
+  const { data: trendingEvents, isLoading, isError } = useTrendingEvents();
+
+  if (isLoading) {
+    return (
+      <section className="trending-section">
+        <div className="section-container">
+          <div className="section-header">
+            <h2 className="section-title">Trending Now</h2>
+            <p className="section-subtitle">Discover the events people are talking about.</p>
+          </div>
+          <div className="events-grid">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="event-card skeleton">
+                <div className="skeleton-image" />
+                <div className="skeleton-content">
+                  <div className="skeleton-title" />
+                  <div className="skeleton-text" />
+                  <div className="skeleton-text short" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (isError || !trendingEvents?.length) {
+    return null;
+  }
 
   return (
     <section className="trending-section">

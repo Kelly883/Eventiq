@@ -1,5 +1,6 @@
 <?php
 
+use App\GraphQL\Handlers\ErrorHandler;
 use App\GraphQL\Queries\EventsQuery;
 use App\GraphQL\Queries\OrdersQuery;
 use App\GraphQL\Queries\TicketsQuery;
@@ -37,15 +38,7 @@ return [
     ],
 
     'error_formatter' => [Rebing\GraphQL\GraphQL::class, 'formatError'],
-    'errors_handler' => function (array $errors, $formatter) {
-        foreach ($errors as $error) {
-            $previous = $error->getPrevious();
-            if ($previous instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
-                throw $previous;
-            }
-        }
-        return Rebing\GraphQL\GraphQL::handleErrors($errors, $formatter);
-    },
+    'errors_handler' => [ErrorHandler::class, 'handle'],
     'params_key' => 'variables',
     'security' => [
         'query_max_complexity' => (int) env('GRAPHQL_QUERY_MAX_COMPLEXITY', 120),
