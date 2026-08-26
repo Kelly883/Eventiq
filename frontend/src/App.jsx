@@ -7,6 +7,7 @@ import { ProtectedRoute, PublicRoute } from './features/auth/components/RouteGua
 import { useAuthContext } from './features/auth/context/AuthContext';
 import { api, showToast } from './lib/api';
 import './App.css';
+import './features/homepage/homepage.css';
 
 const SalesAnalyticsDashboardPage = lazy(() => import('./features/analytics/pages/SalesAnalyticsDashboardPage'));
 const DetailedAnalyticsPage = lazy(() => import('./features/analytics/pages/DetailedAnalyticsPage'));
@@ -26,6 +27,7 @@ const TicketStatusPage = lazy(() => import('./features/ticket-delivery/pages/Tic
 const DeliverySettingsPage = lazy(() => import('./features/ticket-delivery/pages/DeliverySettingsPage'));
 const AdminDeliveryDashboardPage = lazy(() => import('./features/ticket-delivery/pages/AdminDeliveryDashboardPage'));
 const AdminEmailTemplateManagementPage = lazy(() => import('./features/email-notifications/pages/AdminEmailTemplateManagementPage'));
+const Homepage = lazy(() => import('./features/homepage/Homepage'));
 const AdminRoleManagementPage = lazy(() => import('./features/roles/pages/AdminRoleManagementPage'));
 const UserPermissionsPage = lazy(() => import('./features/roles/pages/UserPermissionsPage'));
 const OrganizerPublicProfilePage = lazy(() => import('./features/organizer-profile/pages/OrganizerPublicProfilePage'));
@@ -322,8 +324,8 @@ function App() {
           <ErrorBoundary>
             <Suspense fallback={<LoadingSpinner message="Loading page..." />}>
               <Routes>
-              <Route path="/" element={<Navigate to="/analytics" replace />} />
-            <Route path="/events" element={<EventBrowsePage />} />
+              <Route path="/" element={<Homepage />} />
+              <Route path="/events" element={<EventBrowsePage />} />
             <Route path="/events/calendar" element={<EventCalendarPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
