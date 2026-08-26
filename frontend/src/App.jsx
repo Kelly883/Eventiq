@@ -49,6 +49,8 @@ const TicketTierManagementPage = lazy(() => import('./features/ticketing/pages')
 const EventPricingConfigPage = lazy(() => import('./features/pricing/pages').then(m => ({ default: m.EventPricingConfigPage })));
 const AdminAnalyticsPage = lazy(() => import('./features/analytics/pages').then(m => ({ default: m.AdminAnalyticsPage })));
 const OrganizerEventLayout = lazy(() => import('./features/events/components/OrganizerEventLayout'));
+const SettingsLayout = lazy(() => import('./features/settings/components/SettingsLayout'));
+const MyTicketsLayout = lazy(() => import('./features/tickets/components/MyTicketsLayout'));
 const AccessDeniedPage = lazy(() => import('./features/common').then(m => ({ default: m.AccessDeniedPage })));
 const MyOrganizerProfilePage = lazy(() => import('./features/organizer-profile/pages/MyOrganizerProfilePage'));
 
@@ -320,19 +322,22 @@ function App() {
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
             <Route path="/order/:orderId/confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
-            <Route path="/my-tickets" element={<ProtectedRoute unauthenticatedToast={true}><UserTicketsDashboardPage /></ProtectedRoute>} />
-            <Route path="/my-tickets/:ticketId" element={<ProtectedRoute unauthenticatedToast={true}><TicketDetailPage /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute unauthenticatedToast={true}><UserDashboardPage /></ProtectedRoute>} />
-            <Route path="/my-tickets/:ticketId/status" element={<ProtectedRoute><TicketStatusPage /></ProtectedRoute>} />
-            <Route path="/my-tickets/:ticketId/delivery" element={<ProtectedRoute><DeliveryStatusPage /></ProtectedRoute>} />
-            <Route path="/my-tickets/status" element={<ProtectedRoute><TicketStatusPage /></ProtectedRoute>} />
+            <Route path="/my-tickets" element={<ProtectedRoute unauthenticatedToast={true}><MyTicketsLayout /></ProtectedRoute>}>
+              <Route index element={<UserTicketsDashboardPage />} />
+              <Route path="status" element={<TicketStatusPage />} />
+              <Route path=":ticketId" element={<TicketDetailPage />} />
+              <Route path=":ticketId/status" element={<TicketStatusPage />} />
+              <Route path=":ticketId/delivery" element={<DeliveryStatusPage />} />
+            </Route>
             <Route path="/admin/email-templates" element={<ProtectedRoute requiredRole="admin"><AdminEmailTemplateManagementPage /></ProtectedRoute>} />
             <Route path="/admin/roles" element={<ProtectedRoute requiredRole="admin"><AdminRoleManagementPage /></ProtectedRoute>} />
             <Route path="/admin/fraud/dashboard" element={<ProtectedRoute requiredRole="admin"><FraudDetectionDashboardPage /></ProtectedRoute>} />
             <Route path="/admin/delivery/dashboard" element={<ProtectedRoute requiredRole="admin"><AdminDeliveryDashboardPage /></ProtectedRoute>} />
             <Route path="/admin/analytics" element={<ProtectedRoute requiredRole="admin"><AdminAnalyticsPage /></ProtectedRoute>} />
-            <Route path="/settings/permissions" element={<ProtectedRoute><UserPermissionsPage /></ProtectedRoute>} />
-            <Route path="/settings/delivery-preferences" element={<ProtectedRoute><DeliverySettingsPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
+              <Route path="permissions" element={<UserPermissionsPage />} />
+              <Route path="delivery-preferences" element={<DeliverySettingsPage />} />
+            </Route>
             <Route path="/events/category/:categoryId" element={<CategoryBrowsePage />} />
             <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
