@@ -48,15 +48,15 @@ export const ProtectedRoute = ({ children, requiredRole = null, unauthenticatedT
   if (requiredRole === 'admin' && !checkAdminAccess()) {
     return (
       <ToastRedirect
-        to="/settings/permissions"
+        to="/login"
         state={{
           deniedByRole: 'admin',
           attemptedPath: location.pathname,
-          message: 'Admin access is required for that page. You have been taken to your permissions instead.',
+          message: 'Admin access is required for that page.',
           messageType: 'warning',
         }}
         title="Access Denied"
-        description="Only admins can manage roles"
+        description="Only admins can access this page"
         type="warning"
       />
     );
