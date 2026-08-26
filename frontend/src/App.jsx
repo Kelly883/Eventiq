@@ -340,7 +340,6 @@ function App() {
               <Route path="fraud/dashboard" element={<FraudDetectionDashboardPage />} />
               <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />
               <Route path="analytics" element={<AdminAnalyticsPage />} />
-              <Route path="email-templates" element={<AdminEmailTemplateManagementPage />} />
               <Route path="settings/email-templates" element={<AdminEmailTemplateManagementPage />} />
             </Route>
             <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
