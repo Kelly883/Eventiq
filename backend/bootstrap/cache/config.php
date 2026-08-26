@@ -581,7 +581,11 @@
       0 => 'Rebing\\GraphQL\\GraphQL',
       1 => 'formatError',
     ),
-    'errors_handler' => 'App\\GraphQL\\Handlers\\ErrorHandler',
+    'errors_handler' => 
+    array (
+      0 => 'App\\GraphQL\\Handlers\\ErrorHandler',
+      1 => 'handle',
+    ),
     'security' => 
     array (
       'query_max_complexity' => 120,

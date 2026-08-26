@@ -8,10 +8,10 @@ class ErrorHandler
 {
     public function __invoke(array $errors, $formatter)
     {
-        return $this->handle($errors, $formatter);
+        return self::handle($errors, $formatter);
     }
 
-    public function handle(array $errors, $formatter)
+    public static function handle(array $errors, $formatter)
     {
         foreach ($errors as $error) {
             $previous = $error->getPrevious();

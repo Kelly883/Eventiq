@@ -38,7 +38,7 @@ return [
     ],
 
     'error_formatter' => [Rebing\GraphQL\GraphQL::class, 'formatError'],
-    'errors_handler' => ErrorHandler::class,
+    'errors_handler' => [ErrorHandler::class, 'handle'],
     'params_key' => 'variables',
     'security' => [
         'query_max_complexity' => (int) env('GRAPHQL_QUERY_MAX_COMPLEXITY', 120),
