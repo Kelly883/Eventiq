@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useEventContext } from '../../components/OrganizerEventLayout';
+import { useEventContext } from '../components/OrganizerEventLayout';
 
 const OrganizerEventOverviewPage = () => {
   const { event, eventId } = useEventContext();
