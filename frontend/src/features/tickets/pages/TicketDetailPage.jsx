@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useParams, useNavigate, Navigate } from 'react-router-dom';
+import { useParams, useNavigate, Navigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ticketKeys } from '../../../lib/queryKeys';
 import { api } from '../../../lib/api';
