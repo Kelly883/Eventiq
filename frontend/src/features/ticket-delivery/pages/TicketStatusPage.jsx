@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { useParams } from 'react-router-dom';
 import { api } from '../../../lib/api';
 
 const TicketStatusPage = () => {
+  const { ticketId } = useParams();
   const [ticketCode, setTicketCode] = useState('');
   const [searchCode, setSearchCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -13,14 +15,20 @@ const TicketStatusPage = () => {
   // No mock data: the page shows an empty state until a real lookup succeeds.
   const [ticket, setTicket] = useState(null);
 
+  useEffect(() => {
+    if (ticketId) {
+      setSearchCode(ticketId);
+      fetchTicket(ticketId);
+    }
+  }, [ticketId]);
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!searchCode.trim()) {
+  const fetchTicket = async (code) => {
+    if (!code?.trim()) {
       showToast('Please enter a valid ticket code.', 'error');
       return;
     }
@@ -29,28 +37,33 @@ const TicketStatusPage = () => {
     setError(null);
 
     try {
-      const response = await api.get(`/tickets/${encodeURIComponent(searchCode.trim())}`);
+      const response = await api.get(`/tickets/${encodeURIComponent(code.trim())}`);
 
       if (response?.data) {
         setTicket(response.data);
-        setTicketCode(searchCode.trim().toUpperCase());
+        setTicketCode(code.trim().toUpperCase());
         showToast('Ticket details fetched successfully.');
       } else {
         setTicket(null);
-        setError(`No ticket found for code "${searchCode.trim()}". Please check the reference and try again.`);
+        setError(`No ticket found for code "${code.trim()}". Please check the reference and try again.`);
         showToast('Ticket not found.', 'error');
       }
     } catch (err) {
       setTicket(null);
       const message =
         err?.response?.status === 404
-          ? `No ticket found for code "${searchCode.trim()}".`
+          ? `No ticket found for code "${code.trim()}".`
           : 'Could not retrieve ticket. Please try again.';
       setError(message);
       showToast(message, 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    await fetchTicket(searchCode);
   };
 
   const triggerRedelivery = async (channel) => {

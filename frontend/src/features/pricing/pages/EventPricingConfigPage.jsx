@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { api, showToast } from '../../../lib/api';
 import Skeleton from '../../../components/Skeleton';
+import PricingPreviewModal from './PricingPreviewModal';
 
 const EventPricingConfigPage = () => {
   const { eventId } = useParams();
@@ -14,6 +15,7 @@ const EventPricingConfigPage = () => {
   const [accessDenied, setAccessDenied] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [savingWindow, setSavingWindow] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [formWindow, setFormWindow] = useState({
     window_name: '',
     ticket_category_id: '',
@@ -201,12 +203,12 @@ const EventPricingConfigPage = () => {
               )}
             </p>
           </div>
-          <Link
-            to={`/organizer/events/${eventId}/pricing/preview`}
+          <button
+            onClick={() => setShowPreviewModal(true)}
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-[#FF6B6B] text-white text-sm font-semibold hover:bg-[#D94545] shadow-sm"
           >
             👁️ Preview
-          </Link>
+          </button>
         </div>
 
         <div className="bg-white rounded-xl border border-[#E3E4E6] p-1.5 mb-6 shadow-sm flex flex-wrap gap-1">
@@ -243,12 +245,12 @@ const EventPricingConfigPage = () => {
               <h2 className="text-lg font-semibold text-[#333333]">Pricing windows</h2>
               <p className="mt-1 text-sm text-[#999999]">Configure early-bird, sales windows and tier pricing rules for this event.</p>
             </div>
-            <Link
-              to={`/organizer/events/${eventId}/pricing/preview`}
+            <button
+              onClick={() => setShowPreviewModal(true)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#FF6B6B] text-[#FF6B6B] text-sm font-medium hover:bg-[#FF6B6B] hover:text-white transition-colors"
             >
               👁️ Preview
-            </Link>
+            </button>
           </div>
 
           <div className="mt-6 space-y-4">
@@ -322,12 +324,19 @@ const EventPricingConfigPage = () => {
 
           <div className="mt-6 flex justify-between items-center pt-6 border-t border-[#E3E4E6]">
             <p className="text-xs text-[#B3B3B3]">Deep link: /organizer/events/{eventId}/pricing</p>
-            <Link to={`/organizer/events/${eventId}/pricing/preview`} className="text-sm font-medium text-[#FF6B6B] hover:text-[#D94545]">
+            <button onClick={() => setShowPreviewModal(true)} className="text-sm font-medium text-[#FF6B6B] hover:text-[#D94545]">
               Preview →
-            </Link>
+            </button>
           </div>
         </div>
       </div>
+
+      {showPreviewModal && (
+        <PricingPreviewModal
+          eventId={eventId}
+          onClose={() => setShowPreviewModal(false)}
+        />
+      )}
     </div>
   );
 };

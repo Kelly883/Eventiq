@@ -1,17 +1,13 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 
-const AdjustInventoryModal = () => {
-  const { eventId } = useParams();
-  const navigate = useNavigate();
-
+const AdjustInventoryModal = ({ eventId, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-slate-900">Adjust Inventory</h2>
           <button
-            onClick={() => navigate(-1)}
+            onClick={onClose}
             className="text-slate-400 hover:text-slate-600 text-xl font-bold"
           >
             ×
@@ -21,7 +17,7 @@ const AdjustInventoryModal = () => {
         <p className="text-sm text-slate-600">Inventory adjustment form would go here.</p>
         <div className="mt-6 flex justify-end gap-2">
           <button
-            onClick={() => navigate(-1)}
+            onClick={onClose}
             className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50"
           >
             Cancel

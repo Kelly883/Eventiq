@@ -1,19 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../../../lib/api';
 import Skeleton from '../../../components/Skeleton';
 
-const PricingPreviewModal = () => {
-  const { eventId } = useParams();
-  const navigate = useNavigate();
+const PricingPreviewModal = ({ eventId, onClose }) => {
   const [event, setEvent] = useState(null);
   const [windows, setWindows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const close = useCallback(() => {
-    navigate(`/organizer/events/${eventId}/pricing`);
-  }, [navigate, eventId]);
+    onClose();
+  }, [onClose]);
 
   // Close on Esc
   useEffect(() => {
@@ -62,8 +60,6 @@ const PricingPreviewModal = () => {
     fetchPreview();
     return () => { cancelled = true; };
   }, [eventId]);
-
-  // Deep linking works because this is a route; unauth/403 handled by ProtectedRoute + error above
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
