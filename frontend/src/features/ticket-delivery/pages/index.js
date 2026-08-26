@@ -1,4 +1,5 @@
 // Ticket Delivery Pages
 export { default as TicketStatusPage } from './TicketStatusPage';
+export { default as DeliveryStatusPage } from './DeliveryStatusPage';
 export { default as DeliverySettingsPage } from './DeliverySettingsPage';
 export { default as AdminDeliveryDashboardPage } from './AdminDeliveryDashboardPage';

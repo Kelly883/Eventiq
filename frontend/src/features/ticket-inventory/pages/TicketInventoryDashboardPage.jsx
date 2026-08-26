@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { inventoryService } from '../services';
+import AdjustInventoryModal from './AdjustInventoryModal';
 
 const TicketInventoryDashboardPage = () => {
   const { eventId } = useParams();
@@ -10,6 +11,7 @@ const TicketInventoryDashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
 
   useEffect(() => {
     if (!eventId) return;
@@ -72,12 +74,12 @@ const TicketInventoryDashboardPage = () => {
             <h1 className="text-3xl font-bold text-[#333333] tracking-tight" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Ticket Inventory</h1>
             <p className="mt-1 text-sm text-[#999999]">Event ID: {eventId} • Adjust sold/remaining stock</p>
           </div>
-          <Link
-            to={`/organizer/events/${eventId}/inventory/adjust`}
+          <button
+            onClick={() => setShowAdjustModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#FF6B6B] text-white text-sm font-bold shadow-sm hover:bg-[#D94545] transition-colors"
           >
             ⚙️ Adjust Inventory
-          </Link>
+          </button>
         </div>
 
         {/* Event management tabs — reciprocal to ticketing */}
@@ -115,6 +117,13 @@ const TicketInventoryDashboardPage = () => {
           </div>
         )}
       </div>
+
+      {showAdjustModal && (
+        <AdjustInventoryModal
+          eventId={eventId}
+          onClose={() => setShowAdjustModal(false)}
+        />
+      )}
     </div>
   );
 };

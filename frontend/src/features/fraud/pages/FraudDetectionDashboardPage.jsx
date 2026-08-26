@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuthContext } from '../../auth/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { fraudService } from '../services/fraudService';
@@ -18,6 +18,20 @@ const FraudDetectionDashboardPage = () => {
     flaggedRevenue: 0,
   });
   const [resolvingAlert, setResolvingAlert] = useState(null);
+  const alertRefs = useRef({});
+  const setAlertRef = useCallback((id, el) => {
+    alertRefs.current[id] = el;
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    const closedAlertId = resolvingAlert;
+    setResolvingAlert(null);
+    requestAnimationFrame(() => {
+      if (closedAlertId != null && alertRefs.current[closedAlertId]) {
+        alertRefs.current[closedAlertId]?.focus();
+      }
+    });
+  }, [resolvingAlert]);
 
   // Fetch alerts and stats on mount
   useEffect(() => {
@@ -61,7 +75,7 @@ const FraudDetectionDashboardPage = () => {
   const handleResolve = async (alertId, decision) => {
     setResolvingAlert(alertId);
     try {
-      await window.alertsService.resolveAlert(alertId, decision);
+      await fraudService.resolveAlert(alertId, { decision });
       setAlerts((prev) => prev.map((a) => a.id === alertId ? { ...a, status: decision === 'approve' ? 'resolved' : decision } : a));
     } catch (err) {
       console.error('Failed to resolve alert', err);
@@ -101,8 +115,12 @@ const FraudDetectionDashboardPage = () => {
                 {alerts.map((alert) => (
                   <div
                     key={alert.id}
-                    className="p-4 border-l-4 border-red-500 rounded bg-red-50 hover:bg-red-100 transition-colors"
-                    onClick={() => navigate(`/admin/fraud/dashboard/${alert.id}`)}
+                    ref={(el) => setAlertRef(alert.id, el)}
+                    role="button"
+                    tabIndex={0}
+                    className="p-4 border-l-4 border-red-500 rounded bg-red-50 hover:bg-red-100 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500"
+                    onClick={() => setResolvingAlert(alert.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setResolvingAlert(alert.id); } }}
                   >
                     <div className="flex items-start">
                       <div className="w-8 rounded-xl bg-red-100 flex items-center justify-center text-sm font-medium text-red-600">
@@ -157,7 +175,7 @@ const FraudDetectionDashboardPage = () => {
         {resolvingAlert !== null ? (
           <FraudTransactionReviewModal
             alertId={resolvingAlert}
-            onClose={() => setResolvingAlert(null)}
+            onClose={handleCloseModal}
           />
         ) : null}
       </div>

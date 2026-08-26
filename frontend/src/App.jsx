@@ -1,54 +1,60 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import SalesAnalyticsDashboardPage from './features/analytics/pages/SalesAnalyticsDashboardPage';
-import DetailedAnalyticsPage from './features/analytics/pages/DetailedAnalyticsPage';
-import AnalyticsComparisonPage from './features/analytics/pages/AnalyticsComparisonPage';
-import { OrganizerDashboardPage } from './features/dashboard/pages';
-import { CheckInDashboardPage } from './features/check-in';
-import VenueCheckInPage from './features/qr-code-ticketing/pages/VenueCheckInPage';
-import EventBrowsePage from './features/events/pages/EventBrowsePage';
-import EventDetailPage from './features/events/pages/EventDetailPage';
-import CategoryBrowsePage from './features/events/pages/CategoryBrowsePage';
-import EventCalendarPage from './features/events-calendar/pages/EventCalendarPage';
-import TicketStatusPage from './features/ticket-delivery/pages/TicketStatusPage';
-import DeliverySettingsPage from './features/ticket-delivery/pages/DeliverySettingsPage';
-import AdminDeliveryDashboardPage from './features/ticket-delivery/pages/AdminDeliveryDashboardPage';
-import AdminEmailTemplateManagementPage from './features/email-notifications/pages/AdminEmailTemplateManagementPage';
-import AdminRoleManagementPage from './features/roles/pages/AdminRoleManagementPage';
-import UserPermissionsPage from './features/roles/pages/UserPermissionsPage';
-import OrganizerPublicProfilePage from './features/organizer-profile/pages/OrganizerPublicProfilePage';
-import OrganizerProfileEditPage from './features/organizer-profile/pages/OrganizerProfileEditPage';
-import OrganizerProfileSettingsPage from './features/organizer-profile/pages/OrganizerProfileSettingsPage';
-import OrganizerProfileView from './features/organizer-profile/components/OrganizerProfileView';
-import OrganizerEventListPage from './features/events/pages/OrganizerEventListPage';
-import EventCreatePage from './features/events/pages/EventCreatePage';
-import EventEditPage from './features/events/pages/EventEditPage';
-import OrganizerEventOverviewPage from './features/events/pages/OrganizerEventOverviewPage';
-import CartPage from './features/checkout/pages/CartPage';
-import CheckoutPage from './features/checkout/pages/CheckoutPage';
-import OrderConfirmationPage from './features/checkout/pages/OrderConfirmationPage';
-import UserTicketsDashboardPage from './features/tickets/pages/UserTicketsDashboardPage';
-import TicketDetailPage from './features/tickets/pages/TicketDetailPage';
-import UserDashboardPage from './features/dashboard/pages/UserDashboardPage';
-import FraudDetectionDashboardPage from './features/fraud/pages/FraudDetectionDashboardPage';
-import FraudTransactionReviewModal from './features/fraud/pages/FraudTransactionReviewModal';
+import { LoadingSpinner } from './features/common';
 import ToastContainer from './features/notifications/components/ToastContainer';
 import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
 import { ProtectedRoute, PublicRoute } from './features/auth/components/RouteGuards';
 import { useAuthContext } from './features/auth/context/AuthContext';
-import {
-  LoginPage,
-  RegisterPage,
-  ForgotPasswordPage,
-  ResetPasswordPage,
-} from './features/auth/pages';
-import { TicketInventoryDashboardPage, AdjustInventoryModal } from './features/ticket-inventory/pages';
-import { TicketTierManagementPage } from './features/ticketing/pages';
-import { EventPricingConfigPage, PricingPreviewModal } from './features/pricing/pages';
-import { AccessDeniedPage } from './features/common';
-import MyOrganizerProfilePage from './features/organizer-profile/pages/MyOrganizerProfilePage';
 import { api, showToast } from './lib/api';
 import './App.css';
+
+const SalesAnalyticsDashboardPage = lazy(() => import('./features/analytics/pages/SalesAnalyticsDashboardPage'));
+const DetailedAnalyticsPage = lazy(() => import('./features/analytics/pages/DetailedAnalyticsPage'));
+const AnalyticsComparisonPage = lazy(() => import('./features/analytics/pages/AnalyticsComparisonPage'));
+const OrganizerDashboardPage = lazy(() => import('./features/dashboard/pages').then(m => ({ default: m.OrganizerDashboardPage })));
+const CheckInDashboardPage = lazy(() => import('./features/check-in').then(m => ({ default: m.CheckInDashboardPage })));
+const VenueCheckInPage = lazy(() => import('./features/qr-code-ticketing/pages/VenueCheckInPage'));
+const EventBrowsePage = lazy(() => import('./features/events/pages/EventBrowsePage'));
+const EventDetailPage = lazy(() => import('./features/events/pages/EventDetailPage'));
+const CategoryBrowsePage = lazy(() => import('./features/events/pages/CategoryBrowsePage'));
+const EventCalendarPage = lazy(() => import('./features/events-calendar/pages/EventCalendarPage'));
+const TicketStatusPage = lazy(() => import('./features/ticket-delivery/pages/TicketStatusPage'));
+const DeliverySettingsPage = lazy(() => import('./features/ticket-delivery/pages/DeliverySettingsPage'));
+const AdminDeliveryDashboardPage = lazy(() => import('./features/ticket-delivery/pages/AdminDeliveryDashboardPage'));
+const AdminEmailTemplateManagementPage = lazy(() => import('./features/email-notifications/pages/AdminEmailTemplateManagementPage'));
+const AdminRoleManagementPage = lazy(() => import('./features/roles/pages/AdminRoleManagementPage'));
+const UserPermissionsPage = lazy(() => import('./features/roles/pages/UserPermissionsPage'));
+const OrganizerPublicProfilePage = lazy(() => import('./features/organizer-profile/pages/OrganizerPublicProfilePage'));
+const OrganizerProfileEditPage = lazy(() => import('./features/organizer-profile/pages/OrganizerProfileEditPage'));
+const OrganizerProfileSettingsPage = lazy(() => import('./features/organizer-profile/pages/OrganizerProfileSettingsPage'));
+const OrganizerProfileView = lazy(() => import('./features/organizer-profile/components/OrganizerProfileView'));
+const OrganizerEventListPage = lazy(() => import('./features/events/pages/OrganizerEventListPage'));
+const EventCreatePage = lazy(() => import('./features/events/pages/EventCreatePage'));
+const EventEditPage = lazy(() => import('./features/events/pages/EventEditPage'));
+const OrganizerEventOverviewPage = lazy(() => import('./features/events/pages/OrganizerEventOverviewPage'));
+const CartPage = lazy(() => import('./features/checkout/pages/CartPage'));
+const CheckoutPage = lazy(() => import('./features/checkout/pages/CheckoutPage'));
+const OrderConfirmationPage = lazy(() => import('./features/checkout/pages/OrderConfirmationPage'));
+const UserTicketsDashboardPage = lazy(() => import('./features/tickets/pages/UserTicketsDashboardPage'));
+const TicketDetailPage = lazy(() => import('./features/tickets/pages/TicketDetailPage'));
+const UserDashboardPage = lazy(() => import('./features/dashboard/pages/UserDashboardPage'));
+const FraudDetectionDashboardPage = lazy(() => import('./features/fraud/pages/FraudDetectionDashboardPage'));
+const DeliveryStatusPage = lazy(() => import('./features/ticket-delivery/pages').then(m => ({ default: m.DeliveryStatusPage })));
+const LoginPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.RegisterPage })));
+const ForgotPasswordPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.ResetPasswordPage })));
+const TicketInventoryDashboardPage = lazy(() => import('./features/ticket-inventory/pages').then(m => ({ default: m.TicketInventoryDashboardPage })));
+const TicketTierManagementPage = lazy(() => import('./features/ticketing/pages').then(m => ({ default: m.TicketTierManagementPage })));
+const EventPricingConfigPage = lazy(() => import('./features/pricing/pages').then(m => ({ default: m.EventPricingConfigPage })));
+const AdminAnalyticsPage = lazy(() => import('./features/analytics/pages').then(m => ({ default: m.AdminAnalyticsPage })));
+const OrganizerEventLayout = lazy(() => import('./features/events/components/OrganizerEventLayout'));
+const SettingsLayout = lazy(() => import('./features/settings/components/SettingsLayout'));
+const MyTicketsLayout = lazy(() => import('./features/tickets/components/MyTicketsLayout'));
+const AdminLayout = lazy(() => import('./features/admin/components/AdminLayout'));
+const DashboardLayout = lazy(() => import('./features/dashboard/components/DashboardLayout'));
+const AccessDeniedPage = lazy(() => import('./features/common').then(m => ({ default: m.AccessDeniedPage })));
+const MyOrganizerProfilePage = lazy(() => import('./features/organizer-profile/pages/MyOrganizerProfilePage'));
 
 const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password', '/access-denied'];
 
@@ -135,6 +141,16 @@ const NAV_ITEMS = [
     visible: (isLoggedIn) => isLoggedIn,
   },
   {
+    to: '/my-tickets/status',
+    label: '🔍 Ticket Status',
+    visible: (isLoggedIn) => isLoggedIn,
+  },
+  {
+    to: '/settings/delivery-preferences',
+    label: '⚙️ Delivery Settings',
+    visible: (isLoggedIn) => isLoggedIn,
+  },
+  {
     to: '/admin/roles',
     label: '🛡️ Admin Roles',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
@@ -142,6 +158,11 @@ const NAV_ITEMS = [
   {
     to: '/admin/fraud/dashboard',
     label: '🕵️ Fraud Detection',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
+  },
+  {
+    to: '/admin/analytics',
+    label: '📊 Analytics',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
   },
 ];
@@ -177,13 +198,13 @@ function App() {
       const getRedirectPath = (to) => {
         const userRoles = user?.roles?.map((r) => r.name) || [];
         if (to === '/dashboard/organizer' && !userRoles.includes('organizer')) {
-          return '/dashboard/user';
+          return '/dashboard';
         }
         if (to.startsWith('/admin/') && !userRoles.includes('admin')) {
-          return '/dashboard/user';
+          return '/dashboard';
         }
         if (to.startsWith('/organizer/') && !userRoles.includes('organizer')) {
-          return '/dashboard/user';
+          return '/dashboard';
         }
         return to;
       };
@@ -295,42 +316,53 @@ function App() {
 
         {/* Page Content */}
         <main className="flex-1">
-          <Routes>
+          <Suspense fallback={<LoadingSpinner message="Loading page..." />}>
+            <Routes>
             <Route path="/" element={<Navigate to="/analytics" replace />} />
             <Route path="/events" element={<EventBrowsePage />} />
             <Route path="/events/calendar" element={<EventCalendarPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
             <Route path="/order/:orderId/confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
-            <Route path="/my-tickets" element={<ProtectedRoute unauthenticatedToast={true}><UserTicketsDashboardPage /></ProtectedRoute>} />
-            <Route path="/my-tickets/:ticketId" element={<ProtectedRoute unauthenticatedToast={true}><TicketDetailPage /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute unauthenticatedToast={true}><UserDashboardPage /></ProtectedRoute>} />
-            <Route path="/my-tickets/:ticketId/status" element={<ProtectedRoute><TicketStatusPage /></ProtectedRoute>} />
-            <Route path="/admin/email-templates" element={<ProtectedRoute requiredRole="admin"><AdminEmailTemplateManagementPage /></ProtectedRoute>} />
-            <Route path="/admin/roles" element={<ProtectedRoute requiredRole="admin"><AdminRoleManagementPage /></ProtectedRoute>} />
-            <Route path="/admin/fraud/dashboard" element={<ProtectedRoute requiredRole="admin"><FraudDetectionDashboardPage /></ProtectedRoute>} />
-            <Route path="/admin/delivery" element={<ProtectedRoute requiredRole="admin"><AdminDeliveryDashboardPage /></ProtectedRoute>} />
-            <Route path="/settings/permissions" element={<ProtectedRoute><UserPermissionsPage /></ProtectedRoute>} />
-            <Route path="/settings/delivery-preferences" element={<ProtectedRoute><DeliverySettingsPage /></ProtectedRoute>} />
+            <Route path="/my-tickets" element={<ProtectedRoute unauthenticatedToast={true}><MyTicketsLayout /></ProtectedRoute>}>
+              <Route index element={<UserTicketsDashboardPage />} />
+              <Route path="status" element={<TicketStatusPage />} />
+              <Route path=":ticketId" element={<TicketDetailPage />} />
+              <Route path=":ticketId/status" element={<TicketStatusPage />} />
+              <Route path=":ticketId/delivery" element={<DeliveryStatusPage />} />
+            </Route>
+            <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
+              <Route path="roles" element={<AdminRoleManagementPage />} />
+              <Route path="fraud/dashboard" element={<FraudDetectionDashboardPage />} />
+              <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />
+              <Route path="analytics" element={<AdminAnalyticsPage />} />
+              <Route path="email-templates" element={<AdminEmailTemplateManagementPage />} />
+            </Route>
+            <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
+              <Route path="permissions" element={<UserPermissionsPage />} />
+              <Route path="delivery-preferences" element={<DeliverySettingsPage />} />
+            </Route>
             <Route path="/events/category/:categoryId" element={<CategoryBrowsePage />} />
             <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
-            <Route path="/organizer/events/:eventId/analytics" element={<ProtectedRoute requiredRole="organizer"><SalesAnalyticsDashboardPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/analytics/detailed" element={<ProtectedRoute requiredRole="organizer"><DetailedAnalyticsPage /></ProtectedRoute>} />
             <Route path="/organizer/analytics/compare" element={<ProtectedRoute requiredRole="organizer"><AnalyticsComparisonPage /></ProtectedRoute>} />
-            <Route path="/dashboard/organizer" element={<ProtectedRoute requiredRole="organizer"><OrganizerDashboardPage /></ProtectedRoute>} />
-            <Route path="/dashboard/user" element={<ProtectedRoute><UserDashboardPage /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+              <Route path="organizer" element={<OrganizerDashboardPage />} />
+              <Route index element={<UserDashboardPage />} />
+            </Route>
             <Route path="/organizer/events" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventListPage /></ProtectedRoute>} />
             <Route path="/organizer/events/create" element={<ProtectedRoute requiredRole="organizer"><EventCreatePage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventOverviewPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/edit" element={<ProtectedRoute requiredRole="organizer"><EventEditPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/inventory" element={<ProtectedRoute requiredRole="organizer"><TicketInventoryDashboardPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/inventory/adjust" element={<ProtectedRoute requiredRole="organizer"><AdjustInventoryModal /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/ticketing" element={<ProtectedRoute requiredRole="organizer"><TicketTierManagementPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/ticketing/tier/:tierId/edit" element={<ProtectedRoute requiredRole="organizer"><TicketTierManagementPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/pricing" element={<ProtectedRoute requiredRole="organizer"><EventPricingConfigPage /></ProtectedRoute>} />
-            <Route path="/organizer/events/:eventId/pricing/preview" element={<ProtectedRoute requiredRole="organizer"><PricingPreviewModal /></ProtectedRoute>} />
+            <Route path="/organizer/events/:eventId" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventLayout /></ProtectedRoute>}>
+              <Route index element={<OrganizerEventOverviewPage />} />
+              <Route path="edit" element={<EventEditPage />} />
+              <Route path="inventory" element={<TicketInventoryDashboardPage />} />
+              <Route path="ticketing" element={<TicketTierManagementPage />} />
+              <Route path="ticketing/tier/:tierId/edit" element={<TicketTierManagementPage />} />
+              <Route path="pricing" element={<EventPricingConfigPage />} />
+              <Route path="analytics" element={<SalesAnalyticsDashboardPage />} />
+              <Route path="analytics/detailed" element={<DetailedAnalyticsPage />} />
+            </Route>
             <Route path="/o/:organizerId" element={<OrganizerPublicProfilePage />} />
             <Route path="/organizer/:organizerId" element={<OrganizerProfileCompatRedirect />} />
             <Route path="/my/profile" element={<ProtectedRoute requiredRole="organizer"><MyOrganizerProfilePage /></ProtectedRoute>} />
@@ -346,6 +378,7 @@ function App() {
             <Route path="/access-denied" element={<AccessDeniedPage />} />
             <Route path="*" element={<Navigate to="/analytics" replace />} />
           </Routes>
+          </Suspense>
         </main>
       </div>
     </BrowserRouter>
