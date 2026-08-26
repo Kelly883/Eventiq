@@ -63,8 +63,11 @@ const UserTicketsDashboardPage = () => {
         <div className="mx-auto max-w-md">
           <div className="text-6xl mb-4">🎫</div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">No tickets yet</h2>
-          <p className="text-slate-500 mb-6">
-            When you purchase tickets, they'll appear here. Start by browsing upcoming events!
+          <p className="text-slate-500 mb-2">
+            When you purchase tickets for events, they'll appear here.
+          </p>
+          <p className="text-sm text-slate-400 mb-6">
+            Tickets give you access to events, show your seat or entry details, and can be checked in at the venue.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link

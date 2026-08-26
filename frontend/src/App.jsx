@@ -224,7 +224,7 @@ function App() {
       <div className="max-w-7xl mx-auto text-center">
         <p className="text-sm font-medium">
           <span className="font-bold">Remembering where you wanted to go&hellip;</span>
-          navigating back to {location.state.from.replace('/', '/')}…
+          navigating back to {location.state.from.pathname}…
         </p>
       </div>
     </div>
