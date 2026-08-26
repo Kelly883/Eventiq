@@ -1,10 +1,28 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthContext } from '../../auth/context/AuthContext';
+import { ticketKeys } from '../../../lib/queryKeys';
+import { api } from '../../../lib/api';
 
 const UserDashboardPage = () => {
   const { user } = useAuthContext();
   const [showWelcome, setShowWelcome] = useState(true);
+
+  const { data: ticketsData } = useQuery(
+    ticketKeys.lists(),
+    async () => {
+      const response = await api.get('/tickets');
+      return response.data;
+    },
+    {
+      staleTime: 2 * 60 * 1000,
+      cacheTime: 10 * 60 * 1000,
+    }
+  );
+
+  const tickets = ticketsData?.data || ticketsData || [];
+  const hasTickets = Array.isArray(tickets) && tickets.length > 0;
 
   const quickActions = [
     {
@@ -55,11 +73,19 @@ const UserDashboardPage = () => {
               >
                 📋 Explore Events
               </Link>
+              {hasTickets && (
+                <Link
+                  to="/my-tickets"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-indigo-700 text-sm font-semibold hover:bg-indigo-50 transition-colors"
+                >
+                  🎫 My Tickets ({tickets.length})
+                </Link>
+              )}
               <Link
                 to="/my-tickets"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-700/50 text-white text-sm font-medium hover:bg-indigo-700/70 transition-colors border border-indigo-500/50"
               >
-                🎫 My Tickets
+                🎫 Browse Tickets
               </Link>
               <button
                 onClick={() => setShowWelcome(false)}
