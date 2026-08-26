@@ -32,7 +32,7 @@ const DashboardLayout = () => {
   }
 
   dashboardNavItems.push({
-    to: '/dashboard/user',
+    to: '/dashboard',
     label: 'My Dashboard',
     icon: '👤',
     description: 'Personal overview',
@@ -42,7 +42,7 @@ const DashboardLayout = () => {
 
   const getPageTitle = () => {
     if (location.pathname === '/dashboard/organizer') return 'Organizer Dashboard';
-    if (location.pathname === '/dashboard/user') return 'My Dashboard';
+    if (location.pathname === '/dashboard') return 'My Dashboard';
     return 'Dashboard';
   };
 
