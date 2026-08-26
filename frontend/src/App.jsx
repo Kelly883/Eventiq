@@ -13,6 +13,10 @@ const DetailedAnalyticsPage = lazy(() => import('./features/analytics/pages/Deta
 const AnalyticsComparisonPage = lazy(() => import('./features/analytics/pages/AnalyticsComparisonPage'));
 const OrganizerDashboardPage = lazy(() => import('./features/dashboard/pages').then(m => ({ default: m.OrganizerDashboardPage })));
 const CheckInDashboardPage = lazy(() => import('./features/check-in').then(m => ({ default: m.CheckInDashboardPage })));
+const CheckInSearchPage = lazy(() => import('./features/check-in/pages/CheckInSearchPage'));
+const CheckInStatsPage = lazy(() => import('./features/check-in/pages/CheckInStatsPage'));
+const CheckInExportPage = lazy(() => import('./features/check-in/pages/CheckInExportPage'));
+const CheckInHistoryPage = lazy(() => import('./features/check-in/pages/CheckInHistoryPage'));
 const VenueCheckInPage = lazy(() => import('./features/qr-code-ticketing/pages/VenueCheckInPage'));
 const EventBrowsePage = lazy(() => import('./features/events/pages/EventBrowsePage'));
 const EventDetailPage = lazy(() => import('./features/events/pages/EventDetailPage'));
@@ -113,12 +117,12 @@ const NAV_ITEMS = [
   {
     to: '/check-in',
     label: '🎟️ Check-In Desk',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer', 'admin'),
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer', 'admin'),
   },
   {
     to: '/venue-scan',
     label: '📷 Gate Scanner',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer', 'admin'),
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer', 'admin'),
   },
   {
     to: '/organizer/events',
@@ -337,6 +341,7 @@ function App() {
               <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />
               <Route path="analytics" element={<AdminAnalyticsPage />} />
               <Route path="email-templates" element={<AdminEmailTemplateManagementPage />} />
+              <Route path="settings/email-templates" element={<AdminEmailTemplateManagementPage />} />
             </Route>
             <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
               <Route path="permissions" element={<UserPermissionsPage />} />
@@ -369,8 +374,13 @@ function App() {
             <Route path="/organizer/profile" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileNotSetUpPage /></ProtectedRoute>} />
             <Route path="/organizer/profile/edit" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileEditPage /></ProtectedRoute>} />
             <Route path="/organizer/profile/settings" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileSettingsPage /></ProtectedRoute>} />
-            <Route path="/check-in" element={<CheckInDashboardPage />} />
-            <Route path="/venue-scan" element={<VenueCheckInPage />} />
+            <Route path="/venue/check-in/:eventId" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><VenueCheckInPage /></ProtectedRoute>} />
+            <Route path="/check-in" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInDashboardPage /></ProtectedRoute>} />
+            <Route path="/check-in/search" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInSearchPage /></ProtectedRoute>} />
+            <Route path="/check-in/stats" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInStatsPage /></ProtectedRoute>} />
+            <Route path="/check-in/export" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInExportPage /></ProtectedRoute>} />
+            <Route path="/check-in/history" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInHistoryPage /></ProtectedRoute>} />
+            <Route path="/venue-scan" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><VenueCheckInPage /></ProtectedRoute>} />
             <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
             <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />

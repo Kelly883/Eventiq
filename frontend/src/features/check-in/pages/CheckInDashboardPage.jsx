@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   CheckInStatsDisplay,
   CheckInQRScanner,
@@ -103,6 +104,40 @@ const CheckInDashboardPage = () => {
               Process attendee check-ins, view queue logs, and monitor attendance metrics offline or online.
             </p>
           </div>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
+          <Link
+            to="/check-in"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white"
+          >
+            Quick Check-In
+          </Link>
+          <Link
+            to="/check-in/search"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
+          >
+            Search
+          </Link>
+          <Link
+            to="/check-in/stats"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
+          >
+            Statistics
+          </Link>
+          <Link
+            to="/check-in/export"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
+          >
+            Export
+          </Link>
+          <Link
+            to="/check-in/history"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
+          >
+            History
+          </Link>
         </div>
 
         {/* Metrics display */}

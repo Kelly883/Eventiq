@@ -6,7 +6,7 @@ const adminNavItems = [
   { to: '/admin/fraud/dashboard', label: 'Fraud Detection', icon: '🕵️', description: 'Monitor flagged transactions' },
   { to: '/admin/delivery/dashboard', label: 'Delivery', icon: '📦', description: 'Ticket delivery management' },
   { to: '/admin/analytics', label: 'Analytics', icon: '📊', description: 'Platform-wide analytics' },
-  { to: '/admin/email-templates', label: 'Email Templates', icon: '✉️', description: 'Manage notification templates' },
+  { to: '/admin/settings/email-templates', label: 'Email Templates', icon: '✉️', description: 'Manage notification templates' },
 ];
 
 const AdminLayout = () => {
