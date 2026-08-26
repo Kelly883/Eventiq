@@ -8,6 +8,7 @@ import { useAuthContext } from './features/auth/context/AuthContext';
 import { api, showToast } from './lib/api';
 import './App.css';
 import './features/homepage/homepage.css';
+import Homepage from './features/homepage/Homepage';
 
 const SalesAnalyticsDashboardPage = lazy(() => import('./features/analytics/pages/SalesAnalyticsDashboardPage'));
 const DetailedAnalyticsPage = lazy(() => import('./features/analytics/pages/DetailedAnalyticsPage'));
@@ -27,7 +28,6 @@ const TicketStatusPage = lazy(() => import('./features/ticket-delivery/pages/Tic
 const DeliverySettingsPage = lazy(() => import('./features/ticket-delivery/pages/DeliverySettingsPage'));
 const AdminDeliveryDashboardPage = lazy(() => import('./features/ticket-delivery/pages/AdminDeliveryDashboardPage'));
 const AdminEmailTemplateManagementPage = lazy(() => import('./features/email-notifications/pages/AdminEmailTemplateManagementPage'));
-const Homepage = lazy(() => import('./features/homepage/Homepage'));
 const AdminRoleManagementPage = lazy(() => import('./features/roles/pages/AdminRoleManagementPage'));
 const UserPermissionsPage = lazy(() => import('./features/roles/pages/UserPermissionsPage'));
 const OrganizerPublicProfilePage = lazy(() => import('./features/organizer-profile/pages/OrganizerPublicProfilePage'));
@@ -200,41 +200,57 @@ function App() {
   }, [user, sessionWarningShown]);
 
   useEffect(() => {
-    if (user && location.state?.from) {
-      const getRedirectPath = (to) => {
-        const userRoles = user?.roles?.map((r) => r.name) || [];
-        if (to === '/dashboard/organizer' && !userRoles.includes('organizer')) {
-          return '/dashboard';
-        }
-        if (to.startsWith('/admin/') && !userRoles.includes('admin')) {
-          return '/dashboard';
-        }
-        if (to.startsWith('/organizer/') && !userRoles.includes('organizer')) {
-          return '/dashboard';
-        }
-        return to;
-      };
+    if (!user || !location.state?.from) return;
+    // Don't hijack the homepage — if the user landed directly on "/",
+    // a stale `state.from` (e.g. from a previous protected-route redirect)
+    // would otherwise immediately bounce them to /analytics.
+    if (location.pathname === '/') return;
 
-      const safePath = getRedirectPath(location.state.from.pathname);
-      navigate(safePath, { replace: true });
-    }
-  }, [user, location.state?.from, navigate]);
+    const fromPath =
+      typeof location.state.from === 'string'
+        ? location.state.from
+        : location.state.from.pathname;
 
-  // Show banner when deep-link recovery is active
-  const recoveryBanner = user && location.state?.from ? (
-    <div
-      key="recovery-banner"
-      className="fixed top-0 left-0 right-0 z-50 bg-indigo-100 border-b border-indigo-200 p-4 text-indigo-800 shadow-sm animate-slide-in-down"
-      role="alert"
-    >
-      <div className="max-w-7xl mx-auto text-center">
-        <p className="text-sm font-medium">
-          <span className="font-bold">Remembering where you wanted to go&hellip;</span>
-          navigating back to {location.state.from.pathname}…
-        </p>
+    const getRedirectPath = (to) => {
+      const userRoles = user?.roles?.map((r) => r.name) || [];
+      if (to === '/dashboard/organizer' && !userRoles.includes('organizer')) {
+        return '/dashboard';
+      }
+      if (to.startsWith('/admin/') && !userRoles.includes('admin')) {
+        return '/dashboard';
+      }
+      if (to.startsWith('/organizer/') && !userRoles.includes('organizer')) {
+        return '/dashboard';
+      }
+      return to;
+    };
+
+    const safePath = getRedirectPath(fromPath);
+    // Avoid redirect loop when safePath is the current location
+    if (safePath === location.pathname) return;
+    navigate(safePath, { replace: true });
+  }, [user, location.state?.from, location.pathname, navigate]);
+
+  // Show banner when deep-link recovery is active — not on the homepage itself
+  const recoveryPath =
+    typeof location.state?.from === 'string'
+      ? location.state.from
+      : location.state?.from?.pathname;
+  const recoveryBanner =
+    user && location.state?.from && location.pathname !== '/' ? (
+      <div
+        key="recovery-banner"
+        className="fixed top-0 left-0 right-0 z-50 bg-indigo-100 border-b border-indigo-200 p-4 text-indigo-800 shadow-sm animate-slide-in-down"
+        role="alert"
+      >
+        <div className="max-w-7xl mx-auto text-center">
+          <p className="text-sm font-medium">
+            <span className="font-bold">Remembering where you wanted to go&hellip;</span>
+            navigating back to {recoveryPath}…
+          </p>
+        </div>
       </div>
-    </div>
-  ) : null;
+    ) : null;
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
