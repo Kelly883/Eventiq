@@ -12,6 +12,14 @@ const LoginPage = () => {
   const location = useLocation();
   const { login, user } = useAuthContext();
 
+  const sessionExpiredReturn = (() => {
+    try {
+      return sessionStorage.getItem('session-expired-return');
+    } catch {
+      return null;
+    }
+  })();
+
   useEffect(() => {
     if (location.state?.message && location.state?.from) {
       const fromPath = location.state.from.pathname || '';
@@ -25,22 +33,11 @@ const LoginPage = () => {
       }
     }
 
-    // Show toast if redirecting due to session expiry
     if (sessionExpiredReturn) {
       showToast('Session expired', 'Please log in again to continue.', 'warning');
     }
   }, [location.state?.message, location.state?.messageType, location.state?.from, sessionExpiredReturn]);
 
-  // Check for session-expired-return (set by api.ts 401 handler)
-  const sessionExpiredReturn = (() => {
-    try {
-      return sessionStorage.getItem('session-expired-return');
-    } catch {
-      return null;
-    }
-  })();
-
-  // Clean up session-expired-return after consuming it
   useEffect(() => {
     if (sessionExpiredReturn) {
       try { sessionStorage.removeItem('session-expired-return'); } catch { /* ignore */ }
@@ -52,13 +49,6 @@ const LoginPage = () => {
     if (userRoles.includes('organizer')) return '/dashboard/organizer';
     return '/dashboard';
   };
-
-  // Clean up session-expired-return after consuming it
-  useEffect(() => {
-    if (sessionExpiredReturn) {
-      try { sessionStorage.removeItem('session-expired-return'); } catch { /* ignore */ }
-    }
-  }, [sessionExpiredReturn]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -8,22 +8,24 @@ const TicketDetailPage = () => {
   const { ticketId } = useParams();
   const navigate = useNavigate();
 
-  if (!ticketId) {
-    return <Navigate to="/my-tickets" replace />;
-  }
-
   const { data, isLoading, isError, error } = useQuery(
-    ticketKeys.detail(ticketId),
+    ticketKeys.detail(ticketId || ''),
     async () => {
+      if (!ticketId) return null;
       const response = await api.get(`/tickets/${ticketId}`);
       return response.data;
     },
     {
+      enabled: Boolean(ticketId),
       staleTime: 5 * 60 * 1000,
       cacheTime: 30 * 60 * 1000,
       retry: 2,
     }
   );
+
+  if (!ticketId) {
+    return <Navigate to="/my-tickets" replace />;
+  }
 
   if (isError || !data) {
     const isNotFound = error?.response?.status === 404;
@@ -105,6 +107,15 @@ const TicketDetailPage = () => {
             </small>
           )}
         </p>
+      </div>
+
+      <div className="mt-6 pt-4 border-t border-slate-100">
+        <button
+          onClick={() => navigate('/my-tickets', { replace: true })}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+        >
+          ← Back to My Tickets
+        </button>
       </div>
     </div>
   );
