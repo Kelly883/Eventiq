@@ -6,7 +6,7 @@
  * Results are used by the Error Boundary and DevTools; values are
  * never exposed to users in production.
  */
-export type DiagnosticStatus = 'OK' | 'FAIL' | 'MISSING';
+export type DiagnosticStatus = 'OK' | 'FAIL' | 'MISSING' | 'CONFIGURED';
 
 export interface BootReport {
   frontendBuild: DiagnosticStatus;
