@@ -8,17 +8,43 @@ const mockEvents = [
   { id: 4, name: 'Charity Gala Night', date: '2026-07-20', status: 'ended' },
 ];
 
+const RECENT_EVENTS_KEY = 'eventiq_recent_events';
+const MAX_RECENT_EVENTS = 3;
+
+const getRecentEvents = () => {
+  try {
+    const stored = localStorage.getItem(RECENT_EVENTS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const addRecentEvent = (eventId) => {
+  const recent = getRecentEvents();
+  const filtered = recent.filter((id) => id !== eventId);
+  const updated = [eventId, ...filtered].slice(0, MAX_RECENT_EVENTS);
+  localStorage.setItem(RECENT_EVENTS_KEY, JSON.stringify(updated));
+};
+
 const EventSelector = ({ compact = false, showLabel = true }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [recentEvents, setRecentEvents] = useState([]);
 
   const selectedEvent = mockEvents.find(e => e.id === selectedEventId);
+
+  useEffect(() => {
+    setRecentEvents(getRecentEvents());
+  }, []);
 
   const handleSelect = (eventId) => {
     setSelectedEventId(eventId);
     setIsOpen(false);
+    addRecentEvent(eventId);
+    setRecentEvents(getRecentEvents());
 
     const currentPath = location.pathname;
     if (currentPath.includes('/venue/check-in/')) {
@@ -64,8 +90,36 @@ const EventSelector = ({ compact = false, showLabel = true }) => {
 
         {isOpen && (
           <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden">
+            {recentEvents.length > 0 && (
+              <>
+                <div className="p-2 border-b border-slate-100">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2">Recent Events</span>
+                </div>
+                <div className="max-h-32 overflow-y-auto">
+                  {recentEvents.map((eventId) => {
+                    const event = mockEvents.find(e => e.id === eventId);
+                    if (!event) return null;
+                    return (
+                      <button
+                        key={`recent-${event.id}`}
+                        onClick={() => handleSelect(event.id)}
+                        className={`w-full flex items-center gap-3 px-4 py-2 hover:bg-slate-50 transition-colors text-left ${
+                          selectedEventId === event.id ? 'bg-indigo-50' : ''
+                        }`}
+                      >
+                        <span className="text-sm">🕐</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-slate-800 truncate">{event.name}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="border-t border-slate-100" />
+              </>
+            )}
             <div className="p-2 border-b border-slate-100">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2">Select Event</span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2">All Events</span>
             </div>
             <div className="max-h-64 overflow-y-auto">
               {mockEvents.map((event) => (

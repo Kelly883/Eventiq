@@ -183,7 +183,7 @@ const CheckInDashboardPage = () => {
               }`
             }
           >
-            Quick Check-In
+            Manual Entry
           </NavLink>
           <NavLink
             to="/check-in/search"

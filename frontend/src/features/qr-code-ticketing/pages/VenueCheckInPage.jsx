@@ -7,16 +7,27 @@ import { getEchoInstance } from '../services/echoService';
 import Skeleton from '../../../components/Skeleton';
 import EmptyState from '../../../components/EmptyState';
 import EventSelector from '../../analytics/components/EventSelector';
+import { api } from '../../../lib/api';
+
+const mockEvents = [
+  { id: 1, name: 'Summer Music Festival 2026', date: '2026-08-28', status: 'active' },
+  { id: 2, name: 'Tech Conference 2026', date: '2026-09-15', status: 'active' },
+  { id: 3, name: 'Food & Wine Expo', date: '2026-10-01', status: 'upcoming' },
+  { id: 4, name: 'Charity Gala Night', date: '2026-07-20', status: 'ended' },
+];
 
 const VenueCheckInPage = () => {
   const { eventId } = useParams();
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
   const [activeCamera, setActiveCamera] = useState(true);
   const [scannedResult, setScannedResult] = useState(null);
-  const [validationStatus, setValidationStatus] = useState('idle'); // 'idle' | 'validating' | 'success' | 'failed'
+  const [validationStatus, setValidationStatus] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [stats, setStats] = useState({ total: 0, processed: 0 });
   const [highContrast, setHighContrast] = useState(false);
+  const [eventDetails, setEventDetails] = useState(null);
+  const [eventLoading, setEventLoading] = useState(true);
+  const [eventError, setEventError] = useState(null);
 
   // Video and Canvas refs
   const videoRef = useRef(null);
@@ -31,6 +42,36 @@ const VenueCheckInPage = () => {
   const history = useOfflineSyncStore((state) => state.history);
   const calculateClockDrift = useOfflineSyncStore((state) => state.calculateClockDrift);
   const clockDriftOffset = useOfflineSyncStore((state) => state.clockDriftOffset);
+
+  // Fetch event details and validate
+  useEffect(() => {
+    const fetchEventDetails = async () => {
+      setEventLoading(true);
+      setEventError(null);
+      try {
+        // Simulated API call - replace with actual endpoint
+        // const response = await api.get(`/events/${eventId}`);
+        // const eventData = response.data;
+        
+        // Using mock data for now
+        const eventData = mockEvents.find(e => e.id === Number(eventId));
+        
+        if (!eventData) {
+          throw new Error('Event not found');
+        }
+        
+        setEventDetails(eventData);
+      } catch (err) {
+        setEventError(err.message || 'Failed to load event details');
+      } finally {
+        setEventLoading(false);
+      }
+    };
+
+    if (eventId) {
+      fetchEventDetails();
+    }
+  }, [eventId]);
 
   // Load offline queue & calculate server NTP clock drift on mount
   useEffect(() => {
@@ -264,7 +305,7 @@ const VenueCheckInPage = () => {
           </Link>
           <span className="text-slate-400">/</span>
           <span className={highContrast ? 'text-slate-300' : 'text-slate-600'}>
-            Event {eventId}
+            {eventDetails ? eventDetails.name : `Event ${eventId}`}
           </span>
         </div>
 
@@ -304,6 +345,56 @@ const VenueCheckInPage = () => {
           </div>
         </div>
 
+        {/* Event Validation Error */}
+        {eventError && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div>
+                <h3 className="font-bold text-red-800">Event Not Found</h3>
+                <p className="text-sm text-red-600 mt-1">
+                  {eventError}. Please select a different event.
+                </p>
+                <Link
+                  to="/check-in"
+                  className="inline-block mt-2 text-sm font-medium text-red-700 hover:text-red-800 underline"
+                >
+                  ← Back to Check-In Desk
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Event Status Warning Banner */}
+        {eventDetails && eventDetails.status === 'ended' && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⏹️</span>
+              <div>
+                <h3 className="font-bold text-amber-800">Event Has Ended</h3>
+                <p className="text-sm text-amber-700 mt-1">
+                  This event has ended. Check-in scanning is disabled.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {eventDetails && eventDetails.status === 'upcoming' && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⏳</span>
+              <div>
+                <h3 className="font-bold text-blue-800">Event Not Started</h3>
+                <p className="text-sm text-blue-700 mt-1">
+                  This event hasn't started yet. Check-in will be available when the event goes live.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Event Context Indicator */}
         <div className={`p-4 rounded-xl border ${
           highContrast ? 'bg-zinc-900 border-zinc-700' : 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-100'
@@ -317,16 +408,40 @@ const VenueCheckInPage = () => {
                 <div className={`text-xs font-medium ${highContrast ? 'text-slate-400' : 'text-slate-500'}`}>
                   Currently Scanning For
                 </div>
-                <div className={`text-lg font-bold ${highContrast ? 'text-white' : 'text-slate-900'}`}>
-                  Event #{eventId}
-                </div>
+                {eventLoading ? (
+                  <Skeleton variant="text" className="h-6 w-48" />
+                ) : eventDetails ? (
+                  <>
+                    <div className={`text-lg font-bold ${highContrast ? 'text-white' : 'text-slate-900'}`}>
+                      {eventDetails.name}
+                    </div>
+                    <div className={`text-xs ${highContrast ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Event #{eventId} • {eventDetails.date}
+                    </div>
+                  </>
+                ) : (
+                  <div className={`text-lg font-bold ${highContrast ? 'text-white' : 'text-slate-900'}`}>
+                    Event #{eventId}
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                Live
-              </span>
+              {eventDetails && (
+                <span className={`px-2.5 py-1 text-xs font-bold rounded-full flex items-center gap-1 ${
+                  eventDetails.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                  eventDetails.status === 'upcoming' ? 'bg-amber-100 text-amber-700' :
+                  'bg-slate-100 text-slate-600'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    eventDetails.status === 'active' ? 'bg-emerald-500 animate-pulse' :
+                    eventDetails.status === 'upcoming' ? 'bg-amber-500' :
+                    'bg-slate-400'
+                  }`} />
+                  {eventDetails.status === 'active' ? 'Live' :
+                   eventDetails.status === 'upcoming' ? 'Upcoming' : 'Ended'}
+                </span>
+              )}
               <span className={`text-xs ${highContrast ? 'text-slate-400' : 'text-slate-500'}`}>
                 Change event:
               </span>
@@ -366,18 +481,27 @@ const VenueCheckInPage = () => {
 
         {/* Layout Split */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          
+
           {/* Main scanning box */}
           <div className="lg:col-span-3 space-y-6">
             <div className={`p-6 rounded-2xl border shadow-sm flex flex-col items-center justify-center ${
               highContrast ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-100'
             }`}>
-              
+
               <h3 className="font-bold text-sm tracking-wide text-slate-400 uppercase mb-4">
                 Real-Time Video Viewfinder
               </h3>
 
-              {hasCameraPermission === false ? (
+              {eventDetails && eventDetails.status !== 'active' ? (
+                <EmptyState
+                  icon={eventDetails.status === 'ended' ? '⏹️' : '⏳'}
+                  title={eventDetails.status === 'ended' ? 'Event Has Ended' : 'Event Not Started'}
+                  description={eventDetails.status === 'ended'
+                    ? 'Check-in scanning is disabled for ended events.'
+                    : 'Check-in will be available when the event goes live.'
+                  }
+                />
+              ) : hasCameraPermission === false ? (
                 <EmptyState
                   icon="⚠️"
                   title="Camera permission denied"
@@ -385,7 +509,7 @@ const VenueCheckInPage = () => {
                 />
               ) : (
                 <div className="relative aspect-video w-full max-w-xl bg-black rounded-xl overflow-hidden border-2 border-dashed border-indigo-500/40">
-                  
+
                   {/* Invisible canvas for processing frames */}
                   <canvas ref={canvasRef} className="hidden" />
 
@@ -402,7 +526,7 @@ const VenueCheckInPage = () => {
                     <div className="border-2 border-indigo-500 w-48 h-48 rounded-2xl relative shadow-md">
                       {/* Interactive scanner laser */}
                       <div className="absolute left-0 right-0 h-1 bg-indigo-500/80 shadow shadow-indigo-500 animate-pulse top-1/2" />
-                      
+
                       {/* Corner overlays */}
                       <div className="absolute -top-1.5 -left-1.5 w-4 h-4 border-t-4 border-l-4 border-indigo-500" />
                       <div className="absolute -top-1.5 -right-1.5 w-4 h-4 border-t-4 border-r-4 border-indigo-500" />
