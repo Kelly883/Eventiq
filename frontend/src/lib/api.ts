@@ -6,11 +6,27 @@ import axios, {
 } from 'axios';
 import { getDeviceToken } from '../features/offline/services/deviceToken';
 
-export function showToast(title: string, message: string, type: string = 'info') {
-  if (typeof window !== 'undefined' && (window as any).__eiShowToast) {
-    (window as any).__eiShowToast({ title, message, type });
-  } else {
-    console.warn(`[toast:${type}] ${title}: ${message}`);
+/* -------------------------------------------------------------------------- */
+/*                              Toast System                                  */
+/* -------------------------------------------------------------------------- */
+
+type Toast = { id: number; title: string; description: string; type: string; duration?: number };
+type ToastListener = (toast: Toast) => void;
+
+let _toastId = 0;
+const _toastListeners = new Set<ToastListener>();
+
+export function addToastListener(listener: ToastListener): () => void {
+  _toastListeners.add(listener);
+  return () => { _toastListeners.delete(listener); };
+}
+
+export function showToast(title: string, description: string, type: string = 'info', duration?: number) {
+  const toast: Toast = { id: ++_toastId, title, description, type, duration };
+  if (_toastListeners.size > 0) {
+    _toastListeners.forEach((fn) => fn(toast));
+  } else if (typeof window !== 'undefined') {
+    console.warn(`[toast:${type}] ${title}: ${description}`);
   }
 }
 
