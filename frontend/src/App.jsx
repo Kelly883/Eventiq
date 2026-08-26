@@ -51,6 +51,8 @@ const AdminAnalyticsPage = lazy(() => import('./features/analytics/pages').then(
 const OrganizerEventLayout = lazy(() => import('./features/events/components/OrganizerEventLayout'));
 const SettingsLayout = lazy(() => import('./features/settings/components/SettingsLayout'));
 const MyTicketsLayout = lazy(() => import('./features/tickets/components/MyTicketsLayout'));
+const AdminLayout = lazy(() => import('./features/admin/components/AdminLayout'));
+const DashboardLayout = lazy(() => import('./features/dashboard/components/DashboardLayout'));
 const AccessDeniedPage = lazy(() => import('./features/common').then(m => ({ default: m.AccessDeniedPage })));
 const MyOrganizerProfilePage = lazy(() => import('./features/organizer-profile/pages/MyOrganizerProfilePage'));
 
@@ -196,13 +198,13 @@ function App() {
       const getRedirectPath = (to) => {
         const userRoles = user?.roles?.map((r) => r.name) || [];
         if (to === '/dashboard/organizer' && !userRoles.includes('organizer')) {
-          return '/dashboard/user';
+          return '/dashboard';
         }
         if (to.startsWith('/admin/') && !userRoles.includes('admin')) {
-          return '/dashboard/user';
+          return '/dashboard';
         }
         if (to.startsWith('/organizer/') && !userRoles.includes('organizer')) {
-          return '/dashboard/user';
+          return '/dashboard';
         }
         return to;
       };
@@ -329,11 +331,13 @@ function App() {
               <Route path=":ticketId/status" element={<TicketStatusPage />} />
               <Route path=":ticketId/delivery" element={<DeliveryStatusPage />} />
             </Route>
-            <Route path="/admin/email-templates" element={<ProtectedRoute requiredRole="admin"><AdminEmailTemplateManagementPage /></ProtectedRoute>} />
-            <Route path="/admin/roles" element={<ProtectedRoute requiredRole="admin"><AdminRoleManagementPage /></ProtectedRoute>} />
-            <Route path="/admin/fraud/dashboard" element={<ProtectedRoute requiredRole="admin"><FraudDetectionDashboardPage /></ProtectedRoute>} />
-            <Route path="/admin/delivery/dashboard" element={<ProtectedRoute requiredRole="admin"><AdminDeliveryDashboardPage /></ProtectedRoute>} />
-            <Route path="/admin/analytics" element={<ProtectedRoute requiredRole="admin"><AdminAnalyticsPage /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
+              <Route path="roles" element={<AdminRoleManagementPage />} />
+              <Route path="fraud/dashboard" element={<FraudDetectionDashboardPage />} />
+              <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />
+              <Route path="analytics" element={<AdminAnalyticsPage />} />
+              <Route path="email-templates" element={<AdminEmailTemplateManagementPage />} />
+            </Route>
             <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
               <Route path="permissions" element={<UserPermissionsPage />} />
               <Route path="delivery-preferences" element={<DeliverySettingsPage />} />
@@ -343,8 +347,10 @@ function App() {
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/organizer/analytics/compare" element={<ProtectedRoute requiredRole="organizer"><AnalyticsComparisonPage /></ProtectedRoute>} />
-            <Route path="/dashboard/organizer" element={<ProtectedRoute requiredRole="organizer"><OrganizerDashboardPage /></ProtectedRoute>} />
-            <Route path="/dashboard/user" element={<ProtectedRoute><UserDashboardPage /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+              <Route path="organizer" element={<OrganizerDashboardPage />} />
+              <Route index element={<UserDashboardPage />} />
+            </Route>
             <Route path="/organizer/events" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventListPage /></ProtectedRoute>} />
             <Route path="/organizer/events/create" element={<ProtectedRoute requiredRole="organizer"><EventCreatePage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventLayout /></ProtectedRoute>}>
