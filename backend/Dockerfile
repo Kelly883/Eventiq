@@ -1,95 +1,165 @@
-FROM php:8.2-fpm-alpine
+# ─── Eventiq Laravel Backend — Production Dockerfile ─────────────────────────
+# Multi-stage build for Render deployment.
+#
+# Stage 1 (build): Install PHP extensions, Composer, Node.js, dependencies
+# Stage 2 (runtime): PHP-FPM + Nginx + Node.js (MJML runtime dependency)
+#
+# Render configuration:
+#   Root Directory: backend
+#   Dockerfile:     Dockerfile
+#   Port:           8080 (mapped to Render's $PORT via sed in entrypoint)
+# ─────────────────────────────────────────────────────────────────────────────
 
-# Install system dependencies
-RUN apk add --no-cache \
-    git \
-    unzip \
+# ══════════════════════════════════════════════════════════════════════════════
+# Stage 1: Build dependencies
+# ══════════════════════════════════════════════════════════════════════════════
+FROM php:8.2-fpm-bookworm AS build
+
+# System dependencies for building PHP extensions
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
     libzip-dev \
-    zip \
-    curl \
-    libpq-dev \
-    icu-dev \
-    libxml2-dev \
-    freetype-dev \
-    libjpeg-turbo-dev \
     libpng-dev \
-    supervisor \
-    nginx \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-configure zip \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
+    libonig-dev \
+    libxml2-dev \
+    libpq-dev \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    unzip \
+    git \
+    curl \
+    ca-certificates \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions required by Eventiq
+# - pdo_pgsql: PostgreSQL database
+# - mbstring:  multibyte string handling (Laravel requirement)
+# - xml:       XML processing (Laravel requirement)
+# - curl:      HTTP client (Laravel requirement)
+# - zip:       ZIP handling
+# - gd:        image processing (QR codes via bacon/bacon-qr-code + simplesoftwareio/simple-qrcode)
+# - bcmath:    arbitrary precision math (Paystack/Flutterwave monetary calculations)
+# - iconv:     character encoding (Laravel requirement)
+# - opcache:   bytecode caching (production performance)
+# - intl:      internationalization
+# - fileinfo:  file type detection (Laravel requirement)
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
-    gd \
-    mbstring \
-    xml \
-    zip \
-    bcmath \
-    intl \
-    pdo \
     pdo_pgsql \
     pgsql \
-    pcntl \
-    exif \
-    fileinfo \
-    && docker-php-ext-enable \
-    gd \
     mbstring \
     xml \
+    curl \
     zip \
+    gd \
     bcmath \
+    iconv \
     intl \
-    pdo \
-    pdo_pgsql \
-    pcntl \
-    exif \
-    fileinfo
+    opcache
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Install Node.js LTS (required for MJML email rendering — see app/Services/MjmlRenderer.php)
-ENV NODE_VERSION=20.18.1
-RUN curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz -o /tmp/node.tar.xz && \
-    tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 && \
-    rm /tmp/node.tar.xz && \
-    node --version && npm --version
-
-# Set working directory
 WORKDIR /var/www/html
 
-# Copy application files
+# Copy only composer files first (layer caching for dependency install)
+COPY composer.json composer.lock ./
+
+# Install production dependencies only
+RUN composer install \
+    --no-dev \
+    --prefer-dist \
+    --optimize-autoloader \
+    --no-interaction \
+    --no-scripts \
+    --no-autoloader
+
+# Install Node.js 20 LTS for MJML email rendering (RUNTIME dependency)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y -qq nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy MJML package files and install
+COPY node-tools/mjml/package.json node-tools/mjml/package-lock.json* node-tools/mjml/
+RUN cd node-tools/mjml && npm install --production --no-audit --no-fund
+
+# Copy full application source
 COPY . .
 
-# Install Node dependencies for MJML
-RUN cd node-tools/mjml && npm install --production && cd /var/www/html
+# Finalize composer autoloader
+RUN composer dump-autoload --optimize --no-dev
 
-# Install PHP dependencies (production only)
-RUN composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+# ══════════════════════════════════════════════════════════════════════════════
+# Stage 2: Runtime image
+# ══════════════════════════════════════════════════════════════════════════════
+FROM php:8.2-fpm-bookworm AS runtime
+
+# Runtime system dependencies
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
+    nginx \
+    supervisor \
+    libzip5 \
+    libpng16-16 \
+    libjpeg62-turbo \
+    libfreetype6 \
+    libonig5 \
+    libxml2 \
+    libpq5 \
+    libcurl4 \
+    libssl3 \
+    libicu72 \
+    ca-certificates \
+    curl \
+    sed \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions in runtime (same as build stage)
+COPY --from=build /usr/local/lib/php/extensions/no-debug-non-zts-*/ /usr/local/lib/php/extensions/no-debug-non-zts-*/
+COPY --from=build /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
+
+# Install Node.js 20 LTS for MJML rendering
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y -qq nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /var/www/html
+
+# Copy application from build stage
+COPY --from=build --chown=www-data:www-data /var/www/html .
+
+# Create www-data user if not exists (some PHP images don't have it)
+RUN id -u www-data >/dev/null 2>&1 || \
+    useradd -r -u 33 -g www-data -d /var/www/html -s /sbin/nologin www-data
 
 # Create required directories
-RUN mkdir -p storage/framework/{sessions,views,cache/data,cache/locks} \
+RUN mkdir -p \
     storage/logs \
+    storage/framework/cache/data \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/app/public \
+    storage/app/private \
     bootstrap/cache \
-    /run/nginx
+    /var/log/nginx \
+    /var/log/supervisor \
+    /run \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 
-# Set permissions — both www-data (php-fpm) and nginx need access
-RUN chown -R www-data:www-data storage bootstrap/cache && \
-    chmod -R 775 storage bootstrap/cache && \
-    chmod -R 775 /var/log/nginx 2>/dev/null || true
-
-# Copy configurations
-COPY docker/php.ini /usr/local/etc/php/conf.d/app.ini
-COPY docker/nginx.conf /etc/nginx/nginx.conf
+# Copy configuration files
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY docker/php.ini /usr/local/etc/php/conf.d/99-eventiq.ini
+COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/zz-eventiq.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -fsS http://localhost:${PORT:-80}/health > /dev/null 2>&1 || exit 1
-
-# Copy entrypoint
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+# Make scripts executable
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-EXPOSE 80
+# Expose port (Render will override via PORT env var)
+EXPOSE 8080
 
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["php-fpm"]
+# Set entrypoint
+ENTRYPOINT ["docker-entrypoint.sh"]

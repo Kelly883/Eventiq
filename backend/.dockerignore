@@ -1,47 +1,41 @@
-# Version control
 .git
 .gitignore
-
-# Development / testing
-tests/
-phpunit.xml
-*.phpunit.result.cache
-test_*.php
-verify_*.php
-
-# IDE / editor
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-.exvim
-
-# Node / npm
-node_modules/
-frontend/node_modules/
-frontend/dist/
-
-# Build artifacts
-build/
-coverage/
-
-# Logs
-*.log
-storage/logs/*.log
-
-# Docker-related (we don't want to copy these into the image)
-Dockerfile
-docker-compose.yml
-*.dockerfile
-
-# Database
-database/database.sqlite
-
-# Environment
+.phpunit.result.cache
 .env
 .env.testing
 .env.local
-
-# Temp / cache
-/tmp/*
+.env.production
+docker/
+docs/
+tests/
+node_modules/
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+vendor/
+*.md
+*.txt
+*.php.bak
+docker-compose*.yml
+.dockerignore
+apply_calendar_indexes.php
+check_*.php
+cleanup_*.php
+diag_*.php
+drop_*.php
+dump_*.php
+final_*.php
+fix_*.php
+id_*.txt
+inspect_*.php
+lint_*.php
+list_*.php
+migrate_*.txt
+prep_*.txt
+prepare_*.php
+recreate_*.php
+scan_*.php
+step66_*.php
+test_*.php
+verify_*.php
