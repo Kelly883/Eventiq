@@ -181,6 +181,7 @@ function App() {
   const isLoggedIn = Boolean(user);
   const roles = user?.roles?.map((r) => r.name) || [];
   const isAuthPage = AUTH_PAGES.some((path) => location.pathname === path);
+  const isHomepage = location.pathname === '/';
 
   // Session warning toast: show at 55s before auto-expire (60s interval)
   const [sessionWarningShown, setSessionWarningShown] = useState(false);
@@ -265,8 +266,8 @@ function App() {
         </noscript>
         <ToastContainer />
         {recoveryBanner}
-        {/* Navigation Bar — hidden on auth pages */}
-        {!isAuthPage && (
+        {/* Navigation Bar — hidden on auth pages and homepage (homepage has its own Header) */}
+        {!isAuthPage && !isHomepage && (
           <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 shadow-sm backdrop-blur-md bg-white/90">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="flex h-16 items-center justify-between">
