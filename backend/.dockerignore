@@ -5,7 +5,6 @@
 .env.testing
 .env.local
 .env.production
-docker/
 docs/
 tests/
 node_modules/
