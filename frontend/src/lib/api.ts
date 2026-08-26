@@ -6,12 +6,41 @@ import axios, {
 } from 'axios';
 import { getDeviceToken } from '../features/offline/services/deviceToken';
 
+export type ToastPayload = {
+  title: string;
+  message: string;
+  type: string;
+  id: string;
+};
+
+type ToastListener = (toast: ToastPayload) => void;
+
+const toastListeners: ToastListener[] = [];
+let toastIdCounter = 0;
+
+export function addToastListener(listener: ToastListener): () => void {
+  toastListeners.push(listener);
+  return () => {
+    const index = toastListeners.indexOf(listener);
+    if (index > -1) toastListeners.splice(index, 1);
+  };
+}
+
 export function showToast(title: string, message: string, type: string = 'info') {
+  const toast: ToastPayload = {
+    title,
+    message,
+    type,
+    id: `toast-${++toastIdCounter}`,
+  };
+
   if (typeof window !== 'undefined' && (window as any).__eiShowToast) {
-    (window as any).__eiShowToast({ title, message, type });
+    (window as any).__eiShowToast(toast);
   } else {
     console.warn(`[toast:${type}] ${title}: ${message}`);
   }
+
+  toastListeners.forEach((listener) => listener(toast));
 }
 
 type Env = {
