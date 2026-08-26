@@ -55,9 +55,15 @@ const UserDashboardPage = () => {
               >
                 📋 Explore Events
               </Link>
+              <Link
+                to="/my-tickets"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-700/50 text-white text-sm font-medium hover:bg-indigo-700/70 transition-colors border border-indigo-500/50"
+              >
+                🎫 My Tickets
+              </Link>
               <button
                 onClick={() => setShowWelcome(false)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-700/50 text-white text-sm font-medium hover:bg-indigo-700/70 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-700/30 text-white/80 text-sm font-medium hover:bg-indigo-700/50 transition-colors"
               >
                 Maybe Later
               </button>

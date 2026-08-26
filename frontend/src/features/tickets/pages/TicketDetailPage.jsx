@@ -8,22 +8,24 @@ const TicketDetailPage = () => {
   const { ticketId } = useParams();
   const navigate = useNavigate();
 
-  if (!ticketId) {
-    return <Navigate to="/my-tickets" replace />;
-  }
-
   const { data, isLoading, isError, error } = useQuery(
-    ticketKeys.detail(ticketId),
+    ticketKeys.detail(ticketId || ''),
     async () => {
+      if (!ticketId) return null;
       const response = await api.get(`/tickets/${ticketId}`);
       return response.data;
     },
     {
+      enabled: Boolean(ticketId),
       staleTime: 5 * 60 * 1000,
       cacheTime: 30 * 60 * 1000,
       retry: 2,
     }
   );
+
+  if (!ticketId) {
+    return <Navigate to="/my-tickets" replace />;
+  }
 
   if (isError || !data) {
     const isNotFound = error?.response?.status === 404;

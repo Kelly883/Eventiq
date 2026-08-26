@@ -1,6 +1,6 @@
 import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { LoadingSpinner } from './features/common';
+import { LoadingSpinner, ErrorBoundary } from './features/common';
 import ToastContainer from './features/notifications/components/ToastContainer';
 import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
 import { ProtectedRoute, PublicRoute } from './features/auth/components/RouteGuards';
@@ -316,9 +316,10 @@ function App() {
 
         {/* Page Content */}
         <main className="flex-1">
-          <Suspense fallback={<LoadingSpinner message="Loading page..." />}>
-            <Routes>
-            <Route path="/" element={<Navigate to="/analytics" replace />} />
+          <ErrorBoundary>
+            <Suspense fallback={<LoadingSpinner message="Loading page..." />}>
+              <Routes>
+              <Route path="/" element={<Navigate to="/analytics" replace />} />
             <Route path="/events" element={<EventBrowsePage />} />
             <Route path="/events/calendar" element={<EventCalendarPage />} />
             <Route path="/cart" element={<CartPage />} />
@@ -377,8 +378,9 @@ function App() {
             <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
             <Route path="/access-denied" element={<AccessDeniedPage />} />
             <Route path="*" element={<Navigate to="/analytics" replace />} />
-          </Routes>
-          </Suspense>
+            </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
     </BrowserRouter>
