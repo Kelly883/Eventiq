@@ -24,6 +24,11 @@ const deleteEmailTemplate = async (id) => {
   await api.delete(`/admin/email-templates/${id}`);
 };
 
+const duplicateEmailTemplate = async ({ id, name, subject, key, content }) => {
+  const response = await api.post('/admin/email-templates', { name, subject, key, content });
+  return response.data?.data || response.data;
+};
+
 const templateVariables = [
   { variable: '{{user.name}}', description: 'Full name of the recipient' },
   { variable: '{{user.email}}', description: 'Email address of the recipient' },
@@ -36,6 +41,8 @@ const templateVariables = [
   { variable: '{{order.total}}', description: 'Order total amount' },
   { variable: '{{company.name}}', description: 'Your company name' },
 ];
+
+const UNDO_DURATION = 5000;
 
 const CreateTemplateModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
   const [formData, setFormData] = React.useState({ name: '', subject: '', key: '' });
@@ -249,6 +256,44 @@ const PreviewModal = ({ isOpen, onClose, content, templateName }) => {
   );
 };
 
+const UndoSnackbar = ({ message, onUndo, onDismiss, duration = UNDO_DURATION }) => {
+  const [progress, setProgress] = React.useState(100);
+
+  React.useEffect(() => {
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
+      setProgress(remaining);
+      if (remaining === 0) {
+        clearInterval(interval);
+        onDismiss();
+      }
+    }, 50);
+    return () => clearInterval(interval);
+  }, [duration, onDismiss]);
+
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white rounded-lg shadow-lg overflow-hidden">
+      <div className="flex items-center gap-4 px-4 py-3">
+        <span className="text-sm">{message}</span>
+        <button
+          onClick={onUndo}
+          className="text-sm font-medium text-indigo-300 hover:text-indigo-200 transition-colors"
+        >
+          UNDO
+        </button>
+      </div>
+      <div className="h-1 bg-slate-700">
+        <div
+          className="h-full bg-indigo-500 transition-all duration-50"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  );
+};
+
 const AdminEmailTemplateManagementPage = () => {
   const queryClient = useQueryClient();
   const { data: templates, isLoading, isError, error } = useQuery({
@@ -262,7 +307,9 @@ const AdminEmailTemplateManagementPage = () => {
   const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [showPreviewModal, setShowPreviewModal] = React.useState(false);
-  const [showVariables, setShowVariables] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [deletedTemplate, setDeletedTemplate] = React.useState(null);
+  const [showUndo, setShowUndo] = React.useState(false);
 
   const saveMutation = useMutation({
     mutationFn: saveEmailTemplate,
@@ -293,16 +340,45 @@ const AdminEmailTemplateManagementPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: deleteEmailTemplate,
-    onSuccess: () => {
+    onSuccess: (_, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ['email-templates'] });
-      showToast('Template deleted', 'Email template has been deleted.', 'success');
       setSelectedTemplate(null);
       setMjmlContent('');
       setHasChanges(false);
       setShowDeleteModal(false);
+      setShowUndo(true);
     },
     onError: (err) => {
       showToast('Deletion failed', err?.message || 'Failed to delete template. Please try again.', 'error');
+    },
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: duplicateEmailTemplate,
+    onSuccess: (newTemplate) => {
+      queryClient.invalidateQueries({ queryKey: ['email-templates'] });
+      showToast('Template duplicated', `Created copy as "${newTemplate.name}".`, 'success');
+      setSelectedTemplate(newTemplate);
+      setMjmlContent(newTemplate.content || '');
+      setHasChanges(false);
+    },
+    onError: (err) => {
+      showToast('Duplication failed', err?.message || 'Failed to duplicate template. Please try again.', 'error');
+    },
+  });
+
+  const undoDeleteMutation = useMutation({
+    mutationFn: createEmailTemplate,
+    onSuccess: (restoredTemplate) => {
+      queryClient.invalidateQueries({ queryKey: ['email-templates'] });
+      showToast('Template restored', `"${restoredTemplate.name}" has been restored.`, 'success');
+      setSelectedTemplate(restoredTemplate);
+      setMjmlContent(restoredTemplate.content || '');
+      setDeletedTemplate(null);
+      setShowUndo(false);
+    },
+    onError: () => {
+      showToast('Restore failed', 'Failed to restore template. Please try again.', 'error');
     },
   });
 
@@ -342,8 +418,44 @@ const AdminEmailTemplateManagementPage = () => {
 
   const handleDeleteTemplate = () => {
     if (!selectedTemplate) return;
+    setDeletedTemplate(selectedTemplate);
     deleteMutation.mutate(selectedTemplate.id);
   };
+
+  const handleDuplicateTemplate = () => {
+    if (!selectedTemplate) return;
+    const newKey = `${selectedTemplate.key}_copy`;
+    const newName = `${selectedTemplate.name} (Copy)`;
+    duplicateMutation.mutate({
+      id: selectedTemplate.id,
+      name: newName,
+      subject: selectedTemplate.subject,
+      key: newKey,
+      content: selectedTemplate.content,
+    });
+  };
+
+  const handleUndoDelete = () => {
+    if (!deletedTemplate) return;
+    undoDeleteMutation.mutate({
+      name: deletedTemplate.name,
+      subject: deletedTemplate.subject,
+      key: deletedTemplate.key,
+      content: deletedTemplate.content,
+    });
+  };
+
+  const filteredTemplates = React.useMemo(() => {
+    if (!templates) return [];
+    if (!searchQuery.trim()) return templates;
+    const query = searchQuery.toLowerCase();
+    return templates.filter(
+      (t) =>
+        t.name?.toLowerCase().includes(query) ||
+        t.key?.toLowerCase().includes(query) ||
+        t.subject?.toLowerCase().includes(query)
+    );
+  }, [templates, searchQuery]);
 
   if (isLoading) {
     return (
@@ -396,11 +508,35 @@ const AdminEmailTemplateManagementPage = () => {
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-100">
               <h2 className="font-semibold text-slate-800">Templates</h2>
-              <p className="text-xs text-slate-500 mt-0.5">{templates?.length || 0} templates available</p>
+              <p className="text-xs text-slate-500 mt-0.5">{filteredTemplates.length} of {templates?.length || 0} templates</p>
+            </div>
+            <div className="p-3 border-b border-slate-100">
+              <div className="relative">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search templates..."
+                  className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
             <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
-              {templates && templates.length > 0 ? (
-                templates.map((template) => (
+              {filteredTemplates.length > 0 ? (
+                filteredTemplates.map((template) => (
                   <button
                     key={template.id}
                     onClick={() => handleTemplateSelect(template)}
@@ -424,7 +560,7 @@ const AdminEmailTemplateManagementPage = () => {
                 ))
               ) : (
                 <div className="p-4 text-center text-slate-500 text-sm">
-                  No templates found. Create your first email template.
+                  {searchQuery ? 'No templates match your search.' : 'No templates found. Create your first email template.'}
                 </div>
               )}
             </div>
@@ -444,15 +580,15 @@ const AdminEmailTemplateManagementPage = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setShowVariables(!showVariables)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-1 ${
-                      showVariables
-                        ? 'bg-indigo-100 text-indigo-700'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
+                    onClick={handleDuplicateTemplate}
+                    disabled={duplicateMutation.isPending}
+                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium rounded-lg transition-colors flex items-center gap-1"
+                    title="Duplicate this template"
                   >
-                    <span>§</span>
-                    Variables
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    {duplicateMutation.isPending ? 'Copying...' : 'Duplicate'}
                   </button>
                   <button
                     onClick={() => setShowPreviewModal(true)}
@@ -480,29 +616,29 @@ const AdminEmailTemplateManagementPage = () => {
                 </div>
               )}
 
-              {showVariables && (
-                <div className="mb-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                  <h3 className="text-sm font-semibold text-slate-800 mb-2">Available Variables</h3>
-                  <p className="text-xs text-slate-500 mb-3">Click to copy, then paste into your template.</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {templateVariables.map((item) => (
-                      <button
-                        key={item.variable}
-                        onClick={() => {
-                          navigator.clipboard.writeText(item.variable);
-                          showToast('Copied!', `${item.variable} copied to clipboard.`, 'success');
-                        }}
-                        className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-left"
-                      >
-                        <code className="text-xs font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
-                          {item.variable}
-                        </code>
-                        <span className="text-xs text-slate-500 truncate">{item.description}</span>
-                      </button>
-                    ))}
-                  </div>
+              <div className="mb-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-slate-800">Available Variables</h3>
+                  <span className="text-xs text-slate-500">Click to copy</span>
                 </div>
-              )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {templateVariables.map((item) => (
+                    <button
+                      key={item.variable}
+                      onClick={() => {
+                        navigator.clipboard.writeText(item.variable);
+                        showToast('Copied!', `${item.variable} copied to clipboard.`, 'success');
+                      }}
+                      className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-left"
+                    >
+                      <code className="text-xs font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+                        {item.variable}
+                      </code>
+                      <span className="text-xs text-slate-500 truncate">{item.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <TemplateEditor content={mjmlContent} onChange={handleContentChange} />
 
@@ -550,6 +686,17 @@ const AdminEmailTemplateManagementPage = () => {
         content={mjmlContent}
         templateName={selectedTemplate?.name}
       />
+
+      {showUndo && deletedTemplate && (
+        <UndoSnackbar
+          message={`"${deletedTemplate.name}" deleted`}
+          onUndo={handleUndoDelete}
+          onDismiss={() => {
+            setShowUndo(false);
+            setDeletedTemplate(null);
+          }}
+        />
+      )}
     </div>
   );
 };
