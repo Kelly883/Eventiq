@@ -5,7 +5,14 @@ import axios, {
   type AxiosResponse,
 } from 'axios';
 import { getDeviceToken } from '../features/offline/services/deviceToken';
-import { showToast } from '../lib/api';
+
+function showToast(title: string, message: string, type: string = 'info') {
+  if (typeof window !== 'undefined' && (window as any).__eiShowToast) {
+    (window as any).__eiShowToast({ title, message, type });
+  } else {
+    console.warn(`[toast:${type}] ${title}: ${message}`);
+  }
+}
 
 type Env = {
   VITE_API_BASE_URL?: string;

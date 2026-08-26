@@ -73,6 +73,9 @@ export function runBootDiagnostics(): BootReport {
     clearTimeout(timeoutId);
     // Note: fetch is async; the report.csrfEndpoint may still be updating.
     // In production, consider running this after the first render cycle.
+  } catch {
+    // Synchronous failure — should not happen but be safe.
+    report.csrfEndpoint = 'FAIL';
   }
 
   // 3. Authentication state check

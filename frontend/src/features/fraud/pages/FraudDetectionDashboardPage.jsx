@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useAuthContext } from '../auth/context/AuthContext';
+import { useAuthContext } from '../../auth/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { listAlerts, resolveAlert, getDashboardStats } from '../services/fraudService';
 import FraudTransactionReviewModal from '../pages/FraudTransactionReviewModal';

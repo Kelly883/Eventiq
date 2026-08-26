@@ -1,15 +1,13 @@
 import React, { useEffect } from 'react';
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ticketKeys } from '../../lib/queryKeys';
-import { api } from '../../lib/api';
-import { Skeleton, Box, Text, Button } from '@/ui';
+import { ticketKeys } from '../../../lib/queryKeys';
+import { api } from '../../../lib/api';
 
 const TicketDetailPage = () => {
   const { ticketId } = useParams();
   const navigate = useNavigate();
 
-  // Guard: if no ticketId, redirect to tickets list
   if (!ticketId) {
     return <Navigate to="/my-tickets" replace />;
   }
@@ -27,87 +25,73 @@ const TicketDetailPage = () => {
     }
   );
 
-  // Error / not-found handling
   if (isError || !data) {
     return (
-      <Box
-        textAlign="center"
-        py={8}
-        px={4}
-        bgcolor="white"
-        borderRadius="xl"
-        border="1px solid #e2e8f0"
-      >
-        <Text fontSize="lg" color="#64748b">
+      <div className="text-center py-8 px-4 bg-white rounded-xl border border-slate-200">
+        <p className="text-lg text-slate-500">
           {isError ? 'Failed to load ticket' : 'Ticket not found'}
-        </Text>
-        <Button
+        </p>
+        <button
           onClick={() => navigate('/my-tickets', { replace: true })}
-          marginTop={4}
-          size="sm"
-          color="secondary"
+          className="mt-4 px-3 py-1 text-sm text-slate-600 hover:text-slate-800"
         >
           Go back to my tickets
-        </Button>
-      </Box>
+        </button>
+      </div>
     );
   }
 
-  // Skeleton / loading state
   if (isLoading) {
     return (
-      <Box py={8} px={4}>
-        <Skeleton className="h-64 w-96 mb-4" />
-        <Skeleton className="h-16 w-80 mb-2" />
-        <Skeleton className="h-10 w-60 mb-2" />
-        <Skeleton className="h-8 w-40" />
-        <Button
+      <div className="py-8 px-4">
+        <div className="h-64 w-96 mb-4 bg-slate-200 rounded animate-pulse" />
+        <div className="h-16 w-80 mb-2 bg-slate-200 rounded animate-pulse" />
+        <div className="h-10 w-60 mb-2 bg-slate-200 rounded animate-pulse" />
+        <div className="h-8 w-40 bg-slate-200 rounded animate-pulse" />
+        <button
           onClick={() => navigate('/my-tickets', { replace: true })}
-          marginTop={4}
-          size="sm"
+          className="mt-4 px-3 py-1 text-sm text-slate-400 cursor-not-allowed"
           disabled
         >
           Loading ticket details…
-        </Button>
-      </Box>
+        </button>
+      </div>
     );
   }
 
-  // Successful render - ticket data available
   const { id, code, status, createdAt, events, ...rest } = data;
 
   return (
-    <Box py={6} px={4} bg="white" borderRadius="xl" border="1px solid #e2e8f0">
-      <Box mb={4}>
-        <Text fontSize="xl" fontWeight="bold" color="#1e293b">
+    <div className="py-6 px-4 bg-white rounded-xl border border-slate-200">
+      <div className="mb-4">
+        <p className="text-xl font-bold text-slate-800">
           Ticket #{id}
-        </Text>
-        <Text fontSize="sm" color="#64748b">
+        </p>
+        <p className="text-sm text-slate-500">
           Code: {code}
-        </Text>
-      </Box>
+        </p>
+      </div>
 
-      <Box mb={6}>
-        <Text fontSize="sm" color="#64748b">
+      <div className="mb-6">
+        <p className="text-sm text-slate-500">
           Status: {status}
-        </Text>
-        <Text fontSize="sm" color="#64748b">
+        </p>
+        <p className="text-sm text-slate-500">
           Created: {createdAt ? new Date(createdAt).toLocaleDateString() : 'N/A'}
-        </Text>
-      </Box>
+        </p>
+      </div>
 
-      <Box>
-        {/* Ticket details / events go here */}
-        <Text fontSize="sm" color="#64748b">
+      <div>
+        <p className="text-sm text-slate-500">
           Events: {events?.length || 0}{' '}
           {(events?.length || 0) > 1 && (
             <small>
               ({events.length} activities)
             </small>
           )}
-        </Text>
-      </Box>
-    </Box>
+        </p>
+      </div>
+    </div>
   );
 };
 
