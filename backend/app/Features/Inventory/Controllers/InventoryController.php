@@ -35,8 +35,17 @@ class InventoryController extends Controller
     /**
      * GET /api/organizer/events/:eventId/inventory/summary
      */
-    public function summary($eventId)
+    public function summary(Request $request, $eventId)
     {
+        $user = $request->user();
+        $ownsEvent = \App\Models\Event::where('id', $eventId)
+            ->when(
+                !$user->hasRole('admin'),
+                fn ($q) => $q->whereHas('organizer', fn ($o) => $o->where('user_id', $user->id))
+            )
+            ->exists();
+        abort_unless($ownsEvent, 403, 'You are not authorized to view this event\'s inventory.');
+
         $inventories = \App\Features\Inventory\Models\TicketInventory::query()
             ->where('event_id', $eventId)
             ->orderBy('ticket_tier_id')

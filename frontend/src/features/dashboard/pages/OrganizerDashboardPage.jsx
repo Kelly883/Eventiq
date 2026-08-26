@@ -1,6 +1,8 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDashboardPreferences } from '../hooks/useDashboardPreferences';
+import EventDetailWidget from '../components/EventDetailWidget';
+import { useAuthContext } from '../../auth/context/AuthContext';
 
 const OrganizerDashboardPage = () => {
   const {
@@ -13,12 +15,31 @@ const OrganizerDashboardPage = () => {
     setActivityFeedVisible,
   } = useDashboardPreferences();
 
-  // Simple event options to expand
-  const eventsList = [
-    { id: 1, title: 'Summer Festival 2026', desc: 'Outdoor arts and music festival with 5 stages.' },
-    { id: 2, title: 'Winter Gala Dinner', desc: 'Premium black-tie charity dinner and live auction.' },
-    { id: 3, title: 'Spring Concert Series', desc: 'Intimate classical orchestral performances.' },
-  ];
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuthContext();
+  const roles = user?.roles?.map((r) => r.name) || [];
+
+  // Deep linking: expand event from query param ?eventId=xyz
+  // Works for any event ID, not just the hardcoded three
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const deepEventId = urlParams.get('eventId');
+    if (deepEventId && expandedEventId !== parseInt(deepEventId, 10)) {
+      setExpandedEventId(parseInt(deepEventId, 10));
+    }
+  }, [location.search, expandedEventId]);
+
+  const { events } = useDashboardPreferences();
+
+  useEffect(() => {
+    useDashboardPreferences().fetchEvents();
+  }, []);
+
+  // Use real events from API — no hardcoded demo fallback
+  const eventMap = events.length > 0
+    ? events.reduce((map, ev) => ({ ...map, [ev.id]: ev }), {})
+    : {};
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">
@@ -48,8 +69,14 @@ const OrganizerDashboardPage = () => {
                 <span className="text-xs text-slate-400">Click an event to expand details</span>
               </div>
 
-              <div className="space-y-3">
-                {eventsList.map((event) => {
+<div className="space-y-3">
+                <Link
+                  to="/organizer/events/create"
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium shadow-sm hover:bg-indigo-700 transition-colors"
+                >
+                  ✨ Create New Event
+                </Link>
+                {Object.values(eventMap).map((event) => {
                   const isExpanded = expandedEventId === event.id;
                   return (
                     <div 
@@ -73,30 +100,74 @@ const OrganizerDashboardPage = () => {
                         </span>
                       </button>
 
-                      {isExpanded && (
-                        <div className="p-4 border-t border-slate-100 bg-slate-50/50 text-slate-600 text-xs animate-fadeIn">
-                          <p className="mb-2 leading-relaxed">{event.desc}</p>
-                          <div className="flex gap-2 mt-3">
-                            <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 text-indigo-600 font-semibold rounded text-[10px]">
-                              Operational status: Active
-                            </span>
-                            <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px]">
-                              Persisted index: {event.id}
-                            </span>
+{isExpanded && (
+                          <div className="p-4 border-t border-slate-100 bg-slate-50/50 text-slate-600 text-xs animate-fadeIn">
+                            <p className="mb-2 leading-relaxed">{event.desc}</p>
+                            <div className="flex gap-2 mt-3">
+                              <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 text-indigo-600 font-semibold rounded text-[10px]">
+                                Operational status: Active
+                              </span>
+                              <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px]">
+                                Persisted index: {event.id}
+                              </span>
+                            </div>
+                            <EventDetailWidget
+                              eventId={event.id}
+                              onViewAnalytics={() => navigate(`/organizer/events/${event.id}/analytics`)}
+                              onManageInventory={() => navigate(`/organizer/events/${event.id}/inventory`)}
+                              onEditEvent={() => navigate(`/organizer/events/${event.id}/edit`)}
+                            />
                           </div>
-                        </div>
-                      )}
+                        )}
                     </div>
                   );
                 })}
               </div>
             </div>
 
+            {/* Event Actions hint — always visible to reduce dead discovery */}
+            <div className="bg-white p-4 rounded-xl border border-indigo-200 mb-6">
+              <h3 className="text-sm font-medium text-indigo-600 mb-2">Event Actions</h3>
+              <p className="text-xs text-slate-500">
+                Click any event accordion to expand and reveal:
+              </p>
+              <ul className="text-[10px] text-slate-500 space-y-1">
+                <li>📊 <strong>View Full Analytics</strong> — sales velocity, conversion rates, performance metrics</li>
+                <li>📦 <strong>Manage Inventory</strong> — ticket allocations and stock levels</li>
+                <li>✎ <strong>Edit Event</strong> — update title, description, venue, capacity and visibility</li>
+              </ul>
+              <p className="mt-2 text-[10px] text-slate-400">
+                <strong>Tip:</strong> Expand any event card to see these actions above.
+              </p>
+            </div>
+
+            {events.length === 0 && (
+              <div className="bg-white p-6 rounded-xl border border-slate-200 mb-6">
+                <h2 className="text-center text-sm text-slate-500 mb-4">No Events</h2>
+                <p className="text-center text-slate-400">
+                  You don't have any events yet. <Link to="/organizer/events/create" className="font-medium text-indigo-600 hover:text-indigo-800">Create your first event</Link> to get started.
+                </p>
+              </div>
+            )}
+
             {/* Filter controls demonstration */}
             <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
               <h2 className="text-lg font-bold text-slate-800 mb-4">Interactive Filter Store</h2>
-              <p className="text-xs text-slate-500 mb-4">
-                Modify these filter preferences. Because they use Zustand's <code>persist</code> middleware, they will survive page refreshes.
+              <p className="text-xs text-slate-500 mb-2">
+                Modify these filter preferences. Because they use Zustand's
+                <code>persist</code> middleware, they will survive page refreshes.
+                <span className="text-[10px] bg-indigo-100 px-2 py-1 rounded text-indigo-600">
+                  ✨ Saved across sessions
+                </span>
+              </p>
+              <button
+                onClick={() => setFilters({ dateRange: 'all', status: 'all', search: '' })}
+                className="mt-2 w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs font-medium shadow-sm hover:bg-indigo-700 transition-colors"
+              >
+                🔄 Reset Filters
+              </button>
+              <p className="mt-2 text-xs text-slate-500">
+                Tip: Changes persist even after closing the browser.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

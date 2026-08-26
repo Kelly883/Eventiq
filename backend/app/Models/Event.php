@@ -97,7 +97,7 @@ class Event extends Model
 
     public function ticketTiers(): HasMany
     {
-        return $this->hasMany(TicketTier::class);
+        return $this->hasMany(TicketTier::class)->touch('updated_at');
     }
 
     public function pricingWindows(): HasMany

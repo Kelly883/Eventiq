@@ -3,10 +3,23 @@
 namespace App\Features\Pricing\Policies;
 
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class PricingWindowPolicy
 {
+    /**
+     * Admins may manage any event; organizers only their own events.
+     */
+    private function ownsEvent(User $user, $event): bool
+    {
+        if ($user->hasRole('admin') || $user->hasRole('super-admin')) {
+            return true;
+        }
+
+        return $event
+            && $event->organizer
+            && (string) $event->organizer->user_id === (string) $user->id;
+    }
+
     /**
      * Determine whether the user can view any pricing windows.
      */
@@ -27,11 +40,15 @@ class PricingWindowPolicy
 
     /**
      * Determine whether the user can create pricing windows.
+     * $event is the URL-resolved Event the window will belong to.
      */
-    public function create(User $user): bool
+    public function create(User $user, $event = null): bool
     {
-        // Only organizers/admins can create pricing windows
-        return $user->hasRole('organizer') || $user->hasRole('admin') || $user->hasRole('super-admin');
+        if (!$user->hasRole('organizer') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            return false;
+        }
+
+        return $this->ownsEvent($user, $event);
     }
 
     /**
@@ -39,8 +56,11 @@ class PricingWindowPolicy
      */
     public function update(User $user, $pricingWindow): bool
     {
-        // Only organizers/admins can update
-        return $user->hasRole('organizer') || $user->hasRole('admin') || $user->hasRole('super-admin');
+        if (!$user->hasRole('organizer') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            return false;
+        }
+
+        return $this->ownsEvent($user, $pricingWindow->event);
     }
 
     /**
@@ -48,8 +68,11 @@ class PricingWindowPolicy
      */
     public function delete(User $user, $pricingWindow): bool
     {
-        // Only organizers/admins can delete
-        return $user->hasRole('organizer') || $user->hasRole('admin') || $user->hasRole('super-admin');
+        if (!$user->hasRole('organizer') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            return false;
+        }
+
+        return $this->ownsEvent($user, $pricingWindow->event);
     }
 
     /**
@@ -68,4 +91,3 @@ class PricingWindowPolicy
         return $user->hasRole('super-admin');
     }
 }
-

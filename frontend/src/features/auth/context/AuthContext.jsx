@@ -29,6 +29,32 @@ function broadcastAuthEvent(type) {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const [organizerId, setOrganizerId] = useState(null);
+
+  const refreshAuth = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/auth/me');
+      setUser(res.data);
+      setSessionExpired(false);
+      const userId = res.data?.id;
+      if (userId) {
+        const meRes = await api.get(`/organizers/user/${userId}`);
+        setOrganizerId(meRes.data?.data?.id || null);
+      }
+    } catch (e) {
+      setUser(null);
+      setSessionExpired(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(refreshAuth, 60000);
+    return () => clearInterval(interval);
+  }, [refreshAuth]);
 
   const fetchCurrentUser = useCallback(async () => {
     try {
@@ -169,6 +195,7 @@ export const AuthProvider = ({ children }) => {
 
     const res = await api.get('/auth/me');
     setUser(res.data);
+    setSessionExpired(false);
     // Broadcast session change to all tabs
     broadcastAuthEvent('session-established');
     return { user: res.data, remember_me: response.data?.remember_me ?? false };
@@ -180,6 +207,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(REMEMBER_ME_KEY);
     const res = await api.get('/auth/me');
     setUser(res.data);
+    setSessionExpired(false);
     broadcastAuthEvent('session-established');
     return res.data;
   }, []);
@@ -188,6 +216,7 @@ export const AuthProvider = ({ children }) => {
     await api.post('/auth/logout');
     localStorage.removeItem(REMEMBER_ME_KEY);
     setUser(null);
+    setOrganizerId(null);
     // Broadcast session invalidation to all tabs
     broadcastAuthEvent('session-ended');
   }, []);
@@ -210,7 +239,7 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: Boolean(user), loading, checkAdminAccess, login, register, logout, forgotPassword, resetPassword }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: Boolean(user) && !sessionExpired, loading, checkAdminAccess, login, register, logout, forgotPassword, resetPassword, refreshAuth, sessionExpired, organizerId }}>
       {children}
     </AuthContext.Provider>
   );

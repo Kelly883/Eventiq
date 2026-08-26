@@ -1,38 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import axios from 'axios';
+import { api } from '../../../lib/api';
 
 const TicketStatusPage = () => {
-  const [ticketCode, setTicketCode] = useState('EVQ-8490-NG');
-  const [searchCode, setSearchCode] = useState('EVQ-8490-NG');
+  const [ticketCode, setTicketCode] = useState('');
+  const [searchCode, setSearchCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [resendingChannel, setResendingChannel] = useState(null);
   const [toast, setToast] = useState(null);
 
-  // Mock initial ticket data with realistic values
-  const [ticket, setTicket] = useState({
-    code: 'EVQ-8490-NG',
-    eventName: 'Afrobeats Summer Festival 2026',
-    holderName: 'Kelechi Emeka',
-    eventDate: 'December 18, 2026 at 6:00 PM',
-    venue: 'Eko Atlantic City, Lagos, Nigeria',
-    price: '₦25,000.00',
-    type: 'VIP Pass',
-    status: 'ACTIVE', // ACTIVE, USED, CANCELLED, DELIVERED
-    deliveryStatus: {
-      email: { sent: true, recipient: 'emekelechi883@gmail.com', timestamp: '2026-07-15 09:12' },
-      sms: { sent: true, recipient: '+234 812 345 6789', timestamp: '2026-07-15 09:13' },
-      dashboard: { sent: true, recipient: 'User ID: 12480', timestamp: '2026-07-15 09:10' }
-    }
-  });
+  // No mock data: the page shows an empty state until a real lookup succeeds.
+  const [ticket, setTicket] = useState(null);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Simulate fetching a ticket status from the backend
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchCode.trim()) {
@@ -44,65 +29,48 @@ const TicketStatusPage = () => {
     setError(null);
 
     try {
-      // We can check if backend is running or simulate high-quality results
-      // Standard fetch with Axios to show actual backend compliance
-      const response = await axios.get(`/api/tickets/${searchCode}`).catch(() => null);
+      const response = await api.get(`/tickets/${encodeURIComponent(searchCode.trim())}`);
 
-      if (response && response.data) {
+      if (response?.data) {
         setTicket(response.data);
-        setTicketCode(searchCode);
+        setTicketCode(searchCode.trim().toUpperCase());
         showToast('Ticket details fetched successfully.');
       } else {
-        // Fallback to updated mock data for demonstration
-        setTicketCode(searchCode);
-        setTicket({
-          code: searchCode.toUpperCase(),
-          eventName: 'Afrobeats Summer Festival 2026',
-          holderName: 'Kelechi Emeka',
-          eventDate: 'December 18, 2026 at 6:00 PM',
-          venue: 'Eko Atlantic City, Lagos, Nigeria',
-          price: '₦25,000.00',
-          type: searchCode.toUpperCase().includes('VIP') ? 'VIP Pass' : 'General Admission',
-          status: 'ACTIVE',
-          deliveryStatus: {
-            email: { sent: true, recipient: 'emekelechi883@gmail.com', timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16) },
-            sms: { sent: false, recipient: '+234 812 345 6789', timestamp: '-' },
-            dashboard: { sent: true, recipient: 'User ID: 12480', timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16) }
-          }
-        });
-        showToast('Ticket code loaded.');
+        setTicket(null);
+        setError(`No ticket found for code "${searchCode.trim()}". Please check the reference and try again.`);
+        showToast('Ticket not found.', 'error');
       }
     } catch (err) {
-      setError('Could not retrieve ticket. Please try again.');
-      showToast('Error loading ticket.', 'error');
+      setTicket(null);
+      const message =
+        err?.response?.status === 404
+          ? `No ticket found for code "${searchCode.trim()}".`
+          : 'Could not retrieve ticket. Please try again.';
+      setError(message);
+      showToast(message, 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  // Simulate triggering backend re-delivery
   const triggerRedelivery = async (channel) => {
     setResendingChannel(channel);
     try {
-      // Attempt API request
       const endpoint = channel === 'email' ? 'resend-email' : channel === 'sms' ? 'resend-sms' : 'resend-dashboard';
-      const success = await axios.post(`/api/tickets/${ticketCode}/${endpoint}`).then(() => true).catch(() => false);
+      await api.post(`/tickets/${encodeURIComponent(ticketCode)}/${endpoint}`);
 
-      // Simulate success callback
-      setTimeout(() => {
-        setTicket(prev => {
-          const updated = { ...prev };
-          if (updated.deliveryStatus[channel]) {
-            updated.deliveryStatus[channel].sent = true;
-            updated.deliveryStatus[channel].timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
-          }
-          return updated;
-        });
-        showToast(`Ticket successfully re-delivered via ${channel.toUpperCase()}!`);
-        setResendingChannel(null);
-      }, 1200);
+      setTicket(prev => {
+        const updated = { ...prev };
+        if (updated.deliveryStatus[channel]) {
+          updated.deliveryStatus[channel].sent = true;
+          updated.deliveryStatus[channel].timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+        }
+        return updated;
+      });
+      showToast(`Ticket successfully re-delivered via ${channel.toUpperCase()}!`);
+      setResendingChannel(null);
     } catch (err) {
-      showToast('Failed to trigger redelivery. Please try again.', 'error');
+      showToast(`Failed to re-deliver via ${channel.toUpperCase()}. Please try again.`, 'error');
       setResendingChannel(null);
     }
   };
@@ -163,7 +131,24 @@ const TicketStatusPage = () => {
           </form>
         </div>
 
+        {error && !loading && (
+          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-200 text-sm" role="alert">
+            {error}
+          </div>
+        )}
+
+        {!ticket && !loading && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center" id="empty-state">
+            <div className="text-4xl mb-4">🎟️</div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">No ticket loaded</h3>
+            <p className="text-sm text-slate-500 max-w-md mx-auto">
+              Enter a ticket reference code above to check its delivery status across email, SMS, and the app dashboard.
+            </p>
+          </div>
+        )}
+
         {/* Grid Area */}
+        {ticket && (
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           
           {/* Ticket Display Card (Left Panel) */}
@@ -348,6 +333,7 @@ const TicketStatusPage = () => {
           </div>
 
         </div>
+        )}
       </div>
     </div>
   );

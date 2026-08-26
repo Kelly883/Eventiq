@@ -62,19 +62,39 @@ const TicketInventoryDashboardPage = () => {
   if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10">
+    <div className="min-h-screen bg-[#F7F8FA] p-6 md:p-10">
       <div className="mx-auto max-w-7xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Ticket Inventory</h1>
-            <p className="mt-2 text-sm text-slate-500">Event ID: {eventId}</p>
+            <Link to="/organizer/events" className="inline-flex items-center gap-2 text-sm font-medium text-[#999999] hover:text-[#333333] mb-2">
+              ← Back to Events
+            </Link>
+            <h1 className="text-3xl font-bold text-[#333333] tracking-tight" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Ticket Inventory</h1>
+            <p className="mt-1 text-sm text-[#999999]">Event ID: {eventId} • Adjust sold/remaining stock</p>
           </div>
           <Link
             to={`/organizer/events/${eventId}/inventory/adjust`}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-bold shadow-sm hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#FF6B6B] text-white text-sm font-bold shadow-sm hover:bg-[#D94545] transition-colors"
           >
             ⚙️ Adjust Inventory
           </Link>
+        </div>
+
+        {/* Event management tabs — reciprocal to ticketing */}
+        <div className="bg-white rounded-xl border border-[#E3E4E6] p-1.5 mb-6 shadow-sm flex flex-wrap gap-1">
+          <Link to={`/organizer/events/${eventId}/ticketing`} className="px-4 py-2 rounded-lg text-sm font-medium text-[#333333] hover:bg-[#F7F8FA] border border-transparent">
+            🎟️ Ticket Tiers
+          </Link>
+          <Link to={`/organizer/events/${eventId}/inventory`} className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#FF6B6B] text-white shadow-sm" aria-current="page">
+            📦 Inventory
+          </Link>
+          <Link to={`/organizer/events/${eventId}/pricing`} className="px-4 py-2 rounded-lg text-sm font-medium text-[#333333] hover:bg-[#F7F8FA] border border-transparent">
+            💰 Pricing
+          </Link>
+          <Link to={`/organizer/events/${eventId}/edit`} className="px-4 py-2 rounded-lg text-sm font-medium text-[#333333] hover:bg-[#F7F8FA] border border-transparent">
+            ✎ Edit Event
+          </Link>
+          <span className="ml-auto hidden md:inline-flex items-center text-xs text-[#999999] px-2">Inventory = how many / adjustments</span>
         </div>
 
         {summary && (

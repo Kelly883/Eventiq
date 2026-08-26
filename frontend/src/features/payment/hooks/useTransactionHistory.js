@@ -1,13 +1,12 @@
 import { api } from '../../lib/api';
-import type { Transaction } from '../types/index';
 
 export function useTransactionHistory() {
-  const fetchHistory = async (): Promise<Transaction[]> => {
+  const fetchHistory = async () => {
     const response = await api.get('/user/transactions');
     return response.data.data ?? [];
   };
 
-  const fetchTransaction = async (id: string): Promise<Transaction> => {
+  const fetchTransaction = async (id) => {
     const response = await api.get(`/user/transactions/${id}`);
     return response.data.data;
   };

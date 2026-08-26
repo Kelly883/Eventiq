@@ -37,6 +37,11 @@ class OrganizerPayoutMethodController extends Controller
     public function store(StoreOrganizerPayoutMethodRequest $request)
     {
         $organizer = $request->user()->organizer;
+
+        if (! $organizer) {
+            return response()->json(['message' => 'Not an organizer account.'], 403);
+        }
+
         $data = $request->validated();
 
         return DB::transaction(function () use ($request, $organizer, $data) {
@@ -68,6 +73,10 @@ class OrganizerPayoutMethodController extends Controller
     public function destroy(Request $request, int $id)
     {
         $organizer = $request->user()->organizer;
+
+        if (! $organizer) {
+            return response()->json(['message' => 'Not an organizer account.'], 403);
+        }
 
         $method = $organizer->payoutMethods()->where('id', $id)->firstOrFail();
         $method->delete();

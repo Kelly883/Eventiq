@@ -18,6 +18,39 @@ class QRGenerationController extends Controller
      */
     public function generate(Request $request, $eventId, $ticketId)
     {
+        $user = $request->user();
+        $eventId = (int) $eventId;
+        $ticketId = (int) $ticketId;
+
+        // Only the event's owning organizer (or an admin) may mint signed QR codes.
+        $event = \App\Models\Event::with('organizer')->find($eventId);
+        if (!$event) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Event not found.',
+            ], 404);
+        }
+
+        $ownsEvent = $event->organizer
+            && (string) $event->organizer->user_id === (string) $user->id;
+        if (!$ownsEvent && !$user->hasRole('admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to generate QR codes for this event.',
+            ], 403);
+        }
+
+        // The ticket must belong to the event being claimed.
+        $ticketExists = \App\Features\Checkout\Models\Ticket::where('id', $ticketId)
+            ->where('event_id', $eventId)
+            ->exists();
+        if (!$ticketExists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ticket not found for this event.',
+            ], 404);
+        }
+
         try {
             // Build the payload with ticket/event properties
             $payload = [

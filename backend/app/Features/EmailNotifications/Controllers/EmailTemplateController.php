@@ -25,6 +25,8 @@ class EmailTemplateController extends Controller
 
     public function store(StoreEmailTemplateRequest $request)
     {
+        $this->authorize('create', EmailTemplate::class);
+
         $template = $this->templateService->save($request->validated());
 
         return new EmailTemplateResource($template);
@@ -39,6 +41,8 @@ class EmailTemplateController extends Controller
 
     public function update(UpdateEmailTemplateRequest $request, EmailTemplate $emailTemplate)
     {
+        $this->authorize('update', $emailTemplate);
+
         $template = $this->templateService->save($request->validated(), $emailTemplate);
 
         return new EmailTemplateResource($template);

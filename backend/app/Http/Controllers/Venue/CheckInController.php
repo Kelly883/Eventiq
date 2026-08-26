@@ -12,17 +12,29 @@ use Illuminate\Support\Facades\Crypt;
 class CheckInController extends Controller
 {
     /**
+     * Only admins and organizers (venue staff) may process check-ins.
+     */
+    private function authorizeVenueStaff($user): void
+    {
+        if (!$user || !($user->hasRole('admin') || $user->hasRole('organizer'))) {
+            abort(403, 'Only venue staff can perform this action.');
+        }
+    }
+
+    /**
      * Store a client-submitted or synchronized check-in scan.
      * Enforces client_mutation_id idempotency and broadcasts to event.{id}.stats channels.
-     * 
+     *
      * POST /api/venue/check-in
      */
     public function store(Request $request)
     {
+        $this->authorizeVenueStaff($request->user());
+
         $validated = $request->validate([
             'ticket_code' => ['required', 'string'],
             'event_id' => ['required'],
-            'scanned_at' => ['required', 'string'],
+            'scanned_at' => ['required', 'date'],
             'client_mutation_id' => ['required', 'string'],
         ]);
 
@@ -47,7 +59,7 @@ class CheckInController extends Controller
         $ticketId = null;
         $decryptedSuccess = false;
 
-        // 2. Attempt Decryption and Cryptographic Verification if encrypted
+        // 2. Cryptographic verification is mandatory: only signed QR payloads are accepted.
         if (str_starts_with($ticketCode, 'ey') || strlen($ticketCode) > 60) {
             try {
                 $decryptedRaw = Crypt::decryptString($ticketCode);
@@ -69,27 +81,41 @@ class CheckInController extends Controller
                     }
                 }
             } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-                Log::warning("Decryption failed for scanned ticket. Proceeding to search as raw: " . $e->getMessage());
+                Log::warning("Decryption failed for scanned ticket. Rejecting scan: " . $e->getMessage());
             } catch (\Exception $e) {
                 Log::error("QR validation general exception: " . $e->getMessage());
             }
         }
 
-        // 3. Look up ticket
-        if ($decryptedSuccess && $ticketId) {
-            $ticket = Ticket::find($ticketId);
-        } else {
-            // Search by raw qr_code code field or primary key ID
-            $ticket = Ticket::where('qr_code', $ticketCode)
-                ->orWhere('id', $ticketCode)
-                ->first();
+        if (!$decryptedSuccess || !$ticketId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid ticket code. A valid signed QR code is required.',
+            ], 422);
         }
+
+        // 3. Look up ticket by verified payload only — no raw-code or ID enumeration fallback.
+        $ticket = Ticket::find($ticketId);
 
         if (!$ticket) {
             return response()->json([
                 'success' => false,
                 'message' => 'Ticket not found or invalid.',
             ], 404);
+        }
+
+        // 3a. Venue staff may only check in tickets for events they own (admins exempt).
+        $user = $request->user();
+        if (!$user->hasRole('admin')) {
+            $ownsEvent = \App\Models\Event::where('id', $ticket->event_id)
+                ->whereHas('organizer', fn ($q) => $q->where('user_id', $user->id))
+                ->exists();
+            if (!$ownsEvent) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not authorized to check in tickets for this event.',
+                ], 403);
+            }
         }
 
         // 4. Double check ticket hasn't been checked in yet by another client
@@ -134,24 +160,16 @@ class CheckInController extends Controller
 
         // 7. Real-time Broadcasting grouped under specific event.{id}.stats channels
         try {
-            $pusherKey = env('PUSHER_APP_KEY', 'eventiq_pusher_key');
-            $pusherSecret = env('PUSHER_APP_SECRET');
-            $pusherAppId = env('PUSHER_APP_ID');
-            $pusherCluster = env('PUSHER_APP_CLUSTER', 'mt1');
-            $pusherHost = env('PUSHER_HOST');
-            $pusherPort = env('PUSHER_PORT', 443);
-            $pusherScheme = env('PUSHER_SCHEME', 'https');
+            $pusherKey = config('broadcasting.connections.pusher.key');
+            $pusherSecret = config('broadcasting.connections.pusher.secret');
+            $pusherAppId = config('broadcasting.connections.pusher.app_id');
+            $pusherCluster = config('broadcasting.connections.pusher.options.cluster', 'mt1');
 
             if ($pusherKey && $pusherSecret && $pusherAppId) {
                 $options = [
                     'cluster' => $pusherCluster,
                     'useTLS' => true,
                 ];
-                if ($pusherHost) {
-                    $options['host'] = $pusherHost;
-                    $options['port'] = $pusherPort;
-                    $options['scheme'] = $pusherScheme;
-                }
 
                 $pusher = new \Pusher\Pusher(
                     $pusherKey,

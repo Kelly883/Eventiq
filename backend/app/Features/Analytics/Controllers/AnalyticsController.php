@@ -15,6 +15,13 @@ class AnalyticsController extends Controller
      */
     public function getSalesVelocity(Request $request, $eventId)
     {
+        // Sales analytics are organizer-private: only the owning organizer (or admin) may read them.
+        $user = $request->user();
+        $ownsEvent = \App\Models\Event::where('id', $eventId)
+            ->when(!$user->hasRole('admin'), fn ($q) => $q->whereHas('organizer', fn ($o) => $o->where('user_id', $user->id)))
+            ->exists();
+        abort_unless($ownsEvent, 403, 'You are not authorized to view this event\'s analytics.');
+
         $interval = $request->query('interval', 'daily'); // 'daily' or 'hourly'
         
         // Check if there is actual database data

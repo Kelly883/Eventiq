@@ -14,17 +14,57 @@ use App\Features\CheckIn\Http\Resources\FraudEventResource;
 class CheckInController extends Controller
 {
     /**
+     * Only admins and organizers (venue staff) may access check-in data.
+     */
+    private function authorizeVenueStaff($user): void
+    {
+        if (!$user || !($user->hasRole('admin') || $user->hasRole('organizer'))) {
+            abort(403, 'Only venue staff can perform this action.');
+        }
+    }
+
+    /**
+     * Scope a ticket query to events owned by the authenticated organizer
+     * (admins see everything).
+     */
+    private function scopeToAccessibleEvents($query, $user)
+    {
+        if ($user->hasRole('admin')) {
+            return $query;
+        }
+
+        return $query->whereHas('event.organizer', fn ($q) => $q->where('user_id', $user->id));
+    }
+
+    /**
+     * Determine whether the user may act on the given ticket's event.
+     */
+    private function canAccessTicket($user, $ticket): bool
+    {
+        if ($user->hasRole('admin')) {
+            return true;
+        }
+
+        return CheckInTicket::where('id', $ticket->id)
+            ->whereHas('event.organizer', fn ($q) => $q->where('user_id', $user->id))
+            ->exists();
+    }
+
+    /**
      * List tickets for a given event with optional filters.
      *
      * GET /api/venue/check-ins
      */
     public function index(Request $request)
     {
+        $this->authorizeVenueStaff($request->user());
+
         $eventId = $request->query('event_id');
         $status = $request->query('status');
         $search = $request->query('search');
 
         $query = CheckInTicket::query()->with(['event', 'user', 'fraudEvents']);
+        $query = $this->scopeToAccessibleEvents($query, $request->user());
 
         if ($eventId) {
             $query->byEvent($eventId);
@@ -52,8 +92,14 @@ class CheckInController extends Controller
      *
      * GET /api/venue/check-ins/{ticket}
      */
-    public function show(CheckInTicket $ticket)
+    public function show(Request $request, CheckInTicket $ticket)
     {
+        $this->authorizeVenueStaff($request->user());
+
+        if (!$this->canAccessTicket($request->user(), $ticket)) {
+            abort(403, 'You are not authorized to view this ticket.');
+        }
+
         $ticket->loadMissing(['event', 'user', 'fraudEvents']);
 
         return new TicketResource($ticket);
@@ -66,10 +112,12 @@ class CheckInController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorizeVenueStaff($request->user());
+
         $validated = $request->validate([
             'ticket_code' => ['required', 'string'],
             'event_id' => ['required', 'string'],
-            'scanned_at' => ['nullable', 'string'],
+            'scanned_at' => ['nullable', 'date'],
             'client_mutation_id' => ['nullable', 'string'],
         ]);
 
@@ -94,10 +142,18 @@ class CheckInController extends Controller
             }
         }
 
-        $ticket = CheckInTicket::where('ticket_id', $ticketCode)
-            ->orWhere('qr_code_data', $ticketCode)
-            ->orWhere('id', $ticketCode)
+        // Wrap the orWhere chain in a closure so the event scope binds to every branch,
+        // and scope to events the caller owns (admins exempt).
+        $ticket = CheckInTicket::where(function ($q) use ($ticketCode) {
+            $q->where('ticket_id', $ticketCode)
+              ->orWhere('qr_code_data', $ticketCode)
+              ->orWhere('id', $ticketCode);
+        })
             ->where('event_id', $eventId)
+            ->when(
+                !$request->user()->hasRole('admin'),
+                fn ($q) => $q->whereHas('event.organizer', fn ($o) => $o->where('user_id', $request->user()->id))
+            )
             ->first();
 
         if (!$ticket) {
@@ -150,12 +206,15 @@ class CheckInController extends Controller
      */
     public function search(Request $request)
     {
+        $this->authorizeVenueStaff($request->user());
+
         $validated = $request->validate([
             'q' => ['required', 'string', 'min:1'],
             'event_id' => ['nullable', 'string'],
         ]);
 
         $query = CheckInTicket::query()->with(['event', 'user', 'fraudEvents']);
+        $query = $this->scopeToAccessibleEvents($query, $request->user());
 
         if ($validated['event_id'] ?? null) {
             $query->byEvent($validated['event_id']);

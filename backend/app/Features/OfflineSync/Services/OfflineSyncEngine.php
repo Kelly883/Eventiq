@@ -29,7 +29,7 @@ class OfflineSyncEngine
         return $item;
     }
 
-    public function applyDueQueue(int $limit = 50): array
+    public function applyDueQueue(int $limit = 50, ?string $deviceToken = null): array
     {
         $results = [];
         $processed = 0;
@@ -41,6 +41,10 @@ class OfflineSyncEngine
             $items = OfflineSyncInboxItem::query()
                 ->where('id', '>', $lastId)
                 ->whereIn('status', ['queued', 'conflict'])
+                ->when(
+                    $deviceToken !== null,
+                    fn ($q) => $q->where('client_id', $deviceToken)
+                )
                 ->where(function ($q) {
                     $q->whereNull('next_retry_at')->orWhere('next_retry_at', '<=', now());
                 })
