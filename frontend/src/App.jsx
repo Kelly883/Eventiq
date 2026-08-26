@@ -387,7 +387,7 @@ function App() {
             <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
             <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
             <Route path="/access-denied" element={<AccessDeniedPage />} />
-            <Route path="*" element={<Navigate to="/analytics" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             </Suspense>
           </ErrorBoundary>
