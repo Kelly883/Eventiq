@@ -4,12 +4,16 @@ import { useTrendingEvents } from '../hooks/useHomepageData';
 
 const EventCard = ({ event }) => {
   const getAvailabilityStatus = (tickets) => {
+    if (tickets == null) return { label: 'Tickets available', className: 'available' };
     if (tickets === 0) return { label: 'Sold out', className: 'sold-out' };
     if (tickets <= 30) return { label: `${tickets} tickets remaining`, className: 'low' };
     return { label: `${tickets} tickets remaining`, className: 'available' };
   };
 
-  const availability = getAvailabilityStatus(event.tickets_remaining ?? event.ticketsRemaining);
+  // Use ticketsRemaining == null to mean "unlimited", so a missing value never
+  // renders as the literal string "undefined tickets remaining".
+  const ticketsRemaining = event.tickets_remaining ?? event.ticketsRemaining ?? null;
+  const availability = getAvailabilityStatus(ticketsRemaining);
   const imageUrl = event.image_url || event.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&h=400&fit=crop';
   const organizerName = event.organizer?.name || event.organizer || 'Organizer';
   const organizerAvatar = event.organizer?.avatar_url || event.organizerAvatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop';
@@ -27,9 +31,7 @@ const EventCard = ({ event }) => {
   };
 
   const getBadge = () => {
-    const tickets = event.tickets_remaining ?? event.ticketsRemaining ?? 0;
-    if (tickets === 0) return 'Sold Out';
-    if (tickets <= 30) return 'Trending';
+    if (ticketsRemaining === 0) return 'Sold Out';
     if (event.is_featured || event.isFeatured) return 'Featured';
     return null;
   };
@@ -61,14 +63,14 @@ const EventCard = ({ event }) => {
                 <line x1="8" y1="2" x2="8" y2="6" />
                 <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
-              <span>{formatDate(event.start_date || event.date)} · {formatTime(event.start_date || event.date)}</span>
+              <span>{formatDate(event.start_datetime || event.start_date || event.date)} · {formatTime(event.start_datetime || event.start_date || event.date)}</span>
             </div>
             <div className="meta-row">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
                 <circle cx="12" cy="10" r="3" />
               </svg>
-              <span>{event.venue?.name || event.venue || 'TBA'} · {event.location || event.city || ''}</span>
+              <span>{event.venue_name || event.venue?.name || event.venue || 'TBA'} · {event.location || event.city || ''}{event.venue_address || ''}</span>
             </div>
           </div>
           <div className="event-footer">

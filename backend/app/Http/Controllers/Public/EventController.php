@@ -45,6 +45,29 @@ class EventController extends Controller
             $query->byCategory($category);
         }
 
+        // Free-text search across title/description/venue/category. Both the
+        // homepage hero search and the browse page's query box share this.
+        // `search` is the canonical name used by the rest of the app; `q` is
+        // accepted as a short alias used by the homepage search form.
+        $search = $request->query('search') ?: $request->query('q');
+        if (is_string($search) && trim($search) !== '') {
+            $query->search(trim($search));
+        }
+
+        // QuickFilter time windows and the footer's coarse filters. No geo
+        // provider exists, so "nearby" is an honest proxy (nearest-upcoming
+        // default) rather than a fabricated geolocation result.
+        $filter = $request->query('filter');
+        if (is_string($filter) && $filter !== '') {
+            if ($filter === 'popular') {
+                $query->available()->upcomingFirst();
+            } elseif (in_array($filter, ['today', 'week', 'month'], true)) {
+                $query->withinWindow($filter);
+            }
+            // 'nearby' intentionally falls through to the existing order so it
+            // shows nearest-upcoming events without implying real geo support.
+        }
+
         $events = $query->limit($limit)->get();
 
         return EventPublicResource::collection($events);

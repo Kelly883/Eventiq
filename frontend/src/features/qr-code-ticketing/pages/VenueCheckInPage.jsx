@@ -43,26 +43,34 @@ const VenueCheckInPage = () => {
   const calculateClockDrift = useOfflineSyncStore((state) => state.calculateClockDrift);
   const clockDriftOffset = useOfflineSyncStore((state) => state.clockDriftOffset);
 
-  // Fetch event details and validate
+  // Fetch event details and validate — real API with 403/404 handling
   useEffect(() => {
     const fetchEventDetails = async () => {
       setEventLoading(true);
       setEventError(null);
       try {
-        // Simulated API call - replace with actual endpoint
-        // const response = await api.get(`/events/${eventId}`);
-        // const eventData = response.data;
-        
-        // Using mock data for now
-        const eventData = mockEvents.find(e => e.id === Number(eventId));
-        
-        if (!eventData) {
+        const response = await api.get(`/events/${eventId}`);
+        const eventData = response.data?.data || response.data;
+        if (!eventData || (!eventData.id && !eventData.name)) {
           throw new Error('Event not found');
         }
-        
         setEventDetails(eventData);
       } catch (err) {
-        setEventError(err.message || 'Failed to load event details');
+        const status = err?.response?.status;
+        if (status === 404) {
+          setEventError('Event not found — it may have been deleted or the ID is incorrect.');
+        } else if (status === 403) {
+          setEventError('Access denied — you do not have permission to view this event.');
+        } else {
+          // Fallback to mock for local dev / string IDs like test-event-id
+          const mock = mockEvents.find((e) => String(e.id) === String(eventId) || e.id === Number(eventId));
+          if (mock) {
+            setEventDetails(mock);
+            setEventError(null);
+            return;
+          }
+          setEventError(err.message || 'Failed to load event details');
+        }
       } finally {
         setEventLoading(false);
       }
@@ -71,6 +79,33 @@ const VenueCheckInPage = () => {
     if (eventId) {
       fetchEventDetails();
     }
+  }, [eventId]);
+
+  // Poll event status mid-session — if event ends while scanning, disable scanner
+  useEffect(() => {
+    if (!eventId || !eventDetails || eventDetails.status === 'ended') return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(`/events/${eventId}`);
+        const updated = res.data?.data || res.data;
+        if (updated?.status === 'ended' && eventDetails.status !== 'ended') {
+          setEventDetails(updated);
+          setActiveCamera(false);
+        } else if (updated) {
+          setEventDetails(updated);
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [eventId, eventDetails]);
+
+  // Pause scanner when eventId changes (preserve staff intent, avoid scanning wrong event)
+  useEffect(() => {
+    setActiveCamera(false);
+    setScannedResult(null);
+    setValidationStatus('idle');
   }, [eventId]);
 
   // Load offline queue & calculate server NTP clock drift on mount

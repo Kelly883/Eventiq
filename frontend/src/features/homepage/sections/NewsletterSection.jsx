@@ -1,14 +1,29 @@
 import React, { useState } from 'react';
+import { api } from '../../../lib/api';
 
 const NewsletterSection = () => {
   const [email, setEmail] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [status, setStatus] = useState(null); // 'success' | 'error' | null
 
-  const handleSubmit = (e) => {
+  // Previously this section flipped local state and claimed "Thanks! We'll
+  // keep you updated." without persisting anything. It now POSTs to a real
+  // backend endpoint (POST /api/newsletter/subscribe) and only shows a success
+  // message when the request actually succeeds.
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (email) {
-      setSubmitted(true);
+    if (!email) return;
+
+    setSubmitting(true);
+    setStatus(null);
+    try {
+      await api.post('/newsletter/subscribe', { email });
+      setStatus('success');
       setEmail('');
+    } catch {
+      setStatus('error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -20,7 +35,7 @@ const NewsletterSection = () => {
           <p className="newsletter-subtitle">
             Get updates about new events and experiences near you.
           </p>
-          {submitted ? (
+          {status === 'success' ? (
             <p className="newsletter-success">Thanks! We'll keep you updated.</p>
           ) : (
             <form className="newsletter-form" onSubmit={handleSubmit}>
@@ -31,11 +46,17 @@ const NewsletterSection = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 className="newsletter-input"
                 required
+                disabled={submitting}
               />
-              <button type="submit" className="btn-notify">
-                Notify me
+              <button type="submit" className="btn-notify" disabled={submitting}>
+                {submitting ? 'Subscribing…' : 'Notify me'}
               </button>
             </form>
+          )}
+          {status === 'error' && (
+            <p className="newsletter-error" role="alert">
+              Something went wrong. Please try again in a moment.
+            </p>
           )}
         </div>
       </div>

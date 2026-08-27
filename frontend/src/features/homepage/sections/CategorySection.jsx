@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useCategories } from '../hooks/useHomepageData';
 
 const CategorySection = () => {
-  const { data: categories, isLoading, isError } = useCategories();
+  const { data: categories = [], isLoading, isError } = useCategories();
 
   const categoryIcons = {
     concerts: '♪',
@@ -18,7 +18,7 @@ const CategorySection = () => {
 
   const getCategoryIcon = (name) => {
     const key = name?.toLowerCase() || '';
-    return categoryIcons[key] || '◆';
+    return categoryIcons[key] || categoryIcons[key.replace(/[^a-z]/g, '')] || '◆';
   };
 
   if (isLoading) {
@@ -45,6 +45,9 @@ const CategorySection = () => {
     return null;
   }
 
+  // GET /categories returns a plain array of category name strings (the
+  // distinct `category` values across published events), not objects. Each
+  // card links to the browse page filtered by that exact category.
   return (
     <section className="category-section">
       <div className="section-container">
@@ -52,17 +55,16 @@ const CategorySection = () => {
           <h2 className="section-title">Browse by Category</h2>
         </div>
         <div className="categories-grid">
-          {categories.map((category) => (
+          {categories.map((name) => (
             <Link
-              key={category.id}
-              to={`/events?category=${category.slug || category.name?.toLowerCase()}`}
+              key={name}
+              to={`/events?category=${encodeURIComponent(name)}`}
               className="category-card"
             >
               <span className="category-icon">
-                {getCategoryIcon(category.name)}
+                {getCategoryIcon(name)}
               </span>
-              <span className="category-name">{category.name}</span>
-              <span className="category-count">{category.events_count || 0} events</span>
+              <span className="category-name">{name}</span>
             </Link>
           ))}
         </div>

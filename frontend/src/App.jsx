@@ -420,7 +420,7 @@ function App() {
             <Route path="/check-in/stats" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInStatsPage /></ProtectedRoute>} />
             <Route path="/check-in/export" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInExportPage /></ProtectedRoute>} />
             <Route path="/check-in/history" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInHistoryPage /></ProtectedRoute>} />
-            <Route path="/venue-scan" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><VenueCheckInPage /></ProtectedRoute>} />
+            <Route path="/venue-scan" element={<Navigate to="/check-in" replace />} />
             <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
             <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
