@@ -1,12 +1,27 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const SearchSection = () => {
   const [query, setQuery] = useState('');
   const [location, setLocation] = useState('');
   const [date, setDate] = useState('');
+  const navigate = useNavigate();
 
   const handleSearch = (e) => {
     e.preventDefault();
+    // Was previously just e.preventDefault() -- the entire search form
+    // (all three fields) collected input into state and then did nothing
+    // with it on submit. EventBrowsePage doesn't read these query params
+    // yet (a separate, larger gap -- it currently has no query-param-driven
+    // filtering at all), but landing there with search intent preserved in
+    // the URL is a real improvement over the button doing nothing, and is
+    // what that page needs to read once it supports it.
+    const params = new URLSearchParams();
+    if (query.trim()) params.set('q', query.trim());
+    if (location.trim()) params.set('location', location.trim());
+    if (date.trim()) params.set('date', date.trim());
+    const qs = params.toString();
+    navigate(qs ? `/events?${qs}` : '/events');
   };
 
   return (

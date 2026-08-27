@@ -92,6 +92,27 @@ class PublicEventBrowsingTest extends TestCase
         $this->assertStringNotContainsString('paymentDefault', $body);
     }
 
+    public function test_index_returns_organizer_as_a_plain_display_name_string_not_an_object(): void
+    {
+        // TrendingSection.jsx and UpcomingEventsSection.jsx both render
+        // organizer as `event.organizer?.name || event.organizer`. This
+        // resource used to embed the organizer as a nested object keyed
+        // `displayName`, not `name` -- so `.name` was always undefined,
+        // falling through to rendering the raw object itself as a React
+        // child, which crashes ("Objects are not valid as a React child").
+        // A flat string is what both components actually need to render
+        // safely.
+        $organizer = Organizer::factory()->create(['isPublic' => true, 'displayName' => 'Lagos Live Events']);
+        Event::factory()->create(['status' => 'published', 'organizer_id' => $organizer->id]);
+
+        $response = $this->getJson('/api/events');
+
+        $response->assertOk();
+        $data = $response->json('data.0');
+        $this->assertIsString($data['organizer']);
+        $this->assertEquals('Lagos Live Events', $data['organizer']);
+    }
+
     public function test_index_computes_ticket_price_as_lowest_available_effective_price(): void
     {
         $event = Event::factory()->create(['status' => 'published']);
@@ -151,11 +172,24 @@ class PublicEventBrowsingTest extends TestCase
         $response = $this->getJson('/api/categories');
 
         $response->assertOk();
-        $categories = $response->json('data');
-        $this->assertContains('music', $categories);
-        $this->assertContains('sports', $categories);
-        $this->assertNotContains('draft-only-category', $categories);
+        $categories = collect($response->json('data'));
         $this->assertCount(2, $categories);
+
+        // CategorySection.jsx reads category.id / .slug / .name /
+        // .events_count -- this used to be a flat array of raw strings,
+        // which would have rendered blank category names, a literal
+        // "?category=undefined" link, and "0 events" on every card the
+        // moment this endpoint actually started returning data.
+        $music = $categories->firstWhere('slug', 'music');
+        $this->assertNotNull($music, 'expected a category object with slug "music"');
+        $this->assertEquals('music', $music['id']);
+        $this->assertEquals('Music', $music['name']);
+        $this->assertEquals(2, $music['events_count']);
+
+        $sports = $categories->firstWhere('slug', 'sports');
+        $this->assertEquals(1, $sports['events_count']);
+
+        $this->assertNull($categories->firstWhere('slug', 'draft-only-category'));
     }
 
     public function test_index_is_rate_limited_to_30_per_minute_per_ip(): void

@@ -16,6 +16,28 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class EventPublicResource extends JsonResource
 {
+    /**
+     * Field names here are deliberately chosen to match what
+     * TrendingSection.jsx and UpcomingEventsSection.jsx already expect --
+     * both were already written against image_url/start_date/organizer
+     * (string)/venue (string)/location, with defensive `a?.b || a` fallback
+     * chains suggesting real uncertainty about the eventual contract on the
+     * frontend side too. Matching that existing, already-written contract
+     * rather than picking new names and requiring changes across multiple
+     * frontend files.
+     *
+     * organizer is returned as a plain display-name string, not a nested
+     * object: both components access it as `event.organizer?.name ||
+     * event.organizer`, which means an object without a `.name` key (what
+     * this used to return, via OrganizerPublicResource, keyed as
+     * `displayName` not `name`) falls through to rendering the raw object
+     * as a React child -- a real crash ("Objects are not valid as a React
+     * child"), not just a display bug, the moment organizer data is
+     * actually present. A flat string satisfies the existing fallback
+     * pattern safely and also further narrows what this public,
+     * unauthenticated endpoint exposes about an organizer to just their
+     * public-facing display name.
+     */
     public function toArray(Request $request): array
     {
         // isAvailable() alone doesn't check publication status -- a tier an
@@ -42,16 +64,16 @@ class EventPublicResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'description' => $this->description,
-            'start_datetime' => $this->start_datetime,
-            'end_datetime' => $this->end_datetime,
-            'venue_name' => $this->venue_name,
-            'venue_address' => $this->venue_address,
+            'start_date' => $this->start_datetime,
+            'end_date' => $this->end_datetime,
+            'venue' => $this->venue_name,
+            'location' => $this->venue_address,
             'category' => $this->category,
-            'banner_image_url' => $this->banner_image_url,
+            'image_url' => $this->banner_image_url,
             'ticket_price' => $lowestPrice,
             'tickets_remaining' => $ticketsRemaining,
             'organizer' => $this->whenLoaded('organizer', function () {
-                return new OrganizerPublicResource($this->organizer);
+                return $this->organizer->getPublicProfile()['displayName'] ?? null;
             }),
         ];
     }

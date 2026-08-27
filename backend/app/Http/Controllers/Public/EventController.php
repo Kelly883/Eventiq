@@ -52,14 +52,35 @@ class EventController extends Controller
 
     public function categories(): \Illuminate\Http\JsonResponse
     {
-        $categories = Event::published()
+        // CategorySection.jsx expects {id, slug, name, events_count} per
+        // category -- this used to return a flat array of raw strings.
+        // With the previous fix (this endpoint existing at all) actually
+        // shipped, that mismatch would have gone from "section invisible"
+        // to "section visible but broken": category.id/name/events_count
+        // are all undefined on a string, rendering blank names, a literal
+        // "/events?category=undefined" link, and "0 events" on every card.
+        //
+        // There's no dedicated Category model -- category is a plain
+        // string column on events -- so id/slug both use the raw stored
+        // value (needed for scopeByCategory's exact-match filtering to
+        // keep working via ?category=<slug>); name is a display-only
+        // title-cased version. events_count is a real per-category count,
+        // not decorative.
+        $counts = Event::published()
             ->whereNotNull('category')
-            ->distinct()
+            ->selectRaw('category, count(*) as events_count')
+            ->groupBy('category')
             ->orderBy('category')
-            ->pluck('category')
-            ->filter(fn ($c) => trim((string) $c) !== '')
+            ->get()
+            ->filter(fn ($row) => trim((string) $row->category) !== '')
+            ->map(fn ($row) => [
+                'id' => $row->category,
+                'slug' => $row->category,
+                'name' => ucwords($row->category),
+                'events_count' => $row->events_count,
+            ])
             ->values();
 
-        return response()->json(['data' => $categories]);
+        return response()->json(['data' => $counts]);
     }
 }

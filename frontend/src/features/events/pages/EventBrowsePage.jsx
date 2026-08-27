@@ -76,11 +76,11 @@ const EventBrowsePage = () => {
                     <Link
                       to={`/events/category/${cat.id}`}
                       key={cat.id}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border ${
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md border ${
                         isSelected
                           ? 'border-indigo-600 text-indigo-600 bg-indigo-50'
                           : 'border-slate-200 text-slate-500'
-                      } transition-colors"
+                      } transition-colors`}
                     >
                       {cat.name}
                     </Link>
