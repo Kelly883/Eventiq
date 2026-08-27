@@ -13,6 +13,18 @@ import { initAccessibilityLocalizationI18n } from './features/accessibility-loca
 import { runBootDiagnostics } from './lib/bootDiagnostics'
 
 async function bootstrap() {
+  // Start MSW (dev + flag only) before the first render so the homepage's
+  // initial /events and /categories requests are intercepted from the start.
+  // Dynamic import keeps msw out of production bundles entirely.
+  if (import.meta.env.DEV) {
+    try {
+      const { enableMocking } = await import('./mocks')
+      await enableMocking()
+    } catch (e) {
+      console.warn('[msw] failed to enable mock layer', e)
+    }
+  }
+
   // Create the root first so the UI appears immediately.
   const root = createRoot(document.getElementById('root'))
 

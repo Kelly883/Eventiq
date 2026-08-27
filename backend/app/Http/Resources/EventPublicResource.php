@@ -13,6 +13,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * unfiltered passthrough of every model attribute, including
  * voucher_code) -- only the aggregate price/availability figures an
  * anonymous visitor actually needs are computed and returned.
+ *
+ * ticket_tiers is the one exception: a *safe* subset (id, name, price,
+ * is_available) is returned for the public event detail page so the UI can
+ * render the tier selector without leaking voucher codes.
  */
 class EventPublicResource extends JsonResource
 {
@@ -50,6 +54,15 @@ class EventPublicResource extends JsonResource
             'banner_image_url' => $this->banner_image_url,
             'ticket_price' => $lowestPrice,
             'tickets_remaining' => $ticketsRemaining,
+            'ticket_tiers' => $tiers->map(function ($tier) {
+                return [
+                    'id' => $tier->id,
+                    'name' => $tier->name,
+                    'price' => $tier->getEffectivePrice(),
+                    'currency' => $tier->currency ?? null,
+                    'is_available' => $tier->isAvailable(),
+                ];
+            })->values(),
             'organizer' => $this->whenLoaded('organizer', function () {
                 return new OrganizerPublicResource($this->organizer);
             }),

@@ -115,6 +115,7 @@ Route::get('/events/{event}/pricing', [PricingController::class, 'show']);
 Route::middleware('throttle:discovery')->group(function () {
     Route::get('/events', [PublicEventController::class, 'index']);
     Route::get('/categories', [PublicEventController::class, 'categories']);
+    Route::get('/events/{event}', [PublicEventController::class, 'show']);
     Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe']);
 });
 
