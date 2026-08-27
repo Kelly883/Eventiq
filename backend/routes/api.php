@@ -118,16 +118,6 @@ Route::middleware('throttle:discovery')->group(function () {
     Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe']);
 });
 
-Route::post('/newsletter/subscribe', function (Illuminate\Http\Request $request) {
-    $request->validate([
-        'email' => 'required|email',
-    ]);
-
-    return response()->json([
-        'message' => 'Subscribed successfully.',
-    ]);
-});
-
 // Public organizer profile
 Route::get('/organizers/{organizer}', [OrganizerController::class, 'show']);
 
