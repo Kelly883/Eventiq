@@ -1,53 +1,69 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useCategories } from '../hooks/useHomepageData';
 
 const QuickFilters = () => {
-  const [activeTimeFilter, setActiveTimeFilter] = useState('all');
-  const [activeCategory, setActiveCategory] = useState(null);
-  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const filter = searchParams.get('filter') || '';
+  const activeCategory = searchParams.get('category') || '';
 
-  const timeFilters = ['All', 'Today', 'This week', 'This month'];
-  const categories = ['Concerts', 'Festivals', 'Comedy', 'Theatre & Arts', 'Conferences', 'Sports'];
+  const { data: categories = [] } = useCategories();
 
-  // Previously these buttons only toggled their own `active` CSS class --
-  // visually responsive, but clicking them did nothing else: no
-  // navigation, no filtering, nothing downstream. Now they actually route
-  // to /events with the selection applied.
-  const handleTimeFilter = (filter) => {
-    const value = filter.toLowerCase();
-    setActiveTimeFilter(value);
-    navigate(value === 'all' ? '/events' : `/events?when=${encodeURIComponent(value)}`);
-  };
+  const timeFilters = [
+    { label: 'All', value: '' },
+    { label: 'Today', value: 'today' },
+    { label: 'This week', value: 'week' },
+    { label: 'This month', value: 'month' },
+  ];
 
-  const handleCategoryFilter = (category) => {
-    setActiveCategory(category);
-    navigate(`/events/category/${encodeURIComponent(category.toLowerCase())}`);
-  };
-
+  // Chips are real <Link>s now so they navigate to a filtered browse page. The
+  // category chips come from the live /categories endpoint, so the slug passed
+  // exactly matches what EventBrowsePage will filter by (previously this
+  // section only toggled local UI state and never influenced the results).
   return (
     <section className="quick-filters">
       <div className="filters-container">
         <div className="time-filters">
-          {timeFilters.map((filter) => (
-            <button
-              key={filter}
-              className={`filter-chip ${activeTimeFilter === filter.toLowerCase() ? 'active' : ''}`}
-              onClick={() => handleTimeFilter(filter)}
-            >
-              {filter}
-            </button>
-          ))}
+          {timeFilters.map(({ label, value }) => {
+            const isActive = value === filter;
+            return (
+              <Link
+                key={label}
+                to={value ? `/events?filter=${value}` : '/events'}
+                aria-pressed={isActive}
+                className={`filter-chip ${isActive ? 'active' : ''}`}
+              >
+                {label}
+              </Link>
+            );
+          })}
         </div>
         <div className="category-filters">
-          {categories.map((category) => (
-            <button
-              key={category}
-              className={`filter-chip category ${activeCategory === category ? 'active' : ''}`}
-              onClick={() => handleCategoryFilter(category)}
-            >
-              {category}
-            </button>
-          ))}
+          {categories.map((category) => {
+            // categories comes from GET /categories, which returns
+            // {id, slug, name, events_count} objects (needed for a genuine
+            // per-category count and a stable slug for scopeByCategory
+            // filtering) -- not plain strings. Treating each entry as a
+            // string here would render an object as a React child (a
+            // crash, same class of bug fixed earlier in TrendingSection/
+            // UpcomingEventsSection's organizer field) and would produce a
+            // garbage "[object Object]" URL via encodeURIComponent.
+            const isActive = activeCategory === category.slug;
+            return (
+              <Link
+                key={category.id}
+                to={
+                  isActive
+                    ? '/events'
+                    : `/events?category=${encodeURIComponent(category.slug)}`
+                }
+                aria-pressed={isActive}
+                className={`filter-chip category ${isActive ? 'active' : ''}`}
+              >
+                {category.name}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>

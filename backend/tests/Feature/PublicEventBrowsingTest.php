@@ -205,4 +205,52 @@ class PublicEventBrowsingTest extends TestCase
 
         $this->getJson('/api/events')->assertStatus(429);
     }
+
+    public function test_index_search_matches_title(): void
+    {
+        Event::factory()->create([
+            'status' => 'published',
+            'title' => 'Nightingale Sunrise Festival',
+        ]);
+        Event::factory()->create([
+            'status' => 'published',
+            'title' => 'Something Completely Unrelated',
+        ]);
+
+        $response = $this->getJson('/api/events?search=Nightingale');
+
+        $response->assertOk();
+        $titles = collect($response->json('data'))->pluck('title');
+        $this->assertCount(1, $titles);
+        $this->assertTrue($titles->first() === 'Nightingale Sunrise Festival');
+    }
+
+    public function test_index_filter_week_returns_only_events_within_a_week(): void
+    {
+        Event::factory()->create(['status' => 'published', 'start_datetime' => now()->addDays(2)]);
+        Event::factory()->create(['status' => 'published', 'start_datetime' => now()->addDays(60)]);
+
+        $response = $this->getJson('/api/events?filter=week');
+
+        $response->assertOk();
+        $this->assertGreaterThan(0, count($response->json('data')));
+        // Every returned event must start before the one-week boundary.
+        $allStartBeforeWeekEnd = collect($response->json('data'))
+            ->every(fn ($e) => strtotime($e['start_date']) <= now()->addWeek()->getTimestamp());
+        $this->assertTrue($allStartBeforeWeekEnd);
+    }
+
+    public function test_index_filter_month_returns_events_within_a_month(): void
+    {
+        Event::factory()->create(['status' => 'published', 'start_datetime' => now()->addDays(10)]);
+        Event::factory()->create(['status' => 'published', 'start_datetime' => now()->addDays(400)]);
+
+        $response = $this->getJson('/api/events?filter=month');
+
+        $response->assertOk();
+        $this->assertGreaterThan(0, count($response->json('data')));
+        $allInsideMonth = collect($response->json('data'))
+            ->every(fn ($e) => strtotime($e['start_date']) <= now()->addMonth()->getTimestamp());
+        $this->assertTrue($allInsideMonth);
+    }
 }

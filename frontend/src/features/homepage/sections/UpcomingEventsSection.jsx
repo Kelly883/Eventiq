@@ -67,7 +67,7 @@ const UpcomingEventsSection = () => {
         </div>
         <div className="events-list">
           {upcomingEvents.map((event) => {
-            const imageUrl = event.image_url || event.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200&h=200&fit=crop';
+            const imageUrl = event.banner_image_url || event.image_url || event.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200&h=200&fit=crop';
             const ticketsRemaining = event.tickets_remaining ?? event.ticketsRemaining ?? 0;
 
             return (
@@ -77,7 +77,7 @@ const UpcomingEventsSection = () => {
                   <h3 className="event-list-title">{event.name || event.title || 'Untitled Event'}</h3>
                   <p className="event-list-organizer">{event.organizer?.name || event.organizer || 'Organizer'}</p>
                   <p className="event-list-venue">
-                    {event.venue?.name || event.venue || 'TBA'} · {event.location || event.city || ''}
+                    {event.venue_name || event.venue?.name || event.venue || 'TBA'} · {event.location || event.city || ''}
                   </p>
                 </div>
                 <div className="event-list-meta">

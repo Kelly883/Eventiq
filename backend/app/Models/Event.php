@@ -179,6 +179,31 @@ class Event extends Model
         });
     }
 
+    /**
+     * Constrain published-event browsing to a relative calendar window so the
+     * homepage QuickFilters (Today / This week / This month) actually filter,
+     * rather than remaining visual-only. Unknown or missing windows are
+     * intentionally no-ops so callers can rely on a lenient default.
+     */
+    public function scopeWithinWindow($query, string $window)
+    {
+        $start = now();
+
+        $end = match ($window) {
+            'today' => now()->endOfDay(),
+            'week' => now()->addWeek(),
+            'month' => now()->addMonth(),
+            default => null,
+        };
+
+        if ($end === null) {
+            return $query;
+        }
+
+        return $query->where('start_datetime', '>=', $start)
+            ->where('start_datetime', '<=', $end);
+    }
+
     public function getStatusBadgeColor(): string
     {
         return match ($this->status) {

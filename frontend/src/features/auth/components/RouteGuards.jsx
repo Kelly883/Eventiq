@@ -50,6 +50,22 @@ export const ProtectedRoute = ({ children, requiredRole = null, requiredRoles = 
     const userRoles = user?.roles?.map((r) => r.name) || [];
     const hasRequiredRole = requiredRoles.some((role) => userRoles.includes(role));
     if (!hasRequiredRole) {
+      const isCheckInRoute = location.pathname.startsWith('/check-in') || location.pathname.startsWith('/venue');
+      if (isCheckInRoute) {
+        return (
+          <div className="min-h-[60vh] flex items-center justify-center p-6 md:p-10 bg-slate-50">
+            <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 p-8 shadow-sm text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 border border-amber-100 text-2xl">🔒</div>
+              <h2 className="text-xl font-bold text-slate-900">Not Authorized</h2>
+              <p className="mt-2 text-sm text-slate-500">You don&apos;t have permission to access check-in. VenueStaff or Organizer role required.</p>
+              <div className="mt-6 flex justify-center gap-3">
+                <a href="/" className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">← Back to Home</a>
+                <a href="/dashboard" className="px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm">Go to Dashboard</a>
+              </div>
+            </div>
+          </div>
+        );
+      }
       return (
         <ToastRedirect
           to="/dashboard"

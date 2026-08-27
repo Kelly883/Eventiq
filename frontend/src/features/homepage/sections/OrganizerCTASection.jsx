@@ -17,7 +17,7 @@ const OrganizerCTASection = () => {
             Create an event
           </Link>
           <Link to="/organizer/events" className="btn-secondary">
-            Explore organizer tools
+            Organizer dashboard
           </Link>
         </div>
       </div>

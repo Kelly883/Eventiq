@@ -1,27 +1,45 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+// Map a selected search date to the coarse calendar window the backend supports
+// (today / week / month). Dates beyond a month are left unfiltered.
+const dateToWindow = (dateString) => {
+  if (!dateString) return null;
+  const selected = new Date(`${dateString}T00:00:00`);
+  if (Number.isNaN(selected.getTime())) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((selected - today) / 86400000);
+
+  if (diffDays <= 0) return 'today';
+  if (diffDays <= 7) return 'week';
+  if (diffDays <= 31) return 'month';
+  return null;
+};
+
 const SearchSection = () => {
   const [query, setQuery] = useState('');
   const [location, setLocation] = useState('');
   const [date, setDate] = useState('');
   const navigate = useNavigate();
 
+  // Submitting actually navigates to /events with real filter params, which
+  // EventBrowsePage turns into API calls. Previously this form only called
+  // preventDefault() and did nothing with anything the user typed or picked.
   const handleSearch = (e) => {
     e.preventDefault();
-    // Was previously just e.preventDefault() -- the entire search form
-    // (all three fields) collected input into state and then did nothing
-    // with it on submit. EventBrowsePage doesn't read these query params
-    // yet (a separate, larger gap -- it currently has no query-param-driven
-    // filtering at all), but landing there with search intent preserved in
-    // the URL is a real improvement over the button doing nothing, and is
-    // what that page needs to read once it supports it.
+
     const params = new URLSearchParams();
     if (query.trim()) params.set('q', query.trim());
     if (location.trim()) params.set('location', location.trim());
-    if (date.trim()) params.set('date', date.trim());
+
+    // A selected date maps onto the supported today/week/month windows.
+    const window = dateToWindow(date);
+    if (window) params.set('filter', window);
+
     const qs = params.toString();
-    navigate(qs ? `/events?${qs}` : '/events');
+    navigate(`/events${qs ? `?${qs}` : ''}`);
   };
 
   return (
@@ -62,8 +80,8 @@ const SearchSection = () => {
               <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
             <input
-              type="text"
-              placeholder="Any date"
+              type="date"
+              aria-label="Any date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className="search-input"
