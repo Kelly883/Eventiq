@@ -4,6 +4,10 @@ import { Link } from 'react-router-dom';
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const handleNavClick = () => {
+    setMobileMenuOpen(false);
+  };
+
   return (
     <header className="header">
       <div className="header-container">
@@ -33,6 +37,7 @@ const Header = () => {
           className="mobile-menu-btn"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label="Menu"
+          aria-expanded={mobileMenuOpen}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             {mobileMenuOpen ? (
@@ -50,12 +55,13 @@ const Header = () => {
 
       {mobileMenuOpen && (
         <nav className="mobile-menu">
-          <Link to="/events" className="mobile-nav-link">Discover</Link>
-          <Link to="/events/calendar" className="mobile-nav-link">Calendar</Link>
-          <Link to="/organizer/events/create" className="mobile-nav-link">For Organizers</Link>
+          <Link to="/events" className="mobile-nav-link" onClick={handleNavClick}>Discover</Link>
+          <Link to="/events/calendar" className="mobile-nav-link" onClick={handleNavClick}>Calendar</Link>
+          <Link to="/organizer/events/create" className="mobile-nav-link" onClick={handleNavClick}>For Organizers</Link>
+          <Link to="/trust" className="mobile-nav-link" onClick={handleNavClick}>Trust & Safety</Link>
           <div className="mobile-nav-actions">
-            <Link to="/login" className="btn-text">Sign in</Link>
-            <Link to="/register" className="btn-primary">Create account</Link>
+            <Link to="/login" className="btn-text" onClick={handleNavClick}>Sign in</Link>
+            <Link to="/register" className="btn-primary" onClick={handleNavClick}>Create account</Link>
           </div>
         </nav>
       )}

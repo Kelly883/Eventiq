@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { api } from '../../../lib/api';
+import { api, showToast } from '../../../lib/api';
 
 const NewsletterSection = () => {
   const [email, setEmail] = useState('');
@@ -20,6 +20,7 @@ const NewsletterSection = () => {
       await api.post('/newsletter/subscribe', { email });
       setStatus('success');
       setEmail('');
+      showToast('Subscribed', "You're on the list. We'll keep you updated.", 'success', 5000);
     } catch {
       setStatus('error');
     } finally {
