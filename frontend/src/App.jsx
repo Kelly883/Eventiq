@@ -67,6 +67,12 @@ const UserRefundRequestPage = lazy(() => import('./features/refunds/pages/UserRe
 const UserRefundStatusPage = lazy(() => import('./features/refunds/pages/UserRefundStatusPage'));
 const AdminRefundDashboardPage = lazy(() => import('./features/refunds/pages/AdminRefundDashboardPage'));
 const AdminPushTemplateManagementPage = lazy(() => import('./features/push-notifications/components/AdminPushTemplateManagementPage'));
+const TrustSafetyPage = lazy(() => import('./features/static-pages/pages/TrustSafetyPage'));
+const AboutPage = lazy(() => import('./features/static-pages/pages/AboutPage'));
+const ContactPage = lazy(() => import('./features/static-pages/pages/ContactPage'));
+const HelpPage = lazy(() => import('./features/static-pages/pages/HelpPage'));
+const RefundPolicyPage = lazy(() => import('./features/static-pages/pages/RefundPolicyPage'));
+const TermsPage = lazy(() => import('./features/static-pages/pages/TermsPage'));
 
 const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password', '/access-denied'];
 
@@ -426,6 +432,12 @@ function App() {
             <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
             <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
             <Route path="/access-denied" element={<AccessDeniedPage />} />
+            <Route path="/trust" element={<TrustSafetyPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/help" element={<HelpPage />} />
+            <Route path="/refund-policy" element={<RefundPolicyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             </Suspense>

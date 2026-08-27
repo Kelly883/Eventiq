@@ -9,11 +9,11 @@ const Footer = () => {
           <div className="footer-column">
             <h4 className="footer-heading">Discover</h4>
             <ul className="footer-links">
-              <li><Link to="/events">All Events</Link></li>
-              <li><Link to="/events?filter=week">This Week</Link></li>
-              <li><Link to="/events?filter=month">This Month</Link></li>
-              <li><Link to="/events?filter=nearby">Nearby Events</Link></li>
-              <li><Link to="/events?filter=popular">Popular Events</Link></li>
+              <li><Link to="/events">Events</Link></li>
+              <li><Link to="/events?category=concerts">Concerts</Link></li>
+              <li><Link to="/events?category=festivals">Festivals</Link></li>
+              <li><Link to="/events?category=comedy">Comedy</Link></li>
+              <li><Link to="/events?category=sports">Sports</Link></li>
             </ul>
           </div>
 
@@ -24,8 +24,6 @@ const Footer = () => {
               <li><Link to="/events?category=festivals">Festivals</Link></li>
               <li><Link to="/events?category=comedy">Comedy</Link></li>
               <li><Link to="/events?category=sports">Sports</Link></li>
-              <li><Link to="/events?category=conferences">Conferences</Link></li>
-              <li><Link to="/events?category=theatre">Theatre & Arts</Link></li>
             </ul>
           </div>
 
@@ -33,7 +31,7 @@ const Footer = () => {
             <h4 className="footer-heading">For Organizers</h4>
             <ul className="footer-links">
               <li><Link to="/organizer/events/create">Create an Event</Link></li>
-              <li><Link to="/organizer/events">Organizer Dashboard</Link></li>
+              <li><Link to="/dashboard/organizer">Organizer Dashboard</Link></li>
               <li><Link to="/organizer/payouts">Payouts</Link></li>
             </ul>
           </div>
@@ -41,10 +39,18 @@ const Footer = () => {
           <div className="footer-column">
             <h4 className="footer-heading">Account</h4>
             <ul className="footer-links">
-              <li><Link to="/my-tickets">My Tickets</Link></li>
-              <li><Link to="/settings">Settings</Link></li>
-              <li><Link to="/login">Sign In</Link></li>
-              <li><Link to="/register">Create Account</Link></li>
+              <li><Link to="/trust">Trust & Safety</Link></li>
+              <li><Link to="/refund-policy">Refund Policy</Link></li>
+              <li><Link to="/terms">Terms of Service</Link></li>
+            </ul>
+          </div>
+
+          <div className="footer-column">
+            <h4 className="footer-heading">Company</h4>
+            <ul className="footer-links">
+              <li><Link to="/about">About</Link></li>
+              <li><Link to="/contact">Contact Us</Link></li>
+              <li><Link to="/help">Help Center</Link></li>
             </ul>
           </div>
         </div>
