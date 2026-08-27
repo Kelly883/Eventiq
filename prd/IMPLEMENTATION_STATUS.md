@@ -76,3 +76,4 @@ Batch 331-340 auto
 Batch 341-345 auto — FINAL
 === PRD AUTO-COMPLETE ===
 All 345 build prompts audited serially. Status: COMPLETE (existing) / VERIFIED (existing) / IMPLEMENTED (missing only: accessibility + OfflineSync).
+VenueCheckInPage routing verification COMPLETE — all 7 checklist items verified (route guard, eventId param, auth redirect, role denial, back button, deep link, invalid event handling). Evidence documented above. No code changes required. PRD status updated.
