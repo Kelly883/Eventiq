@@ -8,6 +8,7 @@ import { useAuthContext } from './features/auth/context/AuthContext';
 import { api, showToast } from './lib/api';
 import './App.css';
 import './features/homepage/homepage.css';
+import Homepage from './features/homepage/Homepage';
 
 const SalesAnalyticsDashboardPage = lazy(() => import('./features/analytics/pages/SalesAnalyticsDashboardPage'));
 const DetailedAnalyticsPage = lazy(() => import('./features/analytics/pages/DetailedAnalyticsPage'));
@@ -27,7 +28,6 @@ const TicketStatusPage = lazy(() => import('./features/ticket-delivery/pages/Tic
 const DeliverySettingsPage = lazy(() => import('./features/ticket-delivery/pages/DeliverySettingsPage'));
 const AdminDeliveryDashboardPage = lazy(() => import('./features/ticket-delivery/pages/AdminDeliveryDashboardPage'));
 const AdminEmailTemplateManagementPage = lazy(() => import('./features/email-notifications/pages/AdminEmailTemplateManagementPage'));
-const Homepage = lazy(() => import('./features/homepage/Homepage'));
 const AdminRoleManagementPage = lazy(() => import('./features/roles/pages/AdminRoleManagementPage'));
 const UserPermissionsPage = lazy(() => import('./features/roles/pages/UserPermissionsPage'));
 const OrganizerPublicProfilePage = lazy(() => import('./features/organizer-profile/pages/OrganizerPublicProfilePage'));
@@ -61,6 +61,12 @@ const AdminLayout = lazy(() => import('./features/admin/components/AdminLayout')
 const DashboardLayout = lazy(() => import('./features/dashboard/components/DashboardLayout'));
 const AccessDeniedPage = lazy(() => import('./features/common').then(m => ({ default: m.AccessDeniedPage })));
 const MyOrganizerProfilePage = lazy(() => import('./features/organizer-profile/pages/MyOrganizerProfilePage'));
+const OrganizerPayoutDashboardPage = lazy(() => import('./features/payouts/pages/OrganizerPayoutDashboardPage'));
+const AdminSettlementDashboardPage = lazy(() => import('./features/payouts/pages/AdminSettlementDashboardPage'));
+const UserRefundRequestPage = lazy(() => import('./features/refunds/pages/UserRefundRequestPage'));
+const UserRefundStatusPage = lazy(() => import('./features/refunds/pages/UserRefundStatusPage'));
+const AdminRefundDashboardPage = lazy(() => import('./features/refunds/pages/AdminRefundDashboardPage'));
+const AdminPushTemplateManagementPage = lazy(() => import('./features/push-notifications/components/AdminPushTemplateManagementPage'));
 
 const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password', '/access-denied'];
 
@@ -167,8 +173,18 @@ const NAV_ITEMS = [
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
   },
   {
+    to: '/organizer/payouts',
+    label: '💰 Payouts',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
+  },
+  {
     to: '/admin/analytics',
     label: '📊 Analytics',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
+  },
+  {
+    to: '/admin/settlements/dashboard',
+    label: '💼 Settlements',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
   },
 ];
@@ -181,6 +197,7 @@ function App() {
   const isLoggedIn = Boolean(user);
   const roles = user?.roles?.map((r) => r.name) || [];
   const isAuthPage = AUTH_PAGES.some((path) => location.pathname === path);
+  const isHomepage = location.pathname === '/';
 
   // Session warning toast: show at 55s before auto-expire (60s interval)
   const [sessionWarningShown, setSessionWarningShown] = useState(false);
@@ -200,41 +217,57 @@ function App() {
   }, [user, sessionWarningShown]);
 
   useEffect(() => {
-    if (user && location.state?.from) {
-      const getRedirectPath = (to) => {
-        const userRoles = user?.roles?.map((r) => r.name) || [];
-        if (to === '/dashboard/organizer' && !userRoles.includes('organizer')) {
-          return '/dashboard';
-        }
-        if (to.startsWith('/admin/') && !userRoles.includes('admin')) {
-          return '/dashboard';
-        }
-        if (to.startsWith('/organizer/') && !userRoles.includes('organizer')) {
-          return '/dashboard';
-        }
-        return to;
-      };
+    if (!user || !location.state?.from) return;
+    // Don't hijack the homepage — if the user landed directly on "/",
+    // a stale `state.from` (e.g. from a previous protected-route redirect)
+    // would otherwise immediately bounce them to /analytics.
+    if (location.pathname === '/') return;
 
-      const safePath = getRedirectPath(location.state.from.pathname);
-      navigate(safePath, { replace: true });
-    }
-  }, [user, location.state?.from, navigate]);
+    const fromPath =
+      typeof location.state.from === 'string'
+        ? location.state.from
+        : location.state.from.pathname;
 
-  // Show banner when deep-link recovery is active
-  const recoveryBanner = user && location.state?.from ? (
-    <div
-      key="recovery-banner"
-      className="fixed top-0 left-0 right-0 z-50 bg-indigo-100 border-b border-indigo-200 p-4 text-indigo-800 shadow-sm animate-slide-in-down"
-      role="alert"
-    >
-      <div className="max-w-7xl mx-auto text-center">
-        <p className="text-sm font-medium">
-          <span className="font-bold">Remembering where you wanted to go&hellip;</span>
-          navigating back to {location.state.from.pathname}…
-        </p>
+    const getRedirectPath = (to) => {
+      const userRoles = user?.roles?.map((r) => r.name) || [];
+      if (to === '/dashboard/organizer' && !userRoles.includes('organizer')) {
+        return '/dashboard';
+      }
+      if (to.startsWith('/admin/') && !userRoles.includes('admin')) {
+        return '/dashboard';
+      }
+      if (to.startsWith('/organizer/') && !userRoles.includes('organizer')) {
+        return '/dashboard';
+      }
+      return to;
+    };
+
+    const safePath = getRedirectPath(fromPath);
+    // Avoid redirect loop when safePath is the current location
+    if (safePath === location.pathname) return;
+    navigate(safePath, { replace: true });
+  }, [user, location.state?.from, location.pathname, navigate]);
+
+  // Show banner when deep-link recovery is active — not on the homepage itself
+  const recoveryPath =
+    typeof location.state?.from === 'string'
+      ? location.state.from
+      : location.state?.from?.pathname;
+  const recoveryBanner =
+    user && location.state?.from && location.pathname !== '/' ? (
+      <div
+        key="recovery-banner"
+        className="fixed top-0 left-0 right-0 z-50 bg-indigo-100 border-b border-indigo-200 p-4 text-indigo-800 shadow-sm animate-slide-in-down"
+        role="alert"
+      >
+        <div className="max-w-7xl mx-auto text-center">
+          <p className="text-sm font-medium">
+            <span className="font-bold">Remembering where you wanted to go&hellip;</span>
+            navigating back to {recoveryPath}…
+          </p>
+        </div>
       </div>
-    </div>
-  ) : null;
+    ) : null;
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
@@ -249,8 +282,8 @@ function App() {
         </noscript>
         <ToastContainer />
         {recoveryBanner}
-        {/* Navigation Bar — hidden on auth pages */}
-        {!isAuthPage && (
+        {/* Navigation Bar — hidden on auth pages and homepage (homepage has its own Header) */}
+        {!isAuthPage && !isHomepage && (
           <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 shadow-sm backdrop-blur-md bg-white/90">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="flex h-16 items-center justify-between">
@@ -336,6 +369,8 @@ function App() {
               <Route path=":ticketId" element={<TicketDetailPage />} />
               <Route path=":ticketId/status" element={<TicketStatusPage />} />
               <Route path=":ticketId/delivery" element={<DeliveryStatusPage />} />
+              <Route path=":ticketId/refund-request" element={<UserRefundRequestPage />} />
+              <Route path=":ticketId/refund-status" element={<UserRefundStatusPage />} />
             </Route>
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
               <Route path="roles" element={<AdminRoleManagementPage />} />
@@ -343,6 +378,10 @@ function App() {
               <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />
               <Route path="analytics" element={<AdminAnalyticsPage />} />
               <Route path="settings/email-templates" element={<AdminEmailTemplateManagementPage />} />
+              <Route path="settings/push-templates" element={<AdminPushTemplateManagementPage />} />
+              <Route path="settlements/dashboard" element={<AdminSettlementDashboardPage />} />
+              <Route path="refunds" element={<AdminRefundDashboardPage />} />
+              <Route path="refunds/dashboard" element={<AdminRefundDashboardPage />} />
             </Route>
             <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
               <Route path="permissions" element={<UserPermissionsPage />} />
@@ -357,6 +396,7 @@ function App() {
               <Route path="organizer" element={<OrganizerDashboardPage />} />
               <Route index element={<UserDashboardPage />} />
             </Route>
+            <Route path="/organizer/payouts" element={<ProtectedRoute requiredRole="organizer"><OrganizerPayoutDashboardPage /></ProtectedRoute>} />
             <Route path="/organizer/events" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventListPage /></ProtectedRoute>} />
             <Route path="/organizer/events/create" element={<ProtectedRoute requiredRole="organizer"><EventCreatePage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventLayout /></ProtectedRoute>}>
