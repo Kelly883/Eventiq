@@ -1,17 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { NavLink, useLocation, Link } from 'react-router-dom';
+import React from 'react';
+import { NavLink, Link, useSearchParams } from 'react-router-dom';
 import {
   CheckInStatsDisplay,
   CheckInQRScanner,
   CheckInSearchBar,
 } from '../components';
 import { useOfflineSyncStore } from '../../offline/services/offlineSyncStore';
-import Skeleton from '../../../components/Skeleton';
-import EmptyState from '../../../components/EmptyState';
 import EventSelector from '../../analytics/components/EventSelector';
 
 const CheckInDashboardPage = () => {
-  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+  const eventId = searchParams.get('eventId');
   const isOnline = useOfflineSyncStore((state) => state.isOnline);
   const queue = useOfflineSyncStore((state) => state.queue);
   const history = useOfflineSyncStore((state) => state.history);
@@ -19,35 +18,7 @@ const CheckInDashboardPage = () => {
   const syncQueue = useOfflineSyncStore((state) => state.syncQueue);
   const clearSyncedHistory = useOfflineSyncStore((state) => state.clearSyncedHistory);
 
-  // Simulate initial config loading to showcase our reusable skeleton states
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsPageLoading(false);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isPageLoading) {
-    return (
-      <div className="space-y-8 max-w-7xl mx-auto p-6 md:p-10">
-        <div className="space-y-3">
-          <Skeleton variant="text" className="h-8 w-1/3" />
-          <Skeleton variant="text" className="h-4 w-1/2" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <Skeleton variant="text" className="h-24 rounded-2xl" count={3} />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <Skeleton variant="card" className="h-64" />
-          </div>
-          <div>
-            <Skeleton variant="list" count={4} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const withEventId = (path) => (eventId ? `${path}?eventId=${eventId}` : path);
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">
@@ -102,7 +73,7 @@ const CheckInDashboardPage = () => {
             </span>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Ticket Check-In Desk</h1>
             <p className="mt-1.5 text-sm text-slate-500">
-              Process attendee check-ins, view queue logs, and monitor attendance metrics offline or online.
+              Unified check-in — QR scan, manual entry, stats, export & history. For gate scanning, use the scanner tab.
             </p>
           </div>
           <div className="flex-shrink-0">
@@ -110,70 +81,33 @@ const CheckInDashboardPage = () => {
           </div>
         </div>
 
-        {/* Mode Selection Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Link
-            to="/venue-scan"
-            className="group p-5 bg-white border border-slate-200 rounded-xl hover:border-indigo-300 hover:shadow-md transition-all"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-indigo-100 rounded-xl group-hover:bg-indigo-200 transition-colors">
-                <span className="text-2xl">📷</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">
-                  Gate Scanner
-                </h3>
-                <p className="text-sm text-slate-500 mt-1">
-                  High-speed camera-based QR scanning for fast entry processing at venue gates.
-                </p>
-                <div className="flex items-center gap-2 mt-3">
-                  <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                    Camera Required
-                  </span>
-                  <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                    Fastest
-                  </span>
-                </div>
-              </div>
-              <svg className="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </Link>
-
-          <div className="p-5 bg-indigo-50 border-2 border-indigo-200 rounded-xl">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-indigo-200 rounded-xl">
-                <span className="text-2xl">⌨️</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-indigo-900">
-                  Check-In Desk
-                  <span className="ml-2 text-xs font-medium bg-indigo-600 text-white px-2 py-0.5 rounded-full">
-                    Current
-                  </span>
-                </h3>
-                <p className="text-sm text-slate-600 mt-1">
-                  Manual ticket entry, search, and stats tracking. Use this desk for customer service and lookups.
-                </p>
-                <div className="flex items-center gap-2 mt-3">
-                  <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
-                    No Camera Needed
-                  </span>
-                  <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                    Full Features
-                  </span>
-                </div>
-              </div>
-            </div>
+        {/* Sticky active event banner */}
+        {eventId && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-800">
+            <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
+            Checking in: <span className="font-bold">Event #{eventId}</span>
+            <span className="text-indigo-500">·</span>
+            <Link to="/check-in" className="text-indigo-600 hover:text-indigo-800 underline text-xs">Clear</Link>
           </div>
-        </div>
+        )}
+        {!eventId && (
+          <div className="px-4 py-2 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-800">
+            No event selected — choose an event above to filter stats, search & exports. Queue works offline regardless.
+          </div>
+        )}
 
-        {/* Navigation Tabs */}
+        {/* Event ended guard */}
+        {eventId === '4' && (
+          <div className="p-4 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-700 flex items-center justify-between">
+            <span>⚠️ This event has ended — check-ins are closed.</span>
+            <Link to="/events" className="text-indigo-600 hover:text-indigo-800 text-xs font-medium">Browse events →</Link>
+          </div>
+        )}
+
+        {/* Navigation Tabs — eventId preserved */}
         <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
           <NavLink
-            to="/check-in"
+            to={withEventId('/check-in')}
             end
             className={({ isActive }) =>
               `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -186,7 +120,7 @@ const CheckInDashboardPage = () => {
             Manual Entry
           </NavLink>
           <NavLink
-            to="/check-in/search"
+            to={withEventId('/check-in/search')}
             className={({ isActive }) =>
               `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive
@@ -198,7 +132,7 @@ const CheckInDashboardPage = () => {
             Search
           </NavLink>
           <NavLink
-            to="/check-in/stats"
+            to={withEventId('/check-in/stats')}
             className={({ isActive }) =>
               `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive
@@ -210,7 +144,7 @@ const CheckInDashboardPage = () => {
             Statistics
           </NavLink>
           <NavLink
-            to="/check-in/export"
+            to={withEventId('/check-in/export')}
             className={({ isActive }) =>
               `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive
@@ -222,7 +156,7 @@ const CheckInDashboardPage = () => {
             Export
           </NavLink>
           <NavLink
-            to="/check-in/history"
+            to={withEventId('/check-in/history')}
             className={({ isActive }) =>
               `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive
@@ -238,26 +172,27 @@ const CheckInDashboardPage = () => {
         {/* Metrics display */}
         <CheckInStatsDisplay total={150} checkedIn={35} />
 
-        {/* Core Layout Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Core Layout Grid — disabled when event ended */}
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-8 ${eventId === '4' ? 'opacity-50 pointer-events-none' : ''}`}>
           {/* Main scanner/manual input */}
           <div className="lg:col-span-2 space-y-6">
-            <CheckInQRScanner eventId={1} />
-            <CheckInSearchBar eventId={1} />
+            <CheckInQRScanner eventId={eventId ? Number(eventId) : 1} />
+            <CheckInSearchBar eventId={eventId ? Number(eventId) : 1} />
           </div>
 
           {/* Sync logs and recent checks side panel */}
           <div className="space-y-6">
             
-            {/* Sync Buffer Queue card */}
+            {/* Pending Sync Queue — offline scans awaiting upload */}
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
               <div className="flex items-center justify-between mb-4 border-b border-slate-50 pb-3">
                 <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                  <span>📥 Buffer Queue</span>
+                  <span>📥 Pending Sync Queue</span>
                   <span className="bg-amber-50 border border-amber-100 text-amber-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                    {queue.length} pending
+                    {queue.length} awaiting upload
                   </span>
                 </h3>
+                <span className="text-[10px] text-slate-400">offline scans</span>
               </div>
 
               {queue.length === 0 ? (
@@ -283,10 +218,10 @@ const CheckInDashboardPage = () => {
               )}
             </div>
 
-            {/* Recent History Scans card */}
+            {/* Recent Scans — synced & failed */}
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
               <div className="flex items-center justify-between mb-4 border-b border-slate-50 pb-3">
-                <h3 className="font-bold text-slate-800 text-sm">Scan Activity History</h3>
+                <h3 className="font-bold text-slate-800 text-sm">Recent Scans — synced & failed</h3>
                 {history.length > 0 && (
                   <button
                     onClick={clearSyncedHistory}

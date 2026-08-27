@@ -50,7 +50,10 @@ const EventSelector = ({ compact = false, showLabel = true }) => {
     if (currentPath.includes('/venue/check-in/')) {
       navigate(`/venue/check-in/${eventId}`);
     } else if (currentPath.includes('/check-in')) {
-      navigate(`/venue/check-in/${eventId}`);
+      const base = currentPath.split('?')[0];
+      const params = new URLSearchParams(location.search);
+      params.set('eventId', String(eventId));
+      navigate(`${base}?${params.toString()}`);
     }
   };
 
