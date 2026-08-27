@@ -157,4 +157,18 @@ class PublicEventBrowsingTest extends TestCase
         $this->assertNotContains('draft-only-category', $categories);
         $this->assertCount(2, $categories);
     }
+
+    public function test_index_is_rate_limited_to_30_per_minute_per_ip(): void
+    {
+        // event-ticketing-prd-export/pages/eventbrowsepage.md: "Rate limit
+        // 30/min per IP to prevent scraping" -- an explicit, named security
+        // requirement, not just a nice-to-have. Verifying the limiter is
+        // actually wired in and enforced, not just present in
+        // AppServiceProvider and silently unused.
+        for ($i = 0; $i < 30; $i++) {
+            $this->getJson('/api/events')->assertOk();
+        }
+
+        $this->getJson('/api/events')->assertStatus(429);
+    }
 }

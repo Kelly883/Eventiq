@@ -108,8 +108,13 @@ Route::get('/events/{event}/pricing', [PricingController::class, 'show']);
 // Public event discovery (homepage, anonymous browsing) -- was entirely
 // missing; frontend/src/features/homepage/hooks/useHomepageData.js has
 // been calling these paths already, every request 404ing invisibly.
-Route::get('/events', [PublicEventController::class, 'index']);
-Route::get('/categories', [PublicEventController::class, 'categories']);
+// event-ticketing-prd-export's EventBrowsePage/CategoryBrowsePage specs
+// both call for "Rate limit 30/min per IP to prevent scraping" -- applied
+// here via the 'discovery' limiter registered in AppServiceProvider.
+Route::middleware('throttle:discovery')->group(function () {
+    Route::get('/events', [PublicEventController::class, 'index']);
+    Route::get('/categories', [PublicEventController::class, 'categories']);
+});
 
 // Public organizer profile
 Route::get('/organizers/{organizer}', [OrganizerController::class, 'show']);
