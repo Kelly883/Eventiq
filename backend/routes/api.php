@@ -6,6 +6,7 @@ use App\Http\Controllers\OrganizerController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Organizer\EventController;
+use App\Http\Controllers\Public\EventController as PublicEventController;
 use App\Features\Ticketing\Controllers\EventTicketingController;
 use App\Features\Pricing\Controllers\PricingWindowController;
 use App\Features\Pricing\Controllers\PricingController;
@@ -103,6 +104,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Public event pricing (attendee)
 Route::get('/events/{event}/pricing', [PricingController::class, 'show']);
+
+// Public event discovery (homepage, anonymous browsing) -- was entirely
+// missing; frontend/src/features/homepage/hooks/useHomepageData.js has
+// been calling these paths already, every request 404ing invisibly.
+Route::get('/events', [PublicEventController::class, 'index']);
+Route::get('/categories', [PublicEventController::class, 'categories']);
 
 // Public organizer profile
 Route::get('/organizers/{organizer}', [OrganizerController::class, 'show']);

@@ -7,37 +7,21 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class OrganizerPublicResource extends JsonResource
 {
+    /**
+     * Was previously a flat, unconditional field dump identical in shape
+     * to OrganizerPrivateResource -- it exposed email, phone,
+     * commissionRate, and paymentDefault to every caller regardless of the
+     * organizer's own isPublic/emailPublic/phonePublic/hideBrandingColors/
+     * hideSocialLinks preferences, even though those exact flags exist on
+     * the model specifically to gate this. The model's own
+     * getPublicProfile() already implements this correctly (checked
+     * directly, not assumed) -- this resource just never called it.
+     * Delegating to it here instead of duplicating that logic a second
+     * time in a place that's already proven easy to let drift out of sync
+     * with the model.
+     */
     public function toArray(Request $request): array
     {
-        return [
-            'id' => $this->id,
-            'user_id' => $this->user_id,
-            'userId' => $this->userId,
-            'displayName' => $this->displayName,
-            'bio' => $this->bio,
-            'avatarUrl' => $this->avatarUrl,
-            'email' => $this->email,
-            'phone' => $this->phone,
-            'website' => $this->website,
-            'socialLinks' => $this->socialLinks,
-            'brandingColors' => $this->brandingColors,
-            'timezone' => $this->timezone,
-            'currency' => $this->currency,
-            'country' => $this->country,
-            'verificationStatus' => $this->verificationStatus,
-            'paymentDefault' => $this->paymentDefault,
-            'commissionRate' => $this->commissionRate,
-            'isPublic' => $this->isPublic,
-            'emailPublic' => $this->emailPublic,
-            'phonePublic' => $this->phonePublic,
-            'hideSocialLinks' => $this->hideSocialLinks,
-            'hideBrandingColors' => $this->hideBrandingColors,
-            'notificationPreferences' => $this->notificationPreferences,
-            'totalEventsCreated' => $this->totalEventsCreated,
-            'totalTicketsSold' => $this->totalTicketsSold,
-            'createdAt' => $this->created_at,
-            'updatedAt' => $this->updated_at,
-            'deletedAt' => $this->deletedAt,
-        ];
+        return $this->resource->getPublicProfile();
     }
 }

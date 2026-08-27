@@ -97,7 +97,19 @@ class Event extends Model
 
     public function ticketTiers(): HasMany
     {
-        return $this->hasMany(TicketTier::class)->touch('updated_at');
+        // Was previously `$this->hasMany(TicketTier::class)->touch('updated_at')`.
+        // Relation::touch() returns void and immediately executes a raw
+        // UPDATE against every related row as a side effect of just
+        // *defining* the relationship -- it isn't a fluent query-builder
+        // modifier. That meant calling ticketTiers() at all (directly, or
+        // via ->with('ticketTiers') eager loading) threw a fatal TypeError,
+        // since void can't satisfy this method's own `: HasMany` return
+        // type. The likely original intent -- touching the parent Event's
+        // updated_at whenever one of its ticket tiers changes -- is a
+        // separate Laravel feature entirely: TicketTier::$touches, set on
+        // the child model, not something the parent's relationship
+        // definition does.
+        return $this->hasMany(TicketTier::class);
     }
 
     public function pricingWindows(): HasMany

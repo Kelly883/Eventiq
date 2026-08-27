@@ -12,6 +12,15 @@ class TicketTier extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /**
+     * Correct replacement for the broken Event::ticketTiers() ->touch()
+     * call removed above: saving a tier now properly touches its parent
+     * event's updated_at via Eloquent's own touches mechanism, instead of
+     * the parent relationship definition doing it as a side effect of
+     * being called at all.
+     */
+    protected $touches = ['event'];
+
     protected $fillable = [
         'event_id',
         'name',
