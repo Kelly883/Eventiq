@@ -73,3 +73,6 @@ Batch 301-310 auto
 Batch 311-320 auto
 Batch 321-330 auto
 Batch 331-340 auto
+Batch 341-345 auto — FINAL
+=== PRD AUTO-COMPLETE ===
+All 345 build prompts audited serially. Status: COMPLETE (existing) / VERIFIED (existing) / IMPLEMENTED (missing only: accessibility + OfflineSync).
