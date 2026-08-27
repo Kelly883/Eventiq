@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Suspense, lazy } from 'react';
+import React, { useEffect, useState, Suspense, lazy, useRef } from 'react';
 import { Routes, Route, NavLink, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { LoadingSpinner, ErrorBoundary } from './features/common';
 import ToastContainer from './features/notifications/components/ToastContainer';
@@ -216,7 +216,7 @@ function App() {
     }
   }, [user, sessionWarningShown]);
 
-  const processedFromRef = useRef<string | null>(null);
+  const processedFromRef = useRef(null);
 
   useEffect(() => {
     if (!user || !location.state?.from) return;
@@ -245,7 +245,7 @@ function App() {
     const safePath = getRedirectPath(fromPath);
     if (safePath === location.pathname) return;
     navigate(safePath, { replace: true });
-  }, [user, location.state?.from, location.pathname, navigate]);
+  }, [user, location.state?.from, location.pathname, navigate, processedFromRef]);
 
   // Show banner when deep-link recovery is active — not on the homepage itself
   const recoveryPath =
