@@ -61,6 +61,12 @@ const AdminLayout = lazy(() => import('./features/admin/components/AdminLayout')
 const DashboardLayout = lazy(() => import('./features/dashboard/components/DashboardLayout'));
 const AccessDeniedPage = lazy(() => import('./features/common').then(m => ({ default: m.AccessDeniedPage })));
 const MyOrganizerProfilePage = lazy(() => import('./features/organizer-profile/pages/MyOrganizerProfilePage'));
+const OrganizerPayoutDashboardPage = lazy(() => import('./features/payouts/pages/OrganizerPayoutDashboardPage'));
+const AdminSettlementDashboardPage = lazy(() => import('./features/payouts/pages/AdminSettlementDashboardPage'));
+const UserRefundRequestPage = lazy(() => import('./features/refunds/pages/UserRefundRequestPage'));
+const UserRefundStatusPage = lazy(() => import('./features/refunds/pages/UserRefundStatusPage'));
+const AdminRefundDashboardPage = lazy(() => import('./features/refunds/pages/AdminRefundDashboardPage'));
+const AdminPushTemplateManagementPage = lazy(() => import('./features/push-notifications/components/AdminPushTemplateManagementPage'));
 
 const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password', '/access-denied'];
 
@@ -167,8 +173,18 @@ const NAV_ITEMS = [
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
   },
   {
+    to: '/organizer/payouts',
+    label: '💰 Payouts',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
+  },
+  {
     to: '/admin/analytics',
     label: '📊 Analytics',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
+  },
+  {
+    to: '/admin/settlements/dashboard',
+    label: '💼 Settlements',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
   },
 ];
@@ -353,6 +369,8 @@ function App() {
               <Route path=":ticketId" element={<TicketDetailPage />} />
               <Route path=":ticketId/status" element={<TicketStatusPage />} />
               <Route path=":ticketId/delivery" element={<DeliveryStatusPage />} />
+              <Route path=":ticketId/refund-request" element={<UserRefundRequestPage />} />
+              <Route path=":ticketId/refund-status" element={<UserRefundStatusPage />} />
             </Route>
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
               <Route path="roles" element={<AdminRoleManagementPage />} />
@@ -360,6 +378,10 @@ function App() {
               <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />
               <Route path="analytics" element={<AdminAnalyticsPage />} />
               <Route path="settings/email-templates" element={<AdminEmailTemplateManagementPage />} />
+              <Route path="settings/push-templates" element={<AdminPushTemplateManagementPage />} />
+              <Route path="settlements/dashboard" element={<AdminSettlementDashboardPage />} />
+              <Route path="refunds" element={<AdminRefundDashboardPage />} />
+              <Route path="refunds/dashboard" element={<AdminRefundDashboardPage />} />
             </Route>
             <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
               <Route path="permissions" element={<UserPermissionsPage />} />
@@ -374,6 +396,7 @@ function App() {
               <Route path="organizer" element={<OrganizerDashboardPage />} />
               <Route index element={<UserDashboardPage />} />
             </Route>
+            <Route path="/organizer/payouts" element={<ProtectedRoute requiredRole="organizer"><OrganizerPayoutDashboardPage /></ProtectedRoute>} />
             <Route path="/organizer/events" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventListPage /></ProtectedRoute>} />
             <Route path="/organizer/events/create" element={<ProtectedRoute requiredRole="organizer"><EventCreatePage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventLayout /></ProtectedRoute>}>
