@@ -47,3 +47,5 @@ Batch 021-030: ALL COMPLETE (revenue/admin/audit/offline/accessibility/api/payme
 Batch 100-109 status: 8/9 complete (OfflineSync added); step 106 AccessibilityPreference already done; committing...
 Batch 110-120 status: AUTOMATIC SCAN
 Batch 110-114: COMPLETE (auth/admin/user/org/event/ticket routes verified existing in backend routes/api.php)
+Batch 115-125 auto-scan start
+Batch 115-125: COMPLETE (pricing/analytics/dashboard/event/calendar/checkout/fraud/delivery/QR/check-in routes and React Router nav verified existing)
