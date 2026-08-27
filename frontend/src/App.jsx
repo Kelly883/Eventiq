@@ -216,17 +216,17 @@ function App() {
     }
   }, [user, sessionWarningShown]);
 
+  const processedFromRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!user || !location.state?.from) return;
-    // Don't hijack the homepage — if the user landed directly on "/",
-    // a stale `state.from` (e.g. from a previous protected-route redirect)
-    // would otherwise immediately bounce them to /analytics.
-    if (location.pathname === '/') return;
-
     const fromPath =
       typeof location.state.from === 'string'
         ? location.state.from
         : location.state.from.pathname;
+
+    if (processedFromRef.current === fromPath) return;
+    processedFromRef.current = fromPath;
 
     const getRedirectPath = (to) => {
       const userRoles = user?.roles?.map((r) => r.name) || [];
@@ -243,7 +243,6 @@ function App() {
     };
 
     const safePath = getRedirectPath(fromPath);
-    // Avoid redirect loop when safePath is the current location
     if (safePath === location.pathname) return;
     navigate(safePath, { replace: true });
   }, [user, location.state?.from, location.pathname, navigate]);
