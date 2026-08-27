@@ -20,7 +20,6 @@ const Header = () => {
           <Link to="/events" className="nav-link">Discover</Link>
           <Link to="/events/calendar" className="nav-link">Calendar</Link>
           <Link to="/organizer/events/create" className="nav-link">For Organizers</Link>
-          <Link to="/trust" className="nav-link">Trust & Safety</Link>
         </nav>
 
         <div className="nav-actions">

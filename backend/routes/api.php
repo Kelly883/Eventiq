@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Organizer\EventController;
 use App\Http\Controllers\Public\EventController as PublicEventController;
+use App\Http\Controllers\Public\NewsletterController;
 use App\Features\Ticketing\Controllers\EventTicketingController;
 use App\Features\Pricing\Controllers\PricingWindowController;
 use App\Features\Pricing\Controllers\PricingController;
@@ -114,6 +115,7 @@ Route::get('/events/{event}/pricing', [PricingController::class, 'show']);
 Route::middleware('throttle:discovery')->group(function () {
     Route::get('/events', [PublicEventController::class, 'index']);
     Route::get('/categories', [PublicEventController::class, 'categories']);
+    Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe']);
 });
 
 Route::post('/newsletter/subscribe', function (Illuminate\Http\Request $request) {

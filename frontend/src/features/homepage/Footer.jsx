@@ -18,6 +18,16 @@ const Footer = () => {
           </div>
 
           <div className="footer-column">
+            <h4 className="footer-heading">Categories</h4>
+            <ul className="footer-links">
+              <li><Link to="/events?category=concerts">Concerts</Link></li>
+              <li><Link to="/events?category=festivals">Festivals</Link></li>
+              <li><Link to="/events?category=comedy">Comedy</Link></li>
+              <li><Link to="/events?category=sports">Sports</Link></li>
+            </ul>
+          </div>
+
+          <div className="footer-column">
             <h4 className="footer-heading">For Organizers</h4>
             <ul className="footer-links">
               <li><Link to="/organizer/events/create">Create an Event</Link></li>
@@ -27,7 +37,7 @@ const Footer = () => {
           </div>
 
           <div className="footer-column">
-            <h4 className="footer-heading">Support</h4>
+            <h4 className="footer-heading">Account</h4>
             <ul className="footer-links">
               <li><Link to="/trust">Trust & Safety</Link></li>
               <li><Link to="/refund-policy">Refund Policy</Link></li>
