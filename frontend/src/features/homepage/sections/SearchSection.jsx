@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const SearchSection = () => {
   const [query, setQuery] = useState('');
   const [location, setLocation] = useState('');
   const [date, setDate] = useState('');
+  const navigate = useNavigate();
 
   const handleSearch = (e) => {
     e.preventDefault();
+    const params = new URLSearchParams();
+    if (query.trim()) params.set('q', query.trim());
+    if (location.trim()) params.set('location', location.trim());
+    if (date) params.set('date', date);
+    navigate(`/events?${params.toString()}`);
   };
 
   return (

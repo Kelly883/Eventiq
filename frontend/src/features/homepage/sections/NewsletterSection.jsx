@@ -1,14 +1,28 @@
 import React, { useState } from 'react';
+import { api, showToast } from '../../../lib/api';
 
 const NewsletterSection = () => {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (email) {
+    if (!email.trim()) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await api.post('/newsletter/subscribe', { email: email.trim() });
       setSubmitted(true);
       setEmail('');
+      showToast('Subscribed', "You're on the list. We'll keep you updated.", 'success', 5000);
+    } catch (err) {
+      setError('Something went wrong. Please try again later.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -31,10 +45,12 @@ const NewsletterSection = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 className="newsletter-input"
                 required
+                disabled={loading}
               />
-              <button type="submit" className="btn-notify">
-                Notify me
+              <button type="submit" className="btn-notify" disabled={loading}>
+                {loading ? 'Subscribing...' : 'Notify me'}
               </button>
+              {error && <p className="newsletter-error">{error}</p>}
             </form>
           )}
         </div>
