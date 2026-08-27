@@ -8,16 +8,6 @@ use App\Models\Event;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
-/**
- * Backs the homepage and any anonymous/public event browsing.
- * frontend/src/features/homepage/hooks/useHomepageData.js already called
- * GET /events (with ?sort=trending, ?sort=upcoming, ?limit=N) and
- * GET /categories -- neither route existed anywhere in this app, so every
- * homepage data fetch was a 404. Every section silently rendered nothing
- * (each one's isError/empty check returns null rather than throwing), so
- * the homepage never visibly errored -- it just never showed a single real
- * event, invisibly, since whenever those hooks were added.
- */
 class EventController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
@@ -45,18 +35,11 @@ class EventController extends Controller
             $query->byCategory($category);
         }
 
-        // Free-text search across title/description/venue/category. Both the
-        // homepage hero search and the browse page's query box share this.
-        // `search` is the canonical name used by the rest of the app; `q` is
-        // accepted as a short alias used by the homepage search form.
         $search = $request->query('search') ?: $request->query('q');
         if (is_string($search) && trim($search) !== '') {
             $query->search(trim($search));
         }
 
-        // QuickFilter time windows and the footer's coarse filters. No geo
-        // provider exists, so "nearby" is an honest proxy (nearest-upcoming
-        // default) rather than a fabricated geolocation result.
         $filter = $request->query('filter');
         if (is_string($filter) && $filter !== '') {
             if ($filter === 'popular') {
@@ -64,8 +47,6 @@ class EventController extends Controller
             } elseif (in_array($filter, ['today', 'week', 'month'], true)) {
                 $query->withinWindow($filter);
             }
-            // 'nearby' intentionally falls through to the existing order so it
-            // shows nearest-upcoming events without implying real geo support.
         }
 
         $events = $query->limit($limit)->get();
@@ -105,5 +86,20 @@ class EventController extends Controller
             ->values();
 
         return response()->json(['data' => $counts]);
+    }
+
+    /**
+     * GET /api/events/{event}
+     *
+     * PRD: discovery_endpoint_detail -- public event detail page.
+     * A visitor may only ever reach a published event (Event::published()).
+     */
+    public function show(Request $request, int $eventId): EventPublicResource
+    {
+        $event = Event::published()
+            ->with(['organizer', 'ticketTiers'])
+            ->findOrFail($eventId);
+
+        return new EventPublicResource($event);
     }
 }
