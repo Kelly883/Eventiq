@@ -41,3 +41,7 @@ PRD implementation session progress:
 - Accessibility (model/migration/controller/policy): COMPLETE (994ee7b)
 - Delivery resending / CheckIn controllers: VERIFIED EXISTING
 - Current HEAD: fd24157
+Batch 010-015 status: ALL COMPLETE (folders exist: events/ checkout/ fraud/ delivery/ dashboard/)
+Batch 016-020: ALL COMPLETE (qr/checkin/email/notifications/refund folders exist)
+Batch 021-030: ALL COMPLETE (revenue/admin/audit/offline/accessibility/api/payment/auth/query/upload folders exist)
+Batch 100-109 status: 8/9 complete (OfflineSync added); step 106 AccessibilityPreference already done; committing...
