@@ -434,13 +434,14 @@ function App() {
             <Route path="/organizer/profile/settings" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileSettingsPage /></ProtectedRoute>} />
             <Route path="/venue/events" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><VenueStaffEventsPage /></ProtectedRoute>} />
             <Route path="/venue/dashboard" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><VenueStaffDashboardPage /></ProtectedRoute>} />
+            <Route path="/venue/check-in" element={<Navigate to="/venue/events" replace />} />
             <Route path="/venue/check-in/:eventId" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><VenueCheckInPage /></ProtectedRoute>} />
             <Route path="/check-in" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInDashboardPage /></ProtectedRoute>} />
             <Route path="/check-in/search" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInSearchPage /></ProtectedRoute>} />
             <Route path="/check-in/stats" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInStatsPage /></ProtectedRoute>} />
             <Route path="/check-in/export" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInExportPage /></ProtectedRoute>} />
             <Route path="/check-in/history" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInHistoryPage /></ProtectedRoute>} />
-            <Route path="/venue-scan" element={<Navigate to="/check-in" replace />} />
+            <Route path="/venue-scan" element={<Navigate to="/venue/events" replace />} />
             <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
             <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
