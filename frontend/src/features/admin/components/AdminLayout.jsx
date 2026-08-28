@@ -7,6 +7,7 @@ const adminNavItems = [
   { to: '/admin/delivery/dashboard', label: 'Delivery', icon: '📦', description: 'Ticket delivery management', group: 'management' },
   { to: '/admin/analytics', label: 'Analytics', icon: '📊', description: 'Platform-wide analytics', group: 'management' },
   { to: '/admin/settings/email-templates', label: 'Email Templates', icon: '✉️', description: 'Manage notification templates', group: 'settings' },
+  { to: '/admin/settings/push-templates', label: 'Push Templates', icon: '📱', description: 'Manage push notification templates', group: 'settings' },
 ];
 
 const AdminLayout = () => {
