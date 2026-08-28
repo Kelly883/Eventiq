@@ -6,26 +6,26 @@ import TemplateEditor from '../components/TemplateEditor';
 import Skeleton from '../../../components/Skeleton';
 
 const fetchEmailTemplates = async () => {
-  const response = await api.get('/admin/email-templates');
+  const response = await api.get('/email-templates');
   return response.data?.data || response.data || [];
 };
 
 const saveEmailTemplate = async ({ id, content }) => {
-  const response = await api.put(`/admin/email-templates/${id}`, { content });
+  const response = await api.put(`/email-templates/${id}`, { content });
   return response.data?.data || response.data;
 };
 
 const createEmailTemplate = async ({ name, subject, key, content }) => {
-  const response = await api.post('/admin/email-templates', { name, subject, key, content });
+  const response = await api.post('/email-templates', { name, subject, key, content });
   return response.data?.data || response.data;
 };
 
 const deleteEmailTemplate = async (id) => {
-  await api.delete(`/admin/email-templates/${id}`);
+  await api.delete(`/email-templates/${id}`);
 };
 
 const duplicateEmailTemplate = async ({ id, name, subject, key, content }) => {
-  const response = await api.post('/admin/email-templates', { name, subject, key, content });
+  const response = await api.post('/email-templates', { name, subject, key, content });
   return response.data?.data || response.data;
 };
 
