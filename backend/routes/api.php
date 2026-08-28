@@ -63,6 +63,15 @@ require base_path('app/Features/Payment/Routes/api.php');
 require base_path('app/Features/OfflineSync/Routes/api.php');
 
 // Include API Keys routes
+
+// Include Accessibility routes
+require base_path('app/Features/Accessibility/Routes/api.php');
+
+// Include Localization routes
+
+// Include Developer portal routes
+require base_path('app/Features/ApiKeys/Routes/developer-api.php');
+require base_path('app/Features/Localization/Routes/api.php');
 require base_path('app/Features/ApiKeys/Routes/api.php');
 
 
