@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useSearchParams } from 'react-router-dom';
 import {
   CheckInStatsDisplay,
@@ -7,6 +7,7 @@ import {
 } from '../components';
 import { useOfflineSyncStore } from '../../offline/services/offlineSyncStore';
 import EventSelector from '../../analytics/components/EventSelector';
+import { api } from '../../../lib/api';
 
 const CheckInDashboardPage = () => {
   const [searchParams] = useSearchParams();

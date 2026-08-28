@@ -34,7 +34,7 @@ const OrganizerDashboardPage = () => {
 
   useEffect(() => {
     useDashboardPreferences().fetchEvents();
-  }, []);
+  }, [setExpandedEventId]);
 
   // Use real events from API — no hardcoded demo fallback
   const eventMap = events.length > 0

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useParams } from 'react-router-dom';
 import { api } from '../../../lib/api';
@@ -15,19 +15,15 @@ const TicketStatusPage = () => {
   // No mock data: the page shows an empty state until a real lookup succeeds.
   const [ticket, setTicket] = useState(null);
 
-  useEffect(() => {
-    if (ticketId) {
-      setSearchCode(ticketId);
-      fetchTicket(ticketId);
-    }
-  }, [ticketId]);
+  // No mock data: the page shows an empty state until a real lookup succeeds.
+  const [ticket, setTicket] = useState(null);
 
-  const showToast = (message, type = 'success') => {
+  const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
-  };
+  }, []);
 
-  const fetchTicket = async (code) => {
+  const fetchTicket = useCallback(async (code) => {
     if (!code?.trim()) {
       showToast('Please enter a valid ticket code.', 'error');
       return;
@@ -59,7 +55,21 @@ const TicketStatusPage = () => {
     } finally {
       setLoading(false);
     }
+  }, [showToast]);
+
+  useEffect(() => {
+    if (ticketId) {
+      setSearchCode(ticketId);
+      fetchTicket(ticketId);
+    }
+  }, [ticketId, fetchTicket]);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
   };
+
+
 
   const handleSearch = async (e) => {
     e.preventDefault();
