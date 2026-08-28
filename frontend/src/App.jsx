@@ -20,6 +20,8 @@ const CheckInStatsPage = lazy(() => import('./features/check-in/pages/CheckInSta
 const CheckInExportPage = lazy(() => import('./features/check-in/pages/CheckInExportPage'));
 const CheckInHistoryPage = lazy(() => import('./features/check-in/pages/CheckInHistoryPage'));
 const VenueCheckInPage = lazy(() => import('./features/qr-code-ticketing/pages/VenueCheckInPage'));
+const VenueStaffEventsPage = lazy(() => import('./features/venue-staff/pages/VenueStaffEventsPage'));
+const VenueStaffDashboardPage = lazy(() => import('./features/venue-staff/pages/VenueStaffDashboardPage'));
 const EventBrowsePage = lazy(() => import('./features/events/pages/EventBrowsePage'));
 const EventDetailPage = lazy(() => import('./features/events/pages/EventDetailPage'));
 const CategoryBrowsePage = lazy(() => import('./features/events/pages/CategoryBrowsePage'));
@@ -134,8 +136,18 @@ const NAV_ITEMS = [
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer', 'admin'),
   },
   {
+    to: '/venue/dashboard',
+    label: 'Venue Dashboard',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer', 'admin'),
+  },
+  {
+    to: '/venue/events',
+    label: 'Check-In Events',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer', 'admin'),
+  },
+  {
     to: '/venue-scan',
-    label: '📷 Gate Scanner',
+    label: 'Gate Scanner',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer', 'admin'),
   },
   {
@@ -420,6 +432,8 @@ function App() {
             <Route path="/organizer/profile" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileNotSetUpPage /></ProtectedRoute>} />
             <Route path="/organizer/profile/edit" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileEditPage /></ProtectedRoute>} />
             <Route path="/organizer/profile/settings" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileSettingsPage /></ProtectedRoute>} />
+            <Route path="/venue/events" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><VenueStaffEventsPage /></ProtectedRoute>} />
+            <Route path="/venue/dashboard" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><VenueStaffDashboardPage /></ProtectedRoute>} />
             <Route path="/venue/check-in/:eventId" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><VenueCheckInPage /></ProtectedRoute>} />
             <Route path="/check-in" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInDashboardPage /></ProtectedRoute>} />
             <Route path="/check-in/search" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInSearchPage /></ProtectedRoute>} />

@@ -79,3 +79,28 @@ All 345 build prompts audited serially. Status: COMPLETE (existing) / VERIFIED (
 VenueCheckInPage routing verification COMPLETE — all 7 checklist items verified (route guard, eventId param, auth redirect, role denial, back button, deep link, invalid event handling). Evidence documented above. No code changes required. PRD status updated.
 Navigation fix verified — /my-tickets already in NAV_ITEMS (App.jsx line ~148, visible when isLoggedIn). /dashboard has index UserDashboardPage + organizer sub-route. All three routes protected correctly. No code edit required — existing navigation complies with PRD schema (sidebar-checkout at order 2, /my-tickets nav item present).
 Navigation: intuitive for staff; tabs keep context; eventId preserves across pages. Missing: no explicit 'Event List' for venue staff (only check-in desk); staff must know eventId or navigate from event card. Edge case: event ending mid-check-in handled by dashboard disable (line 176 opacity-50 when eventId==='4' — seems mock/demo guard, not production). Recommendation: add /venue/events route for staff to select event easily.
+Fixing staff event list gap + event-end guard — flow by flow
+
+## Venue Staff Navigation (Flow-by-flow)
+**Status:** COMPLETE
+**Commit:** 02c1264
+
+**Added:**
+- `/venue/events` — `VenueStaffEventsPage` (event list with Start Check-In button)
+- `/venue/dashboard` — `VenueStaffDashboardPage` (stats cards + quick actions)
+- `VenueStaffLayout` component
+- `useVenueStaffDashboard` / `useVenueStaffCheckIn` hooks
+- Nav links added: "Venue Dashboard" and "Check-In Events" (role-gated: venue_staff/organizer/admin)
+- Lazy imports registered in App.jsx
+
+**Verified:**
+- App.jsx parses cleanly via esbuild (54ms)
+- All 4 new files bundle successfully (no import errors)
+- Routes protected by `ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}`
+- Imports corrected to use 3-level relative paths (`../../../components/...`)
+- Existing RouteGuards handles unauthorized with proper redirect to /access-denied
+
+**Role enforcement:** Test flow:
+- Logged out -> /login redirect
+- Regular user -> /access-denied
+- venue_staff/organizer/admin -> page loads
