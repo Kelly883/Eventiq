@@ -15,9 +15,6 @@ const TicketStatusPage = () => {
   // No mock data: the page shows an empty state until a real lookup succeeds.
   const [ticket, setTicket] = useState(null);
 
-  // No mock data: the page shows an empty state until a real lookup succeeds.
-  const [ticket, setTicket] = useState(null);
-
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
