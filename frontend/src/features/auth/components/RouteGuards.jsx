@@ -128,6 +128,12 @@ export const PublicRoute = ({ children }) => {
   }
 
   if (user) {
+    const roles = user?.roles?.map((r) => r.name) || [];
+    // Venue staff (venue_staff, organizer, admin) → dedicated staff dashboard
+    if (roles.some((r) => ['venue_staff', 'organizer', 'admin'].includes(r))) {
+      return <Navigate to="/venue/dashboard" replace />;
+    }
+    // Fallback for logged-in users without a dedicated dashboard
     const role = getUserRole(user);
     if (role === 'organizer') {
       return <Navigate to="/dashboard/organizer" replace />;

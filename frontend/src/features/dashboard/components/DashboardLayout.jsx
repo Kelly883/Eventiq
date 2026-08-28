@@ -118,32 +118,6 @@ const DashboardLayout = () => {
                 <span className="text-lg">📋</span>
                 <span>Check-In Events</span>
               </NavLink>
-              <NavLink
-                to="/check-in"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`
-                }
-              >
-                <span className="text-lg">🎟️</span>
-                <span>Check-In Desk</span>
-              </NavLink>
-              <NavLink
-                to="/venue/events"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`
-                }
-              >
-                <span className="text-lg">📷</span>
-                <span>Gate Scanner</span>
-              </NavLink>
             </>
           )}
         </nav>

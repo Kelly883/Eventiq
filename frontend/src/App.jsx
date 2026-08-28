@@ -146,11 +146,6 @@ const NAV_ITEMS = [
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer', 'admin'),
   },
   {
-    to: '/venue-scan',
-    label: 'Gate Scanner',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer', 'admin'),
-  },
-  {
     to: '/organizer/events',
     label: '📦 Events',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),

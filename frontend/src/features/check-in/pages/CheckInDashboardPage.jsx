@@ -85,7 +85,7 @@ const CheckInDashboardPage = () => {
             </span>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Ticket Check-In Desk</h1>
             <p className="mt-1.5 text-sm text-slate-500">
-              Unified check-in — QR scan, manual entry, stats, export & history. For gate scanning, use the scanner tab.
+              Unified check-in desk — scan QR codes, search attendees, view stats, export records & audit history. Select an event above to begin.
             </p>
           </div>
           <div className="flex-shrink-0">
@@ -184,12 +184,12 @@ const CheckInDashboardPage = () => {
         {/* Metrics display */}
         <CheckInStatsDisplay total={150} checkedIn={35} />
 
-        {/* Core Layout Grid — disabled when event ended */}
-        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-8 ${(eventDetails && eventDetails.status === 'ended') ? 'opacity-50 pointer-events-none' : ''}`}>
+        {/* Core Layout Grid — disabled when no event selected or event ended */}
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-8 ${!eventId || (eventDetails && eventDetails.status === 'ended') ? 'opacity-50 pointer-events-none' : ''}`}>
           {/* Main scanner/manual input */}
           <div className="lg:col-span-2 space-y-6">
-            <CheckInQRScanner eventId={eventId ? Number(eventId) : 1} />
-            <CheckInSearchBar eventId={eventId ? Number(eventId) : 1} />
+            <CheckInQRScanner eventId={eventId ? Number(eventId) : null} />
+            <CheckInSearchBar eventId={eventId ? Number(eventId) : null} />
           </div>
 
           {/* Sync logs and recent checks side panel */}
