@@ -247,7 +247,7 @@ function App() {
         return '/dashboard';
       }
       if (to.startsWith('/admin/') && !userRoles.includes('admin')) {
-        return '/dashboard';
+        return '/access-denied';
       }
       if (to.startsWith('/organizer/') && !userRoles.includes('organizer')) {
         return '/dashboard';
@@ -389,6 +389,7 @@ function App() {
               <Route path="fraud/dashboard" element={<FraudDetectionDashboardPage />} />
               <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />
               <Route path="analytics" element={<AdminAnalyticsPage />} />
+              <Route path="settings" element={<Navigate to="/admin/settings/email-templates" replace />} />
               <Route path="settings/email-templates" element={<AdminEmailTemplateManagementPage />} />
               <Route path="settings/push-templates" element={<AdminPushTemplateManagementPage />} />
               <Route path="settlements/dashboard" element={<AdminSettlementDashboardPage />} />
