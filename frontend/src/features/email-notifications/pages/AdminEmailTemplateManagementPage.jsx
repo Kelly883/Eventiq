@@ -1,14 +1,9 @@
 import React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../../lib/api';
-import { showToast } from '../../../lib/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { api, showToast } from '../../../lib/api';
+import { useEmailTemplates } from '../hooks/useEmailTemplates';
 import TemplateEditor from '../components/TemplateEditor';
 import Skeleton from '../../../components/Skeleton';
-
-const fetchEmailTemplates = async () => {
-  const response = await api.get('/email-templates');
-  return response.data?.data || response.data || [];
-};
 
 const saveEmailTemplate = async ({ id, content }) => {
   const response = await api.put(`/email-templates/${id}`, { content });
@@ -296,10 +291,7 @@ const UndoSnackbar = ({ message, onUndo, onDismiss, duration = UNDO_DURATION }) 
 
 const AdminEmailTemplateManagementPage = () => {
   const queryClient = useQueryClient();
-  const { data: templates, isLoading, isError, error } = useQuery({
-    queryKey: ['email-templates'],
-    queryFn: fetchEmailTemplates,
-  });
+  const { data: templates, isLoading, isError, error } = useEmailTemplates();
 
   const [selectedTemplate, setSelectedTemplate] = React.useState(null);
   const [mjmlContent, setMjmlContent] = React.useState('');
