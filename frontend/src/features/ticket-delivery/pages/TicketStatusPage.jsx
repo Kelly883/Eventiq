@@ -61,11 +61,6 @@ const TicketStatusPage = () => {
     }
   }, [ticketId, fetchTicket]);
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  };
-
 
 
   const handleSearch = async (e) => {
