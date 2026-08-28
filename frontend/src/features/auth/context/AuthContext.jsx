@@ -169,6 +169,12 @@ export const AuthProvider = ({ children }) => {
     };
 
     window.addEventListener('role-change', () => fetchCurrentUser());
+    window.addEventListener('session-expired', () => {
+      // Fired by api.ts when a 401 refresh fails — redirects to /login
+      setUser(null);
+      showToast('Session expired', 'Your session has ended. Please log in again.', 'warning');
+      window.location.href = '/login';
+    });
     window.addEventListener('storage', handleStorageEvent);
 
     if ('BroadcastChannel' in window) {

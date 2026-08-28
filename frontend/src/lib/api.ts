@@ -134,8 +134,12 @@ api.interceptors.response.use(
     }
 
     // CSRF refresh failed - session is truly expired
-    // The app should handle redirect-to-login via ProtectedRoute/toast
-    // We've already shown the toast above
+    // Dispatch session-expired event so AuthContext and app can redirect to login
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('session-expired', {
+        detail: { reason: 'csrf-refresh-failed' }
+      }));
+    }
     return Promise.reject(error);
   }
 );
