@@ -86,7 +86,7 @@ export const ProtectedRoute = ({ children, requiredRole = null, requiredRoles = 
   if (requiredRole === 'admin' && !checkAdminAccess()) {
     return (
       <ToastRedirect
-        to="/dashboard"
+        to="/access-denied"
         state={{
           deniedByRole: 'admin',
           attemptedPath: location.pathname,
