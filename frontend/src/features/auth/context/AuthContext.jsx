@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }) => {
           // Dispatch within same document
           window.dispatchEvent(new Event('role-change'));
           // Broadcast role-change to all tabs
-          if (BroadcastChannel) {
+          if ('BroadcastChannel' in window) {
             broadcastAuthEvent('role-change');
           }
         }
@@ -168,14 +168,20 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
-    window.addEventListener('role-change', () => fetchCurrentUser());
-    window.addEventListener('session-expired', () => {
-      // Fired by api.ts when a 401 refresh fails — redirects to /login
-      setUser(null);
-      showToast('Session expired', 'Your session has ended. Please log in again.', 'warning');
-      window.location.href = '/login';
-    });
-    window.addEventListener('storage', handleStorageEvent);
+    const handleRoleChange = () => {
+        fetchCurrentUser();
+      };
+
+      const handleSessionExpired = () => {
+        // Fired by api.ts when a 401 refresh fails — redirects to /login
+        setUser(null);
+        showToast('Session expired', 'Your session has ended. Please log in again.', 'warning');
+        window.location.href = '/login';
+      };
+
+      window.addEventListener('role-change', handleRoleChange);
+      window.addEventListener('session-expired', handleSessionExpired);
+        window.addEventListener('storage', handleStorageEvent);
 
     if ('BroadcastChannel' in window) {
       const channel = new BroadcastChannel('auth-sync');
@@ -183,13 +189,15 @@ export const AuthProvider = ({ children }) => {
       return () => {
         channel.close();
         window.removeEventListener('storage', handleStorageEvent);
-        window.removeEventListener('role-change', () => fetchCurrentUser());
+        window.removeEventListener('role-change', handleRoleChange);
+        window.removeEventListener('session-expired', handleSessionExpired);
       };
     }
 
     return () => {
       window.removeEventListener('storage', handleStorageEvent);
-      window.removeEventListener('role-change', () => fetchCurrentUser());
+      window.removeEventListener('role-change', handleRoleChange);
+        window.removeEventListener('session-expired', handleSessionExpired);
     };
   }, [fetchCurrentUser]);
 
