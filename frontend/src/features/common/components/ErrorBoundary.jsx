@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React from 'react';
 
 /**
  * Global Error Boundary — covers the entire React tree.
