@@ -11,12 +11,24 @@ import EventSelector from '../../analytics/components/EventSelector';
 const CheckInDashboardPage = () => {
   const [searchParams] = useSearchParams();
   const eventId = searchParams.get('eventId');
+  const [eventDetails, setEventDetails] = useState(null);
   const isOnline = useOfflineSyncStore((state) => state.isOnline);
   const queue = useOfflineSyncStore((state) => state.queue);
   const history = useOfflineSyncStore((state) => state.history);
   const isSyncing = useOfflineSyncStore((state) => state.isSyncing);
   const syncQueue = useOfflineSyncStore((state) => state.syncQueue);
   const clearSyncedHistory = useOfflineSyncStore((state) => state.clearSyncedHistory);
+
+  // Fetch event details for ended-status check
+  useEffect(() => {
+    if (!eventId) {
+      setEventDetails(null);
+      return;
+    }
+    api.get(`/events/${eventId}`)
+      .then((res) => setEventDetails(res.data?.data || res.data))
+      .catch(() => setEventDetails(null));
+  }, [eventId]);
 
   const withEventId = (path) => (eventId ? `${path}?eventId=${eventId}` : path);
 
@@ -97,7 +109,7 @@ const CheckInDashboardPage = () => {
         )}
 
         {/* Event ended guard */}
-        {eventId === '4' && (
+        {eventDetails && eventDetails.status === 'ended' && (
           <div className="p-4 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-700 flex items-center justify-between">
             <span>⚠️ This event has ended — check-ins are closed.</span>
             <Link to="/events" className="text-indigo-600 hover:text-indigo-800 text-xs font-medium">Browse events →</Link>
@@ -173,7 +185,7 @@ const CheckInDashboardPage = () => {
         <CheckInStatsDisplay total={150} checkedIn={35} />
 
         {/* Core Layout Grid — disabled when event ended */}
-        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-8 ${eventId === '4' ? 'opacity-50 pointer-events-none' : ''}`}>
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-8 ${(eventDetails && eventDetails.status === 'ended') ? 'opacity-50 pointer-events-none' : ''}`}>
           {/* Main scanner/manual input */}
           <div className="lg:col-span-2 space-y-6">
             <CheckInQRScanner eventId={eventId ? Number(eventId) : 1} />

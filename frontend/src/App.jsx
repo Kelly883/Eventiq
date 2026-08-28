@@ -131,8 +131,8 @@ const NAV_ITEMS = [
     visible: (isLoggedIn) => isLoggedIn,
   },
   {
-    to: '/check-in',
-    label: '🎟️ Check-In Desk',
+    to: '/venue/events',
+    label: '🎟️ Quick Check-In',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer', 'admin'),
   },
   {
