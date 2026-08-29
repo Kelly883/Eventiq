@@ -1,58 +1,37 @@
-/* Homepage visual refresh: intentional hierarchy, contrast, and mobile behavior. */
-    #root:has(.homepage) {
-    max-width: none;
-    margin: 0;
-    padding: 0;
-    text-align: left;
-    }
+/* Transparent over the hero. Becomes solid white when the .is-scrolled
+   class is toggled on (by Header.jsx via scroll threshold). */
+.homepage .header {
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: background 220ms cubic-bezier(.2, .8, .2, 1),
+              border-color 220ms cubic-bezier(.2, .8, .2, 1),
+              box-shadow 220ms cubic-bezier(.2, .8, .2, 1);
+}
+.homepage .header.is-scrolled {
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom-color: var(--color-border-subtle);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+  backdrop-filter: saturate(160%) blur(10px);
+  -webkit-backdrop-filter: saturate(160%) blur(10px);
+}
 
-    .homepage {
-    --color-primary: #ff5a5f;
-    --color-primary-hover: #e7474d;
-    --color-secondary: #35b7ae;
-    --color-bg: #fbfaf8;
-    --color-text: #1f2430;             /* design-system #333, slightly deeper
-                                          for AAA contrast on #F7F8FA bg */
-    --color-text-secondary: #6b7280;
-    --color-border-subtle: #e9e6e1;
-    width: 100%;
-    overflow: hidden;
-    background: var(--color-bg);
-    }
-
-    .homepage .header {
-    /* Transparent over the hero. Becomes solid white when the .is-scrolled
-       class is toggled on (by Header.jsx via IntersectionObserver). */
-    background: transparent;
-    border-bottom: 1px solid transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    transition: background 220ms cubic-bezier(.2, .8, .2, 1),
-                border-color 220ms cubic-bezier(.2, .8, .2, 1),
-                box-shadow 220ms cubic-bezier(.2, .8, .2, 1);
-    }
-    .homepage .header.is-scrolled {
-    background: rgba(255, 255, 255, 0.94);
-    border-bottom-color: var(--color-border-subtle);
-    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
-    backdrop-filter: saturate(160%) blur(10px);
-    -webkit-backdrop-filter: saturate(160%) blur(10px);
-    }
-
-    .homepage .logo,
-    .homepage .nav-link,
-    .homepage .btn-text,
-    .homepage .mobile-menu-btn {
-    color: #fff;
-    }
-    /* When the header is solid white (scrolled), invert the text so it reads
-       against the white surface, not the dark hero. */
-    .homepage .header.is-scrolled .logo,
-    .homepage .header.is-scrolled .nav-link,
-    .homepage .header.is-scrolled .btn-text,
-    .homepage .header.is-scrolled .mobile-menu-btn {
-    color: var(--color-text);
-    }
+/* Keep text visible against both header states */
+.homepage .logo,
+.homepage .nav-link,
+.homepage .btn-text,
+.homepage .mobile-menu-btn {
+  color: inherit;
+}
+/* When the header is solid white (scrolled), invert the text so it reads
+   against the white surface, not the dark hero. */
+.homepage .header.is-scrolled .logo,
+.homepage .header.is-scrolled .nav-link,
+.homepage .header.is-scrolled .btn-text,
+.homepage .header.is-scrolled .mobile-menu-btn {
+  color: var(--color-text);
+}
     .homepage .header.is-scrolled .btn-text:hover {
     color: var(--color-primary);
     }
