@@ -8,6 +8,7 @@ import { useAuthContext } from './features/auth/context/AuthContext';
 import { api, showToast } from './lib/api';
 import './App.css';
 import './features/homepage/homepage.css';
+import './features/homepage/homepage-refresh.css';
 import Homepage from './features/homepage/Homepage';
 
 const SalesAnalyticsDashboardPage = lazy(() => import('./features/analytics/pages/SalesAnalyticsDashboardPage'));
