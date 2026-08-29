@@ -29,6 +29,12 @@ const DashboardLayout = () => {
       icon: '💼',
       description: 'Events and analytics',
     });
+    dashboardNavItems.push({
+      to: '/organizer/payouts',
+      label: 'Payouts',
+      icon: '💰',
+      description: 'View and manage payouts and settlements',
+    });
   }
 
   if (isAdmin) {
@@ -37,6 +43,12 @@ const DashboardLayout = () => {
       label: 'Admin',
       icon: '🛡️',
       description: 'Platform management',
+    });
+    dashboardNavItems.push({
+      to: '/admin/settlements/dashboard',
+      label: 'Settlements',
+      icon: '📊',
+      description: 'View and manage platform settlements and refunds',
     });
   }
 
