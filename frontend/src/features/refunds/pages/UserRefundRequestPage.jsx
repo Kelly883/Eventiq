@@ -24,6 +24,7 @@ const UserRefundRequestPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [error, setError] = useState(null);
 
   const validateForm = () => {
     const newErrors = {};
@@ -156,7 +157,7 @@ const UserRefundRequestPage = () => {
 
       {showError && (
         <div className='p-4 bg-red-50 rounded-lg border border-red-200 mb-4'>
-          <p className='text-sm text-red-600'>{error.message}</p>
+          <p className='text-sm text-red-600'>{error}</p>
           <button onClick={handleErrorClose} className='ml-2 text-sm text-indigo-600 hover:underline'>Close</button>
         </div>
       )}
@@ -174,5 +175,8 @@ const UserRefundRequestPage = () => {
         </p>
       </div>
     </div>
-}
+  );
+};
+
+export default UserRefundRequestPage;
 

@@ -139,28 +139,6 @@ const CreateTemplateModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
               value={formData.key}
               onChange={handleChange('key')}
               placeholder="e.g., welcome_email"
-            {/* Helper text for key format */}
-            <p className="text-xs text-slate-500 mt-1">
-              Lowercase letters, numbers, and underscores only (e.g., welcome_email or order_confirmation)
-            </p>
-
-  {/* Template type guidance */}
-  {/* Template type guidance */}
-  const templateTypeHelp = (
-    <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-      <p className="text-xs font-medium text-slate-600 mb-1">Template Types</p>
-      <p className="text-xs text-slate-500">
-        Choose a template type that determines the structure and variables available:
-      </p>
-      <ul className="list-disc list-inside text-xs text-slate-400 space-y-0.5">
-        <li>order_confirmation - For order status updates with {{order.id}}, {{order.total}}, {{user.name}}</li>
-        <li>event_reminder - For event notifications with {{event.title}}, {{event.date}}, {{event.venue}}, {{user.name}}</li>
-        <li>ticket_confirmation - For ticket delivery with {{ticket.code}}, {{ticket.type}}, {{user.email}}</li>
-        <li>password_reset - For account recovery with {{user.email}}</li>
-      </ul>
-      <p className="text-xs text-indigo-600 mt-2"><strong>Tip:</strong> You can edit the MJML body to customize the layout for any type.</p>
-    </div>
-  )
               className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                 errors.key ? 'border-red-300' : 'border-slate-200'
               }`}

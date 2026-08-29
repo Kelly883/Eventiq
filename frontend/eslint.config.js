@@ -9,6 +9,7 @@ export default [
     ignores: [
       "dist",
       "node_modules",
+      "public/mockServiceWorker.js",
       // Type-declaration stubs written in TS/JSDoc-typedef syntax ahead of a
       // planned TS migration. They are intentionally outside the Vite build
       // graph (never imported at runtime) and cannot parse as plain JS.

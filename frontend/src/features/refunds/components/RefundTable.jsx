@@ -40,9 +40,10 @@ const RefundTable = ({ refunds, columns, onStatusUpdate, onBulkUpdate, onExport 
                       </div>
                     )}
                   </td>
-                )
-              )}
-            )}
+                );
+              })}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

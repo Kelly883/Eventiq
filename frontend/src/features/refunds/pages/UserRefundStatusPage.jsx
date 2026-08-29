@@ -101,9 +101,9 @@ const UserRefundStatusPage = () => {
             Refund #{refund.id} - {formatRefundStatus(refund.status)}
           </p>
         </div>
-      )
+      )}
 
-{refund && refund.status === 'rejected' && (
+      {refund && refund.status === 'rejected' && (
         <AppealModal
           isOpen={showAppeal}
           onClose={() => setShowAppeal(false)}
@@ -137,31 +137,33 @@ const UserRefundStatusPage = () => {
 
       {refund && refund.status === 'pending' && (
         <div className='mt-4 p-3 bg-indigo-50 rounded-lg border border-indigo-200'>
-          <p className='text-sm text-slate-700'>
+          <p className='text-sm text-slate-700 flex items-center'>
             <svg className='w-4 h-4 mr-2 inline-block text-indigo-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
               <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M8 7h.5a2 2 0 012 2v.5a2 2 0 01-2 2h-2v-2H8z' />
-              <span className='ml-2'>Typically processed within 5-7 business days. Status updates sent via email.</span>
             </svg>
+            <span className='ml-2'>Typically processed within 5-7 business days. Status updates sent via email.</span>
           </p>
         </div>
       )}
 
       {refund && refund.status === 'approved' && (
         <div className='mt-4 p-3 bg-green-50 rounded-lg border border-green-200'>
-          <p className='text-sm text-green-600'>
+          <p className='text-sm text-green-600 flex items-center'>
             <svg className='w-4 h-4 mr-2 inline-block text-green-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
               <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 13l4 4L2 12l3.5-3.5L7.5 6l-2.5 5L12 1l3.5 3.5L15 6l-2.5 5L19.5 6l3.5 3.5L12 1l-3.5 3.5L8.5 6L5 13z' />
-              <span className='ml-2'>Refund approved! Expect 3-5 business days for funds to appear in your account.</span>
+            </svg>
+            <span className='ml-2'>Refund approved! Expect 3-5 business days for funds to appear in your account.</span>
           </p>
         </div>
       )}
 
       {refund && refund.status === 'completed' && (
         <div className='mt-4 p-3 bg-green-50 rounded-lg border border-green-200'>
-          <p className='text-sm text-green-600'>
+          <p className='text-sm text-green-600 flex items-center'>
             <svg className='w-4 h-4 mr-2 inline-block text-green-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
               <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 13l4 4L2 12l3.5-3.5L7.5 6l-2.5 5L12 1l3.5 3.5L15 6l-2.5 5L19.5 6l3.5 3.5L12 1l-3.5 3.5L8.5 6L5 13z' />
-              <span className='ml-2'>Refund completed! Funds have been transferred to your account.</span>
+            </svg>
+            <span className='ml-2'>Refund completed! Funds have been transferred to your account.</span>
           </p>
           <p className='text-xs text-slate-500 mt-1'>Actual completion date: {refund.processedAt ? new Date(refund.processedAt).toLocaleDateString() : 'N/A'}</p>
         </div>
@@ -175,5 +177,7 @@ const UserRefundStatusPage = () => {
         </div>
       )}
     </div>
-  ))
-}
+  );
+};
+
+export default UserRefundStatusPage;

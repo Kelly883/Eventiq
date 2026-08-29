@@ -51,9 +51,7 @@ const AdminRefundDashboardPage = () => {
     if (!checkAdminAccess()) {
       navigate('/admin/refunds/dashboard'); // Stay on page
       return;
-    },
-    [navigate]
-}
+    }
 
     // Fetch admin refund data
     // In production, this would be:
@@ -128,7 +126,7 @@ const AdminRefundDashboardPage = () => {
       approvalRate: parseFloat(approvalRate),
       averageProcessingTime: avgTime,
     });
-  }, [checkAdminAccess]);
+  }, [checkAdminAccess, navigate]);
 
   // Handle status update
   const handleStatusUpdate = async (refundId, newStatus, reason) => {
