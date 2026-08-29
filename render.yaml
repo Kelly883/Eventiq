@@ -78,9 +78,13 @@ services:
       npm run build
     staticPublishPath: ./frontend/dist
     headers:
-      - path: /*
+      # index.html must NEVER be cached by the browser or CDN. A stale
+      # index.html references asset hashes that no longer exist after a
+      # deploy (Render replaces the whole dist folder), which produces a
+      # 404 on the JS bundle and a permanent white page for the user.
+      - path: /index.html
         name: Cache-Control
-        value: public, max-age=0, must-revalidate
+        value: no-cache, no-store, must-revalidate
       - path: /assets/*
         name: Cache-Control
         value: public, max-age=31536000, immutable

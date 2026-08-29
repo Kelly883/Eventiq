@@ -1,0 +1,8 @@
+# SPA fallback — all routes serve /index.html so React Router handles
+# client-side routing. This is the standard Netlify/Cloudflare/Render
+# compatible rewrite baked into the build output. Without it, deep links
+# like /events or /venue/check-in/123 return HTTP 404 from the static host.
+#
+# Order matters: rules are evaluated top-down, first match wins.
+#   200 = rewrite and serve with HTTP 200.
+/*    /index.html   200

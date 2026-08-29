@@ -1,31 +1,31 @@
 import React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../../lib/api';
-import { showToast } from '../../../lib/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { api, showToast } from '../../../lib/api';
+import { useEmailTemplates } from '../hooks/useEmailTemplates';
 import TemplateEditor from '../components/TemplateEditor';
 import Skeleton from '../../../components/Skeleton';
 
-const fetchEmailTemplates = async () => {
-  const response = await api.get('/admin/email-templates');
-  return response.data?.data || response.data || [];
-};
-
 const saveEmailTemplate = async ({ id, content }) => {
-  const response = await api.put(`/admin/email-templates/${id}`, { content });
+  const response = await api.put(`/email-templates/${id}`, { content });
   return response.data?.data || response.data;
 };
 
 const createEmailTemplate = async ({ name, subject, key, content }) => {
-  const response = await api.post('/admin/email-templates', { name, subject, key, content });
+  const response = await api.post('/email-templates', { name, subject, key, content });
   return response.data?.data || response.data;
 };
 
 const deleteEmailTemplate = async (id) => {
-  await api.delete(`/admin/email-templates/${id}`);
+  await api.delete(`/email-templates/${id}`);
+};
+
+const sendTestEmail = async ({ id, email }) => {
+  const response = await api.post(`/email-templates/${id}/send-test`, { email });
+  return response.data;
 };
 
 const duplicateEmailTemplate = async ({ id, name, subject, key, content }) => {
-  const response = await api.post('/admin/email-templates', { name, subject, key, content });
+  const response = await api.post('/email-templates', { name, subject, key, content });
   return response.data?.data || response.data;
 };
 
@@ -174,6 +174,85 @@ const CreateTemplateModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
   );
 };
 
+const SendTestModal = ({ isOpen, onClose, onSend, templateName, isLoading }) => {
+  const [email, setEmail] = React.useState('');
+  const [error, setError] = React.useState('');
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setError('Email address is required');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    setError('');
+    onSend(email.trim());
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-indigo-100 rounded-full">
+              <svg className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900">Send Test Email</h3>
+              <p className="text-sm text-slate-500">Verify how "{templateName}" renders in a real inbox.</p>
+            </div>
+          </div>
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Recipient email address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                placeholder="test@example.com"
+                autoFocus
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                  error ? 'border-red-300' : 'border-slate-200'
+                }`}
+              />
+              {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+              <p className="mt-1.5 text-xs text-slate-500">
+                The template will be rendered with sample data and sent to this address.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                {isLoading ? 'Sending...' : 'Send Test Email'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, templateName, isLoading }) => {
   if (!isOpen) return null;
 
@@ -296,10 +375,7 @@ const UndoSnackbar = ({ message, onUndo, onDismiss, duration = UNDO_DURATION }) 
 
 const AdminEmailTemplateManagementPage = () => {
   const queryClient = useQueryClient();
-  const { data: templates, isLoading, isError, error } = useQuery({
-    queryKey: ['email-templates'],
-    queryFn: fetchEmailTemplates,
-  });
+  const { data: templates, isLoading, isError, error } = useEmailTemplates();
 
   const [selectedTemplate, setSelectedTemplate] = React.useState(null);
   const [mjmlContent, setMjmlContent] = React.useState('');
@@ -307,6 +383,7 @@ const AdminEmailTemplateManagementPage = () => {
   const [showCreateModal, setShowCreateModal] = React.useState(false);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [showPreviewModal, setShowPreviewModal] = React.useState(false);
+  const [showSendTestModal, setShowSendTestModal] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [deletedTemplate, setDeletedTemplate] = React.useState(null);
   const [showUndo, setShowUndo] = React.useState(false);
@@ -379,6 +456,25 @@ const AdminEmailTemplateManagementPage = () => {
     },
     onError: () => {
       showToast('Restore failed', 'Failed to restore template. Please try again.', 'error');
+    },
+  });
+
+  const sendTestMutation = useMutation({
+    mutationFn: sendTestEmail,
+    onSuccess: () => {
+      showToast(
+        'Test email sent',
+        `A test email has been sent to the provided address.`,
+        'success'
+      );
+      setShowSendTestModal(false);
+    },
+    onError: (err) => {
+      showToast(
+        'Send failed',
+        err?.response?.data?.message || 'Failed to send test email. Please try again.',
+        'error'
+      );
     },
   });
 
@@ -644,6 +740,14 @@ const AdminEmailTemplateManagementPage = () => {
 
               <div className="mt-4 flex items-center justify-end gap-3">
                 <button
+                  onClick={() => setShowSendTestModal(true)}
+                  disabled={!selectedTemplate}
+                  title={!selectedTemplate ? 'Select a template first' : 'Send a test email to verify this template renders correctly'}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium rounded-lg transition-colors"
+                >
+                  Send Test Email
+                </button>
+                <button
                   onClick={handleSave}
                   disabled={!hasChanges || saveMutation.isPending}
                   title={!hasChanges ? 'No changes to save' : 'Save your changes'}
@@ -685,6 +789,16 @@ const AdminEmailTemplateManagementPage = () => {
         onClose={() => setShowPreviewModal(false)}
         content={mjmlContent}
         templateName={selectedTemplate?.name}
+      />
+
+      <SendTestModal
+        isOpen={showSendTestModal}
+        onClose={() => setShowSendTestModal(false)}
+        onSend={(email) =>
+          sendTestMutation.mutate({ id: selectedTemplate.id, email })
+        }
+        templateName={selectedTemplate?.name}
+        isLoading={sendTestMutation.isPending}
       />
 
       {showUndo && deletedTemplate && (

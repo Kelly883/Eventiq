@@ -9,7 +9,7 @@ const AccessDeniedPage = ({ title = 'Access Denied', message = 'You do not have 
   const handleGoBack = () => {
     const from = location.state?.from;
     if (from) {
-      navigate('/dashboard/organizer', { replace: true });
+      navigate('/dashboard', { replace: true });
     } else {
       navigate(-1);
     }
@@ -41,7 +41,7 @@ const AccessDeniedPage = ({ title = 'Access Denied', message = 'You do not have 
             ← Go Back
           </button>
           <button
-            onClick={() => navigate('/dashboard/organizer')}
+            onClick={() => navigate('/dashboard')}
             className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors"
           >
             Dashboard

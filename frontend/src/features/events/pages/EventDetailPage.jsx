@@ -47,7 +47,7 @@ const EventDetailPage = () => {
     } else if (event) {
       setBreadcrumb(['Events', event.name || event.title || `Event #${eventId}`]);
     }
-  }, [eventId, location]);
+  }, [eventId, location, event]);
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">

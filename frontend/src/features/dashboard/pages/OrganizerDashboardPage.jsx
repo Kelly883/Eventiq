@@ -28,13 +28,13 @@ const OrganizerDashboardPage = () => {
     if (deepEventId && expandedEventId !== parseInt(deepEventId, 10)) {
       setExpandedEventId(parseInt(deepEventId, 10));
     }
-  }, [location.search, expandedEventId]);
+  }, [location.search, expandedEventId, setExpandedEventId]);
 
   const { events } = useDashboardPreferences();
 
   useEffect(() => {
     useDashboardPreferences().fetchEvents();
-  }, []);
+  }, [setExpandedEventId]);
 
   // Use real events from API — no hardcoded demo fallback
   const eventMap = events.length > 0

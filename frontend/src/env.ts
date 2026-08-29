@@ -1,12 +1,17 @@
-// Environment validation — fail fast in production.
+// Runtime environment validation — DEGRADES GRACEFULLY.
 //
-// Required environment variables are checked at build time so that a
-// missing or malformed config never silently results in a blank page
-// at runtime. The error identifies the variable name but never exposes
-// its value.
+// NOTE: a `throw` at import time here is fatal to the whole SPA — main.jsx
+// imports this module first, so an exception produces a permanent white page
+// for every visitor. Vite/Rollup does NOT execute modules during `vite build`,
+// so a throw never actually failed the deployment pipeline the way the old
+// "fail fast" comment intended; it only crashed the browser at runtime.
 //
-// This file is imported early in the bootstrap process (via main.jsx)
-// so the build aborts before a deployable bundle is produced.
+// The real, effective build-time gate now lives in `vite.config.js`
+// (loadEnv + hard error when VITE_API_BASE_URL is missing for a production
+// build). This runtime check is the LAST LINE OF DEFENSE: if a misconfigured
+// bundle ever ships anyway, the public site still renders (data sections show
+// error/empty states) and the misconfiguration is surfaced in the console and
+// via `window.__eiMissingEnvVars__` for diagnostics — never a blank page.
 
 const requiredInProd: Record<string, string> = {
   // Production API base URL — must be a fully-qualified HTTPS URL.
@@ -15,25 +20,50 @@ const requiredInProd: Record<string, string> = {
 
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export default class EnvValidator {
-  static validate() {
-    // import.meta.env is only available inside Vite's transform context
-    // (client code and build). When this file is loaded outside that
-    // context the guard prevents a crash.
+  static missing(): string[] {
     const meta = import.meta as any;
-    if (meta.env?.PROD) {
-      for (const key of Object.keys(requiredInProd)) {
-        const value: string | undefined = meta.env[key];
+    if (!meta.env?.PROD) {
+      return [];
+    }
 
-        if (!value) {
-          throw new Error(
-            `Missing required environment variable: ${key}. Production API base URL is required.`,
-          );
-        }
+    const missing: string[] = [];
+    for (const key of Object.keys(requiredInProd)) {
+      const value: string | undefined = meta.env[key];
+      if (!value) {
+        missing.push(key);
       }
     }
-    // In development, we do not enforce — developers may use local URLs.
+    return missing;
+  }
+
+  static validate(): void {
+    const missing = EnvValidator.missing();
+
+    if (!missing.length) {
+      return;
+    }
+
+    // Never throw — keep the app renderable. Surface the problem loudly.
+    const message =
+      `Missing required environment ${missing.length === 1 ? 'variable' : 'variables'}: ` +
+      `${missing.join(', ')}. Without a valid API base URL, live data will not load. ` +
+      `Rebuild with VITE_API_BASE_URL set (see vite.config.js).`;
+
+    // eslint-disable-next-line no-console
+    console.warn('[env] ' + message);
+
+    if (typeof window !== 'undefined') {
+      try {
+        (window as any).__eiMissingEnvVars__ = missing;
+      } catch {
+        // ignore — diagnostics only
+      }
+    }
   }
 }
 
 // Auto-validate on import when running under Vite/build.
 EnvValidator.validate();
+
+// Simple named export so consuming modules can also check at runtime.
+export { EnvValidator };

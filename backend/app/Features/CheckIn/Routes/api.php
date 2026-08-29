@@ -9,5 +9,8 @@ Route::middleware('auth:sanctum')->prefix('venue')->group(function () {
     Route::post('/check-in', [VenueCheckInController::class, 'store']);
     Route::get('/check-ins', [CheckInController::class, 'index']);
     Route::get('/check-ins/search', [CheckInController::class, 'search']);
+    Route::get('/check-ins/stats', [CheckInController::class, 'stats']);
+    Route::get('/check-ins/export', [CheckInController::class, 'export']);
+    Route::get('/check-ins/history', [CheckInController::class, 'history']);
     Route::get('/check-ins/{ticket}', [CheckInController::class, 'show']);
 });

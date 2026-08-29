@@ -93,7 +93,7 @@ const DashboardLayout = () => {
                 </span>
               </div>
               <NavLink
-                to="/check-in"
+                to="/venue/dashboard"
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isActive
@@ -102,11 +102,11 @@ const DashboardLayout = () => {
                   }`
                 }
               >
-                <span className="text-lg">🎟️</span>
-                <span>Check-In Desk</span>
+                <span className="text-lg">🎯</span>
+                <span>Venue Dashboard</span>
               </NavLink>
               <NavLink
-                to="/venue-scan"
+                to="/venue/events"
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isActive
@@ -115,8 +115,8 @@ const DashboardLayout = () => {
                   }`
                 }
               >
-                <span className="text-lg">📷</span>
-                <span>Gate Scanner</span>
+                <span className="text-lg">📋</span>
+                <span>Check-In Events</span>
               </NavLink>
             </>
           )}

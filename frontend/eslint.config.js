@@ -33,6 +33,25 @@ export default [
     },
   },
   {
+    // Build / config files run in Node, not the browser. `process`,
+    // `__dirname`, etc. are valid globals here (esp. vite.config.js
+    // which reads process.cwd() for loadEnv).
+    files: ["vite.config.js", "*.config.js"],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: {
+        ...globals.node,
+      },
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+      },
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+    },
+  },
+  {
     files: ["**/*.{js,jsx}"],
     ignores: ["public/firebase-messaging-sw.js"],
     languageOptions: {

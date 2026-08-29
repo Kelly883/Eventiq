@@ -21,7 +21,7 @@ const CheckoutPage = () => {
         navigate('/cart', { replace: true });
       }, 1500);
     }
-  }, []);
+  }, [navigate]);
 
   if (error) {
     return (

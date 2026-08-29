@@ -235,4 +235,142 @@ class CheckInController extends Controller
             'query' => $search,
         ]);
     }
+
+    /**
+
+    /**
+     * Real-time check-in statistics for an event.
+     *
+     * GET /api/venue/check-ins/stats
+     */
+    public function stats(Request $request)
+    {
+        $this->authorizeVenueStaff($request->user());
+
+        $eventId = $request->query('event_id');
+
+        $query = CheckInTicket::query();
+        $query = $this->scopeToAccessibleEvents($query, $request->user());
+
+        if ($eventId) {
+            $query->byEvent($eventId);
+        }
+
+        $total = (clone $query)->count();
+        $checkedIn = (clone $query)->where('status', 'checked_in')->count();
+        $remaining = max(0, $total - $checkedIn);
+        $rate = $total > 0 ? round(($checkedIn / $total) * 100, 1) : 0;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total' => $total,
+                'checked_in' => $checkedIn,
+                'remaining' => $remaining,
+                'rate' => $rate,
+            ],
+        ]);
+    }
+
+    /**
+     * Export check-in records as CSV or JSON.
+     *
+     * GET /api/venue/check-ins/export
+     */
+    public function export(Request $request)
+    {
+        $this->authorizeVenueStaff($request->user());
+
+        $eventId = $request->query('event_id');
+        $format = $request->query('format', 'csv');
+
+        if (!in_array($format, ['csv', 'json'])) {
+            return response()->json(['success' => false, 'message' => 'Invalid format. Use csv or json.'], 422);
+        }
+
+        $query = CheckInTicket::query()->with(['event', 'user']);
+        $query = $this->scopeToAccessibleEvents($query, $request->user());
+
+        if ($eventId) {
+            $query->byEvent($eventId);
+        }
+
+        $tickets = $query->orderBy('created_at', 'desc')->get();
+
+        if ($format === 'json') {
+            return response()->json([
+                'success' => true,
+                'data' => TicketResource::collection($tickets),
+                'exported_at' => now()->toIso8601String(),
+            ]);
+        }
+
+        // CSV export
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="check-in-export.csv"',
+        ];
+
+        $callback = function () use ($tickets) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, [
+                'ticket_id', 'attendee_name', 'attendee_email',
+                'event_name', 'status', 'checked_in_at',
+                'checked_in_by', 'created_at',
+            ]);
+            foreach ($tickets as $ticket) {
+                fputcsv($handle, [
+                    $ticket->ticket_id,
+                    $ticket->attendee_name ?? '',
+                    $ticket->attendee_email ?? '',
+                    $ticket->event?->name ?? '',
+                    $ticket->status,
+                    $ticket->checked_in_at ?? '',
+                    $ticket->checked_in_by ?? '',
+                    $ticket->created_at?->toIso8601String() ?? '',
+                ]);
+            }
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Audit log of all check-in actions.
+     *
+     * GET /api/venue/check-ins/history
+     */
+    public function history(Request $request)
+    {
+        $this->authorizeVenueStaff($request->user());
+
+        $eventId = $request->query('event_id');
+        $perPage = min((int) $request->query('per_page', 50), 200);
+
+        $query = AuditLog::query()
+            ->with(['user'])
+            ->where('action', '!=', 'fraud_suspected');
+
+        if (!$request->user()->hasRole('admin')) {
+            $query->whereHas('event.organizer', fn ($q) => $q->where('user_id', $request->user()->id));
+        }
+
+        if ($eventId) {
+            $query->where('event_id', $eventId);
+        }
+
+        $logs = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'data' => $logs->items(),
+            'meta' => [
+                'current_page' => $logs->currentPage(),
+                'last_page' => $logs->lastPage(),
+                'per_page' => $logs->perPage(),
+                'total' => $logs->total(),
+            ],
+        ]);
+    }
 }

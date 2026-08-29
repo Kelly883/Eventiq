@@ -24,7 +24,7 @@ const CheckInSearchPage = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get(`/check-in/search`, {
+      const response = await api.get(`/venue/check-ins/search`, {
         params: { query, event_id: eventId },
       });
       setResults(response.data?.data || []);

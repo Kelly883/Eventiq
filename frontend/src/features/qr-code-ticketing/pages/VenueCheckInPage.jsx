@@ -333,10 +333,10 @@ const VenueCheckInPage = () => {
         {/* Breadcrumb / Back Navigation */}
         <div className="flex items-center gap-2 text-sm">
           <Link
-            to="/check-in"
+            to="/venue/events"
             className={`font-medium ${highContrast ? 'text-indigo-400 hover:text-indigo-300' : 'text-slate-500 hover:text-slate-700'}`}
           >
-            ← Check-In Desk
+            ← Back to Events
           </Link>
           <span className="text-slate-400">/</span>
           <span className={highContrast ? 'text-slate-300' : 'text-slate-600'}>
@@ -391,10 +391,10 @@ const VenueCheckInPage = () => {
                   {eventError}. Please select a different event.
                 </p>
                 <Link
-                  to="/check-in"
+                  to="/venue/events"
                   className="inline-block mt-2 text-sm font-medium text-red-700 hover:text-red-800 underline"
                 >
-                  ← Back to Check-In Desk
+                  ← Back to Events
                 </Link>
               </div>
             </div>
