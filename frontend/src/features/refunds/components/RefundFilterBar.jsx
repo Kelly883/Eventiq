@@ -92,4 +92,4 @@ const RefundFilterBar = ({ filters, setFilters }) => {
   );
 };
 
-export { RefundFilterBar };
+export default RefundFilterBar;

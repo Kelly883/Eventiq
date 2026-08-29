@@ -13,4 +13,4 @@ const RefundMetricCard = ({ title, value, suffix, icon, className }) => {
   );
 };
 
-export { RefundMetricCard };
+export default RefundMetricCard;

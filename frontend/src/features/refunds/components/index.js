@@ -4,3 +4,4 @@ export { default as RefundCalculationCard } from './RefundCalculationCard';
 export { default as AppealModal } from './AppealModal';
 export { default as RefundFilterBar } from './RefundFilterBar';
 export { default as RefundMetricCard } from './RefundMetricCard';
+export { default as RefundTable } from './RefundTable';

@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { api, showToast } from '../../../lib/api';
-import { useAuthContext, useRoleGuard } from '../../../features/auth/context/AuthContext';
-import { Skeleton, LoadingSpinner, ErrorBoundary } from '../../../components';
+import { useAuthContext } from '../../../features/auth/context/AuthContext';
+import Skeleton from '../../../components/Skeleton';
+import { LoadingSpinner, ErrorBoundary } from '../../common';
 import { REFUND_STATUSES } from '../../../features/refunds/constants';
 import { formatRefundStatus, calculateRefundAmount } from '../../../features/refunds/utils';
 import { REFUND_STATUSES as STATUS_ENUM } from '../../../features/refunds/constants';
 import { useRefunds } from '../../../features/refunds/hooks';
-import { RefundFilterBar } from '../components';
-import { RefundMetricCard } from '../components';
-import { RefundTable } from '../components';
-import { RefundPolicyDetails } from '../components';
+import { RefundFilterBar, RefundMetricCard } from '../components';
+import RefundTable from '../components/RefundTable';
 
 const AdminRefundDashboardPage = () => {
   const { user, loading, checkAdminAccess } = useAuthContext();
@@ -224,10 +223,9 @@ const AdminRefundDashboardPage = () => {
         onBulkUpdate={handleBulkUpdate}
         onExport={handleExport}
       />
-
-      {/* Policy Details Sidebar */}
-      <RefundPolicyDetails />
     </div>
-  )
-}
+  );
+};
+
+export default AdminRefundDashboardPage;
 
