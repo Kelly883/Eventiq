@@ -51,7 +51,9 @@ const AdminRefundDashboardPage = () => {
     if (!checkAdminAccess()) {
       navigate('/admin/refunds/dashboard'); // Stay on page
       return;
-    }
+    },
+    [navigate]
+}
 
     // Fetch admin refund data
     // In production, this would be:
@@ -177,7 +179,7 @@ const AdminRefundDashboardPage = () => {
   };
 
   if (loading) return <LoadingSpinner message='Loading admin refund dashboard...' />;
-  if (!checkAdminAccess()) return <div className='p-6 text-center'><h3>Access Denied - Admins only</h3></div>;
+  if (!checkAdminAccess()) return <div className='p-6 text-center'><h3>Access Denied - Only administrators can view the settlement dashboard</h3></div>;
 
   return (
     <div className='max-w-7xl mx-auto p-6'>
@@ -191,6 +193,7 @@ const AdminRefundDashboardPage = () => {
         </h1>
         <p className='text-sm text-slate-500 mt-1'>
           Oversee all refund requests across the platform. Filter, search, and update status.
+          <strong className='ml-2 text-indigo-600'>Note:</strong> This is platform-wide administrator view. Organizer payouts (accessible via /organizer/payouts) manage individual organizer earnings separately.
         </p>
       </header>
 

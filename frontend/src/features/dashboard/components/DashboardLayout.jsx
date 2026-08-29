@@ -33,7 +33,7 @@ const DashboardLayout = () => {
       to: '/organizer/payouts',
       label: 'Payouts',
       icon: '💰',
-      description: 'View and manage payouts and settlements',
+      description: 'View your earnings and payout history. Different from platform-wide settlements.',
     });
   }
 
@@ -48,7 +48,7 @@ const DashboardLayout = () => {
       to: '/admin/settlements/dashboard',
       label: 'Settlements',
       icon: '📊',
-      description: 'View and manage platform settlements and refunds',
+      description: 'Platform-wide refund and settlement management. Different from organizer payouts.',
     });
   }
 

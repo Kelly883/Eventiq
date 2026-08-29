@@ -4,7 +4,7 @@ import { api, showToast } from '../../../lib/api';
 import { useAuthContext } from '../../../features/auth/context/AuthContext';
 import { Skeleton, LoadingSpinner, ErrorBoundary } from '../../../components';
 import { REFUND_STATUSES } from '../../../features/refunds/constants';
-import { formatRefundStatus, REFUND_STATUSES } from '../../../features/refunds/utils';
+import { formatRefundStatus } from '../../../features/refunds/utils';
 import { useRefunds } from '../../../features/refunds/hooks';
 import { RefundStatusBadge } from '../components';
 import { AppealModal } from '../components';
@@ -103,7 +103,7 @@ const UserRefundStatusPage = () => {
         </div>
       )
 
-      {refund && refund.status === 'rejected' && (
+{refund && refund.status === 'rejected' && (
         <AppealModal
           isOpen={showAppeal}
           onClose={() => setShowAppeal(false)}
@@ -177,4 +177,3 @@ const UserRefundStatusPage = () => {
     </div>
   ))
 }
-

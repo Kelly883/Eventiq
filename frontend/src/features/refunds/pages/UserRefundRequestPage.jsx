@@ -174,6 +174,5 @@ const UserRefundRequestPage = () => {
         </p>
       </div>
     </div>
-  ))
 }
 
