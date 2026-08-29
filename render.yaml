@@ -20,6 +20,13 @@ services:
         sync: false
       - key: APP_KEY
         generateValue: true
+      # Stateless sessions (signed cookies) so the web middleware group never
+      # touches the database. This keeps GET /health (healthCheckPath) 200
+      # and all routes healthy even if the Postgres resource is briefly
+      # unreachable; Sanctum web/session auth still works. Postgres still
+      # stores all application data (users, events, tickets, etc.).
+      - key: SESSION_DRIVER
+        value: cookie
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
