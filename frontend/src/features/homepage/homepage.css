@@ -163,12 +163,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: transparent;
   cursor: pointer;
   color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.mobile-menu-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .mobile-menu {
@@ -1140,6 +1146,18 @@ body {
   .newsletter-form {
     flex-direction: column;
   }
+
+  /* Ensure hamburger has proper contrast on mobile */
+  .mobile-menu-btn {
+    color: var(--color-text);
+  }
+}
+
+/* Hide hamburger on desktop */
+@media (min-width: 768px) {
+  .mobile-menu-btn {
+    display: none;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1157,6 +1175,20 @@ body {
 
   .organizer-actions {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 360px) {
+  .hero-headline {
+    font-size: 24px;
+  }
+
+  .section-title {
+    font-size: 20px;
+  }
+
+  .categories-grid {
+    grid-template-columns: 1fr;
   }
 }
 
