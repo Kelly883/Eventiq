@@ -61,6 +61,7 @@ const CreateTemplateModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
     if (!formData.subject.trim()) newErrors.subject = 'Email subject is required';
     if (!formData.key.trim()) newErrors.key = 'Template key is required';
     else if (!/^[a-z0-9_]+$/.test(formData.key)) newErrors.key = 'Key must contain only lowercase letters, numbers, and underscores';
+    else if (formData.key.length > 50) newErrors.key = 'Key must be 50 characters or fewer';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -138,6 +139,27 @@ const CreateTemplateModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
               value={formData.key}
               onChange={handleChange('key')}
               placeholder="e.g., welcome_email"
+            {/* Helper text for key format */}
+            <p className="text-xs text-slate-500 mt-1">
+              Lowercase letters, numbers, and underscores only (e.g., welcome_email or order_confirmation)
+            </p>
+
+  {/* Template type guidance */}
+  const templateTypeHelp = (
+    <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+      <p className="text-xs font-medium text-slate-600 mb-1">Template Types</p>
+      <p className="text-xs text-slate-500">
+        Choose a template type that determines the structure and variables available:
+      </p>
+      <ul className="list-disc list-inside text-xs text-slate-400 space-y-0.5">
+        <li>order_confirmation - For order status updates with {{order.id}}, {{order.total}}, {{user.name}}</li>
+        <li>event_reminder - For event notifications with {{event.title}}, {{event.date}}, {{event.venue}}, {{user.name}}</li>
+        <li>ticket_confirmation - For ticket delivery with {{ticket.code}}, {{ticket.type}}, {{user.email}}</li>
+        <li>password_reset - For account recovery with {{user.email}}</li>
+      </ul>
+      <p className="text-xs text-indigo-600 mt-2"><strong>Tip:</strong> You can edit the MJML body to customize the layout for any type.</p>
+    </div>
+  )
               className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                 errors.key ? 'border-red-300' : 'border-slate-200'
               }`}
@@ -208,6 +230,10 @@ const SendTestModal = ({ isOpen, onClose, onSend, templateName, isLoading }) => 
             <div>
               <h3 className="font-semibold text-slate-900">Send Test Email</h3>
               <p className="text-sm text-slate-500">Verify how "{templateName}" renders in a real inbox.</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Enter a user's email address to send a test email. This helps verify your template
+                renders correctly before sending to your actual users.
+              </p>
             </div>
           </div>
           <form onSubmit={handleSubmit}>
@@ -759,11 +785,30 @@ const AdminEmailTemplateManagementPage = () => {
             </div>
           ) : (
             <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-12 text-center">
-              <span className="text-4xl block mb-4">✉️</span>
-              <h3 className="font-semibold text-slate-800">Select a template to edit</h3>
-              <p className="text-sm text-slate-500 mt-1">
-                Choose a template from the list to start editing.
+              <span className="text-4xl mb-2 inline-block text-indigo-600">✉️</span>
+              <h3 className="font-semibold text-slate-800">No templates yet</h3>
+              <p className="text-sm text-slate-500 mb-4 max-w-xl mx-auto">
+                Get started by creating your first email template. Templates let you send
+                consistent, branded notifications to your users for events, orders, and more.
               </p>
+              {/* Role indicator badge */}
+              <div className="mt-3 p-2 bg-indigo-50 rounded-lg text-xs font-medium text-indigo-700 mb-4">
+                Managed by admin
+              </div>
+              {/* Sample templates CTA */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-indigo-600 rounded-lg text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create Your First Template
+                  </button>
+                <p className="text-xs text-slate-500 text-center">
+                  Need a starting point? Create a template below to see how it works.
+                </p>
+              </div>
             </div>
           )}
         </div>
