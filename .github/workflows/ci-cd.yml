@@ -93,20 +93,12 @@ jobs:
           retention-days: 7
 
   deploy:
-    name: Deploy — Trigger production build
+    name: Deploy — Trigger Render production build
     needs: [backend, frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Vercel deploy hook
-        env:
-          HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
-        # No-op when the secret is not configured (Vercel Git integration
-        # deploys automatically in that case).
-        if: ${{ env.HOOK_URL != '' }}
-        run: curl -sfX POST "$HOOK_URL"
-
       - name: Deployment gate passed
         run: |
           echo "All checks green on main."
-          echo "Vercel deploys via Git integration, or via VERCEL_DEPLOY_HOOK_URL when configured."
+          echo "Frontend and backend deployed to Render."
