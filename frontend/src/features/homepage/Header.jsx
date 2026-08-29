@@ -35,8 +35,9 @@ const Header = () => {
 
         <button
           className="mobile-menu-btn"
+          type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label="Menu"
+          aria-label={mobileMenuOpen ? 'Close navigation' : 'Open navigation'}
           aria-expanded={mobileMenuOpen}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
