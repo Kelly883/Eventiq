@@ -104,15 +104,23 @@ php artisan test
 
 ### Backend
 
+The backend is built to run on **PostgreSQL** in production. In Render, the
+`eventiq-api` service is wired to the `eventiq-db` database resource via
+`fromDatabase` (see `render.yaml`); in local dev you can use SQLite by
+setting `DB_CONNECTION=sqlite` in `backend/.env` and uncommenting the
+sqlite line in `backend/.env.example`.
+
 | Variable | Description |
 |---|---|
 | `APP_KEY` | Laravel application key |
-| `DB_CONNECTION` | Database driver (`sqlite` for local, `pgsql` for production) |
-| `DB_DATABASE` | Database name or path |
-| `DB_HOST` | Database host |
+| `DB_CONNECTION` | Database driver. **PostgreSQL in production** (`pgsql`); `sqlite` for local dev |
+| `DB_HOST` | Database host (Render injects from `eventiq-db`) |
 | `DB_PORT` | Database port (5432 for PostgreSQL) |
-| `DB_USERNAME` | Database username |
-| `DB_PASSWORD` | Database password |
+| `DB_DATABASE` | Database name (`eventiq` on Render; `:memory:` for tests) |
+| `DB_USERNAME` | Database user (`eventiq` on Render) |
+| `DB_PASSWORD` | Database password (Render injects from `eventiq-db`) |
+| `DB_SSL_MODE` | PostgreSQL SSL mode (`prefer` local, `require` on Render) |
+| `SESSION_DRIVER` | Session backend. `cookie` is recommended so `GET /health` stays 200 even during a Postgres blip; `database` writes sessions to the `sessions` table |
 | `SANCTUM_STATEFUL_DOMAINS` | Frontend domain for session auth |
 
 ### Frontend
