@@ -145,6 +145,7 @@ const CreateTemplateModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
             </p>
 
   {/* Template type guidance */}
+  {/* Template type guidance */}
   const templateTypeHelp = (
     <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
       <p className="text-xs font-medium text-slate-600 mb-1">Template Types</p>
