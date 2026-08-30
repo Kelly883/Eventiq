@@ -560,7 +560,7 @@
 
     @media (max-width: 900px) {
     .homepage .hero {
-      min-height: 650px;
+      min-height: 50vh;
       height: auto;
     }
 
@@ -574,29 +574,29 @@
     }
     }
 
-    @media (max-width: 640px) {
-    .homepage .header-container {
-      height: 60px;
-      padding: 0 16px;
-    }
+@media (max-width: 640px) {
+  .homepage .header-container {
+    height: 60px;
+    padding: 0 16px;
+  }
 
-    .homepage .logo-text {
-      font-size: 14px;
-    }
+  .homepage .logo-text {
+    font-size: 14px;
+  }
 
-    .homepage .hero {
-      min-height: 700px;
-      align-items: flex-end;
-      padding: 104px 16px 130px;
-    }
+  .homepage .hero {
+    min-height: 50vh;
+    align-items: flex-end;
+    padding: 80px 16px 60px;
+  }
 
-    .homepage .hero-background {
-      background-position: 62% center;
-    }
+  .homepage .hero-background {
+    background-position: 50% center;
+  }
 
-    .homepage .hero-overlay {
-      background: linear-gradient(180deg, rgba(15, 17, 27, 0.12) 0%, rgba(15, 17, 27, 0.40) 48%, rgba(15, 17, 27, 0.78) 100%);
-    }
+  .homepage .hero-overlay {
+    background: linear-gradient(180deg, rgba(15, 17, 27, 0.10) 0%, rgba(15, 17, 27, 0.35) 50%, rgba(15, 17, 27, 0.55) 100%);
+  }
 
     .homepage .hero-content {
       padding: 0;
@@ -830,7 +830,4 @@
     .homepage *::after {
       scroll-behavior: auto !important;
       transition-duration: 0.01ms !important;
-      animation-duration: 0.01ms !important;
-    }
-    }
-    
+      animation-duration: 0.01ms !importa
