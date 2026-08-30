@@ -241,7 +241,7 @@ export const AuthProvider = ({ children }) => {
 
   const resetPassword = useCallback(async (token, email, newPassword, passwordConfirmation) => {
     await api.get('/sanctum/csrf-cookie');
-    await api.post('/auth/reset-password', { token, email, password, password_confirmation: passwordConfirmation });
+    await api.post('/auth/reset-password', { token, email, newPassword, password_confirmation: passwordConfirmation });
     localStorage.removeItem(REMEMBER_ME_KEY);
     setUser(null);
     // Broadcast session invalidation to all tabs
