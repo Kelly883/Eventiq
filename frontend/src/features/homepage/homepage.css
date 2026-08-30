@@ -1151,6 +1151,18 @@ body {
   .mobile-menu-btn {
     color: var(--color-text);
     stroke: var(--color-text);
+    /* Background circle for visibility on transparent header */
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    padding: 8px;
+    /* Increase stroke weight for visibility */
+    stroke-width: 3;
+  }
+
+  .mobile-menu-btn svg {
+    /* Ensure the SVG fills the button area */
+    width: 20px;
+    height: 20px;
   }
 }
 
