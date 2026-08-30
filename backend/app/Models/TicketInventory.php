@@ -78,6 +78,11 @@ class TicketInventory extends Model
         return max(0, $allocated - $sold);
     }
 
+    public function getRemainingAttribute(): int
+    {
+        return $this->total_available;
+    }
+
     public function getIsLowStockAttribute(): bool
     {
         $threshold = (int) ($this->attributes['low_stock_threshold'] ?? 0);

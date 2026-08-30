@@ -88,6 +88,7 @@ async function main() {
 
   console.log(checks.join('\n'))
   server.close()
+  process.exit(process.exitCode ?? 0)
 }
 
 main().catch((err) => {

@@ -50,7 +50,8 @@ class AuthController extends Controller
 
         if ($request->boolean('remember_me')) {
             $request->session()->put('_remember_me', true);
-            $request->session()->getCookie()->setMaxAge(config('session.lifetime', 120) * 60 * 2);
+            // Note: session lifetime is controlled via config/session.php (lifetime key).
+            // Extended remember-me sessions should be configured at the infrastructure level.
         }
 
         return response()->json([

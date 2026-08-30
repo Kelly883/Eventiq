@@ -183,8 +183,3 @@ class InventoryLockService
         ];
     }
 }
-
-</parameter>
-<command>type nul > backend/app/Services/InventoryLockService.php</command>
-<requires_approval>false</requires_approval>
-</execute_command>

@@ -13,26 +13,29 @@ const OrderConfirmationPage = () => {
 
   // Fetch order details on mount
   useEffect(() => {
-    if (!orderId) {
-      setError('Order ID not specified');
+    async function fetchOrder() {
+      if (!orderId) {
+        setError('Order ID not specified');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const res = await api.get(`/api/orders/${orderId}`);
+        setOrder(res.data.data || null);
+      } catch (err) {
+        const status = err?.response?.status;
+        setError(
+          status === 404 ? 'Order not found' : status === 403 ? 'Permission denied' : 'Failed to load order'
+        );
+      }
       setLoading(false);
-      return;
     }
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = api.get(`/api/orders/${orderId}`);
-      setOrder(res.data.data || null);
-      setLoading(false);
-    } catch (err) {
-      const status = err?.response?.status;
-      setError(
-        status === 404 ? 'Order not found' : status === 403 ? 'Permission denied' : 'Failed to load order'
-      );
-      setLoading(false);
-    }
+    fetchOrder();
   }, [orderId, user]);
 
   // If order not found or permission denied, redirect after a moment

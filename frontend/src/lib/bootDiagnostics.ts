@@ -55,26 +55,32 @@ export function runBootDiagnostics(): BootReport {
     report.apiUrlConfigured = 'FAIL';
   }
 
-  // 2. API reachability (light HEAD request with short timeout)
+  // 2. API reachability (light GET request with short timeout)
   try {
+    const rawUrl =
+      (import.meta as unknown as { env: { VITE_API_BASE_URL?: string } })
+        .env?.VITE_API_BASE_URL || 'http://localhost:8000';
+    const cleanBaseUrl = rawUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
-    fetch(`${report.apiUrlConfigured === 'OK' ? report.apiUrlConfigured.split('/tickets')[0] : ''}/sanctum/csrf-cookie`, {
+    fetch(`${cleanBaseUrl}/sanctum/csrf-cookie`, {
       method: 'GET',
       credentials: 'include',
       signal: controller.signal,
     })
       .then(() => {
+        report.apiReachable = 'OK';
         report.csrfEndpoint = 'OK';
       })
       .catch(() => {
+        report.apiReachable = 'FAIL';
         report.csrfEndpoint = 'FAIL';
       });
     clearTimeout(timeoutId);
-    // Note: fetch is async; the report.csrfEndpoint may still be updating.
-    // In production, consider running this after the first render cycle.
+    // Note: fetch is async; report.csrfEndpoint and report.apiReachable may still be updating.
   } catch {
     // Synchronous failure — should not happen but be safe.
+    report.apiReachable = 'FAIL';
     report.csrfEndpoint = 'FAIL';
   }
 

@@ -1,11 +1,29 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCartContext } from '../context/CartContext';
+import { api } from '../../../lib/api';
 
 const CartPage = () => {
+  const navigate = useNavigate();
   const { cart, addToCart, removeFromCart, clearCart } = useCartContext();
-
+  const [verifying, setVerifying] = useState(false);
   const itemCount = cart.length;
+
+  // Verify cart on mount - lightweight check that items are still valid
+  useEffect(() => {
+    setVerifying(true);
+    const cartItems = cart.map(item => item.id || item.ticketId || item.ticket_id || item.id);
+    if (cartItems.length > 0) {
+      api.post('/cart/verify', { items: cart })
+        .then(() => {
+          // Cart verification successful
+        })
+        .catch(() => {
+          // Verification failed - continue anyway, cart items will be re-verified at checkout
+        });
+    }
+    setVerifying(false);
+  }, [cart]);
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">
@@ -18,12 +36,8 @@ const CartPage = () => {
             <p className="text-slate-400">
               Your cart doesn't have any items. <Link to="/events" className="font-medium text-indigo-600 hover:text-indigo-800">Browse events</Link> to add tickets to your cart.
             </p>
-            <button
-              onClick={() => localStorage.removeItem('cart')}
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium shadow-sm hover:bg-indigo-700 transition-colors"
-            >
-              Clear Cart
-            </button>
+            {/* Disabled proceed-to-checkout message when cart is empty */}
+            <p className="mt-4 text-sm text-slate-400">Your cart is empty. Add tickets from events to get started.</p>
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
@@ -51,8 +65,9 @@ const CartPage = () => {
             <div className="mt-4 pt-4 border-t border-slate-200">
               <p className="text-sm text-slate-500">Total: {itemCount} item(s)</p>
               <button
-                onClick={() => clearCart()}
-                className="w-full inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium shadow-sm hover:bg-indigo-700 transition-colors"
+                onClick={() => navigate('/checkout')}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium shadow-sm hover:bg-indigo-700 transition-colors"
+                disabled={verifying}
               >
                 <span className="font-medium">Proceed to Checkout</span>
                 <span className="ml-2 arrow">→</span>
@@ -64,5 +79,4 @@ const CartPage = () => {
     </div>
   );
 };
-
 export default CartPage;

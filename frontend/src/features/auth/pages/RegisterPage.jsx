@@ -29,7 +29,7 @@ const RegisterPage = () => {
     setError('');
 
     try {
-      await register(email, password, name);
+      await register(email, password, name, passwordConfirm);
       navigate('/login', { state: { message: 'Account created successfully. Please log in.', messageType: 'success' } });
     } catch (err) {
       setError(

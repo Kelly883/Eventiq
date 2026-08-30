@@ -142,11 +142,6 @@ const NAV_ITEMS = [
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer', 'admin'),
   },
   {
-    to: '/venue/events',
-    label: 'Check-In Events',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer', 'admin'),
-  },
-  {
     to: '/organizer/events',
     label: '📦 Events',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
@@ -386,6 +381,7 @@ function App() {
               <Route path=":ticketId/refund-status" element={<UserRefundStatusPage />} />
             </Route>
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
+              <Route index element={<AdminDeliveryDashboardPage />} />
               <Route path="roles" element={<AdminRoleManagementPage />} />
               <Route path="fraud/dashboard" element={<FraudDetectionDashboardPage />} />
               <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />
@@ -398,6 +394,7 @@ function App() {
               <Route path="refunds/dashboard" element={<AdminRefundDashboardPage />} />
             </Route>
             <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
+              <Route index element={<DeliverySettingsPage />} />
               <Route path="permissions" element={<UserPermissionsPage />} />
               <Route path="delivery-preferences" element={<DeliverySettingsPage />} />
             </Route>

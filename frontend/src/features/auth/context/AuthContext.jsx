@@ -215,9 +215,14 @@ export const AuthProvider = ({ children }) => {
     return { user: res.data, remember_me: response.data?.remember_me ?? false };
   }, []);
 
-  const register = useCallback(async (email, password, name) => {
+  const register = useCallback(async (email, password, name, passwordConfirmation = null) => {
     await api.get('/sanctum/csrf-cookie');
-    await api.post('/auth/register', { email, password, password_confirmation: name, name });
+    await api.post('/auth/register', {
+      email,
+      password,
+      password_confirmation: passwordConfirmation ?? password,
+      name,
+    });
     localStorage.removeItem(REMEMBER_ME_KEY);
     const res = await api.get('/auth/me');
     setUser(res.data);
