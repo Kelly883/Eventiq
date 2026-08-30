@@ -35,7 +35,7 @@ const EventCalendarPage = () => {
   useEffect(() => {
     async function fetchEvents() {
       try {
-        const res = await api.get('/events');
+        const res = await api.get('/calendar');
         setEvents(res.data.data || []);
       } catch (err) {
         console.error('Failed to fetch events', err);

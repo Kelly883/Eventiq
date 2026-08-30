@@ -34,10 +34,13 @@ type Env = {
   VITE_API_BASE_URL?: string;
 };
 
-const baseURL = ((import.meta as unknown) as { env: Env }).env.VITE_API_BASE_URL ?? '';
+const baseURL = ((import.meta as unknown) as { env: Env }).env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
+
+      // Ensure baseURL always includes /api prefix (Laravel expects it)
+      const normalizedBaseURL = baseURL.endsWith('/api') ? baseURL : `${baseURL}/api`;
 
 export const api = axios.create({
-  baseURL,
+  baseURL: normalizedBaseURL,
   withCredentials: true,
 });
 

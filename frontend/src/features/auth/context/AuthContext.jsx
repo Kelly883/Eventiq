@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
       setSessionExpired(false);
       const userId = res.data?.id;
       if (userId) {
-        const meRes = await api.get(`/organizers/user/${userId}`);
+        const meRes = await api.get(`/organizers/${userId}`);
         setOrganizerId(meRes.data?.data?.id || null);
       }
     } catch (e) {
@@ -217,7 +217,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = useCallback(async (email, password, name) => {
     await api.get('/sanctum/csrf-cookie');
-    await api.post('/auth/register', { email, password, name });
+    await api.post('/auth/register', { email, password, password_confirmation: name, name });
     localStorage.removeItem(REMEMBER_ME_KEY);
     const res = await api.get('/auth/me');
     setUser(res.data);
@@ -239,9 +239,9 @@ export const AuthProvider = ({ children }) => {
     await api.post('/auth/forgot-password', { email });
   }, []);
 
-  const resetPassword = useCallback(async (token, newPassword) => {
+  const resetPassword = useCallback(async (token, email, newPassword, passwordConfirmation) => {
     await api.get('/sanctum/csrf-cookie');
-    await api.post('/auth/reset-password', { token, newPassword });
+    await api.post('/auth/reset-password', { token, email, password, password_confirmation: passwordConfirmation });
     localStorage.removeItem(REMEMBER_ME_KEY);
     setUser(null);
     // Broadcast session invalidation to all tabs

@@ -42,7 +42,7 @@ const UserRefundRequestPage = () => {
 
     try {
       const response = await api.post('/api/refunds/request', {
-        ticketId,
+        ticket_id: ticketId,  // snake_case to match backend StoreRefundRequest
         ...form,
       });
 

@@ -6,6 +6,8 @@ import react from '@vitejs/plugin-react'
 // not executed during bundling) — it only threw at runtime, producing a
 // permanent white page. This build-time gate makes the failure loud, early,
 // and fixable before anything is deployed.
+import path from 'path'
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   if (mode === 'production' && !env.VITE_API_BASE_URL) {
@@ -16,6 +18,11 @@ export default defineConfig(({ mode }) => {
     )
   }
   return {
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, 'src')
+      }
+    },
     plugins: [react()],
   server: {
     port: 3000,

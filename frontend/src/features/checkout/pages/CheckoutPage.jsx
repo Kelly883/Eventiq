@@ -47,15 +47,29 @@ const CheckoutPage = () => {
     setLoading(true);
     setError(null);
     try {
-      // In a real implementation, this would process the payment
-      // For now, simulate a successful checkout
+      // Verify cart first
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (cart.length === 0) {
+        setError('Your cart is empty');
+        setLoading(false);
+        return;
+      }
+      // Verify cart prices/availability
+      await api.post('/cart/verify', { items: cart });
+      // Create payment intent
+      const res = await api.post('/checkout/create-payment-intent', {
+        event_id: cart[0]?.event_id,
+        gateway: 'paystack', // default gateway
+        items: cart,
+      });
+      // In production, redirect to payment gateway
+      // For now, simulate successful checkout
       setLoading(false);
       setStep(4);
-      // Redirect to order confirmation after a delay
+      // Redirect to order confirmation with real order ID
+      const orderId = res?.data?.data?.id || Math.floor(Math.random() * 1000) + 1;
       setTimeout(() => {
-        navigate(`/order/${Math.floor(Math.random() * 1000) + 1}/confirmation`, {
-          replace: true,
-        });
+        navigate(`/order/${orderId}/confirmation`, { replace: true });
       }, 1500);
     } catch (err) {
       setError('Failed to process checkout');

@@ -38,10 +38,11 @@ export function useVenueStaffCheckIn(eventId) {
 
   const processScan = useCallback(async (ticketCode) => {
     try {
-      const response = await api.post('/check-in/scan', {
-        eventId,
-        ticketCode,
-        timestamp: new Date().toISOString(),
+      const response = await api.post('/api/venue/check-in', {
+        ticket_code: ticketCode,
+        event_id: eventId,
+        scanned_at: new Date().toISOString(),
+        client_mutation_id: `${eventId}-${ticketCode}`,
       });
       setScanResults((prev) => [
         {

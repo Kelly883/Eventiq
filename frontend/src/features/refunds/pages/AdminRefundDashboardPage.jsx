@@ -131,9 +131,9 @@ const AdminRefundDashboardPage = () => {
   const handleStatusUpdate = async (refundId, newStatus, reason) => {
     try {
       if (newStatus === 'approve') {
-        await api.post(`/api/admin/refunds/approve`, { refundId });
+        await api.put(`/api/admin/refunds/${refundId}/approve`, { admin_notes: reason });
       } else if (newStatus === 'reject') {
-        await api.post(`/api/admin/refunds/reject`, { refundId, reason });
+        await api.put(`/api/admin/refunds/${refundId}/reject`, { admin_notes: reason });
       }
       showToast('Success', 'Refund status updated.', 'success');
       // Refetch data
@@ -149,27 +149,16 @@ const AdminRefundDashboardPage = () => {
     if (selected.length === 0) return;
     
     try {
-      if (status === 'approve') {
-        await api.post('/api/admin/refunds/bulk-approve', { refundIds: selected.map(r => r.id) });
-      } else if (status === 'reject') {
-        await api.post('/api/admin/refunds/bulk-reject', { refundIds: selected.map(r => r.id), reason: 'Bulk rejection' });
-      }
-      showToast('Success', `${selected.length} refunds updated.`, 'success');
+      showToast('Info', 'Bulk refund update requires backend implementation.', 'info');
     } catch (err) {
-      showToast('Error', 'Failed to bulk update refunds.', 'error');
+      showToast('Error', 'Failed to process bulk update.', 'error');
     }
   };
 
   // Handle export
   const handleExport = async () => {
     try {
-      const url = await api.get('/api/admin/refunds/export', { params: filters });
-      // Trigger download
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = 'refunds-report.csv';
-      anchor.click();
-      showToast('Success', 'Refunds exported.', 'success');
+      showToast('Info', 'Refund export requires backend implementation.', 'info');
     } catch (err) {
       showToast('Error', 'Failed to export refunds.', 'error');
     }

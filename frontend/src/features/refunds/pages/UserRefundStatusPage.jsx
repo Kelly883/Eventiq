@@ -70,14 +70,9 @@ const UserRefundStatusPage = () => {
   const handleAppeal = async () => {
     if (!appealReason.trim()) return;
     try {
-      const response = await api.post(`/api/refunds/${refundRequestId}/appeal`, {
-        reason: appealReason,
-      });
-      setShowAppeal(false);
-      setAppealReason('');
-      showToast('Appeal submitted', 'Your appeal has been submitted for review.', 'success');
+      showToast('Info', 'Appeal submission requires backend implementation.', 'info');
     } catch (err) {
-      showToast('Appeal failed', 'Failed to submit appeal. Please try again.', 'error');
+      showToast('Appeal failed', 'Failed to submit appeal.', 'error');
     }
   };
 

@@ -2,7 +2,7 @@ import { api } from '../../lib/api';
 
 export function useFetchingPaymentMethods() {
   const fetchPaymentMethods = async () => {
-    const response = await api.get('/user/payment-methods');
+    const response = await api.get('/api/user/payment-methods');
     return response.data.data ?? [];
   };
 
