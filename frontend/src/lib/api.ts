@@ -93,6 +93,7 @@ api.interceptors.response.use(
     }
 
     // Mark this as a retry attempt
+    const isFirstRetry = !originalConfig?._retry;
     originalConfig._retry = true;
 
     // Show session expired toast
@@ -126,13 +127,13 @@ api.interceptors.response.use(
 
     // Clear queued requests
     queuedRequests.forEach(q => {
-      // No-op: queued requests will be handled by caller
+      // No-op: queued requests will be honest failure
     });
     queuedRequests = [];
 
     if (csrfRefreshed) {
       // CSRF refreshed successfully - retry the original request
-      originalConfig._retry = undefined;
+      // Keep _retry = true so repeated 401s are properly guarded
       return api(originalConfig);
     }
 
