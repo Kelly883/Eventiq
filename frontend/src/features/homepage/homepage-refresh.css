@@ -827,8 +827,6 @@
     }
     }
 
-    @media (prefers-reduced-motion: reduce) {
-
 @media (prefers-reduced-motion: reduce) {
   .homepage *,
   .homepage *::before,
