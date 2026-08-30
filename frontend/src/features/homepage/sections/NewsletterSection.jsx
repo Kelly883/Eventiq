@@ -6,10 +6,8 @@ const NewsletterSection = () => {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState(null); // 'success' | 'error' | null
 
-  // Previously this section flipped local state and claimed "Thanks! We'll
-  // keep you updated." without persisting anything. It now POSTs to a real
-  // backend endpoint (POST /api/newsletter/subscribe) and only shows a success
-  // message when the request actually succeeds.
+  // POSTs to a real backend endpoint (POST /api/newsletter/subscribe) and only
+  // shows a success message when the request actually succeeds.
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) return;
@@ -31,11 +29,13 @@ const NewsletterSection = () => {
   return (
     <section className="newsletter-section">
       <div className="section-container">
-        <div className="newsletter-content">
-          <h2 className="newsletter-title">Don't miss what's next.</h2>
-          <p className="newsletter-subtitle">
-            Get updates about new events and experiences near you.
-          </p>
+        <div className="newsletter-panel">
+          <div className="newsletter-copy">
+            <h2 className="newsletter-title">Don't miss what's next.</h2>
+            <p className="newsletter-subtitle">
+              Get a digest of new events and experiences near you.
+            </p>
+          </div>
           {status === 'success' ? (
             <p className="newsletter-success">Thanks! We'll keep you updated.</p>
           ) : (
