@@ -23,6 +23,9 @@
 .homepage .btn-text,
 .homepage .mobile-menu-btn {
   color: inherit;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
 }
 /* When the header is solid white (scrolled), invert the text so it reads
    against the white surface, not the dark hero. */
