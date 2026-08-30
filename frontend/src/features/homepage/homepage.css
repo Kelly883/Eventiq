@@ -1150,6 +1150,7 @@ body {
   /* Ensure hamburger has proper contrast on mobile */
   .mobile-menu-btn {
     color: var(--color-text);
+    stroke: var(--color-text);
   }
 }
 
