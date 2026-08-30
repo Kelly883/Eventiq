@@ -828,7 +828,6 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-    .homepage *::before,
     .homepage *::after {
       scroll-behavior: auto !important;
       transition-duration: 0.01ms !important;
