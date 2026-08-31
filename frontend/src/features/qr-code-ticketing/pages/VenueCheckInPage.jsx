@@ -8,6 +8,7 @@ import Skeleton from '../../../components/Skeleton';
 import EmptyState from '../../../components/EmptyState';
 import EventSelector from '../../analytics/components/EventSelector';
 import { api } from '../../../lib/api';
+import { showToast } from '../../../lib/api';
 
 const mockEvents = [
   { id: 1, name: 'Summer Music Festival 2026', date: '2026-08-28', status: 'active' },
@@ -28,6 +29,7 @@ const VenueCheckInPage = () => {
   const [eventDetails, setEventDetails] = useState(null);
   const [eventLoading, setEventLoading] = useState(true);
   const [eventError, setEventError] = useState(null);
+  const [showEventSelector, setShowEventSelector] = useState(false);
 
   // Video and Canvas refs
   const videoRef = useRef(null);
@@ -73,6 +75,10 @@ const VenueCheckInPage = () => {
         }
       } finally {
         setEventLoading(false);
+        // If event could not be loaded and we have an eventId, show selector
+        if (eventId && !eventDetails) {
+          setShowEventSelector(true);
+        }
       }
     };
 
@@ -462,6 +468,9 @@ const VenueCheckInPage = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {showEventSelector && !eventDetails && (
+                <EventSelector compact showLabel={false} />
+              )}
               {eventDetails && (
                 <span className={`px-2.5 py-1 text-xs font-bold rounded-full flex items-center gap-1 ${
                   eventDetails.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
