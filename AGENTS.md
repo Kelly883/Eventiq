@@ -37,6 +37,19 @@ cd backend && composer install --no-interaction --prefer-dist --no-progress --no
 cd frontend && npm install
 ```
 
+## Headless Browser (optional, for render/a11y verification)
+
+Chrome/Chromium cannot execute pages in this sandbox (the renderer SIGTRAPs), so use Firefox (AArch64) driven by Puppeteer's WebDriver BiDi or standalone geckodriver. The tooling lives in `$HOME/headless-tools` and is reinstalled with:
+
+```bash
+bash $HOME/headless-tools/install-headless.sh
+```
+
+- `node $HOME/headless-tools/shot.mjs <url> 1440,768,430 /tmp/shots` — Puppeteer screenshots + overflow/console-error report (default engine Firefox; `HLT_BROWSER=chrome` opts into the Chrome for Testing build).
+- `$HOME/headless-tools/fireshot.sh <url> [out.png] [width] [height]` — one-off Firefox CLI screenshot.
+- `$HOME/headless-tools/geckodriver` — raw WebDriver driver for the repo's `/tmp/opencode/verify*.js`-style probes.
+- Note: local API mocks (MSW) do not engage under headless Firefox — serve real/stub API responses separately (`/tmp/opencode/stub-api.js` mirrors the backend contracts).
+
 ## Lint & Type Check Commands
 - `php artisan test` — runs all 95 PHPUnit tests (175 assertions)
 - `npx tsc --noEmit` — TypeScript type checking (exit 0 = pass)

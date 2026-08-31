@@ -13,8 +13,9 @@ import NewsletterSection from './sections/NewsletterSection';
 const Homepage = () => {
   return (
     <div className="homepage">
+      <a className="skip-link" href="#homepage-main">Skip to content</a>
       <Header />
-      <main>
+      <main id="homepage-main">
         <HeroSection />
         <DiscoverySection />
         <TrendingSection />

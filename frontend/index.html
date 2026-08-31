@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F7F8FA" />
     <title>EventIQ</title>
     <!-- Inter (with system-ui fallback) gives the editorial typography
          defined in DESIGN_SYSTEM.md actual weight on the page; without it
@@ -15,6 +16,14 @@
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    />
+    <!-- Hero photography is served by Unsplash; preconnect + preload make the
+         above-the-fold image start downloading before the CSS references it. -->
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
+    <link
+      rel="preload"
+      as="image"
+      href="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=2200&h=1200&fit=crop"
     />
   </head>
   <body>

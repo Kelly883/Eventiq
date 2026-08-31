@@ -39,8 +39,7 @@ const DiscoverySection = () => {
   ];
 
   // Submitting navigates to /events with real filter params, which
-  // EventBrowsePage turns into API calls (previously this form only called
-  // preventDefault() and did nothing with anything the user typed or picked).
+  // EventBrowsePage turns into API calls.
   const handleSearch = (e) => {
     e.preventDefault();
 
@@ -48,7 +47,6 @@ const DiscoverySection = () => {
     if (query.trim()) params.set('q', query.trim());
     if (location.trim()) params.set('location', location.trim());
 
-    // A selected date maps onto the supported today/week/month windows.
     const window = dateToWindow(date);
     if (window) params.set('filter', window);
 
@@ -59,7 +57,7 @@ const DiscoverySection = () => {
   return (
     <section className="discovery-section" aria-label="Find events">
       <div className="discovery-container">
-        <form className="search-form" onSubmit={handleSearch}>
+        <form className="search-form" role="search" onSubmit={handleSearch}>
           <div className="search-field search-main">
             <svg className="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <circle cx="11" cy="11" r="8" />
@@ -67,7 +65,10 @@ const DiscoverySection = () => {
             </svg>
             <input
               type="text"
+              name="q"
               placeholder="Search events, artists, or venues"
+              aria-label="Search events, artists, or venues"
+              autoComplete="off"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="search-input"
@@ -80,7 +81,10 @@ const DiscoverySection = () => {
             </svg>
             <input
               type="text"
+              name="location"
               placeholder="Near you"
+              aria-label="Search by city or venue location"
+              autoComplete="off"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               className="search-input"
@@ -95,6 +99,7 @@ const DiscoverySection = () => {
             </svg>
             <input
               type="date"
+              name="date"
               aria-label="Any date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
@@ -103,48 +108,55 @@ const DiscoverySection = () => {
           </div>
           <button type="submit" className="btn-search">
             Search
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
           </button>
         </form>
 
         <div className="discovery-filters">
-          <span className="discovery-label">When</span>
-          <div className="time-filters" role="group" aria-label="Filter by date">
-            {timeFilters.map(({ label, value }) => {
-              const isActive = value === filter;
-              return (
-                <Link
-                  key={label}
-                  to={value ? `/events?filter=${value}` : '/events'}
-                  aria-pressed={isActive}
-                  className={`filter-chip ${isActive ? 'active' : ''}`}
-                >
-                  {label}
-                </Link>
-              );
-            })}
+          <div className="discovery-group" role="group" aria-label="Filter by date">
+            <span className="discovery-label">When</span>
+            <div className="time-filters">
+              {timeFilters.map(({ label, value }) => {
+                const isActive = value === filter;
+                return (
+                  <Link
+                    key={label}
+                    to={value ? `/events?filter=${value}` : '/events'}
+                    aria-pressed={isActive}
+                    className={`filter-chip ${isActive ? 'active' : ''}`}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
 
-          <span className="discovery-label">Category</span>
-          <div className="category-filters" role="group" aria-label="Filter by category">
-            {categories.map((category) => {
-              // categories comes from GET /categories, which returns
-              // {id, slug, name, events_count} objects — not plain strings.
-              const isActive = activeCategory === category.slug;
-              return (
-                <Link
-                  key={category.id}
-                  to={
-                    isActive
-                      ? '/events'
-                      : `/events?category=${encodeURIComponent(category.slug)}`
-                  }
-                  aria-pressed={isActive}
-                  className={`filter-chip category ${isActive ? 'active' : ''}`}
-                >
-                  {category.name}
-                </Link>
-              );
-            })}
+          <div className="discovery-group" role="group" aria-label="Filter by category">
+            <span className="discovery-label">Category</span>
+            <div className="category-filters">
+              {categories.map((category) => {
+                // categories comes from GET /categories, which returns
+                // {id, slug, name, events_count} objects — not plain strings.
+                const isActive = activeCategory === category.slug;
+                return (
+                  <Link
+                    key={category.id}
+                    to={
+                      isActive
+                        ? '/events'
+                        : `/events?category=${encodeURIComponent(category.slug)}`
+                    }
+                    aria-pressed={isActive}
+                    className={`filter-chip category ${isActive ? 'active' : ''}`}
+                  >
+                    {category.name}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

@@ -87,8 +87,11 @@ const CategorySection = () => {
       <section className="category-section">
         <div className="section-container">
           <div className="section-header">
-            <h2 className="section-title">Browse by category</h2>
-            <p className="section-subtitle">Find what you love — from concerts to conferences.</p>
+            <div>
+              <p className="section-eyebrow">Browse by taste</p>
+              <h2 className="section-title">Browse by category</h2>
+              <p className="section-subtitle">Find what you love — from concerts to conferences.</p>
+            </div>
           </div>
           <div className="categories-grid">
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -117,6 +120,7 @@ const CategorySection = () => {
       <div className="section-container">
         <div className="section-header">
           <div>
+            <p className="section-eyebrow">Browse by taste</p>
             <h2 className="section-title">Browse by category</h2>
             <p className="section-subtitle">Find what you love — from concerts to conferences.</p>
           </div>

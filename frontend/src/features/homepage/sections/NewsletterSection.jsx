@@ -27,22 +27,26 @@ const NewsletterSection = () => {
   };
 
   return (
-    <section className="newsletter-section">
+    <section className="newsletter-section" aria-labelledby="newsletter-heading">
       <div className="section-container">
         <div className="newsletter-panel">
           <div className="newsletter-copy">
-            <h2 className="newsletter-title">Don't miss what's next.</h2>
+            <h2 className="newsletter-title" id="newsletter-heading">Don't miss what's next.</h2>
             <p className="newsletter-subtitle">
               Get a digest of new events and experiences near you.
             </p>
           </div>
           {status === 'success' ? (
-            <p className="newsletter-success">Thanks! We'll keep you updated.</p>
+            <p className="newsletter-success" role="status">Thanks! We'll keep you updated.</p>
           ) : (
             <form className="newsletter-form" onSubmit={handleSubmit}>
               <input
                 type="email"
-                placeholder="Enter your email"
+                name="email"
+                placeholder="you@example.com"
+                aria-label="Email address"
+                autoComplete="email"
+                spellCheck={false}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="newsletter-input"

@@ -5,13 +5,9 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // The header has two visual states:
-  //   1. Transparent over the hero (initial) — text/links render in white.
-  //   2. Solid white after the user scrolls past the hero — text/links flip to
-  //      the design-system text color (handled by .is-scrolled CSS).
-  // The class is applied to <header>, so the CSS handles the actual inversion
-  // (text color, border, shadow). A 6px threshold keeps the swap from firing
-  // on micro-scrolls (which would feel jittery on iOS).
+  // Two visual states: transparent white text over the hero, then a solid
+  // white surface once scrolled. A 6px threshold keeps the swap from firing
+  // on micro-scrolls. The .is-scrolled class drives the color inversion in CSS.
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 6);
     onScroll();
@@ -33,17 +29,11 @@ const Header = () => {
 
         <nav className="nav-desktop" aria-label="Primary">
           <Link to="/events" className="nav-link">Discover</Link>
-          <Link to="/events/calendar" className="nav-link">Calendar</Link>
+          <Link to="/events" className="nav-link">Categories</Link>
           <Link to="/organizer/events/create" className="nav-link">For Organizers</Link>
         </nav>
 
         <div className="nav-actions">
-          <Link to="/events" className="btn-icon" aria-label="Search events">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
-          </Link>
           <Link to="/login" className="btn-text">Sign in</Link>
           <Link to="/register" className="btn-primary">Create account</Link>
         </div>
@@ -73,6 +63,7 @@ const Header = () => {
       {mobileMenuOpen && (
         <nav className="mobile-menu" id="mobile-menu" aria-label="Mobile">
           <Link to="/events" className="mobile-nav-link" onClick={handleNavClick}>Discover</Link>
+          <Link to="/events" className="mobile-nav-link" onClick={handleNavClick}>Categories</Link>
           <Link to="/events/calendar" className="mobile-nav-link" onClick={handleNavClick}>Calendar</Link>
           <Link to="/organizer/events/create" className="mobile-nav-link" onClick={handleNavClick}>For Organizers</Link>
           <Link to="/trust" className="mobile-nav-link" onClick={handleNavClick}>Trust &amp; Safety</Link>
