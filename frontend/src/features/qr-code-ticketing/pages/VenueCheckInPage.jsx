@@ -441,31 +441,18 @@ const VenueCheckInPage = () => {
           highContrast ? 'bg-zinc-900 border-zinc-700' : 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-100'
         }`}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${highContrast ? 'bg-zinc-800' : 'bg-white shadow-sm'}`}>
-                <span className="text-xl">🎪</span>
-              </div>
-              <div>
-                <div className={`text-xs font-medium ${highContrast ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Currently Scanning For
-                </div>
-                {eventLoading ? (
-                  <Skeleton variant="text" className="h-6 w-48" />
-                ) : eventDetails ? (
-                  <>
-                    <div className={`text-lg font-bold ${highContrast ? 'text-white' : 'text-slate-900'}`}>
-                      {eventDetails.name}
-                    </div>
-                    <div className={`text-xs ${highContrast ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Event #{eventId} • {eventDetails.date}
-                    </div>
-                  </>
-                ) : (
-                  <div className={`text-lg font-bold ${highContrast ? 'text-white' : 'text-slate-900'}`}>
-                    Event #{eventId}
-                  </div>
-                )}
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                Venue
+              </span>
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                Check-in
+              </span>
+              {eventDetails && (
+                <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                  • {eventDetails.name}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {showEventSelector && !eventDetails && (
