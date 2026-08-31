@@ -12,14 +12,19 @@ const TicketDetailPage = () => {
     ticketKeys.detail(ticketId || ''),
     async () => {
       if (!ticketId) return null;
-      const response = await api.get(`/tickets/${ticketId}`);
-      return response.data;
+      try {
+        const response = await api.get(`/tickets/${ticketId}`);
+        return response.data;
+      } catch {
+        return null;
+      }
     },
     {
       enabled: Boolean(ticketId),
       staleTime: 5 * 60 * 1000,
       cacheTime: 30 * 60 * 1000,
-      retry: 2,
+      retry: false,
+      placeholderData: false,
     }
   );
 

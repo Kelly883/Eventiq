@@ -85,7 +85,7 @@ const UserDashboardPage = () => {
                 to="/my-tickets"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-700/50 text-white text-sm font-medium hover:bg-indigo-700/70 transition-colors border border-indigo-500/50"
               >
-                🎫 Browse Tickets
+                🎫 View My Tickets
               </Link>
               <button
                 onClick={() => setShowWelcome(false)}

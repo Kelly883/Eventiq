@@ -5,6 +5,7 @@ import ToastContainer from './features/notifications/components/ToastContainer';
 import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
 import { ProtectedRoute, PublicRoute } from './features/auth/components/RouteGuards';
 import { useAuthContext } from './features/auth/context/AuthContext';
+import { safeRedirectPath, normalizeFromPath } from './features/auth/utils';
 import { api, showToast } from './lib/api';
 import './App.css';
 import './features/homepage/homepage.css';
@@ -224,42 +225,39 @@ function App() {
     }
   }, [user, sessionWarningShown]);
 
+  // Listen for auth-driven redirects emitted by AuthContext (e.g. session
+  // expiry / cross-tab logout). We navigate via the router (SPA) instead of a
+  // hard reload so unauthenticated users never cascade into a reload loop.
+  const currentLocationRef = useRef(location);
+  useEffect(() => {
+    currentLocationRef.current = location;
+  }, [location]);
+  useEffect(() => {
+    const handleRedirectLogin = () => {
+      const loc = currentLocationRef.current;
+      if (loc.pathname === '/login') return;
+      navigate('/login', { replace: true, state: { from: loc } });
+    };
+    window.addEventListener('eventiq:redirect-login', handleRedirectLogin);
+    return () => window.removeEventListener('eventiq:redirect-login', handleRedirectLogin);
+  }, [navigate]);
+
   const processedFromRef = useRef(null);
 
   useEffect(() => {
     if (!user || !location.state?.from) return;
-    const fromPath =
-      typeof location.state.from === 'string'
-        ? location.state.from
-        : location.state.from.pathname;
+    const fromPath = normalizeFromPath(location.state.from);
 
     if (processedFromRef.current === fromPath) return;
     processedFromRef.current = fromPath;
 
-    const getRedirectPath = (to) => {
-      const userRoles = user?.roles?.map((r) => r.name) || [];
-      if (to === '/dashboard/organizer' && !userRoles.includes('organizer')) {
-        return '/dashboard';
-      }
-      if (to.startsWith('/admin/') && !userRoles.includes('admin')) {
-        return '/access-denied';
-      }
-      if (to.startsWith('/organizer/') && !userRoles.includes('organizer')) {
-        return '/dashboard';
-      }
-      return to;
-    };
-
-    const safePath = getRedirectPath(fromPath);
+    const safePath = safeRedirectPath(fromPath, user, '/dashboard');
     if (safePath === location.pathname) return;
     navigate(safePath, { replace: true });
   }, [user, location.state?.from, location.pathname, navigate, processedFromRef]);
 
   // Show banner when deep-link recovery is active — not on the homepage itself
-  const recoveryPath =
-    typeof location.state?.from === 'string'
-      ? location.state.from
-      : location.state?.from?.pathname;
+  const recoveryPath = normalizeFromPath(location.state?.from);
   const recoveryBanner =
     user && location.state?.from && location.pathname !== '/' ? (
       <div
@@ -334,7 +332,7 @@ function App() {
                     type="button"
                     onClick={() => {
                       logout();
-                      window.location.href = '/login';
+                      navigate('/login', { replace: true });
                     }}
                     className="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 transition-colors"
                   >

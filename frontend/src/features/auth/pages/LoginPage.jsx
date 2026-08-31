@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import { showToast } from '../../../lib/api';
+import { safeRedirectPath, defaultRedirect, normalizeFromPath } from '../utils';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -44,11 +45,7 @@ const LoginPage = () => {
     }
   }, [sessionExpiredReturn]);
 
-  const getDefaultRedirect = () => {
-    const userRoles = user?.roles?.map((r) => r.name) || [];
-    if (userRoles.includes('organizer')) return '/dashboard/organizer';
-    return '/dashboard';
-  };
+  const getDefaultRedirect = () => defaultRedirect(user);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,7 +56,8 @@ const LoginPage = () => {
       await login(email, password);
       showToast('Session Extended', 'Your session will remain active.', 'info');
       // Compute redirect after login when user roles are available
-      const redirectTo = location.state?.from?.pathname || sessionExpiredReturn || getDefaultRedirect();
+      const fromPath = normalizeFromPath(location.state?.from) || sessionExpiredReturn || null;
+      const redirectTo = safeRedirectPath(fromPath, user, defaultRedirect(user));
       navigate(redirectTo, { replace: true });
     } catch (err) {
       if (err.response?.status === 419) {
