@@ -1,13 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { useAuthContext } from '../../auth/context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
 import { fraudService } from '../services/fraudService';
 
-const FraudTransactionReviewModal = ({ alertId, onClose }) => {
-  const { user } = useAuthContext();
-  const navigate = useNavigate();
+const FraudTransactionReviewModal = ({ alertId, onClose, onResolve }) => {
   const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const dialogRef = useRef(null);
 
   // Fetch alert details on mount
   useEffect(() => {
@@ -16,9 +14,9 @@ const FraudTransactionReviewModal = ({ alertId, onClose }) => {
       try {
         const result = await fraudService.getAlert(alertId);
         setAlert(result);
-        setLoading(false);
       } catch (err) {
-        console.error('Failed to load alert', err);
+        setError('Unable to load this fraud alert. Please try again.');
+      } finally {
         setLoading(false);
       }
     }
@@ -36,34 +34,39 @@ const FraudTransactionReviewModal = ({ alertId, onClose }) => {
     }
   }, [alertId]);
 
-  if (!alert) {
-    return null;
-  }
+  useEffect(() => {
+    dialogRef.current?.focus();
 
-  const handleResolve = async (decision) => {
-    try {
-      await fraudService.resolveAlert(alertId, decision);
-      onClose();
-    } catch (err) {
-      console.error('Failed to resolve alert', err);
-    }
-  };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   return (
     <div
       className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center"
-      onClick={e => e.target !== e.currentTarget && onClose()}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fraud-review-title"
+        tabIndex={-1}
         className="bg-white rounded-xl border border-slate-200 p-6 shadow-2xl max-w-2xl w-full transform overflow-hidden"
-        onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-800">
+          <h2 id="fraud-review-title" className="text-lg font-bold text-slate-800">
             Fraud Transaction Review
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close fraud transaction review"
             className="text-sm text-slate-500 hover:text-slate-700"
           >
             ✕
@@ -71,6 +74,10 @@ const FraudTransactionReviewModal = ({ alertId, onClose }) => {
         </div>
 
         <div className="p-6">
+          {loading && <p className="text-sm text-slate-500">Loading alert details...</p>}
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+          {alert && (
+            <>
           <h3 className="text-lg font-bold text-slate-800 mb-4">
             Alert #{alert.id}
           </h3>
@@ -113,19 +120,21 @@ const FraudTransactionReviewModal = ({ alertId, onClose }) => {
             <p className="text-sm text-slate-500 mb-1">Decisions:</p>
             <div className="flex gap-4">
               <button
-                onClick={() => handleResolve('approve')}
+                onClick={() => onResolve(alertId, 'approve')}
                 className="flex-1 px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors"
               >
                 Approve
               </button>
               <button
-                onClick={() => handleResolve('reject')}
+                onClick={() => onResolve(alertId, 'reject')}
                 className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors"
               >
                 Reject
               </button>
             </div>
           </div>
+            </>
+          )}
         </div>
       </div>
     </div>

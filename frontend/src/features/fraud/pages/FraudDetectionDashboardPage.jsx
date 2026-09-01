@@ -176,6 +176,7 @@ const FraudDetectionDashboardPage = () => {
           <FraudTransactionReviewModal
             alertId={resolvingAlert}
             onClose={handleCloseModal}
+            onResolve={handleResolve}
           />
         ) : null}
       </div>

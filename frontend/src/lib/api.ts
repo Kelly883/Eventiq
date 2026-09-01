@@ -82,8 +82,14 @@ api.interceptors.response.use(
       _retry?: boolean;
     };
 
-    // If we already tried to refresh, don't try again
+    // The CSRF refresh cannot renew an expired Sanctum session. A second 401
+    // therefore confirms expiration and must notify the router.
     if (error.response?.status === 401 && originalConfig._retry) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('session-expired', {
+          detail: { reason: 'authenticated-request-rejected' }
+        }));
+      }
       return Promise.reject(error);
     }
 
