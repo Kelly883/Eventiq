@@ -8,28 +8,39 @@ const TicketDetailPage = () => {
   const { ticketId } = useParams();
   const navigate = useNavigate();
 
-  const { data, isLoading, isError, error } = useQuery(
-    ticketKeys.detail(ticketId || ''),
-    async () => {
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ticketKeys.detail(ticketId || ''),
+    queryFn: async () => {
       if (!ticketId) return null;
-      try {
-        const response = await api.get(`/tickets/${ticketId}`);
-        return response.data;
-      } catch {
-        return null;
-      }
+      const response = await api.get(`/tickets/${ticketId}`);
+      return response.data;
     },
-    {
-      enabled: Boolean(ticketId),
-      staleTime: 5 * 60 * 1000,
-      cacheTime: 30 * 60 * 1000,
-      retry: false,
-      placeholderData: false,
-    }
-  );
+    enabled: Boolean(ticketId),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    retry: false,
+  });
 
   if (!ticketId) {
     return <Navigate to="/my-tickets" replace />;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="py-8 px-4">
+        <div className="h-64 w-96 mb-4 bg-slate-200 rounded animate-pulse" />
+        <div className="h-16 w-80 mb-2 bg-slate-200 rounded animate-pulse" />
+        <div className="h-10 w-60 mb-2 bg-slate-200 rounded animate-pulse" />
+        <div className="h-8 w-40 bg-slate-200 rounded animate-pulse" />
+        <button
+          onClick={() => navigate('/my-tickets', { replace: true })}
+          className="mt-4 px-3 py-1 text-sm text-slate-400 cursor-not-allowed"
+          disabled
+        >
+          Loading ticket details…
+        </button>
+      </div>
+    );
   }
 
   if (isError || !data) {
@@ -59,24 +70,6 @@ const TicketDetailPage = () => {
             🔍 Look Up by Code
           </Link>
         </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="py-8 px-4">
-        <div className="h-64 w-96 mb-4 bg-slate-200 rounded animate-pulse" />
-        <div className="h-16 w-80 mb-2 bg-slate-200 rounded animate-pulse" />
-        <div className="h-10 w-60 mb-2 bg-slate-200 rounded animate-pulse" />
-        <div className="h-8 w-40 bg-slate-200 rounded animate-pulse" />
-        <button
-          onClick={() => navigate('/my-tickets', { replace: true })}
-          className="mt-4 px-3 py-1 text-sm text-slate-400 cursor-not-allowed"
-          disabled
-        >
-          Loading ticket details…
-        </button>
       </div>
     );
   }

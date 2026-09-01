@@ -256,10 +256,13 @@ function App() {
     navigate(safePath, { replace: true });
   }, [user, location.state?.from, location.pathname, navigate, processedFromRef]);
 
+  // Track if recovery banner has been dismissed in this session
+  const [recoveryBannerDismissed, setRecoveryBannerDismissed] = useState(false);
+
   // Show banner when deep-link recovery is active — not on the homepage itself
   const recoveryPath = normalizeFromPath(location.state?.from);
   const recoveryBanner =
-    user && location.state?.from && location.pathname !== '/' ? (
+    user && location.state?.from && location.pathname !== '/' && !recoveryBannerDismissed ? (
       <div
         key="recovery-banner"
         className="fixed top-0 left-0 right-0 z-50 bg-indigo-100 border-b border-indigo-200 p-4 text-indigo-800 shadow-sm animate-slide-in-down"
@@ -270,6 +273,12 @@ function App() {
             <span className="font-bold">Remembering where you wanted to go&hellip;</span>
             navigating back to {recoveryPath}…
           </p>
+          <button
+            onClick={() => setRecoveryBannerDismissed(true)}
+            className="mt-2 text-indigo-600 underline cursor-pointer text-sm"
+          >
+            Don't show again
+          </button>
         </div>
       </div>
     ) : null;

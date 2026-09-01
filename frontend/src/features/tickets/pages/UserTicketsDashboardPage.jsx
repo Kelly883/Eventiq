@@ -5,17 +5,15 @@ import { ticketKeys } from '../../../lib/queryKeys';
 import { api } from '../../../lib/api';
 
 const UserTicketsDashboardPage = () => {
-  const { data, isLoading, isError, error } = useQuery(
-    ticketKeys.lists(),
-    async () => {
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ticketKeys.lists(),
+    queryFn: async () => {
       const response = await api.get('/tickets');
       return response.data;
     },
-    {
-      staleTime: 2 * 60 * 1000,
-      cacheTime: 10 * 60 * 1000,
-    }
-  );
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
   const tickets = data?.data || data || [];
   const hasTickets = Array.isArray(tickets) && tickets.length > 0;
@@ -63,8 +61,8 @@ const UserTicketsDashboardPage = () => {
         <div className="mx-auto max-w-md">
           <div className="text-6xl mb-4">🎫</div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">No tickets yet</h2>
-          <p className="text-slate-500 mb-2">
-            When you purchase tickets for events, they'll appear here.
+          <p className="text-slate-500 mb-4">
+            Purchase tickets for events to see them here.
           </p>
           <p className="text-sm text-slate-400 mb-6">
             Tickets give you access to events, show your seat or entry details, and can be checked in at the venue.

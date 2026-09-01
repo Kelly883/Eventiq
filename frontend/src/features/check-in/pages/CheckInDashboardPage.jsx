@@ -7,6 +7,7 @@ import {
 } from '../components';
 import { useOfflineSyncStore } from '../../offline/services/offlineSyncStore';
 import EventSelector from '../../analytics/components/EventSelector';
+const CHECKIN_FIRST_VISIT_KEY = "eventiq-checkin-first-visit";
 import { api } from '../../../lib/api';
 
 const CheckInDashboardPage = () => {
@@ -19,6 +20,14 @@ const CheckInDashboardPage = () => {
   const isSyncing = useOfflineSyncStore((state) => state.isSyncing);
   const syncQueue = useOfflineSyncStore((state) => state.syncQueue);
   const clearSyncedHistory = useOfflineSyncStore((state) => state.clearSyncedHistory);
+  // Mark first visit as completed after mount
+  useEffect(() => {
+    localStorage.setItem(CHECKIN_FIRST_VISIT_KEY, "true");
+  }, []);
+  const [showFirstTimeBanner, setShowFirstTimeBanner] = useState(() => {
+    const hasVisited = localStorage.getItem(CHECKIN_FIRST_VISIT_KEY);
+    return !hasVisited;
+  });
 
   // Fetch event details for ended-status check
   useEffect(() => {
@@ -96,12 +105,15 @@ const CheckInDashboardPage = () => {
 
         {/* Sticky active event banner */}
         {eventId && (
-          <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-800">
-            <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
-            Checking in: <span className="font-bold">Event #{eventId}</span>
-            <span className="text-indigo-500">·</span>
-            <Link to="/check-in" className="text-indigo-600 hover:text-indigo-800 underline text-xs">Clear</Link>
-          </div>
+<div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-800">
+          <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
+          <span className="font-bold">{eventDetails?.name || `Event #${eventId}`}</span>
+          <span className="text-indigo-500">·</span>
+          <Link to="/check-in" className="text-indigo-600 hover:text-indigo-800 underline text-xs">Clear</Link>
+          <span className="ml-4 text-indigo-500 hover:text-indigo-600 cursor-pointer text-xs" title="Works offline - scans save locally and sync when back online">
+            ⓘ
+          </span>
+        </div>
         )}
         {!eventId && (
           <div className="px-4 py-2 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-800">

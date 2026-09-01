@@ -9,17 +9,15 @@ const UserDashboardPage = () => {
   const { user } = useAuthContext();
   const [showWelcome, setShowWelcome] = useState(true);
 
-  const { data: ticketsData } = useQuery(
-    ticketKeys.lists(),
-    async () => {
+  const { data: ticketsData } = useQuery({
+    queryKey: ticketKeys.lists(),
+    queryFn: async () => {
       const response = await api.get('/tickets');
       return response.data;
     },
-    {
-      staleTime: 2 * 60 * 1000,
-      cacheTime: 10 * 60 * 1000,
-    }
-  );
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
   const tickets = ticketsData?.data || ticketsData || [];
   const hasTickets = Array.isArray(tickets) && tickets.length > 0;
@@ -36,6 +34,7 @@ const UserDashboardPage = () => {
       icon: '🎫',
       title: 'My Tickets',
       description: 'View and manage your purchased tickets',
+      visible: () => hasTickets,
     },
     {
       to: '/my-tickets/status',
@@ -109,7 +108,9 @@ const UserDashboardPage = () => {
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-slate-800 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {quickActions.map((action) => (
+          {quickActions.map((action) => {
+            if (!action.visible()) return null;
+            return (
             <Link
               key={action.to}
               to={action.to}

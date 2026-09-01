@@ -94,6 +94,7 @@ const CheckInExportPage = () => {
             <p className="text-sm text-slate-500 mt-1">
               Spreadsheet format compatible with Excel and Google Sheets.
             </p>
+            <p className="text-xs text-indigo-600 mt-1">Best for: Excel, Google Sheets, data analysis</p>
           </button>
           <button
             onClick={() => handleExport('json')}
@@ -105,6 +106,7 @@ const CheckInExportPage = () => {
             <p className="text-sm text-slate-500 mt-1">
               Machine-readable format for integrations and analysis.
             </p>
+            <p className="text-xs text-indigo-600 mt-1">Best for: APIs, databases, automated processing</p>
           </button>
         </div>
       </div>
