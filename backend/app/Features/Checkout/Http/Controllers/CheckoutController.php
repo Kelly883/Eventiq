@@ -139,7 +139,9 @@ class CheckoutController extends Controller
                 'email' => $user->email,
                 'amount' => $total,
                 'reference' => $reference,
-                'callback_url' => config('app.url') . '/checkout/callback',
+                'callback_url' => rtrim(config('app.frontend_url'), '/') . '/checkout/callback?' . http_build_query([
+                    'orderId' => $order->id,
+                ]),
                 'metadata' => ['order_id' => $order->id],
             ]);
         } catch (\Throwable $e) {

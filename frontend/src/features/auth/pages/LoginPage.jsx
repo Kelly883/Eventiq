@@ -14,7 +14,7 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, user } = useAuthContext();
+  const { login } = useAuthContext();
 
   const sessionExpiredReturn = (() => {
     try {
@@ -54,11 +54,14 @@ const LoginPage = () => {
     setError('');
 
     try {
-      await login(email, password, rememberMe);
+      const { user: authenticatedUser } = await login(email, password, rememberMe);
       showToast('Session Extended', 'Your session will remain active.', 'info');
-      // Compute redirect after login when user roles are available
       const fromPath = normalizeFromPath(location.state?.from) || sessionExpiredReturn || null;
-      const redirectTo = safeRedirectPath(fromPath, user, defaultRedirect(user));
+      const redirectTo = safeRedirectPath(
+        fromPath,
+        authenticatedUser,
+        defaultRedirect(authenticatedUser)
+      );
       navigate(redirectTo, { replace: true });
     } catch (err) {
       if (err.response?.status === 419) {

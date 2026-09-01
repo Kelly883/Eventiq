@@ -83,11 +83,11 @@ return [
     'callbacks' => [
         'paystack' => [
             'callback_url' => env('PAYSTACK_CALLBACK_URL', '/api/payments/paystack/callback'),
-            'webhook_url' => env('PAYSTACK_WEBHOOK_URL', '/api/payments/paystack/webhook'),
+            'webhook_url' => env('PAYSTACK_WEBHOOK_URL', '/api/webhooks/payment-provider'),
         ],
         'flutterwave' => [
             'callback_url' => env('FLUTTERWAVE_CALLBACK_URL', '/api/payments/flutterwave/callback'),
-            'webhook_url' => env('FLUTTERWAVE_WEBHOOK_URL', '/api/payments/flutterwave/webhook'),
+            'webhook_url' => env('FLUTTERWAVE_WEBHOOK_URL', '/api/webhooks/payment-provider'),
         ],
     ],
 

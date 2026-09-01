@@ -1,27 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../../lib/api';
 import { useAuthContext } from '../../../features/auth/context/AuthContext';
+import { useCartContext } from '../context/CartContext';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuthContext();
+  const { cart } = useCartContext();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [billingDetails, setBillingDetails] = useState({
+    fullName: user?.name || '',
+    email: user?.email || '',
+  });
 
   // Check cart status on mount
   useEffect(() => {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     if (cart.length === 0) {
       setError('Your cart is empty');
-      // Redirect to cart after a moment
-      setTimeout(() => {
+      const redirectTimer = setTimeout(() => {
         navigate('/cart', { replace: true });
       }, 1500);
+      return () => clearTimeout(redirectTimer);
     }
-  }, [navigate]);
+    setError(null);
+    return undefined;
+  }, [cart.length, navigate]);
 
   if (error) {
     return (
@@ -38,17 +44,12 @@ const CheckoutPage = () => {
     );
   }
 
-  // Handle step changes
-  const handleNext = () => setStep((s) => Math.min(s + 1, 4));
-  const handlePrev = () => setStep((s) => Math.max(s - 1, 1));
-
   // Handle checkout submission
   const handleSubmit = async () => {
     setLoading(true);
     setError(null);
     try {
       // Verify cart first
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
       if (cart.length === 0) {
         setError('Your cart is empty');
         setLoading(false);
@@ -62,15 +63,19 @@ const CheckoutPage = () => {
         gateway: 'paystack', // default gateway
         items: cart,
       });
-      // In production, redirect to payment gateway
-      // For now, simulate successful checkout
       setLoading(false);
-      setStep(4);
-      // Redirect to order confirmation with real order ID
-      const orderId = res?.data?.data?.id || Math.floor(Math.random() * 1000) + 1;
-      setTimeout(() => {
-        navigate(`/order/${orderId}/confirmation`, { replace: true });
-      }, 1500);
+      const orderId = res?.data?.order_id;
+      if (!orderId) {
+        throw new Error('Checkout did not return an order ID');
+      }
+
+      const gatewayUrl = res?.data?.gateway_data?.authorization_url
+        || res?.data?.gateway_data?.link;
+      if (!gatewayUrl) {
+        throw new Error('Payment gateway did not return a checkout URL');
+      }
+
+      window.location.assign(gatewayUrl);
     } catch (err) {
       setError('Failed to process checkout');
       setLoading(false);
@@ -99,7 +104,7 @@ const CheckoutPage = () => {
               <div className="mb-6">
                 <h3 className="text-lg font-bold text-slate-800 mb-2">Cart Summary</h3>
                 <p className="text-sm text-slate-500 mb-2">
-                  Your cart contains {JSON.parse(localStorage.getItem('cart') || '[]').length} item(s)
+                  Your cart contains {cart.length} item(s)
                 </p>
                 <button
                   onClick={() => setStep(2)}
@@ -115,24 +120,57 @@ const CheckoutPage = () => {
                   Please fill in your billing information to complete the purchase.
                 </p>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-500 mb-2">
+                  <label htmlFor="checkout-full-name" className="block text-sm font-medium text-slate-500 mb-2">
                     Full Name
                   </label>
                   <input
+                    id="checkout-full-name"
+                    name="fullName"
                     type="text"
+                    value={billingDetails.fullName}
+                    onChange={(event) => setBillingDetails((details) => ({
+                      ...details,
+                      fullName: event.target.value,
+                    }))}
                     className="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 p-3"
-                    placeholder="Full name" required
+                    placeholder="Full name"
+                    required
                   />
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-500 mb-2">
+                  <label htmlFor="checkout-email" className="block text-sm font-medium text-slate-500 mb-2">
                     Email
                   </label>
                   <input
+                    id="checkout-email"
+                    name="email"
                     type="email"
+                    value={billingDetails.email}
+                    onChange={(event) => setBillingDetails((details) => ({
+                      ...details,
+                      email: event.target.value,
+                    }))}
                     className="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 p-3"
-                    placeholder="name@example.com" required
+                    placeholder="name@example.com"
+                    required
                   />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium"
+                  >
+                    ← Back to Cart
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStep(3)}
+                    disabled={!billingDetails.fullName.trim() || !billingDetails.email.trim()}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    Continue to Payment
+                  </button>
                 </div>
               </div>
             ) : step === 3 ? (
@@ -144,20 +182,24 @@ const CheckoutPage = () => {
                 <p className="text-sm text-slate-500">
                   No card details are stored on our servers.
                 </p>
-              </div>
-            ) : step === 4 ? (
-              <div className="text-center py-12">
-                <h1 className="text-2xl font-bold text-slate-900 mb-4">Thank you for your purchase!</h1>
-                <p className="text-slate-500 mb-4">
-                  Your order has been successfully processed. Your tickets will be
-                  delivered to your email address.
-                </p>
-                <button
-                  onClick={() => navigate('/my-tickets', { replace: true })}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium shadow-sm hover:bg-indigo-700 transition-colors"
-                >
-                  View My Tickets
-                </button>
+                <div className="mt-6 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    disabled={loading}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium disabled:opacity-50"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    {loading ? 'Processing payment...' : 'Pay and Complete Order'}
+                  </button>
+                </div>
               </div>
             ) : null}
           </div>

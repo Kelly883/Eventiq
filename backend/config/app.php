@@ -34,6 +34,10 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // The SPA owns payment-return screens. This may differ from APP_URL when
+    // the API and frontend are deployed on separate origins.
+    'frontend_url' => env('FRONTEND_URL', env('APP_URL', 'http://localhost')),
+
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*

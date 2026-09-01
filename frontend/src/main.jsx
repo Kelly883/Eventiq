@@ -5,6 +5,7 @@ import './index.css'
 import './env'
 import App from './App.jsx'
 import { AuthProvider } from './features/auth/context/AuthContext.jsx'
+import { CartProvider } from './features/checkout/context/CartContext.jsx'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './lib/queryClient'
 import GlobalErrorBoundary from './features/common/components/ErrorBoundary'
@@ -35,7 +36,9 @@ async function bootstrap() {
         <BrowserRouter>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
-              <App />
+              <CartProvider>
+                <App />
+              </CartProvider>
             </AuthProvider>
           </QueryClientProvider>
         </BrowserRouter>

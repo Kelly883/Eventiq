@@ -1,15 +1,49 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
-// Initialize cart from localStorage on first load
-const INITIAL_CART = JSON.parse(localStorage.getItem('cart') || '[]');
+const CART_STORAGE_KEY = 'cart';
 
-// Create the context with initial state
 const CartContext = createContext({
-  cart: INITIAL_CART,
+  cart: [],
   addToCart: (item) => {},
   removeFromCart: (id) => {},
   clearCart: () => {},
 });
 
-// Custom hook to get context value
+const readCart = () => {
+  try {
+    const storedCart = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]');
+    return Array.isArray(storedCart) ? storedCart : [];
+  } catch {
+    return [];
+  }
+};
+
+export const CartProvider = ({ children }) => {
+  const [cart, setCart] = useState(readCart);
+
+  useEffect(() => {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+  }, [cart]);
+
+  const addToCart = useCallback((item) => {
+    setCart((currentCart) => [...currentCart, item]);
+  }, []);
+
+  const removeFromCart = useCallback((id) => {
+    setCart((currentCart) => currentCart.filter((item) => item.id !== id));
+  }, []);
+
+  const clearCart = useCallback(() => {
+    setCart([]);
+  }, []);
+
+  return (
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart }}>
+      {children}
+    </CartContext.Provider>
+  );
+};
+
 export const useCartContext = () => useContext(CartContext);
+
+export { CartContext };

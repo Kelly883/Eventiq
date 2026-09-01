@@ -43,6 +43,7 @@ const EventEditPage = lazy(() => import('./features/events/pages/EventEditPage')
 const OrganizerEventOverviewPage = lazy(() => import('./features/events/pages/OrganizerEventOverviewPage'));
 const CartPage = lazy(() => import('./features/checkout/pages/CartPage'));
 const CheckoutPage = lazy(() => import('./features/checkout/pages/CheckoutPage'));
+const CheckoutCallbackPage = lazy(() => import('./features/checkout/pages/CheckoutCallbackPage'));
 const OrderConfirmationPage = lazy(() => import('./features/checkout/pages/OrderConfirmationPage'));
 const UserTicketsDashboardPage = lazy(() => import('./features/tickets/pages/UserTicketsDashboardPage'));
 const TicketDetailPage = lazy(() => import('./features/tickets/pages/TicketDetailPage'));
@@ -376,6 +377,7 @@ function App() {
             <Route path="/events/calendar" element={<EventCalendarPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+            <Route path="/checkout/callback" element={<ProtectedRoute><CheckoutCallbackPage /></ProtectedRoute>} />
             <Route path="/order/:orderId/confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
             <Route path="/my-tickets" element={<ProtectedRoute unauthenticatedToast={true}><MyTicketsLayout /></ProtectedRoute>}>
               <Route index element={<UserTicketsDashboardPage />} />

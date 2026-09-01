@@ -12,7 +12,7 @@ class OrderController extends Controller
     /**
      * GET /api/orders/{orderId} - order confirmation page data.
      */
-    public function show(Request $request, int $orderId)
+    public function show(Request $request, string $orderId)
     {
         $order = Order::with(['items.ticketTier', 'tickets', 'event'])
             ->where('id', $orderId)

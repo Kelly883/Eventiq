@@ -11,7 +11,7 @@
 export function normalizeFromPath(from) {
   if (!from) return null;
   if (typeof from === 'string') return from;
-  if (from.pathname) return from.pathname;
+  if (from.pathname) return `${from.pathname}${from.search || ''}${from.hash || ''}`;
   return null;
 }
 

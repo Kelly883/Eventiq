@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import { showToast } from '../../../lib/api';
 import { LoadingSpinner } from '../../common';
+import { normalizeFromPath, safeRedirectPath } from '../utils';
 
 const getUserRole = (user) => {
   if (user?.roles?.some((r) => r.name === 'organizer')) return 'organizer';
@@ -86,10 +87,15 @@ export const ProtectedRoute = ({ children, requiredRole = null, requiredRoles = 
   if (requiredRole === 'admin' && !checkAdminAccess()) {
     return (
       <ToastRedirect
-        to="/login"
-        state={{ from: location }}
-        title="Session expired"
-        description="Your session has expired. Please log in again."
+        to="/access-denied"
+        state={{
+          deniedByRole: 'admin',
+          attemptedPath: location.pathname,
+          message: 'That page is for administrators only.',
+          messageType: 'warning',
+        }}
+        title="Access Denied"
+        description="Administrators only."
         type="warning"
       />
     );
@@ -117,15 +123,21 @@ export const ProtectedRoute = ({ children, requiredRole = null, requiredRoles = 
 
 export const PublicRoute = ({ children }) => {
   const { user, loading } = useAuthContext();
+  const location = useLocation();
 
   if (loading) {
     return <LoadingSpinner message="Checking authentication..." />;
   }
 
   if (user) {
+    const returnPath = normalizeFromPath(location.state?.from);
+    if (returnPath) {
+      return <Navigate to={safeRedirectPath(returnPath, user)} replace />;
+    }
+
     const roles = user?.roles?.map((r) => r.name) || [];
-    // Venue staff (venue_staff, organizer, admin) → dedicated staff dashboard
-    if (roles.some((r) => ['venue_staff', 'organizer', 'admin'].includes(r))) {
+    // Venue staff and organizers share the dedicated staff dashboard.
+    if (roles.some((r) => ['venue_staff', 'organizer'].includes(r))) {
       return <Navigate to="/venue/dashboard" replace />;
     }
     // Fallback for logged-in users without a dedicated dashboard
