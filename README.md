@@ -53,7 +53,8 @@ Eventiq is a full-stack event management and ticketing platform. It provides eve
 │   │   └── App.jsx   # Router and layout
 │   ├── index.html
 │   └── vite.config.js
-└── vercel.json       # SPA rewrite rules
+└── frontend/
+    └── vercel.json   # SPA rewrite rules
 ```
 
 ## Getting Started
