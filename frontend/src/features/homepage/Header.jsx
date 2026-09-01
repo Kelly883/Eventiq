@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import BrandLogo from '../common/components/BrandLogo';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -23,8 +24,7 @@ const Header = () => {
     <header className={`header${scrolled ? ' is-scrolled' : ''}`}>
       <div className="header-container">
         <Link to="/" className="logo" aria-label="Eventiq home">
-          <span className="logo-icon" aria-hidden="true">◆</span>
-          <span className="logo-text">EVENTIQ</span>
+          <BrandLogo variant={scrolled ? 'light' : 'transparent'} />
         </Link>
 
         <nav className="nav-desktop" aria-label="Primary">

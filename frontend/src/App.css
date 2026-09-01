@@ -4,3 +4,21 @@
 #root {
   min-height: 100vh;
 }
+
+.app-brand {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.app-brand .brand-logo {
+  display: block;
+  width: 188px;
+  height: auto;
+}
+
+@media (max-width: 640px) {
+  .app-brand .brand-logo {
+    width: 152px;
+  }
+}

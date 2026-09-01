@@ -159,31 +159,13 @@
 .homepage .logo {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
   text-decoration: none;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.homepage .header.is-scrolled .logo {
-  color: var(--color-text);
-  text-shadow: none;
-}
-
-.homepage .logo-icon {
-  color: var(--color-primary-light);
-  font-size: 18px;
-  line-height: 1;
-}
-
-.homepage .header.is-scrolled .logo-icon {
-  color: var(--color-primary);
-}
-
-.homepage .logo-text {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+.homepage .brand-logo {
+  display: block;
+  width: 194px;
+  height: auto;
 }
 
 .homepage .nav-desktop {
@@ -1578,6 +1560,10 @@
 
   .homepage .mobile-menu-btn {
     display: inline-flex;
+  }
+
+  .homepage .brand-logo {
+    width: 166px;
   }
 
   .homepage .mobile-menu {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, Suspense, lazy, useRef } from 'react';
 import { Routes, Route, NavLink, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { LoadingSpinner, ErrorBoundary } from './features/common';
+import BrandLogo from './features/common/components/BrandLogo';
 import ToastContainer from './features/notifications/components/ToastContainer';
 import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
 import { ProtectedRoute, PublicRoute } from './features/auth/components/RouteGuards';
@@ -303,15 +304,9 @@ function App() {
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="flex h-16 items-center justify-between">
                 {/* Logo */}
-                <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white font-black text-lg shadow-md shadow-indigo-200">
-                    E
-                  </div>
-                  <span className="text-xl font-black text-slate-900 tracking-tight">Eventiq</span>
-                  <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-                    v1.0
-                  </span>
-                </div>
+                <NavLink to="/" className="app-brand" aria-label="eventIQ home">
+                  <BrandLogo />
+                </NavLink>
 
                 {/* Navigation Links — filtered by auth state and role so users
                     never see destinations they cannot access */}
