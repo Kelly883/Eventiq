@@ -128,7 +128,8 @@ const UserDashboardPage = () => {
                 </div>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </div>
 
