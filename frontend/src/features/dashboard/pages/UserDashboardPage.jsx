@@ -111,23 +111,24 @@ const UserDashboardPage = () => {
           {quickActions.map((action) => {
             if (!action.visible()) return null;
             return (
-            <Link
-              key={action.to}
-              to={action.to}
-              className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all group"
-            >
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-50 text-2xl group-hover:bg-indigo-100 transition-colors">
-                  {action.icon}
+              <Link
+                key={action.to}
+                to={action.to}
+                className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all group"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-50 text-2xl group-hover:bg-indigo-100 transition-colors">
+                    {action.icon}
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900 group-hover:text-indigo-700 transition-colors">
+                      {action.title}
+                    </h4>
+                    <p className="text-sm text-slate-500 mt-1">{action.description}</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 group-hover:text-indigo-700 transition-colors">
-                    {action.title}
-                  </h4>
-                  <p className="text-sm text-slate-500 mt-1">{action.description}</p>
-                </div>
-              </div>
-            </Link>
+              </Link>
+            );
           ))}
         </div>
       </div>
