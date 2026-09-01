@@ -109,7 +109,7 @@ const UserDashboardPage = () => {
         <h3 className="text-lg font-semibold text-slate-800 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {quickActions.map((action) => {
-            if (!action.visible()) return null;
+            if (action.visible && !action.visible()) return null;
             return (
               <Link
                 key={action.to}
@@ -129,7 +129,7 @@ const UserDashboardPage = () => {
                 </div>
               </Link>
             );
-          ))}
+          })}
         </div>
       </div>
 
