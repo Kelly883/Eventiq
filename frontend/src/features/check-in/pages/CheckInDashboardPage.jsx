@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   CheckInStatsDisplay,
   CheckInQRScanner,
   CheckInSearchBar,
+  CheckInNavigation,
 } from '../components';
 import { useOfflineSyncStore } from '../../offline/services/offlineSyncStore';
 import EventSelector from '../../analytics/components/EventSelector';
@@ -39,8 +40,6 @@ const CheckInDashboardPage = () => {
       .then((res) => setEventDetails(res.data?.data || res.data))
       .catch(() => setEventDetails(null));
   }, [eventId]);
-
-  const withEventId = (path) => (eventId ? `${path}?eventId=${eventId}` : path);
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">
@@ -99,7 +98,7 @@ const CheckInDashboardPage = () => {
             </p>
           </div>
           <div className="flex-shrink-0">
-            <EventSelector compact />
+            <EventSelector compact selectedEventId={eventId} />
           </div>
         </div>
 
@@ -129,70 +128,7 @@ const CheckInDashboardPage = () => {
           </div>
         )}
 
-        {/* Navigation Tabs — eventId preserved */}
-        <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
-          <NavLink
-            to={withEventId('/check-in')}
-            end
-            className={({ isActive }) =>
-              `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`
-            }
-          >
-            Manual Entry
-          </NavLink>
-          <NavLink
-            to={withEventId('/check-in/search')}
-            className={({ isActive }) =>
-              `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`
-            }
-          >
-            Search
-          </NavLink>
-          <NavLink
-            to={withEventId('/check-in/stats')}
-            className={({ isActive }) =>
-              `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`
-            }
-          >
-            Statistics
-          </NavLink>
-          <NavLink
-            to={withEventId('/check-in/export')}
-            className={({ isActive }) =>
-              `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`
-            }
-          >
-            Export
-          </NavLink>
-          <NavLink
-            to={withEventId('/check-in/history')}
-            className={({ isActive }) =>
-              `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`
-            }
-          >
-            History
-          </NavLink>
-        </div>
+        <CheckInNavigation eventId={eventId} />
 
         {/* Metrics display */}
         <CheckInStatsDisplay total={150} checkedIn={35} />

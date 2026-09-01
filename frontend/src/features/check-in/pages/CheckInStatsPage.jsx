@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import EventSelector from '../../analytics/components/EventSelector';
 import { useAuthContext } from '../../auth/context/AuthContext';
 import { api } from '../../../lib/api';
 import Skeleton from '../../../components/Skeleton';
+import { CheckInNavigation } from '../components';
 
 const CheckInStatsPage = () => {
   const { user } = useAuthContext();
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const eventId = searchParams.get('eventId');
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -105,6 +105,7 @@ const CheckInStatsPage = () => {
             Real-time check-in metrics for your event.
           </p>
         </div>
+        <CheckInNavigation eventId={eventId} />
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useAuthContext } from '../../auth/context/AuthContext';
 import { api } from '../../../lib/api';
 import Skeleton from '../../../components/Skeleton';
+import { CheckInNavigation } from '../components';
 
 const CheckInSearchPage = () => {
   const { user } = useAuthContext();
@@ -53,6 +54,7 @@ const CheckInSearchPage = () => {
             Find attendees by ticket code, email, or name.
           </p>
         </div>
+        <CheckInNavigation eventId={eventId} />
 
         <form onSubmit={handleSearch} className="flex gap-3">
           <input

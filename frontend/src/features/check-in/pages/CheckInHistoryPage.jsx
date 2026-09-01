@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import EventSelector from '../../analytics/components/EventSelector';
 import { useAuthContext } from '../../auth/context/AuthContext';
 import { api } from '../../../lib/api';
 import Skeleton from '../../../components/Skeleton';
 import EmptyState from '../../../components/EmptyState';
+import { CheckInNavigation } from '../components';
 
 const CheckInHistoryPage = () => {
   const { user } = useAuthContext();
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const eventId = searchParams.get('eventId');
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +101,7 @@ const CheckInHistoryPage = () => {
             Audit log of all check-in actions for compliance.
           </p>
         </div>
+        <CheckInNavigation eventId={eventId} />
 
         {history.length === 0 ? (
           <EmptyState

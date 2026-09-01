@@ -132,14 +132,14 @@ const NAV_ITEMS = [
     visible: (isLoggedIn) => isLoggedIn,
   },
   {
-    to: '/venue/events',
+    to: '/check-in',
     label: '🎟️ Quick Check-In',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer', 'admin'),
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer'),
   },
   {
     to: '/venue/dashboard',
     label: 'Venue Dashboard',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer', 'admin'),
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer'),
   },
   {
     to: '/organizer/events',
@@ -432,15 +432,15 @@ function App() {
             <Route path="/organizer/profile" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileNotSetUpPage /></ProtectedRoute>} />
             <Route path="/organizer/profile/edit" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileEditPage /></ProtectedRoute>} />
             <Route path="/organizer/profile/settings" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileSettingsPage /></ProtectedRoute>} />
-            <Route path="/venue/events" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><VenueStaffEventsPage /></ProtectedRoute>} />
-            <Route path="/venue/dashboard" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><VenueStaffDashboardPage /></ProtectedRoute>} />
+            <Route path="/venue/events" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><VenueStaffEventsPage /></ProtectedRoute>} />
+            <Route path="/venue/dashboard" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><VenueStaffDashboardPage /></ProtectedRoute>} />
             <Route path="/venue/check-in" element={<Navigate to="/venue/events" replace />} />
-            <Route path="/venue/check-in/:eventId" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><VenueCheckInPage /></ProtectedRoute>} />
-            <Route path="/check-in" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInDashboardPage /></ProtectedRoute>} />
-            <Route path="/check-in/search" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInSearchPage /></ProtectedRoute>} />
-            <Route path="/check-in/stats" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInStatsPage /></ProtectedRoute>} />
-            <Route path="/check-in/export" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInExportPage /></ProtectedRoute>} />
-            <Route path="/check-in/history" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer', 'admin']}><CheckInHistoryPage /></ProtectedRoute>} />
+            <Route path="/venue/check-in/:eventId" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><VenueCheckInPage /></ProtectedRoute>} />
+            <Route path="/check-in" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><CheckInDashboardPage /></ProtectedRoute>} />
+            <Route path="/check-in/search" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><CheckInSearchPage /></ProtectedRoute>} />
+            <Route path="/check-in/stats" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><CheckInStatsPage /></ProtectedRoute>} />
+            <Route path="/check-in/export" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><CheckInExportPage /></ProtectedRoute>} />
+            <Route path="/check-in/history" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><CheckInHistoryPage /></ProtectedRoute>} />
             <Route path="/venue-scan" element={<Navigate to="/venue/events" replace />} />
             <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />

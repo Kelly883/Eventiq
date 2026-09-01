@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import EventSelector from '../../analytics/components/EventSelector';
 import { useAuthContext } from '../../auth/context/AuthContext';
 import { api } from '../../../lib/api';
 import Skeleton from '../../../components/Skeleton';
+import { CheckInNavigation } from '../components';
 
 const CheckInExportPage = () => {
   const { user } = useAuthContext();
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const eventId = searchParams.get('eventId');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -76,6 +76,7 @@ const CheckInExportPage = () => {
             Download check-in records for compliance and reporting.
           </p>
         </div>
+        <CheckInNavigation eventId={eventId} />
 
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">

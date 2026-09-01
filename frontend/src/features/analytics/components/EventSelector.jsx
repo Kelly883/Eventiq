@@ -27,10 +27,12 @@ const addRecentEvent = (eventId) => {
   localStorage.setItem(RECENT_EVENTS_KEY, JSON.stringify(updated));
 };
 
-const EventSelector = ({ compact = false, showLabel = true }) => {
+const EventSelector = ({ compact = false, showLabel = true, selectedEventId: controlledEventId, onSelect }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [selectedEventId, setSelectedEventId] = useState(null);
+  const [selectedEventId, setSelectedEventId] = useState(() => (
+    controlledEventId ? Number(controlledEventId) : null
+  ));
   const [isOpen, setIsOpen] = useState(false);
   const [recentEvents, setRecentEvents] = useState([]);
 
@@ -40,11 +42,20 @@ const EventSelector = ({ compact = false, showLabel = true }) => {
     setRecentEvents(getRecentEvents());
   }, []);
 
+  useEffect(() => {
+    setSelectedEventId(controlledEventId ? Number(controlledEventId) : null);
+  }, [controlledEventId]);
+
   const handleSelect = (eventId) => {
     setSelectedEventId(eventId);
     setIsOpen(false);
     addRecentEvent(eventId);
     setRecentEvents(getRecentEvents());
+
+    if (onSelect) {
+      onSelect(eventId);
+      return;
+    }
 
     const currentPath = location.pathname;
     if (currentPath.includes('/venue/check-in/')) {
@@ -86,7 +97,7 @@ const EventSelector = ({ compact = false, showLabel = true }) => {
           <span className="text-sm font-medium text-slate-700 truncate max-w-[150px]">
             {selectedEvent?.name || 'Select Event'}
           </span>
-          <svg className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg aria-hidden="true" className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
