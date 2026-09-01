@@ -19,7 +19,7 @@ const mockEvents = [
 const VenueCheckInPage = () => {
   const { eventId } = useParams();
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
-  const [activeCamera, setActiveCamera] = useState(true);
+  const [activeCamera, setActiveCamera] = useState(false);
   const [scannedResult, setScannedResult] = useState(null);
   const [validationStatus, setValidationStatus] = useState('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -51,11 +51,20 @@ const VenueCheckInPage = () => {
       try {
         const response = await api.get(`/events/${eventId}`);
         const eventData = response.data?.data || response.data;
-        if (!eventData || (!eventData.id && !eventData.name)) {
+        if (!eventData?.id || (!eventData.name && !eventData.title)) {
           throw new Error('Event not found');
         }
-        setEventDetails(eventData);
+        const localEvent = mockEvents.find((event) => String(event.id) === String(eventData.id));
+        const resolvedEvent = {
+          ...eventData,
+          name: eventData.name || eventData.title,
+          date: eventData.date || eventData.start_datetime,
+          status: eventData.status || localEvent?.status || 'unknown',
+        };
+        setEventDetails(resolvedEvent);
+        setActiveCamera(resolvedEvent.status === 'active');
       } catch (err) {
+        setActiveCamera(false);
         const status = err?.response?.status;
         if (status === 404) {
           setEventError('Event not found — it may have been deleted or the ID is incorrect.');
@@ -164,33 +173,6 @@ const VenueCheckInPage = () => {
     }
   }, []);
 
-  // Setup camera stream
-  useEffect(() => {
-    if (!activeCamera) {
-      stopCamera();
-      return;
-    }
-
-    navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'environment' } })
-      .then((stream) => {
-        setHasCameraPermission(true);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.setAttribute('playsinline', 'true'); // Required for iOS
-          videoRef.current.play().catch(err => console.error(err));
-          // Start the scanning loop
-          requestRef.current = requestAnimationFrame(scanFrame);
-        }
-      })
-      .catch((err) => {
-        console.error('Camera access failed:', err);
-        setHasCameraPermission(false);
-      });
-
-    return () => stopCamera();
-  }, [activeCamera, scanFrame, stopCamera]);
-
   const stopCamera = useCallback(() => {
     if (requestRef.current) {
       cancelAnimationFrame(requestRef.current);
@@ -278,6 +260,31 @@ const VenueCheckInPage = () => {
       requestRef.current = requestAnimationFrame(scanFrame);
     }
   }, [activeCamera, handleScannedData]);
+
+  useEffect(() => {
+    if (!activeCamera) {
+      stopCamera();
+      return;
+    }
+
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: 'environment' } })
+      .then((stream) => {
+        setHasCameraPermission(true);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.setAttribute('playsinline', 'true');
+          videoRef.current.play().catch((err) => console.error(err));
+          requestRef.current = requestAnimationFrame(scanFrame);
+        }
+      })
+      .catch((err) => {
+        console.error('Camera access failed:', err);
+        setHasCameraPermission(false);
+      });
+
+    return () => stopCamera();
+  }, [activeCamera, scanFrame, stopCamera]);
 
   const handleResetScanner = () => {
     setScannedResult(null);
@@ -369,7 +376,8 @@ const VenueCheckInPage = () => {
             </button>
             <button
               onClick={() => setActiveCamera(!activeCamera)}
-              className={`px-4 py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer shadow-sm ${
+              disabled={Boolean(eventError)}
+              className={`px-4 py-2 text-xs font-bold rounded-lg border transition-all shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${
                 activeCamera
                   ? 'bg-rose-600 text-white border-rose-500'
                   : 'bg-indigo-600 text-white border-indigo-500'
@@ -388,7 +396,7 @@ const VenueCheckInPage = () => {
               <div>
                 <h3 className="font-bold text-red-800">Event Not Found</h3>
                 <p className="text-sm text-red-600 mt-1">
-                  {eventError}. Please select a different event.
+                  {eventError} Please select a different event.
                 </p>
                 <Link
                   to="/venue/events"
@@ -527,7 +535,13 @@ const VenueCheckInPage = () => {
                 Real-Time Video Viewfinder
               </h3>
 
-              {eventDetails && eventDetails.status !== 'active' ? (
+              {eventError ? (
+                <EmptyState
+                  icon="⚠️"
+                  title="Event unavailable"
+                  description="Select a valid event before scanning tickets."
+                />
+              ) : eventDetails && eventDetails.status !== 'active' ? (
                 <EmptyState
                   icon={eventDetails.status === 'ended' ? '⏹️' : '⏳'}
                   title={eventDetails.status === 'ended' ? 'Event Has Ended' : 'Event Not Started'}
