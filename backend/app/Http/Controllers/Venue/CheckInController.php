@@ -6,17 +6,19 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Features\Checkout\Models\Ticket;
 use App\Features\CheckIn\Models\CheckIn;
+use App\Features\CheckIn\Policies\CheckInPolicy;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Crypt;
 
 class CheckInController extends Controller
 {
-    /**
-     * Only admins and organizers (venue staff) may process check-ins.
-     */
+    public function __construct(private readonly CheckInPolicy $checkInPolicy)
+    {
+    }
+
     private function authorizeVenueStaff($user): void
     {
-        if (!$user || !($user->hasRole('admin') || $user->hasRole('organizer'))) {
+        if (!$this->checkInPolicy->isVenueStaff($user)) {
             abort(403, 'Only venue staff can perform this action.');
         }
     }
@@ -104,18 +106,13 @@ class CheckInController extends Controller
             ], 404);
         }
 
-        // 3a. Venue staff may only check in tickets for events they own (admins exempt).
         $user = $request->user();
-        if (!$user->hasRole('admin')) {
-            $ownsEvent = \App\Models\Event::where('id', $ticket->event_id)
-                ->whereHas('organizer', fn ($q) => $q->where('user_id', $user->id))
-                ->exists();
-            if (!$ownsEvent) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You are not authorized to check in tickets for this event.',
-                ], 403);
-            }
+        $event = \App\Models\Event::find($ticket->event_id);
+        if (!$event || !$this->checkInPolicy->canAccessEvent($user, $event)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to check in tickets for this event.',
+            ], 403);
         }
 
         // 4. Double check ticket hasn't been checked in yet by another client

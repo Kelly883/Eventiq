@@ -34,6 +34,10 @@ type Env = {
   VITE_API_BASE_URL?: string;
 };
 
+function isAuthenticationRequest(url?: string): boolean {
+  return Boolean(url?.includes('/auth/'));
+}
+
 const baseURL = ((import.meta as unknown) as { env: Env }).env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
 
       // Ensure baseURL always includes /api prefix (Laravel expects it)
@@ -81,6 +85,13 @@ api.interceptors.response.use(
     const originalConfig = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
+
+    // Authentication endpoints deliberately return 401 for guests and invalid
+    // credentials. Treating those expected responses as a session expiry makes
+    // the login page flash a misleading toast on every fresh visit.
+    if (error.response?.status === 401 && isAuthenticationRequest(originalConfig?.url)) {
+      return Promise.reject(error);
+    }
 
     // The CSRF refresh cannot renew an expired Sanctum session. A second 401
     // therefore confirms expiration and must notify the router.

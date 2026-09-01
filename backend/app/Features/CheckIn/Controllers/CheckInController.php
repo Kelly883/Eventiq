@@ -10,15 +10,17 @@ use App\Features\CheckIn\Models\FraudEvent;
 use App\Features\CheckIn\Http\Resources\TicketResource;
 use App\Features\CheckIn\Http\Resources\AuditLogResource;
 use App\Features\CheckIn\Http\Resources\FraudEventResource;
+use App\Features\CheckIn\Policies\CheckInPolicy;
 
 class CheckInController extends Controller
 {
-    /**
-     * Only admins and organizers (venue staff) may access check-in data.
-     */
+    public function __construct(private readonly CheckInPolicy $checkInPolicy)
+    {
+    }
+
     private function authorizeVenueStaff($user): void
     {
-        if (!$user || !($user->hasRole('admin') || $user->hasRole('organizer'))) {
+        if (!$this->checkInPolicy->isVenueStaff($user)) {
             abort(403, 'Only venue staff can perform this action.');
         }
     }
@@ -29,11 +31,7 @@ class CheckInController extends Controller
      */
     private function scopeToAccessibleEvents($query, $user)
     {
-        if ($user->hasRole('admin')) {
-            return $query;
-        }
-
-        return $query->whereHas('event.organizer', fn ($q) => $q->where('user_id', $user->id));
+        return $this->checkInPolicy->scopeToAccessibleEvents($query, $user);
     }
 
     /**
@@ -41,13 +39,10 @@ class CheckInController extends Controller
      */
     private function canAccessTicket($user, $ticket): bool
     {
-        if ($user->hasRole('admin')) {
-            return true;
-        }
-
-        return CheckInTicket::where('id', $ticket->id)
-            ->whereHas('event.organizer', fn ($q) => $q->where('user_id', $user->id))
-            ->exists();
+        return $this->checkInPolicy->scopeToAccessibleEvents(
+            CheckInTicket::where('id', $ticket->id),
+            $user
+        )->exists();
     }
 
     /**
@@ -142,18 +137,15 @@ class CheckInController extends Controller
             }
         }
 
-        // Wrap the orWhere chain in a closure so the event scope binds to every branch,
-        // and scope to events the caller owns (admins exempt).
-        $ticket = CheckInTicket::where(function ($q) use ($ticketCode) {
+        // Wrap the orWhere chain in a closure so the event scope binds to every branch.
+        $ticketQuery = CheckInTicket::where(function ($q) use ($ticketCode) {
             $q->where('ticket_id', $ticketCode)
               ->orWhere('qr_code_data', $ticketCode)
               ->orWhere('id', $ticketCode);
         })
-            ->where('event_id', $eventId)
-            ->when(
-                !$request->user()->hasRole('admin'),
-                fn ($q) => $q->whereHas('event.organizer', fn ($o) => $o->where('user_id', $request->user()->id))
-            )
+            ->where('event_id', $eventId);
+        $ticket = $this->checkInPolicy
+            ->scopeToAccessibleEvents($ticketQuery, $request->user())
             ->first();
 
         if (!$ticket) {
@@ -352,9 +344,7 @@ class CheckInController extends Controller
             ->with(['user'])
             ->where('action', '!=', 'fraud_suspected');
 
-        if (!$request->user()->hasRole('admin')) {
-            $query->whereHas('event.organizer', fn ($q) => $q->where('user_id', $request->user()->id));
-        }
+        $query = $this->checkInPolicy->scopeToAccessibleEvents($query, $request->user());
 
         if ($eventId) {
             $query->where('event_id', $eventId);

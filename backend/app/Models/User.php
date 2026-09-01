@@ -128,6 +128,11 @@ class User extends Authenticatable
         return $this->hasOne(Organizer::class);
     }
 
+    public function assignedCheckInEvents(): BelongsToMany
+    {
+        return $this->belongsToMany(Event::class, 'event_venue_staff')->withTimestamps();
+    }
+
     public function accessibilityPreference(): HasOne
     {
         return $this->hasOne(AccessibilityPreference::class);
