@@ -130,7 +130,7 @@ const NAV_ITEMS = [
   {
     to: '/dashboard/organizer',
     label: '💼 Organizer',
-    visible: (isLoggedIn) => isLoggedIn,
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
   },
   {
     to: '/check-in',

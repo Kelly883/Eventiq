@@ -65,8 +65,14 @@ export const AuthProvider = ({ children }) => {
       setSessionExpired(false);
       const userId = res.data?.id;
       if (userId) {
-        const meRes = await api.get(`/organizers/${userId}`);
-        setOrganizerId(meRes.data?.data?.id || null);
+        try {
+          const meRes = await api.get(`/organizers/${userId}`);
+          setOrganizerId(meRes.data?.data?.id || null);
+        } catch {
+          // An attendee or venue staff member may not have an organizer
+          // profile; that must not invalidate their authenticated session.
+          setOrganizerId(null);
+        }
       }
     } catch (e) {
       setUser(null);
