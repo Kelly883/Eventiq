@@ -139,8 +139,11 @@ export const AuthProvider = ({ children }) => {
     };
 
     // Immediate session check when tab gains focus — catches expired sessions
-    // from logout in another tab or server-side session expiry
+    // from logout in another tab or server-side session expiry.
+    // Guard: only fire the toast if we actually HAD a session. Otherwise a
+    // guest landing on /login gets spammed on every tab switch.
     const handleFocus = async () => {
+      if (!user) return;
       try {
         await fetchCurrentUser();
       } catch {
@@ -149,12 +152,11 @@ export const AuthProvider = ({ children }) => {
     };
 
     const handleVisibility = async () => {
-      if (!document.hidden) {
-        try {
-          await fetchCurrentUser();
-        } catch {
-          showToast('Session expired', 'Please log in again to continue.', 'warning');
-        }
+      if (!user || document.hidden) return;
+      try {
+        await fetchCurrentUser();
+      } catch {
+        showToast('Session expired', 'Please log in again to continue.', 'warning');
       }
     };
 
