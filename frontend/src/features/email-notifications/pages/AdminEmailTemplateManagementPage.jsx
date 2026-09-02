@@ -44,6 +44,88 @@ const templateVariables = [
 
 const UNDO_DURATION = 5000;
 
+const DEFAULT_TEMPLATES = [
+  {
+    name: 'Order Confirmation',
+    subject: 'Your order #{{order.id}} is confirmed',
+    key: 'order_confirmation',
+    content: `<mjml>
+  <mj-head>
+    <mj-title>Order Confirmation</mj-title>
+    <mj-style>
+      .btn { background: #6366f1; color: #ffffff; }
+    </mj-style>
+  </mj-head>
+  <mj-body>
+    <mj-section background-color="#f8fafc" padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="24px" font-weight="700" color="#0f172a" text-align="center">Order Confirmed 🎉</mj-text>
+        <mj-text font-size="16px" color="#475569" text-align="center" padding-top="8px">
+          Hi {{user.name}}, your order #{{order.id}} has been received!
+        </mj-text>
+        <mj-text font-size="14px" color="#64748b" text-align="center" padding-top="16px">
+          Total: {{order.total}}<br/>
+          Ticket: {{ticket.code}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>`,
+  },
+  {
+    name: 'Event Reminder',
+    subject: 'Reminder: {{event.title}} is tomorrow',
+    key: 'event_reminder',
+    content: `<mjml>
+  <mj-head>
+    <mj-title>Event Reminder</mj-title>
+  </mj-head>
+  <mj-body>
+    <mj-section background-color="#fefce8" padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="24px" font-weight="700" color="#0f172a" text-align="center">Don't forget! ⏰</mj-text>
+        <mj-text font-size="16px" color="#475569" text-align="center" padding-top="8px">
+          {{event.title}} is tomorrow at {{event.date}}.
+        </mj-text>
+        <mj-text font-size="14px" color="#64748b" text-align="center" padding-top="8px">
+          Venue: {{event.venue}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>`,
+  },
+  {
+    name: 'Welcome Email',
+    subject: 'Welcome to EventIQ, {{user.name}}!',
+    key: 'welcome_email',
+    content: `<mjml>
+  <mj-head>
+    <mj-title>Welcome to EventIQ</mj-title>
+  </mj-head>
+  <mj-body>
+    <mj-section background-color="#ecfdf5" padding="40px 20px">
+      <mj-column>
+        <mj-text font-size="24px" font-weight="700" color="#0f172a" text-align="center">Welcome aboard! 👋</mj-text>
+        <mj-text font-size="16px" color="#475569" text-align="center" padding-top="8px">
+          Hi {{user.name}}, you're all set to start exploring events.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>`,
+  },
+];
+
+const seedDefaultTemplates = async () => {
+  const results = [];
+  for (const t of DEFAULT_TEMPLATES) {
+    const response = await api.post('/email-templates', t);
+    results.push(response.data?.data || response.data);
+  }
+  return results;
+};
+
 const CreateTemplateModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
   const [formData, setFormData] = React.useState({ name: '', subject: '', key: '' });
   const [errors, setErrors] = React.useState({});
@@ -475,14 +557,34 @@ const AdminEmailTemplateManagementPage = () => {
       setShowSendTestModal(false);
     },
     onError: (err) => {
+      const status = err?.response?.status;
+      const detail = status === 500
+        ? 'Mail server is not configured. Contact your platform administrator.'
+        : status === 422
+          ? 'The email server rejected the request. Check your mail configuration.'
+          : (err?.message || 'Failed to send test email. Please try again.');
       showToast(
-        'Send failed',
-        err?.response?.data?.message || 'Failed to send test email. Please try again.',
+        'Test email failed',
+        detail,
         'error'
       );
     },
   });
 
+  const seedMutation = useMutation({
+    mutationFn: seedDefaultTemplates,
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ['email-templates'] });
+      showToast('Templates seeded', `${created.length} default templates created.`, 'success');
+      if (created[0]) {
+        setSelectedTemplate(created[0]);
+        setMjmlContent(created[0].content || '');
+      }
+    },
+    onError: (err) => {
+      showToast('Seeding failed', err?.message || 'Failed to seed default templates.', 'error');
+    },
+  });
   React.useEffect(() => {
     if (templates && templates.length > 0 && !selectedTemplate) {
       setSelectedTemplate(templates[0]);
@@ -770,23 +872,31 @@ const AdminEmailTemplateManagementPage = () => {
                 Get started by creating your first email template. Templates let you send
                 consistent, branded notifications to your users for events, orders, and more.
               </p>
-              {/* Role indicator badge */}
               <div className="mt-3 p-2 bg-indigo-50 rounded-lg text-xs font-medium text-indigo-700 mb-4">
                 Managed by admin
               </div>
-              {/* Sample templates CTA */}
               <div className="space-y-3">
                 <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-indigo-600 rounded-lg text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">
+                  onClick={() => seedMutation.mutate()}
+                  disabled={seedMutation.isPending}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  {seedMutation.isPending ? 'Seeding...' : '✨ Seed Default Templates'}
+                </button>
+                <p className="text-xs text-slate-500 text-center">
+                  Instantly create Order Confirmation, Event Reminder, and Welcome Email templates.
+                </p>
+                <div className="pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                  >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Create Your First Template
+                    Create Custom Template
                   </button>
-                <p className="text-xs text-slate-500 text-center">
-                  Need a starting point? Create a template below to see how it works.
-                </p>
+                </div>
               </div>
             </div>
           )}

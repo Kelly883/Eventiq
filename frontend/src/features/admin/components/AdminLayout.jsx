@@ -1,17 +1,21 @@
-import React from 'react';
-import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
+import { useAuthContext } from '../../auth/context/AuthContext';
 
 const adminNavItems = [
+  { to: '/admin', label: 'Dashboard', icon: '📊', description: 'Platform overview & delivery status', group: 'management' },
   { to: '/admin/roles', label: 'Roles', icon: '🛡️', description: 'Manage admin roles and permissions', group: 'management' },
   { to: '/admin/fraud/dashboard', label: 'Fraud Detection', icon: '🕵️', description: 'Monitor flagged transactions', group: 'management' },
   { to: '/admin/delivery/dashboard', label: 'Delivery', icon: '📦', description: 'Ticket delivery management', group: 'management' },
-  { to: '/admin/analytics', label: 'Analytics', icon: '📊', description: 'Platform-wide analytics', group: 'management' },
+  { to: '/admin/analytics', label: 'Analytics', icon: '📈', description: 'Platform-wide analytics', group: 'management' },
   { to: '/admin/settings/email-templates', label: 'Email Templates', icon: '✉️', description: 'Manage notification templates', group: 'settings' },
   { to: '/admin/settings/push-templates', label: 'Push Templates', icon: '📱', description: 'Manage push notification templates', group: 'settings' },
 ];
 
 const AdminLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, sessionExpired } = useAuthContext();
 
   const activeItem = adminNavItems.find(
     (item) => item.to === location.pathname || location.pathname.startsWith(item.to + '/')
@@ -20,21 +24,47 @@ const AdminLayout = () => {
   const managementItems = adminNavItems.filter(item => item.group === 'management');
   const settingsItems = adminNavItems.filter(item => item.group === 'settings');
 
+  // ── Session-expiry guard ──
+  // The axios interceptor dispatches 'session-expired' when a 401 survives the
+  // CSRF refresh attempt. The AuthContext clears the local user, but the
+  // ProtectedRoute only re-evaluates on navigation — so a data-fetching page
+  // (like the email-template editor) can stay mounted on a dead session.
+  // Listen here and bounce the admin back to login.
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      if (user) return; // already cleared by AuthContext
+      navigate('/login', { replace: true, state: { from: location, message: 'Your session has expired. Please log in again.', messageType: 'warning' } });
+    };
+    window.addEventListener('session-expired', handleSessionExpired);
+    return () => window.removeEventListener('session-expired', handleSessionExpired);
+  }, [user, navigate, location]);
+
+  // If the session just expired while we're mounted, redirect immediately.
+  useEffect(() => {
+    if (sessionExpired && user === null) {
+      navigate('/login', { replace: true, state: { from: location, message: 'Your session has expired. Please log in again.', messageType: 'warning' } });
+    }
+  }, [sessionExpired, user, navigate, location]);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <nav className="mb-4 flex items-center gap-2 text-sm" aria-label="Breadcrumb">
           <Link
-            to="/admin/roles"
+            to="/admin"
             className="text-slate-500 hover:text-slate-700 font-medium"
           >
             Admin
           </Link>
-          <span className="text-slate-400">/</span>
-          <span className="text-slate-700 font-medium">
-            {activeItem?.label || 'Dashboard'}
-          </span>
+          {activeItem && activeItem.to !== '/admin' && (
+            <>
+              <span className="text-slate-400">/</span>
+              <span className="text-slate-700 font-medium">
+                {activeItem.label}
+              </span>
+            </>
+          )}
         </nav>
 
         <div className="mb-8">
@@ -62,6 +92,7 @@ const AdminLayout = () => {
                     <li key={item.to}>
                       <NavLink
                         to={item.to}
+                        end={item.to === '/admin'}
                         className={({ isActive }) =>
                           `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
                             isActive
