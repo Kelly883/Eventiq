@@ -32,7 +32,7 @@ const VenueStaffEventsPage = () => {
   }, []);
 
   const handleStartCheckIn = (eventId) => {
-    navigate(`/venue/check-in/${eventId}`);
+    navigate(`/check-in?eventId=${eventId}`);
   };
 
   const getStatusColor = (status) => {

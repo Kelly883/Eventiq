@@ -1,4 +1,5 @@
 export { default as CheckInSearchBar } from './CheckInSearchBar'
 export { default as CheckInQRScanner } from './CheckInQRScanner'
+export { default as CameraScanner } from './CameraScanner'
 export { default as CheckInStatsDisplay } from './CheckInStatsDisplay'
 export { default as CheckInNavigation } from './CheckInNavigation'

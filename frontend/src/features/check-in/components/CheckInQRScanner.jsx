@@ -1,9 +1,21 @@
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useOfflineSyncStore } from '../../offline/services/offlineSyncStore';
+import CameraScanner from './CameraScanner';
 
-export const CheckInQRScanner = ({ eventId = 1 }) => {
+/*
+ * Payload shape check ported from the former VenueCheckInPage: accept the
+ * two QR payload families the backend issues (base64/encrypted blobs and
+ * dashed ticket codes) and reject everything else before it hits the queue.
+ */
+const isValidPayload = (payloadString) =>
+  payloadString.startsWith('ey') ||
+  payloadString.length > 50 ||
+  (payloadString.includes('-') && payloadString.length > 8);
+
+export const CheckInQRScanner = ({ eventId = null }) => {
   const [inputCode, setInputCode] = useState('');
   const [scanMessage, setScanMessage] = useState(null);
+  const messageTimerRef = useRef(null);
   const enqueueScan = useOfflineSyncStore((state) => state.enqueueScan);
   const isOnline = useOfflineSyncStore((state) => state.isOnline);
 
@@ -14,68 +26,57 @@ export const CheckInQRScanner = ({ eventId = 1 }) => {
     { code: 'TCK-ERR-EXPIRED', name: 'Expired Ticket (Test Error)' },
   ];
 
-  const handleScan = (code) => {
-    if (!code.trim()) return;
-
-    enqueueScan(code.trim(), eventId);
-    
-    setInputCode('');
-    setScanMessage({
-      type: 'success',
-      text: `Scanned: ${code} - Buffered ${isOnline ? 'Online' : 'Offline'}`,
-    });
-
-    setTimeout(() => {
-      setScanMessage(null);
-    }, 4000);
+  const flashMessage = (type, text) => {
+    if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+    setScanMessage({ type, text });
+    messageTimerRef.current = setTimeout(() => setScanMessage(null), 4000);
   };
+
+  // Single intake path for BOTH camera scans and manual codes.
+  const handleScan = useCallback((rawCode) => {
+    const code = String(rawCode || '').trim();
+    if (!code) return;
+
+    if (!isValidPayload(code)) {
+      flashMessage('error', `Rejected: “${code}” is not a valid ticket QR payload.`);
+      return;
+    }
+
+    enqueueScan(code, eventId);
+    flashMessage(
+      'success',
+      `Scanned: ${code} — buffered ${isOnline ? 'online' : 'offline (will sync)'}`
+    );
+  }, [enqueueScan, eventId, isOnline]);
 
   const onSubmitForm = (e) => {
     e.preventDefault();
     handleScan(inputCode);
+    setInputCode('');
   };
 
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-6">
-      {/* Viewfinder simulation */}
+      {/* Live camera viewfinder (real jsQR scanning) */}
       <div className="flex-1 max-w-sm mx-auto">
         <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 text-center">
-          QR Viewfinder (Simulated)
+          Live Camera Scanner
         </label>
-        <div className="relative aspect-square w-full rounded-2xl bg-slate-900 overflow-hidden border border-slate-800 flex flex-col items-center justify-center p-6 shadow-inner">
-          {/* Decorative scanner grid lines */}
-          <div className="absolute inset-4 border-2 border-dashed border-slate-700/50 rounded-xl" />
-          
-          {/* Laser beam line */}
-          <div className="absolute left-0 right-0 h-1 bg-rose-500 opacity-80 shadow-md shadow-rose-500/50 animate-bounce top-1/2" />
-
-          {/* QR Code Graphic or status */}
-          <div className="z-10 flex flex-col items-center text-center">
-            <span className="text-4xl filter grayscale opacity-45 select-none mb-3">📱</span>
-            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">
-              Camera is Active
-            </p>
-          </div>
-
-          <div className="absolute bottom-4 left-4 right-4 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-800 text-center">
-            <span className="text-[10px] text-slate-400 font-medium">
-              Ready to Scan Ticket Codes
-            </span>
-          </div>
-        </div>
+        <CameraScanner onScan={handleScan} />
       </div>
 
-      {/* Inputs and helper buttons */}
+      {/* Manual entry — same intake path as the camera */}
       <div className="flex-1 flex flex-col justify-between">
         <div>
-          <h3 className="text-base font-bold text-slate-800 mb-1">Manual Scan / Test Sandbox</h3>
+          <h3 className="text-base font-bold text-slate-800 mb-1">Manual ticket entry</h3>
           <p className="text-xs text-slate-500 leading-relaxed mb-4">
-            Type a ticket code manually or use the buttons below to simulate on-site ticket scanning.
+            Type a ticket code when a QR code won&rsquo;t scan — it follows the exact same validation and offline queue as the camera.
           </p>
 
           <form onSubmit={onSubmitForm} className="flex gap-2 mb-5">
             <input
               type="text"
+              aria-label="Ticket code"
               placeholder="e.g. TCK-SUM-9281"
               value={inputCode}
               onChange={(e) => setInputCode(e.target.value)}
@@ -90,8 +91,15 @@ export const CheckInQRScanner = ({ eventId = 1 }) => {
           </form>
 
           {scanMessage && (
-            <div className="mb-4 p-3 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold rounded-lg animate-fadeIn flex items-center gap-2">
-              <span className="animate-ping h-1.5 w-1.5 bg-indigo-500 rounded-full" />
+            <div
+              role="status"
+              className={`mb-4 p-3 text-xs font-bold rounded-lg animate-fadeIn flex items-center gap-2 border ${
+                scanMessage.type === 'error'
+                  ? 'bg-rose-50 border-rose-100 text-rose-700'
+                  : 'bg-indigo-50 border-indigo-100 text-indigo-700'
+              }`}
+            >
+              <span className="animate-ping h-1.5 w-1.5 bg-current rounded-full" />
               {scanMessage.text}
             </div>
           )}
@@ -104,6 +112,7 @@ export const CheckInQRScanner = ({ eventId = 1 }) => {
               {sampleTickets.map((t) => (
                 <button
                   key={t.code}
+                  type="button"
                   onClick={() => handleScan(t.code)}
                   className="w-full text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50/50 border border-slate-100 hover:border-indigo-100 rounded-lg text-xs font-medium text-slate-700 transition-all flex items-center justify-between"
                 >
@@ -117,7 +126,7 @@ export const CheckInQRScanner = ({ eventId = 1 }) => {
 
         <div className="mt-5 border-t border-slate-100 pt-4 text-[10px] text-slate-400 flex items-center justify-between">
           <span>Idempotency Protected</span>
-          <span className="font-mono">v1.2.0-offline</span>
+          <span className="font-mono">v1.3.0-offline</span>
         </div>
       </div>
     </div>

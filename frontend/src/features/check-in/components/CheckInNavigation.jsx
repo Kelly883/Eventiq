@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 
 const CHECK_IN_TABS = [
-  { to: '/check-in', label: 'Manual Entry', end: true },
+  { to: '/check-in', label: 'Scan / Check-In', end: true },
   { to: '/check-in/search', label: 'Search' },
   { to: '/check-in/stats', label: 'Statistics' },
   { to: '/check-in/export', label: 'Export' },

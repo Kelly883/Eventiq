@@ -25,6 +25,7 @@ const CheckInHistoryPage = () => {
           params: { event_id: eventId },
         });
         setHistory(response.data?.data || []);
+        setError('');
       } catch (err) {
         setError(err?.response?.data?.message || 'Failed to load history.');
       } finally {
@@ -35,33 +36,11 @@ const CheckInHistoryPage = () => {
     fetchHistory();
   }, [user, eventId]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 p-6 md:p-10">
-        <div className="mx-auto max-w-4xl space-y-6">
-          <Skeleton variant="text" className="h-8 w-48" />
-          <div className="space-y-3">
-            <Skeleton variant="card" className="h-16" />
-            <Skeleton variant="card" className="h-16" />
-            <Skeleton variant="card" className="h-16" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-slate-50 p-6 md:p-10">
-        <div className="mx-auto max-w-4xl">
-          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-            {error}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  /*
+   * Same shell-first layout as the statistics page: back link, event
+   * context and tab navigation stay mounted while data loads, so the
+   * check-in navigation never blinks out mid-session.
+   */
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">
       <div className="mx-auto max-w-4xl space-y-6">
@@ -103,13 +82,29 @@ const CheckInHistoryPage = () => {
         </div>
         <CheckInNavigation eventId={eventId} />
 
-        {history.length === 0 ? (
+        {loading && (
+          <div className="space-y-3" role="status" aria-label="Loading history">
+            <Skeleton variant="card" className="h-16" />
+            <Skeleton variant="card" className="h-16" />
+            <Skeleton variant="card" className="h-16" />
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+
+        {!loading && !error && history.length === 0 && (
           <EmptyState
             icon="📋"
             title="No check-in history"
             description="Check-in actions will appear here as they occur."
           />
-        ) : (
+        )}
+
+        {!loading && !error && history.length > 0 && (
           <div className="space-y-3">
             {history.map((item) => (
               <div key={item.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">

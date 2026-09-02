@@ -21,7 +21,6 @@ const CheckInSearchPage = lazy(() => import('./features/check-in/pages/CheckInSe
 const CheckInStatsPage = lazy(() => import('./features/check-in/pages/CheckInStatsPage'));
 const CheckInExportPage = lazy(() => import('./features/check-in/pages/CheckInExportPage'));
 const CheckInHistoryPage = lazy(() => import('./features/check-in/pages/CheckInHistoryPage'));
-const VenueCheckInPage = lazy(() => import('./features/qr-code-ticketing/pages/VenueCheckInPage'));
 const VenueStaffEventsPage = lazy(() => import('./features/venue-staff/pages/VenueStaffEventsPage'));
 const VenueStaffDashboardPage = lazy(() => import('./features/venue-staff/pages/VenueStaffDashboardPage'));
 const EventBrowsePage = lazy(() => import('./features/events/pages/EventBrowsePage'));
@@ -105,6 +104,23 @@ const OrganizerProfileCompatRedirect = () => {
   const location = useLocation();
 
   return <Navigate to={`/o/${organizerId}${location.search}`} replace />;
+};
+
+/**
+ * /venue/check-in/:eventId was folded into the unified check-in desk.
+ * Bookmarks and older links keep working by carrying the event into
+ * /check-in?eventId=… (any extra query params survive too).
+ */
+const VenueCheckInRedirect = ({ eventId: eventIdParam = null }) => {
+  const params = useParams();
+  const location = useLocation();
+  const eventId = eventIdParam ?? params.eventId;
+
+  const query = new URLSearchParams(location.search);
+  if (eventId) query.set('eventId', eventId);
+  const qs = query.toString();
+
+  return <Navigate to={`/check-in${qs ? `?${qs}` : ''}`} replace />;
 };
 
 const hasAnyRole = (roles, ...names) => names.some((n) => roles.includes(n));
@@ -431,8 +447,8 @@ function App() {
             <Route path="/organizer/profile/settings" element={<ProtectedRoute requiredRole="organizer"><OrganizerProfileSettingsPage /></ProtectedRoute>} />
             <Route path="/venue/events" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><VenueStaffEventsPage /></ProtectedRoute>} />
             <Route path="/venue/dashboard" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><VenueStaffDashboardPage /></ProtectedRoute>} />
-            <Route path="/venue/check-in" element={<Navigate to="/venue/events" replace />} />
-            <Route path="/venue/check-in/:eventId" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><VenueCheckInPage /></ProtectedRoute>} />
+            <Route path="/venue/check-in" element={<Navigate to="/check-in" replace />} />
+            <Route path="/venue/check-in/:eventId" element={<VenueCheckInRedirect />} />
             <Route path="/check-in" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><CheckInDashboardPage /></ProtectedRoute>} />
             <Route path="/check-in/search" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><CheckInSearchPage /></ProtectedRoute>} />
             <Route path="/check-in/stats" element={<ProtectedRoute requiredRoles={['venue_staff', 'organizer']}><CheckInStatsPage /></ProtectedRoute>} />
