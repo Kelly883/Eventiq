@@ -16,6 +16,7 @@ const CheckInDashboardPage = () => {
   const eventId = searchParams.get('eventId');
   const [eventDetails, setEventDetails] = useState(null);
   const [eventLoading, setEventLoading] = useState(false);
+  const [eventError, setEventError] = useState('');
   const isOnline = useOfflineSyncStore((state) => state.isOnline);
   const queue = useOfflineSyncStore((state) => state.queue);
   const history = useOfflineSyncStore((state) => state.history);
@@ -31,17 +32,31 @@ const CheckInDashboardPage = () => {
     return !hasVisited;
   });
 
-  // Fetch event details for ended-status check
+  // Fetch event details for ended-status check and surfacing deleted/missing
+  // events. A 404 (deleted or mistyped event) must disable scanning with a
+  // clear message — staff should never scan into an event that doesn't exist.
   useEffect(() => {
     if (!eventId) {
       setEventDetails(null);
       setEventLoading(false);
+      setEventError('');
       return;
     }
     setEventLoading(true);
+    setEventError('');
     api.get(`/events/${eventId}`)
       .then((res) => setEventDetails(res.data?.data || res.data))
-      .catch(() => setEventDetails(null))
+      .catch((err) => {
+        setEventDetails(null);
+        const status = err?.response?.status;
+        setEventError(
+          status === 404
+            ? `Event not found — it may have been deleted or the ID is incorrect.`
+            : status === 403
+              ? `Access denied — you do not have permission to view this event.`
+              : 'Failed to load event details. Please try again.'
+        );
+      })
       .finally(() => setEventLoading(false));
   }, [eventId]);
 
@@ -107,7 +122,7 @@ const CheckInDashboardPage = () => {
         </div>
 
         {/* Sticky active event banner */}
-        {eventId && (
+        {eventId && !eventError && (
 <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-800">
           <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
           <span className="font-bold">{eventLoading ? 'Loading event...' : eventDetails?.name || eventDetails?.title || `Event #${eventId}`}</span>
@@ -132,13 +147,21 @@ const CheckInDashboardPage = () => {
           </div>
         )}
 
+        {/* Event missing / not found guard */}
+        {eventError && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center justify-between" role="alert">
+            <span>⚠️ {eventError}</span>
+            <Link to="/check-in" className="text-red-700 hover:text-red-900 underline text-xs font-medium shrink-0 ml-4">Choose a valid event →</Link>
+          </div>
+        )}
+
         <CheckInNavigation eventId={eventId} />
 
         {/* Metrics display */}
         <CheckInStatsDisplay total={150} checkedIn={35} />
 
-        {/* Core Layout Grid — disabled when no event selected or event ended */}
-        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-8 ${!eventId || (eventDetails && eventDetails.status === 'ended') ? 'opacity-50 pointer-events-none' : ''}`}>
+        {/* Core Layout Grid — disabled when no event selected, event ended, or event not found */}
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-8 ${!eventId || eventError || (eventDetails && eventDetails.status === 'ended') ? 'opacity-50 pointer-events-none' : ''}`}>
           {/* Main scanner/manual input */}
           <div className="lg:col-span-2 space-y-6">
             <CheckInQRScanner eventId={eventId ? Number(eventId) : null} />
