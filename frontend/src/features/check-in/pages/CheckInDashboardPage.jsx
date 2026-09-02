@@ -15,6 +15,7 @@ const CheckInDashboardPage = () => {
   const [searchParams] = useSearchParams();
   const eventId = searchParams.get('eventId');
   const [eventDetails, setEventDetails] = useState(null);
+  const [eventLoading, setEventLoading] = useState(false);
   const isOnline = useOfflineSyncStore((state) => state.isOnline);
   const queue = useOfflineSyncStore((state) => state.queue);
   const history = useOfflineSyncStore((state) => state.history);
@@ -34,11 +35,14 @@ const CheckInDashboardPage = () => {
   useEffect(() => {
     if (!eventId) {
       setEventDetails(null);
+      setEventLoading(false);
       return;
     }
+    setEventLoading(true);
     api.get(`/events/${eventId}`)
       .then((res) => setEventDetails(res.data?.data || res.data))
-      .catch(() => setEventDetails(null));
+      .catch(() => setEventDetails(null))
+      .finally(() => setEventLoading(false));
   }, [eventId]);
 
   return (
@@ -106,7 +110,7 @@ const CheckInDashboardPage = () => {
         {eventId && (
 <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-800">
           <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
-          <span className="font-bold">{eventDetails?.name || `Event #${eventId}`}</span>
+          <span className="font-bold">{eventLoading ? 'Loading event...' : eventDetails?.name || eventDetails?.title || `Event #${eventId}`}</span>
           <span className="text-indigo-500">·</span>
           <Link to="/check-in" className="text-indigo-600 hover:text-indigo-800 underline text-xs">Clear</Link>
           <span className="ml-4 text-indigo-500 hover:text-indigo-600 cursor-pointer text-xs" title="Works offline - scans save locally and sync when back online">

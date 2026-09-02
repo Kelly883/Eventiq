@@ -4,10 +4,11 @@ import { useAuthContext } from '../../auth/context/AuthContext';
 import { api } from '../../../lib/api';
 import Skeleton from '../../../components/Skeleton';
 import { CheckInNavigation } from '../components';
+import EventSelector from '../../analytics/components/EventSelector';
 
 const CheckInSearchPage = () => {
   const { user } = useAuthContext();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const eventId = searchParams.get('eventId');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -26,9 +27,9 @@ const CheckInSearchPage = () => {
     setError('');
     try {
       const response = await api.get(`/venue/check-ins/search`, {
-        params: { query, event_id: eventId },
+        params: { q: query, event_id: eventId },
       });
-      setResults(response.data?.data || []);
+      setResults(response.data?.results || []);
     } catch (err) {
       setError(err?.response?.data?.message || 'Search failed. Please try again.');
     } finally {
@@ -39,14 +40,36 @@ const CheckInSearchPage = () => {
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">
       <div className="mx-auto max-w-4xl space-y-6">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <Link
             to={eventId ? `/check-in?eventId=${eventId}` : '/check-in'}
-            className="text-slate-500 hover:text-slate-700 text-sm font-medium"
+            className="text-slate-500 hover:text-slate-700 text-sm font-medium shrink-0"
           >
             ← Back to Check-In
           </Link>
+          <div className="flex-1 max-w-xs">
+            <EventSelector
+              compact
+              selectedEventId={eventId}
+              onSelect={(id) => {
+                if (id) setSearchParams({ eventId: id });
+                else setSearchParams({});
+              }}
+            />
+          </div>
         </div>
+
+        {eventId && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-800">
+            <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
+            Searching attendees for: <span className="font-bold">Event #{eventId}</span>
+          </div>
+        )}
+        {!eventId && (
+          <div className="px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-800">
+            No event selected — searching attendees across all your events.
+          </div>
+        )}
 
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Search Attendees</h1>

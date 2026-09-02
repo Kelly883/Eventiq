@@ -119,7 +119,13 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    fetchCurrentUser().finally(() => setLoading(false));
+    fetchCurrentUser()
+      .catch((error) => {
+        if (error?.response?.status !== 401) {
+          console.error('[auth] Unable to restore the current session.', error);
+        }
+      })
+      .finally(() => setLoading(false));
 
     let idleTimer;
 
