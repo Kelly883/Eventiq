@@ -10,6 +10,14 @@ const adminNavItems = [
   { to: '/admin/analytics', label: 'Analytics', icon: '📈', description: 'Platform-wide analytics', group: 'management' },
   { to: '/admin/settings/email-templates', label: 'Email Templates', icon: '✉️', description: 'Manage notification templates', group: 'settings' },
   {
+    to: '/admin/refunds',
+    label: 'Refunds',
+    icon: '💰',
+    description: 'Platform-wide refund requests and status',
+    group: 'settings',
+    adminOnly: true,
+  },
+  {
     to: '/admin/settings/push-templates',
     label: 'Push Templates',
     icon: '📱',
