@@ -29,15 +29,15 @@
   </g>
   <g font-family="Inter, Avenir Next, Arial, sans-serif" font-weight="800">
     <text x="100" y="57" fill="#1A1D22" font-size="47" letter-spacing="-2.7">event</text>
-    <text x="226" y="57" fill="url(#warm-gradient)" font-size="47" letter-spacing="-2.7">I</text>
-    <text x="240" y="57" fill="url(#iq-gradient)" font-size="47" letter-spacing="-3">Q</text>
-    <path d="m284 52 14 13" stroke="url(#warm-gradient)" stroke-linecap="round" stroke-width="5"/>
+    <text x="332" y="57" fill="url(#warm-gradient)" font-size="47" letter-spacing="-2.7">I</text>
+    <text x="354" y="57" fill="url(#iq-gradient)" font-size="47" letter-spacing="-3">Q</text>
+    <path d="m396 52 14 13" stroke="url(#warm-gradient)" stroke-linecap="round" stroke-width="5"/>
   </g>
   <g font-family="Inter, Avenir Next, Arial, sans-serif" fill="#4B5563" font-size="10" font-weight="700" letter-spacing="2.5">
     <text x="103" y="82">TICKETS</text>
-    <circle cx="169" cy="78.5" r="2.2" fill="#FFDA6B"/>
-    <text x="179" y="82">EVENTS</text>
-    <circle cx="243" cy="78.5" r="2.2" fill="#FF6B6B"/>
-    <text x="253" y="82">EXPERIENCES</text>
+    <circle cx="195" cy="78.5" r="2.2" fill="#FFDA6B"/>
+    <text x="205" y="82">EVENTS</text>
+    <circle cx="285" cy="78.5" r="2.2" fill="#FF6B6B"/>
+    <text x="295" y="82">EXPERIENCES</text>
   </g>
 </svg>

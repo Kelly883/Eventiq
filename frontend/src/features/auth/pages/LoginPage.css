@@ -268,14 +268,14 @@
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -1px rgb(0 0 0 / 6%);
-  transition: background-color 150ms ease, transform 150ms ease;
+  transition: background-color 150ms ease, transform 150ms ease, opacity 150ms ease;
 }
 
-.login-page__submit:hover {
+.login-page__submit:hover:not(:disabled) {
   background: var(--coral-dark);
 }
 
-.login-page__submit:active {
+.login-page__submit:active:not(:disabled) {
   transform: translateY(1px);
 }
 
@@ -286,16 +286,19 @@
 
 .login-page__submit:disabled {
   cursor: not-allowed;
-  background: #ff9e9e;
+  background: var(--coral-dark);
+  opacity: 0.85;
 }
 
 .login-page__spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgb(255 255 255 / 40%);
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgb(255 255 255 / 45%);
   border-top-color: #fff;
   border-radius: 50%;
-  animation: login-page-spin 800ms linear infinite;
+  animation: login-page-spin 700ms linear infinite;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgb(255 255 255 / 40%);
 }
 
 .login-page__signup {
