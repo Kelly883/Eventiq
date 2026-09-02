@@ -9,7 +9,14 @@ const AccessDeniedPage = ({ title = 'Access Denied', message = 'You do not have 
   const handleGoBack = () => {
     const from = location.state?.from;
     if (from) {
-      navigate('/dashboard', { replace: true });
+      const fromPath = new URL(from, window.location.origin).pathname;
+      if (fromPath.startsWith('/admin/settings')) {
+        navigate('/admin/settings/email-templates', { replace: true });
+      } else if (fromPath.startsWith('/admin')) {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     } else {
       navigate(-1);
     }
