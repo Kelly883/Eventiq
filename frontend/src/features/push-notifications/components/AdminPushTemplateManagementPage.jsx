@@ -22,6 +22,42 @@ const deleteTemplate = async (id) => {
   await api.delete(`/admin/push-templates/${id}`);
 };
 
+const DEFAULT_PUSH_TEMPLATES = [
+  {
+    name: 'Order Confirmation',
+    type: 'order_confirmation',
+    title: 'Order Confirmed',
+    body: 'Your order #{{order.id}} is confirmed! View your tickets.',
+    is_active: true,
+    priority: 5,
+  },
+  {
+    name: 'Event Reminder',
+    type: 'event_reminder',
+    title: 'Event Tomorrow',
+    body: '{{event.title}} is tomorrow at {{event.date}}. See you there!',
+    is_active: true,
+    priority: 7,
+  },
+  {
+    name: 'Check-in Alert',
+    type: 'checkin_alert',
+    title: 'Ticket Scanned',
+    body: 'Your ticket {{ticket.code}} was just scanned at {{event.venue}}.',
+    is_active: true,
+    priority: 8,
+  },
+];
+
+const seedDefaultPushTemplates = async () => {
+  const results = [];
+  for (const t of DEFAULT_PUSH_TEMPLATES) {
+    const response = await api.post('/admin/push-templates', t);
+    results.push(response.data?.data || response.data);
+  }
+  return results;
+};
+
 const templateTypes = ['order_confirmation', 'event_reminder', 'checkin_alert', 'promotional', 'custom'];
 
 const typeLabels = {
@@ -229,6 +265,15 @@ const AdminPushTemplateManagementPage = () => {
     },
   });
 
+  const seedMutation = useMutation({
+    mutationFn: seedDefaultPushTemplates,
+    onSuccess: () => {
+      invalidate();
+      showToast('Templates seeded', 'Default push notification templates created.', 'success');
+    },
+    onError: (err) => showToast('Seeding failed', err?.response?.data?.message || 'Failed to seed default templates.', 'error'),
+  });
+
   const filtered = searchQuery.trim()
     ? templates.filter((t) =>
         [t.name, t.type, t.title, t.body].some((v) => v && String(v).toLowerCase().includes(searchQuery.toLowerCase()))
@@ -289,9 +334,24 @@ const AdminPushTemplateManagementPage = () => {
               : 'Create your first push notification template to get started.'}
           </p>
           {!searchQuery.trim() && (
-            <button onClick={() => setShowCreate(true)} className="mt-4 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">
-              Create your first template
-            </button>
+            <div className="mt-5 space-y-3">
+              <button
+                onClick={() => seedMutation.mutate()}
+                disabled={seedMutation.isPending}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg text-sm font-semibold transition-colors"
+              >
+                {seedMutation.isPending ? 'Seeding...' : '✨ Seed Default Templates'}
+              </button>
+              <p className="text-xs text-slate-500 text-center">
+                Instantly create Order Confirmation, Event Reminder, and Check-in Alert templates.
+              </p>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Create Custom Template
+              </button>
+            </div>
           )}
         </div>
       ) : (
