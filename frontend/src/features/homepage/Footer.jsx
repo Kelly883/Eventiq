@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import BrandLogo from '../common/components/BrandLogo';
 
 const Footer = () => {
   return (
@@ -48,8 +49,7 @@ const Footer = () => {
 
         <div className="footer-bottom">
           <div className="footer-brand">
-            <span className="logo-icon" aria-hidden="true">◆</span>
-            <span className="logo-text">EVENTIQ</span>
+            <BrandLogo variant="transparent" />
           </div>
           <div className="footer-social">
             <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter">

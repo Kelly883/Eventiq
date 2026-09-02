@@ -65,17 +65,10 @@
   letter-spacing: -0.025em;
 }
 
-.login-page__brand-mark {
-  display: grid;
-  width: 40px;
-  height: 40px;
-  place-items: center;
-  border-radius: 12px;
-  background: var(--coral);
-  box-shadow: 0 4px 10px rgb(255 107 107 / 25%);
-  color: white;
-  font-size: 18px;
-  font-weight: 800;
+.login-page__brand .brand-logo {
+  display: block;
+  width: 180px;
+  height: auto;
 }
 
 .login-page__secure-badge {

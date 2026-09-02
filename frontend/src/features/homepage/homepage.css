@@ -1363,12 +1363,10 @@
   gap: 9px;
 }
 
-.homepage .footer-brand .logo-icon {
-  color: var(--color-primary);
-}
-
-.homepage .footer-brand .logo-text {
-  color: #fff;
+.homepage .footer-brand .brand-logo {
+  display: block;
+  width: 150px;
+  height: auto;
 }
 
 .homepage .footer-social {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import { showToast } from '../../../lib/api';
+import BrandLogo from '../../common/components/BrandLogo';
 import { safeRedirectPath, defaultRedirect, normalizeFromPath } from '../utils';
 import './LoginPage.css';
 
@@ -85,9 +86,8 @@ const LoginPage = () => {
 
       <section className="login-page__content">
         <div className="login-page__brand-row">
-          <Link to="/" className="login-page__brand">
-            <span aria-hidden="true" className="login-page__brand-mark">E</span>
-            <span>Eventiq</span>
+          <Link to="/" className="login-page__brand" aria-label="eventIQ home">
+            <BrandLogo />
           </Link>
           <span className="login-page__secure-badge">
             Secure sign-in
