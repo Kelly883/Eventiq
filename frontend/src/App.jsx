@@ -400,7 +400,7 @@ function App() {
               <Route path=":ticketId/refund-status" element={<UserRefundStatusPage />} />
             </Route>
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
-              <Route index element={<AdminDeliveryDashboardPage />} />
+              <Route index element={<AdminDashboardPage />} />
               <Route path="roles" element={<AdminRoleManagementPage />} />
               <Route path="fraud/dashboard" element={<FraudDetectionDashboardPage />} />
               <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />

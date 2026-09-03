@@ -1,10 +1,19 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { showToast } from '../../../lib/api';
+import { useAuthContext } from '../../../features/auth/context/AuthContext';
 
 const AccessDeniedPage = ({ title = 'Access Denied', message = 'You do not have permission to access this page.' }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuthContext();
+
+  const getRoleBasedFallback = () => {
+    if (user?.roles?.some((r) => r.name === 'admin')) return '/admin';
+    if (user?.roles?.some((r) => r.name === 'organizer')) return '/dashboard/organizer';
+    if (user) return '/dashboard';
+    return '/login';
+  };
 
   const handleGoBack = () => {
     const from = location.state?.from;
@@ -18,7 +27,9 @@ const AccessDeniedPage = ({ title = 'Access Denied', message = 'You do not have 
         navigate('/dashboard', { replace: true });
       }
     } else {
-      navigate(-1);
+      // No referring path in state — use role-based fallback to avoid
+      // navigate(-1) looping when the page is bookmarked or directly accessed.
+      navigate(getRoleBasedFallback(), { replace: true });
     }
   };
 
@@ -48,7 +59,7 @@ const AccessDeniedPage = ({ title = 'Access Denied', message = 'You do not have 
             ← Go Back
           </button>
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(getRoleBasedFallback(), { replace: true })}
             className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors"
           >
             Dashboard

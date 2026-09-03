@@ -872,9 +872,6 @@ const AdminEmailTemplateManagementPage = () => {
                 Get started by creating your first email template. Templates let you send
                 consistent, branded notifications to your users for events, orders, and more.
               </p>
-              <div className="mt-3 p-2 bg-indigo-50 rounded-lg text-xs font-medium text-indigo-700 mb-4">
-                Managed by admin
-              </div>
               <div className="space-y-3">
                 <button
                   onClick={() => seedMutation.mutate()}

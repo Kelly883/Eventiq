@@ -1,9 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAdminDashboard } from '../hooks/useAdminDashboard';
 import { MetricCard, ActivityFeed, AlertsSection, QuickStatsSection, NavigationTiles } from '../components/dashboard';
+import { requestNotificationPermissionAndToken } from '../../../config/firebase';
+import { showToast } from '../../../lib/api';
 
 const AdminDashboardPage = () => {
   const { loading, error, metrics, activity, alerts, quickStats } = useAdminDashboard();
+  const [notificationStatus, setNotificationStatus] = useState(() => {
+    if (typeof Notification === 'undefined') return 'unsupported';
+    return Notification.permission;
+  });
+  const [enabling, setEnabling] = useState(false);
+
+  const handleEnableNotifications = async () => {
+    setEnabling(true);
+    try {
+      const token = await requestNotificationPermissionAndToken();
+      if (token) {
+        setNotificationStatus('granted');
+        showToast('Notifications enabled', 'You will now receive push notifications.', 'success');
+      } else if (Notification.permission === 'denied') {
+        setNotificationStatus('denied');
+        showToast('Permission denied', 'Please enable notifications in your browser settings.', 'warning');
+      } else {
+        setNotificationStatus(Notification.permission);
+      }
+    } catch {
+      setNotificationStatus('denied');
+      showToast('Could not enable notifications', 'Push notifications are not supported in this browser.', 'error');
+    } finally {
+      setEnabling(false);
+    }
+  };
 
   if (error) {
     return (
@@ -18,6 +46,22 @@ const AdminDashboardPage = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
       </div>
+
+      {notificationStatus === 'default' && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-indigo-900">Enable push notifications</h3>
+            <p className="text-xs text-indigo-700 mt-0.5">Stay alerted on new events, refunds, and security events.</p>
+          </div>
+          <button
+            onClick={handleEnableNotifications}
+            disabled={enabling}
+            className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            {enabling ? 'Enabling...' : 'Enable'}
+          </button>
+        </div>
+      )}
 
       <NavigationTiles />
 

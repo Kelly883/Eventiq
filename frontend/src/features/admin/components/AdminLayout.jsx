@@ -8,7 +8,14 @@ const adminNavItems = [
   { to: '/admin/fraud/dashboard', label: 'Fraud Detection', icon: '🕵️', description: 'Monitor flagged transactions', group: 'management' },
   { to: '/admin/delivery/dashboard', label: 'Delivery', icon: '📦', description: 'Ticket delivery management', group: 'management' },
   { to: '/admin/analytics', label: 'Analytics', icon: '📈', description: 'Platform-wide analytics', group: 'management' },
-  { to: '/admin/settings/email-templates', label: 'Email Templates', icon: '✉️', description: 'Manage notification templates', group: 'settings' },
+  {
+    to: '/admin/settings/email-templates',
+    label: 'Email Templates',
+    icon: '✉️',
+    description: 'Notification templates (default settings page)',
+    group: 'settings',
+    adminOnly: true,
+  },
   {
     to: '/admin/refunds',
     label: 'Refunds',
@@ -76,6 +83,10 @@ const AdminLayout = () => {
           </Link>
           {activeItem && activeItem.to !== '/admin' && (
             <>
+              <span className="text-slate-400">/</span>
+              <span className="text-slate-500 font-medium capitalize">
+                {activeItem.group}
+              </span>
               <span className="text-slate-400">/</span>
               <span className="text-slate-700 font-medium">
                 {activeItem.label}
