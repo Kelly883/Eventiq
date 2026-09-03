@@ -146,7 +146,7 @@ export const PublicRoute = ({ children }) => {
       return <Navigate to="/dashboard/organizer" replace />;
     }
     if (role === 'admin') {
-      return <Navigate to="/admin/roles" replace />;
+      return <Navigate to="/admin" replace />;
     }
     return <Navigate to="/dashboard" replace />;
   }

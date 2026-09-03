@@ -28,8 +28,18 @@ export function useFCMTokenSync() {
     syncInFlight.current = true;
 
     try {
+      // Only attempt to sync if notification permission was already granted.
+      // Requesting permission outside a user gesture throws a console error
+      // ("The Notification permission may only be requested from inside a
+      // short running user-generated event handler"). The permission request
+      // must be gated behind an explicit user action (e.g. an "Enable
+      // notifications" button) — never on page load or tab visibility change.
+      if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
+        return;
+      }
+
       const newToken = await requestNotificationPermissionAndToken();
-      if (!newToken) return; // permission denied / unsupported / not configured
+      if (!newToken) return; // unsupported / not configured
 
       const previousToken = localStorage.getItem(STORED_TOKEN_KEY);
       if (previousToken === newToken) return; // unchanged, nothing to do

@@ -49,7 +49,7 @@ async function fetchUserPreferredLanguage() {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
 
   // Conservative default endpoint; backend can be adjusted later.
-  const url = `${baseUrl}/api/user/preferences/language`
+  const url = `${baseUrl}/user/preferences/language`
 
   try {
     const res = await fetch(url, {

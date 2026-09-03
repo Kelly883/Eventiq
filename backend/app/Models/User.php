@@ -57,6 +57,14 @@ class User extends Authenticatable
     ];
 
     /**
+     * Override: the auth column is `passwordHash`, not `password`.
+     */
+    public function getAuthPassword(): string
+    {
+        return $this->passwordHash;
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

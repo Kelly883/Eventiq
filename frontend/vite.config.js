@@ -27,7 +27,18 @@ export default defineConfig(({ mode }) => {
   server: {
     port: 3000,
     host: '0.0.0.0',
-    allowedHosts: true
+    allowedHosts: true,
+    proxy: {
+      // Sanctum's csrf-cookie route is registered at /sanctum/csrf-cookie
+      // (without /api prefix). The SPA's axios baseURL includes /api, so
+      // requests go to /api/sanctum/csrf-cookie. This proxy strips the
+      // /api prefix and forwards to the backend's /sanctum path.
+      '/sanctum': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
   build: {
     chunkSizeWarningLimit: 1000,

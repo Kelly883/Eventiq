@@ -6,7 +6,16 @@ export default function ToastContainer() {
 
   useEffect(() => {
     const removeListener = addToastListener((newToast) => {
-      setToasts((prev) => [...prev, newToast]);
+      setToasts((prev) => {
+        // Deduplicate: skip if an identical toast (same title, description, type)
+        // is already visible. Prevents stacked toasts from StrictMode
+        // double-invokes or rapid re-renders.
+        const isDuplicate = prev.some(
+          (t) => t.title === newToast.title && t.description === newToast.description && t.type === newToast.type
+        );
+        if (isDuplicate) return prev;
+        return [...prev, newToast];
+      });
 
       // Auto-dismiss logic
       const duration = newToast.duration ?? 5000;

@@ -15,6 +15,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->append(App\Http\Middleware\AssignCorrelationId::class);
 
+        // Enable Sanctum's stateful SPA authentication for the API guard.
+        // This allows the frontend to authenticate using secure cookies
+        // instead of bearer tokens.
+        $middleware->api(append: [
+            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+        ]);
+
         $middleware->alias([
             'role' => App\Http\Middleware\CheckRole::class,
             'api.key' => App\Http\Middleware\ApiKeyMiddleware::class,
