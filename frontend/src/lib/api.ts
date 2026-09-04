@@ -41,7 +41,8 @@ function isAuthenticationRequest(url?: string): boolean {
 const baseURL = ((import.meta as unknown) as { env: Env }).env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
 
       // Ensure baseURL always includes /api prefix (Laravel expects it)
-      const normalizedBaseURL = baseURL.endsWith('/api') ? baseURL : `${baseURL}/api`;
+const normalizedBaseURL = baseURL.endsWith('/api') ? baseURL : `${baseURL}/api`;
+const csrfCookieUrl = `${normalizedBaseURL.replace(/\/api$/, '')}/sanctum/csrf-cookie`;
 
 export const api = axios.create({
   baseURL: normalizedBaseURL,
@@ -63,9 +64,9 @@ let queuedRequests: Array<{
 /*                       Refresh CSRF Cookie (Sanctum)                        */
 /* -------------------------------------------------------------------------- */
 
-async function refreshCsrf(): Promise<boolean> {
+export async function refreshCsrf(): Promise<boolean> {
   try {
-    await api.get('/sanctum/csrf-cookie', {
+    await axios.get(csrfCookieUrl, {
       withCredentials: true,
     });
     return true;

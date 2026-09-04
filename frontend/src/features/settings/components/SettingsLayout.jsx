@@ -1,5 +1,6 @@
 import React from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
+import { useAuthContext } from '../../auth/context/AuthContext';
 
 const settingsNavItems = [
   { to: '/settings/permissions', label: 'Permissions', icon: '🛡️', description: 'View and request access roles' },
@@ -8,6 +9,8 @@ const settingsNavItems = [
 
 const SettingsLayout = () => {
   const location = useLocation();
+  const { user } = useAuthContext();
+  const isAdmin = user?.roles?.some((r) => r.name === 'admin');
 
   const activeItem = settingsNavItems.find(
     (item) => item.to === location.pathname
@@ -51,6 +54,22 @@ const SettingsLayout = () => {
                   </li>
                 ))}
               </ul>
+              {isAdmin && (
+                <div className="p-4 bg-indigo-50/70 border-t border-indigo-100">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-900">
+                    <span>⚡</span> Administrator Access
+                  </div>
+                  <p className="text-xs text-indigo-700 mt-1">
+                    Looking to manage platform email templates or push notifications?
+                  </p>
+                  <Link
+                    to="/admin/settings"
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+                  >
+                    Go to Admin Settings →
+                  </Link>
+                </div>
+              )}
             </div>
           </nav>
 

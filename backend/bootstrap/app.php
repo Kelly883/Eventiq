@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 use Rebing\GraphQL\GraphQLServiceProvider;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -13,6 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // API consumers must always receive an authentication response, even
+        // when their client does not send an Accept: application/json header.
+        // Without this, Laravel attempts to redirect guests to a named web
+        // "login" route, which this API-only auth flow does not define.
+        $middleware->redirectGuestsTo(fn (Request $request) =>
+            $request->is('api/*') ? null : route('login')
+        );
+
         $middleware->append(App\Http\Middleware\AssignCorrelationId::class);
 
         // Enable Sanctum's stateful SPA authentication for the API guard.

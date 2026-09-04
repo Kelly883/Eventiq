@@ -9,29 +9,30 @@ const adminNavItems = [
   { to: '/admin/delivery/dashboard', label: 'Delivery', icon: '📦', description: 'Ticket delivery management', group: 'management' },
   { to: '/admin/analytics', label: 'Analytics', icon: '📈', description: 'Platform-wide analytics', group: 'management' },
   {
+    to: '/admin/settings',
+    label: 'Settings',
+    icon: '⚙️',
+    description: 'Platform configuration & templates',
+    group: 'settings',
+    end: true,
+  },
+  {
     to: '/admin/settings/email-templates',
     label: 'Email Templates',
     icon: '✉️',
-    description: 'Notification templates (default settings page)',
+    description: 'Transactional notification templates',
     group: 'settings',
-    adminOnly: true,
-  },
-  {
-    to: '/admin/refunds',
-    label: 'Refunds',
-    icon: '💰',
-    description: 'Platform-wide refund requests and status',
-    group: 'settings',
-    adminOnly: true,
+    subItem: true,
   },
   {
     to: '/admin/settings/push-templates',
     label: 'Push Templates',
     icon: '📱',
-    description: 'Manage push notification templates',
+    description: 'Mobile & web push notifications',
     group: 'settings',
-    adminOnly: true,
+    subItem: true,
   },
+  { to: '/admin/refunds', label: 'Refunds', icon: '💰', description: 'Platform-wide refund requests and status', group: 'management' },
 ];
 
 const AdminLayout = () => {
@@ -39,14 +40,15 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, sessionExpired } = useAuthContext();
 
-  const activeItem = adminNavItems.find(
-    (item) => item.to === location.pathname || location.pathname.startsWith(item.to + '/')
-  );
+  const activeItem = adminNavItems
+    .filter((item) => item.to === location.pathname || location.pathname.startsWith(item.to + '/'))
+    .sort((a, b) => b.to.length - a.to.length)[0];
 
+  // ── Settings section: always rendered inside AdminLayout, which itself sits
+  // behind <ProtectedRoute requiredRole="admin">. Every visitor here is an admin,
+  // so the sub-items are always visible — there's no further role gate.
   const managementItems = adminNavItems.filter(item => item.group === 'management');
-  const settingsItems = adminNavItems.filter(
-    (item) => item.group === 'settings' && (!item.adminOnly || user?.roles?.some((r) => r.name === 'admin'))
-  );
+  const settingsItems = adminNavItems.filter(item => item.group === 'settings');
 
   // ── Session-expiry guard ──
   // The axios interceptor dispatches 'session-expired' when a 401 survives the
@@ -70,6 +72,21 @@ const AdminLayout = () => {
     }
   }, [sessionExpired, user, navigate, location]);
 
+  // ── Role-change guard ──
+  // If the admin is demoted mid-session (e.g. via another tab or admin action),
+  // the AuthContext dispatches a 'role-change' event. Non-admins must be bounced
+  // away from admin-only pages immediately — not just on next navigation.
+  useEffect(() => {
+    const handleRoleChange = () => {
+      const isAdmin = user?.roles?.some((r) => r.name === 'admin');
+      if (!isAdmin) {
+        navigate('/access-denied', { replace: true, state: { deniedByRole: 'admin', attemptedPath: location.pathname, message: 'Your administrator access has been revoked.', messageType: 'warning' } });
+      }
+    };
+    window.addEventListener('role-change', handleRoleChange);
+    return () => window.removeEventListener('role-change', handleRoleChange);
+  }, [user, navigate, location]);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -82,16 +99,28 @@ const AdminLayout = () => {
             Admin
           </Link>
           {activeItem && activeItem.to !== '/admin' && (
-            <>
-              <span className="text-slate-400">/</span>
-              <span className="text-slate-500 font-medium capitalize">
-                {activeItem.group}
-              </span>
-              <span className="text-slate-400">/</span>
-              <span className="text-slate-700 font-medium">
-                {activeItem.label}
-              </span>
-            </>
+            activeItem.subItem ? (
+              <>
+                <span className="text-slate-400">/</span>
+                <Link
+                  to="/admin/settings"
+                  className="text-slate-500 hover:text-slate-700 font-medium capitalize"
+                >
+                  {activeItem.group}
+                </Link>
+                <span className="text-slate-400">/</span>
+                <span className="text-slate-700 font-medium">
+                  {activeItem.label}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-slate-400">/</span>
+                <span className="text-slate-700 font-medium">
+                  {activeItem.label}
+                </span>
+              </>
+            )
           )}
         </nav>
 
@@ -152,24 +181,42 @@ const AdminLayout = () => {
                     <li key={item.to}>
                       <NavLink
                         to={item.to}
+                        end={item.end}
                         className={({ isActive }) =>
-                          `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
-                            isActive
-                              ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600'
-                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-l-4 border-transparent'
-                          }`
+                          item.subItem
+                            ? `flex items-center gap-2 pl-10 pr-4 py-2.5 text-sm transition-colors border-l-4 ${
+                                isActive
+                                  ? 'bg-indigo-50 text-indigo-700 border-indigo-600'
+                                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 border-transparent'
+                              }`
+                            : `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors border-l-4 ${
+                                isActive
+                                  ? 'bg-indigo-50 text-indigo-700 border-indigo-600'
+                                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent'
+                              }`
                         }
                       >
-                        <span className="text-lg">{item.icon}</span>
-                        <div>
-                          <div className="font-semibold">{item.label}</div>
-                          <div className="text-xs text-slate-400 font-normal">{item.description}</div>
-                        </div>
+                        {item.subItem ? (
+                          <>
+                            <span className="text-slate-300 select-none" aria-hidden="true">└</span>
+                            <span className="text-base">{item.icon}</span>
+                            <span>{item.label}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-lg">{item.icon}</span>
+                            <div>
+                              <div className="font-semibold">{item.label}</div>
+                              <div className="text-xs text-slate-400 font-normal">{item.description}</div>
+                            </div>
+                          </>
+                        )}
                       </NavLink>
                     </li>
                   ))}
                 </ul>
               </div>
+
             </div>
           </nav>
 

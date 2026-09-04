@@ -1,1 +1,7 @@
 .phpunit.result.cache
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/app/purifier/*
+/storage/logs/*
+/storage/app/public/qrcodes/*

@@ -31,6 +31,8 @@ const TicketStatusPage = lazy(() => import('./features/ticket-delivery/pages/Tic
 const DeliverySettingsPage = lazy(() => import('./features/ticket-delivery/pages/DeliverySettingsPage'));
 const AdminDeliveryDashboardPage = lazy(() => import('./features/ticket-delivery/pages/AdminDeliveryDashboardPage'));
 const AdminEmailTemplateManagementPage = lazy(() => import('./features/email-notifications/pages/AdminEmailTemplateManagementPage'));
+const AdminDashboardPage = lazy(() => import('./features/admin/pages/AdminDashboardPage'));
+const AdminSettingsPage = lazy(() => import('./features/admin/pages/AdminSettingsPage'));
 const AdminRoleManagementPage = lazy(() => import('./features/roles/pages/AdminRoleManagementPage'));
 const UserPermissionsPage = lazy(() => import('./features/roles/pages/UserPermissionsPage'));
 const OrganizerPublicProfilePage = lazy(() => import('./features/organizer-profile/pages/OrganizerPublicProfilePage'));
@@ -188,6 +190,11 @@ const NAV_ITEMS = [
     to: '/settings',
     label: '⚙️ Settings',
     visible: (isLoggedIn) => isLoggedIn,
+  },
+  {
+    to: '/admin',
+    label: '⚡ Admin',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
   },
   {
     to: '/admin/roles',
@@ -399,13 +406,13 @@ function App() {
               <Route path=":ticketId/refund-request" element={<UserRefundRequestPage />} />
               <Route path=":ticketId/refund-status" element={<UserRefundStatusPage />} />
             </Route>
-            <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
+            <Route path="/admin" element={<ProtectedRoute requiredRole="admin" unauthenticatedToast={false}><AdminLayout /></ProtectedRoute>}>
               <Route index element={<AdminDashboardPage />} />
               <Route path="roles" element={<AdminRoleManagementPage />} />
               <Route path="fraud/dashboard" element={<FraudDetectionDashboardPage />} />
               <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />
               <Route path="analytics" element={<AdminAnalyticsPage />} />
-              <Route path="settings" element={<Navigate to="/admin/settings/email-templates" replace />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
               <Route path="settings/email-templates" element={<AdminEmailTemplateManagementPage />} />
               <Route path="settings/push-templates" element={<AdminPushTemplateManagementPage />} />
               <Route path="settlements/dashboard" element={<AdminSettlementDashboardPage />} />

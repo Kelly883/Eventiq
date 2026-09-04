@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { api, showToast } from '../../../lib/api';
+import { api, refreshCsrf, showToast } from '../../../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -250,7 +250,7 @@ export const AuthProvider = ({ children }) => {
   }, [fetchCurrentUser]);
 
   const login = useCallback(async (email, password, rememberMe = false) => {
-    await api.get('/sanctum/csrf-cookie');
+    await refreshCsrf();
     const response = await api.post('/auth/login', { email, password, remember_me: rememberMe });
 
     localStorage.setItem(REMEMBER_ME_KEY, rememberMe ? 'true' : '');

@@ -1,5 +1,5 @@
 .login-page {
-  --coral: #d94545;
+  --coral: #cc3838;
   --coral-dark: #b83535;
   --teal: #4ecdc4;
   --ink: #333333;
@@ -30,7 +30,7 @@
   left: -96px;
   width: 320px;
   height: 320px;
-  background: rgb(217 69 69 / 30%);
+    background: rgb(204 56 56 / 30%);
 }
 
 .login-page__orb--teal {
@@ -164,7 +164,7 @@
 .login-page__input:focus-visible {
   border-color: var(--coral);
   outline: none;
-  box-shadow: 0 0 0 3px rgb(217 69 69 / 50%);
+    box-shadow: 0 0 0 3px rgb(204 56 56 / 50%);
 }
 
 .login-page__input:disabled {

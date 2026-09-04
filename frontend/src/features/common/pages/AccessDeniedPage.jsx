@@ -17,20 +17,16 @@ const AccessDeniedPage = ({ title = 'Access Denied', message = 'You do not have 
 
   const handleGoBack = () => {
     const from = location.state?.from;
-    if (from) {
+    // Primary: role-based fallback — always safe, works for bookmarked/direct access.
+    // Secondary: if the user came from an admin path and is still an admin, go there.
+    if (from && user?.roles?.some((r) => r.name === 'admin')) {
       const fromPath = new URL(from, window.location.origin).pathname;
-      if (fromPath.startsWith('/admin/settings')) {
-        navigate('/admin/settings/email-templates', { replace: true });
-      } else if (fromPath.startsWith('/admin')) {
-        navigate('/admin', { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
+      if (fromPath.startsWith('/admin')) {
+        navigate(fromPath, { replace: true });
+        return;
       }
-    } else {
-      // No referring path in state — use role-based fallback to avoid
-      // navigate(-1) looping when the page is bookmarked or directly accessed.
-      navigate(getRoleBasedFallback(), { replace: true });
     }
+    navigate(getRoleBasedFallback(), { replace: true });
   };
 
   React.useEffect(() => {
@@ -49,7 +45,12 @@ const AccessDeniedPage = ({ title = 'Access Denied', message = 'You do not have 
             </svg>
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">{title}</h1>
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 mb-2 rounded-full text-xs font-semibold uppercase tracking-wider bg-red-100 text-red-700">
+          <span>Error 403</span>
+        </div>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">
+          {title.includes('403') ? title : `403: ${title}`}
+        </h1>
         <p className="text-slate-600 mb-6">{message}</p>
         <div className="flex gap-3 justify-center">
           <button

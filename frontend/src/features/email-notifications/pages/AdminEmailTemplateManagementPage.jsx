@@ -383,6 +383,50 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, templateName, isLoadin
   );
 };
 
+const SeedConfirmModal = ({ isOpen, onClose, onConfirm, isLoading }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-amber-100 rounded-full">
+              <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m0 3.75h.008v.008H12v-.008zm.008-6.905a9 9 0 11-2.25-.241.75.75 0 00.626.825 1.5 1.5 0 10-1.5-1.5A1.5 1.5 0 0112 15z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900">Create Default Templates</h3>
+              <p className="text-sm text-slate-500">This will create default email templates.</p>
+            </div>
+          </div>
+          <p className="text-sm text-slate-600 mb-4">
+            This action creates Order Confirmation, Event Reminder, and Welcome Email templates. If templates with the same keys already exist, they may be overwritten.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              disabled={isLoading}
+              className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={isLoading}
+              className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              {isLoading ? 'Creating...' : 'Create Templates'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PreviewModal = ({ isOpen, onClose, content, templateName }) => {
   if (!isOpen) return null;
 
@@ -474,6 +518,7 @@ const AdminEmailTemplateManagementPage = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [deletedTemplate, setDeletedTemplate] = React.useState(null);
   const [showUndo, setShowUndo] = React.useState(false);
+  const [showSeedModal, setShowSeedModal] = React.useState(false);
 
   const saveMutation = useMutation({
     mutationFn: saveEmailTemplate,
@@ -575,14 +620,14 @@ const AdminEmailTemplateManagementPage = () => {
     mutationFn: seedDefaultTemplates,
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['email-templates'] });
-      showToast('Templates seeded', `${created.length} default templates created.`, 'success');
+      showToast('Templates created', `${created.length} default templates created.`, 'success');
       if (created[0]) {
         setSelectedTemplate(created[0]);
         setMjmlContent(created[0].content || '');
       }
     },
     onError: (err) => {
-      showToast('Seeding failed', err?.message || 'Failed to seed default templates.', 'error');
+      showToast('Creation failed', err?.message || 'Failed to create default templates.', 'error');
     },
   });
   React.useEffect(() => {
@@ -662,8 +707,8 @@ const AdminEmailTemplateManagementPage = () => {
 
   if (isLoading) {
     return (
-      <div className="p-6 max-w-6xl mx-auto">
-        <Skeleton variant="text" className="h-8 w-64 mb-6" />
+      <div className="space-y-6">
+        <Skeleton variant="text" className="h-8 w-64" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
             <Skeleton variant="card" className="h-96" />
@@ -678,7 +723,7 @@ const AdminEmailTemplateManagementPage = () => {
 
   if (isError) {
     return (
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="space-y-6">
         <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
           <h3 className="font-bold">Failed to load email templates</h3>
           <p className="text-sm mt-1">{error?.message || 'An error occurred while fetching templates.'}</p>
@@ -688,8 +733,8 @@ const AdminEmailTemplateManagementPage = () => {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Email Templates</h1>
           <p className="text-sm text-slate-500 mt-1">
@@ -776,7 +821,19 @@ const AdminEmailTemplateManagementPage = () => {
             <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="font-semibold text-slate-800">{selectedTemplate.name}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-semibold text-slate-800">{selectedTemplate.name}</h2>
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                      selectedTemplate.status === 'active'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {selectedTemplate.status === 'active' ? 'Active' : 'Draft'}
+                    </span>
+                    <span className="text-xs font-mono text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                      {selectedTemplate.key}
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Subject: {selectedTemplate.subject}
                   </p>
@@ -828,16 +885,22 @@ const AdminEmailTemplateManagementPage = () => {
                   {templateVariables.map((item) => (
                     <button
                       key={item.variable}
+                      type="button"
                       onClick={() => {
                         navigator.clipboard.writeText(item.variable);
                         showToast('Copied!', `${item.variable} copied to clipboard.`, 'success');
                       }}
-                      className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-left"
+                      className="group flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50/50 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none transition-colors text-left"
+                      title={`Click to copy ${item.variable}`}
+                      aria-label={`Copy variable ${item.variable}: ${item.description}`}
                     >
-                      <code className="text-xs font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
-                        {item.variable}
-                      </code>
-                      <span className="text-xs text-slate-500 truncate">{item.description}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <code className="text-xs font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded shrink-0">
+                          {item.variable}
+                        </code>
+                        <span className="text-xs text-slate-500 truncate">{item.description}</span>
+                      </div>
+                      <span className="text-xs text-slate-400 group-hover:text-indigo-600 shrink-0 ml-1 select-none" aria-hidden="true">📋</span>
                     </button>
                   ))}
                 </div>
@@ -869,16 +932,14 @@ const AdminEmailTemplateManagementPage = () => {
               <span className="text-4xl mb-2 inline-block text-indigo-600">✉️</span>
               <h3 className="font-semibold text-slate-800">No templates yet</h3>
               <p className="text-sm text-slate-500 mb-4 max-w-xl mx-auto">
-                Get started by creating your first email template. Templates let you send
-                consistent, branded notifications to your users for events, orders, and more.
-              </p>
+                Get started by creating your first email template. Email templates power automated, branded notifications sent to users for key platform events like event registrations, ticket confirmations, reminders, and welcome messages.
               <div className="space-y-3">
-                <button
-                  onClick={() => seedMutation.mutate()}
+                                <button
+                  onClick={() => setShowSeedModal(true)}
                   disabled={seedMutation.isPending}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg text-sm font-medium transition-colors"
                 >
-                  {seedMutation.isPending ? 'Seeding...' : '✨ Seed Default Templates'}
+                  {seedMutation.isPending ? 'Creating...' : '✨ Create Default Templates'}
                 </button>
                 <p className="text-xs text-slate-500 text-center">
                   Instantly create Order Confirmation, Event Reminder, and Welcome Email templates.
@@ -907,12 +968,19 @@ const AdminEmailTemplateManagementPage = () => {
         isLoading={createMutation.isPending}
       />
 
-      <DeleteConfirmModal
+            <DeleteConfirmModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteTemplate}
         templateName={selectedTemplate?.name}
         isLoading={deleteMutation.isPending}
+      />
+
+      <SeedConfirmModal
+        isOpen={showSeedModal}
+        onClose={() => setShowSeedModal(false)}
+        onConfirm={() => seedMutation.mutate()}
+        isLoading={seedMutation.isPending}
       />
 
       <PreviewModal
