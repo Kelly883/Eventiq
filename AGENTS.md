@@ -50,6 +50,22 @@ bash $HOME/headless-tools/install-headless.sh
 - `$HOME/headless-tools/geckodriver` — raw WebDriver driver for the repo's `/tmp/opencode/verify*.js`-style probes.
 - Note: local API mocks (MSW) do not engage under headless Firefox — serve real/stub API responses separately (`/tmp/opencode/stub-api.js` mirrors the backend contracts).
 
+## Skills
+
+Five agent skills are vendored in `.agents/skills/` (pinned via `skills-lock.json`):
+
+| Skill | Source | Use |
+|---|---|---|
+| `typescript-advanced-types` | `wshobson/agents` | Advanced TS type patterns, generics, conditional/mapped/template-literal types, utility types |
+| `browser-testing-with-devtools` | `addyosmani/agent-skills` | Browser testing/DOM/console/network/performance inspection |
+| `playwright-cli` | `microsoft/playwright-cli` | Driving the Playwright browser tooling via CLI commands |
+| `frontend-design` | `anthropics/skills` | Frontend UI design guidance |
+| `web-design-guidelines` | `vercel-labs/agent-skills` | UI review against Web Interface Guidelines |
+
+- Invoke a skill for relevant agent-friendly tasks (e.g. `frontend-design` or `web-design-guidelines` for frontend work; `playwright-cli` / `browser-testing-with-devtools` for browser testing). The `skills` tool lists them as available skills.
+- To refresh or reinstall from upstream: `npx skills add <owner>/<repo> --skill <name>` in project mode (writes `.agents/skills/` + `skills-lock.json`).
+- `skills-lock.json` `computedHash` = SHA-256 over the sorted relative-file paths + contents of each skill folder (excludes `.git`, `node_modules`).
+
 ## Lint & Type Check Commands
 - `php artisan test` — runs all 95 PHPUnit tests (175 assertions)
 - `npx tsc --noEmit` — TypeScript type checking (exit 0 = pass)
