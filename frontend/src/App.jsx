@@ -29,12 +29,14 @@ const CategoryBrowsePage = lazy(() => import('./features/events/pages/CategoryBr
 const EventCalendarPage = lazy(() => import('./features/events-calendar/pages/EventCalendarPage'));
 const TicketStatusPage = lazy(() => import('./features/ticket-delivery/pages/TicketStatusPage'));
 const DeliverySettingsPage = lazy(() => import('./features/ticket-delivery/pages/DeliverySettingsPage'));
-const AdminDeliveryDashboardPage = lazy(() => import('./features/ticket-delivery/pages/AdminDeliveryDashboardPage'));
-const AdminEmailTemplateManagementPage = lazy(() => import('./features/email-notifications/pages/AdminEmailTemplateManagementPage'));
+const DeliveryStatusPage = lazy(() => import('./features/ticket-delivery/pages').then(m => ({ default: m.DeliveryStatusPage })));
 const AdminDashboardPage = lazy(() => import('./features/admin/pages/AdminDashboardPage'));
-const AdminSettingsPage = lazy(() => import('./features/admin/pages/AdminSettingsPage'));
-const AdminRoleManagementPage = lazy(() => import('./features/roles/pages/AdminRoleManagementPage'));
+const AdminRoutes = lazy(() => import('./features/admin/routes'));
 const UserPermissionsPage = lazy(() => import('./features/roles/pages/UserPermissionsPage'));
+const LoginPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.RegisterPage })));
+const ForgotPasswordPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.ResetPasswordPage })));
 const OrganizerPublicProfilePage = lazy(() => import('./features/organizer-profile/pages/OrganizerPublicProfilePage'));
 const OrganizerProfileEditPage = lazy(() => import('./features/organizer-profile/pages/OrganizerProfileEditPage'));
 const OrganizerProfileSettingsPage = lazy(() => import('./features/organizer-profile/pages/OrganizerProfileSettingsPage'));
@@ -50,16 +52,9 @@ const OrderConfirmationPage = lazy(() => import('./features/checkout/pages/Order
 const UserTicketsDashboardPage = lazy(() => import('./features/tickets/pages/UserTicketsDashboardPage'));
 const TicketDetailPage = lazy(() => import('./features/tickets/pages/TicketDetailPage'));
 const UserDashboardPage = lazy(() => import('./features/dashboard/pages/UserDashboardPage'));
-const FraudDetectionDashboardPage = lazy(() => import('./features/fraud/pages/FraudDetectionDashboardPage'));
-const DeliveryStatusPage = lazy(() => import('./features/ticket-delivery/pages').then(m => ({ default: m.DeliveryStatusPage })));
-const LoginPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.LoginPage })));
-const RegisterPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.RegisterPage })));
-const ForgotPasswordPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.ForgotPasswordPage })));
-const ResetPasswordPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.ResetPasswordPage })));
 const TicketInventoryDashboardPage = lazy(() => import('./features/ticket-inventory/pages').then(m => ({ default: m.TicketInventoryDashboardPage })));
 const TicketTierManagementPage = lazy(() => import('./features/ticketing/pages').then(m => ({ default: m.TicketTierManagementPage })));
 const EventPricingConfigPage = lazy(() => import('./features/pricing/pages').then(m => ({ default: m.EventPricingConfigPage })));
-const AdminAnalyticsPage = lazy(() => import('./features/analytics/pages').then(m => ({ default: m.AdminAnalyticsPage })));
 const OrganizerEventLayout = lazy(() => import('./features/events/components/OrganizerEventLayout'));
 const SettingsLayout = lazy(() => import('./features/settings/components/SettingsLayout'));
 const MyTicketsLayout = lazy(() => import('./features/tickets/components/MyTicketsLayout'));
@@ -406,17 +401,10 @@ function App() {
               <Route path=":ticketId/refund-request" element={<UserRefundRequestPage />} />
               <Route path=":ticketId/refund-status" element={<UserRefundStatusPage />} />
             </Route>
-            <Route path="/admin" element={<ProtectedRoute requiredRole="admin" unauthenticatedToast={false}><AdminLayout /></ProtectedRoute>}>
-              <Route index element={<AdminDashboardPage />} />
-              <Route path="roles" element={<AdminRoleManagementPage />} />
-              <Route path="fraud/dashboard" element={<FraudDetectionDashboardPage />} />
-              <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />
-              <Route path="analytics" element={<AdminAnalyticsPage />} />
-              <Route path="settings" element={<AdminSettingsPage />} />
-              <Route path="settlements/dashboard" element={<AdminSettlementDashboardPage />} />
-              <Route path="refunds" element={<AdminRefundDashboardPage />} />
-              <Route path="refunds/dashboard" element={<AdminRefundDashboardPage />} />
-            </Route>
+             <Route path="/admin" element={<ProtectedRoute requiredRole="admin" unauthenticatedToast={false}><AdminLayout /></ProtectedRoute>}>
+               <Route index element={<AdminDashboardPage />} />
+               <AdminRoutes />
+             </Route>
             <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
               <Route index element={<DeliverySettingsPage />} />
               <Route path="permissions" element={<UserPermissionsPage />} />
