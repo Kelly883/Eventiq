@@ -106,7 +106,7 @@ const AdminLayout = () => {
                   to="/admin/settings"
                   className="text-slate-500 hover:text-slate-700 font-medium capitalize"
                 >
-                  {activeItem.label}
+                  {activeItem.group}
                 </Link>
                 <span className="text-slate-400">/</span>
                 <span className="text-slate-700 font-medium">

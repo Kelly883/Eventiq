@@ -413,8 +413,6 @@ function App() {
               <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />
               <Route path="analytics" element={<AdminAnalyticsPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
-              <Route path="settings/push-templates" element={<AdminPushTemplateManagementPage />} />
-              <Route path="settings/email-templates" element={<AdminEmailTemplateManagementPage />} />
               <Route path="settlements/dashboard" element={<AdminSettlementDashboardPage />} />
               <Route path="refunds" element={<AdminRefundDashboardPage />} />
               <Route path="refunds/dashboard" element={<AdminRefundDashboardPage />} />

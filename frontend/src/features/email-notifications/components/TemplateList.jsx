@@ -64,11 +64,9 @@ const TemplateList = ({ templates, selectedTemplate, onSelect, searchQuery, onSe
                   {template.status === 'active' ? 'Active' : 'Draft'}
                 </span>
                 <span className="text-[10px] text-slate-400">{template.key}</span>
-                {(template.creator?.name || template.created_at) && (
-                  <span className="text-[10px] text-slate-400 ml-auto" title={template.created_at ? `Created ${new Date(template.created_at).toLocaleString()}` : undefined}>
-                    {template.creator?.name ? `by ${template.creator.name}` : ''}
-                    {template.creator?.name && template.created_at ? ' • ' : ''}
-                    {template.created_at ? new Date(template.created_at).toLocaleDateString() : ''}
+                {template.createdAt && (
+                  <span className="text-[10px] text-slate-400 ml-auto" title={`Created ${new Date(template.createdAt).toLocaleString()}`}>
+                    {new Date(template.createdAt).toLocaleDateString()}
                   </span>
                 )}
               </div>
