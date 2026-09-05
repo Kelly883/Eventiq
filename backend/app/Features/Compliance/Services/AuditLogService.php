@@ -119,4 +119,9 @@ class AuditLogService
 
         return $query->paginate($filters['per_page'] ?? 20);
     }
+
+    public function find(string $logId): ?AuditLog
+    {
+        return AuditLog::find($logId);
+    }
 }

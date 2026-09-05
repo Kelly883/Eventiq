@@ -11,7 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->string('report_code');
             $table->string('status')->default('queued'); // queued|processing|ready|failed
-            $table->foreignId('requested_by')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('requested_by')->nullable()->constrained('users')->nullOnDelete();
             $table->json('filters')->nullable();
             $table->string('result_location')->nullable(); // path/url to export
             $table->text('error_message')->nullable();

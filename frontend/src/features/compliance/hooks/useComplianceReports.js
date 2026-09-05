@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { complianceService } from '../services/complianceService';
 
 export const useComplianceReports = () => {
   const [loading, setLoading] = useState(false);
@@ -11,9 +12,13 @@ export const useComplianceReports = () => {
     setLoading(true);
     setError(null);
     try {
-      // Placeholder
-      setReports([]);
-      setChecklist([]);
+      const [reportsData, checklistData] = await Promise.all([
+        complianceService.getComplianceReports(),
+        complianceService.getComplianceChecklist(),
+      ]);
+
+      setReports(reportsData);
+      setChecklist(checklistData);
     } catch (e) {
       setError(e?.message ?? 'Failed to load reports');
     } finally {
@@ -25,8 +30,18 @@ export const useComplianceReports = () => {
     fetchReports();
   }, []);
 
-  const generateReport = async () => {
-    // Placeholder
+  const generateReport = async (reportCode) => {
+    if (!reportCode) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await complianceService.generateComplianceReport(reportCode, {});
+      return result;
+    } catch (e) {
+      setError(e?.message ?? 'Failed to generate report');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return {
@@ -40,4 +55,3 @@ export const useComplianceReports = () => {
     refetch: fetchReports,
   };
 };
-
