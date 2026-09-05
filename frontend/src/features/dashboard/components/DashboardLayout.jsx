@@ -33,7 +33,7 @@ const DashboardLayout = () => {
       to: '/organizer/payouts',
       label: 'Payouts',
       icon: '💰',
-      description: 'View your earnings and payout history. Different from platform-wide settlements.',
+      description: 'Your earnings and payout history for your events only.',
     });
   }
 

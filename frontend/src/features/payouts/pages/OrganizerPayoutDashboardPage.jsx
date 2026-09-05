@@ -9,7 +9,10 @@ const OrganizerPayoutDashboardPage = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Payouts Dashboard</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">My Payouts</h1>
+          <p className="text-sm text-gray-500 mt-1">Payments for your events only. For platform-wide settlement data, ask an admin.</p>
+        </div>
         <ExportButton filters={filters} />
       </div>
 

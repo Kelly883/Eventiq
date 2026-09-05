@@ -8,7 +8,7 @@ const adminNavItems = [
   { to: '/admin/fraud/dashboard', label: 'Fraud Detection', icon: '🕵️', description: 'Monitor flagged transactions', group: 'management' },
   { to: '/admin/delivery/dashboard', label: 'Delivery', icon: '📦', description: 'Ticket delivery management', group: 'management' },
   { to: '/admin/analytics', label: 'Analytics', icon: '📈', description: 'Platform-wide analytics', group: 'management' },
-  { to: '/admin/settlements/dashboard', label: 'Settlements', icon: '📊', description: 'Platform-wide refund and settlement management', group: 'management' },
+  { to: '/admin/settlements/dashboard', label: 'Settlements', icon: '📊', description: 'Platform-wide financial overview across all events and organizers.', group: 'management' },
   {
     to: '/admin/settings',
     label: 'Settings',

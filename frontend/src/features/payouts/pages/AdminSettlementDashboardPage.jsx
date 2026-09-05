@@ -9,7 +9,10 @@ const AdminSettlementDashboardPage = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Settlement Dashboard</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Platform Settlements</h1>
+          <p className="text-sm text-gray-500 mt-1">All organizer payouts, refunds, and platform-level financial activity across events.</p>
+        </div>
         <ExportButton filters={filters} />
       </div>
 
