@@ -7,6 +7,18 @@
       "skillPath": "skills/browser-testing-with-devtools/SKILL.md",
       "computedHash": "639950ea71851d9c4919608cba8b6276cd1ba30cd82acdc4949c701537eed661"
     },
+    "flow-by-flow": {
+      "source": "builtin",
+      "sourceType": "builtin",
+      "skillPath": ".kilo/builtin/flow-by-flow/SKILL.md",
+      "computedHash": "9bbe80f8b5441b48e471a9d122c913314274cc9db2df1e6917550de9f57b72ef"
+    },
+    "flow-prototype": {
+      "source": "builtin",
+      "sourceType": "builtin",
+      "skillPath": ".kilo/builtin/flow-prototype/SKILL.md",
+      "computedHash": "13366d25fd6ab3ba7ac45cddde8d3748bd88479008284202eda621b12fc8d1fd"
+    },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",

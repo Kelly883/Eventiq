@@ -29,6 +29,12 @@ export default defineConfig(({ mode }) => {
     host: '0.0.0.0',
     allowedHosts: true,
     proxy: {
+      // Forward API requests through the dev server so same-origin cookies
+      // and CORS behave consistently during local development.
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
       // Sanctum's csrf-cookie route is registered at /sanctum/csrf-cookie
       // (without /api prefix). The SPA's axios baseURL includes /api, so
       // requests go to /api/sanctum/csrf-cookie. This proxy strips the
