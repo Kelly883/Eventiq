@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
-import { AdminEmailTemplateManagementPage } from '../../email-notifications/pages/AdminEmailTemplateManagementPage';
-import { AdminPushTemplateManagementPage } from '../../push-notifications/components/AdminPushTemplateManagementPage';
+import AdminEmailTemplateManagementPage from '../../email-notifications/pages/AdminEmailTemplateManagementPage';
+import AdminPushTemplateManagementPage from '../../push-notifications/components/AdminPushTemplateManagementPage';
 
 const AdminSettingsLandingPage = () => {
   const settingsCards = [

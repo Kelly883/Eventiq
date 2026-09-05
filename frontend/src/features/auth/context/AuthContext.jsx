@@ -255,10 +255,17 @@ export const AuthProvider = ({ children }) => {
 
     localStorage.setItem(REMEMBER_ME_KEY, rememberMe ? 'true' : '');
 
+    const user = response.data?.user;
+    if (user) {
+      setUser(user);
+      setSessionExpired(false);
+      broadcastAuthEvent('session-established');
+      return { user, remember_me: response.data?.remember_me ?? false };
+    }
+
     const res = await api.get('/auth/me');
     setUser(res.data);
     setSessionExpired(false);
-    // Broadcast session change to all tabs
     broadcastAuthEvent('session-established');
     return { user: res.data, remember_me: response.data?.remember_me ?? false };
   }, []);
