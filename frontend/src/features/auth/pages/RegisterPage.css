@@ -1,0 +1,334 @@
+.register-page {
+  --coral: #cc3838;
+  --coral-dark: #b83535;
+  --teal: #4ecdc4;
+  --ink: #333333;
+  --muted: #555555;
+  --line: #e3e4e6;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 40px 16px;
+  background: #f7f8fa;
+  color: var(--ink);
+}
+
+.register-page__orb {
+  position: absolute;
+  z-index: -1;
+  border-radius: 999px;
+  filter: blur(64px);
+  pointer-events: none;
+}
+
+.register-page__orb--coral {
+  top: -96px;
+  left: -96px;
+  width: 320px;
+  height: 320px;
+  background: rgb(204 56 56 / 30%);
+}
+
+.register-page__orb--teal {
+  right: -96px;
+  bottom: -128px;
+  width: 384px;
+  height: 384px;
+  background: rgb(78 205 196 / 30%);
+}
+
+.register-page__content {
+  width: 100%;
+  max-width: 448px;
+}
+
+.register-page__brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding: 0 4px;
+}
+
+.register-page__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.register-page__brand .brand-logo {
+  display: block;
+  width: 180px;
+  height: auto;
+}
+
+.register-page__secure-badge {
+  border: 1px solid rgb(78 205 196 / 40%);
+  border-radius: 999px;
+  background: rgb(78 205 196 / 10%);
+  padding: 6px 12px;
+  color: #287a74;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.register-page__card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 32px;
+  box-shadow: 0 16px 40px rgb(51 51 51 / 9%), 0 1px 3px rgb(0 0 0 / 10%);
+}
+
+.register-page__intro {
+  margin-bottom: 32px;
+}
+
+.register-page__intro p:first-child {
+  margin: 0 0 8px;
+  color: var(--coral);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.register-page__intro h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.register-page__intro p:last-child {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.register-page__form {
+  display: grid;
+  gap: 20px;
+}
+
+.register-page__field {
+  display: grid;
+  gap: 8px;
+}
+
+.register-page__field label,
+.register-page__field-header {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.register-page__field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.register-page__input {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #d1d2d4;
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px 16px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.register-page__input::placeholder {
+  color: #999;
+}
+
+.register-page__input:focus-visible {
+  border-color: var(--coral);
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(204 56 56 / 50%);
+}
+
+.register-page__input:disabled {
+  cursor: not-allowed;
+  background: #f7f8fa;
+}
+
+.register-page__input--error {
+  border-color: var(--coral);
+}
+
+.register-page__password-field {
+  position: relative;
+}
+
+.register-page__password-field .register-page__input {
+  padding-right: 56px;
+}
+
+.register-page__password-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 52px;
+  border: 0;
+  border-radius: 0 8px 8px 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.register-page__password-toggle:hover {
+  color: var(--coral-dark);
+}
+
+.register-page__password-toggle:disabled {
+  cursor: not-allowed;
+}
+
+.register-page__text-link {
+  border-radius: 4px;
+  color: #cc3838;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.register-page__text-link:hover {
+  color: var(--coral-dark);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.register-page__text-link:focus-visible,
+.register-page__brand:focus-visible,
+.register-page__password-toggle:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+
+.register-page__error {
+  margin: 0;
+  color: #cc3838;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.register-page__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--coral);
+  padding: 12px 24px;
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -1px rgb(0 0 0 / 6%);
+  transition: background-color 150ms ease, transform 150ms ease, opacity 150ms ease;
+}
+
+.register-page__submit:hover:not(:disabled) {
+  background: var(--coral-dark);
+}
+
+.register-page__submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.register-page__submit:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 3px;
+}
+
+.register-page__submit:disabled {
+  cursor: not-allowed;
+  background: var(--coral-dark);
+  opacity: 0.85;
+}
+
+.register-page__spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgb(255 255 255 / 45%);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: register-page-spin 700ms linear infinite;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgb(255 255 255 / 40%);
+}
+
+.register-page__signin {
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 14px;
+}
+
+.register-page__security-note {
+  margin: 24px 0 0;
+  color: var(--muted);
+  text-align: center;
+  font-size: 12px;
+}
+
+@keyframes register-page-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .register-page {
+    align-items: flex-start;
+    padding-top: 28px;
+  }
+
+  .register-page__brand-row {
+    margin-bottom: 24px;
+  }
+
+  .register-page__card {
+    padding: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .register-page__input,
+  .register-page__submit {
+    transition: none;
+  }
+
+  .register-page__spinner {
+    animation: none;
+  }
+}

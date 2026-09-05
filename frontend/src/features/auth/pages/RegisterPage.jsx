@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
+import BrandLogo from '../../common/components/BrandLogo';
+import './RegisterPage.css';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -14,6 +18,11 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!name.trim()) {
+      setError('Please enter your full name.');
+      return;
+    }
 
     if (password !== passwordConfirm) {
       setError('Passwords do not match.');
@@ -43,100 +52,163 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="max-w-md w-full bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Create Account</h1>
-        <p className="text-sm text-slate-500 mb-6">Sign up for Eventiq.</p>
+    <div className="register-page">
+      <div aria-hidden="true" className="register-page__orb register-page__orb--coral" />
+      <div aria-hidden="true" className="register-page__orb register-page__orb--teal" />
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Full Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              required
-              autoComplete="name"
-              placeholder="Jane Doe"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              required
-              autoComplete="email"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Confirm Password
-            </label>
-            <input
-              type="password"
-              value={passwordConfirm}
-              onChange={(e) => setPasswordConfirm(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 px-4 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Creating account...' : 'Create Account'}
-          </button>
-        </form>
-
-        <div className="mt-4 text-sm text-slate-600 text-center">
-          Already have an account?{' '}
+      <section className="register-page__content">
+        <div className="register-page__brand-row">
           <button
             type="button"
-            onClick={() => navigate('/login')}
-            className="text-indigo-600 hover:text-indigo-800"
+            onClick={() => navigate('/')}
+            className="register-page__brand"
+            aria-label="eventIQ home"
           >
-            Sign in
+            <BrandLogo />
           </button>
+          <span className="register-page__secure-badge">
+            Create account
+          </span>
         </div>
-      </div>
+
+        <div className="register-page__card">
+          <div className="register-page__intro">
+            <p>Join Eventiq</p>
+            <h1>Create your account</h1>
+            <p>Start creating and managing amazing events.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="register-page__form" aria-busy={loading}>
+            <div className="register-page__field">
+              <label htmlFor="register-name">
+                Full Name
+              </label>
+              <input
+                id="register-name"
+                name="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="register-page__input"
+                required
+                autoComplete="name"
+                placeholder="Jane Doe"
+              />
+            </div>
+
+            <div className="register-page__field">
+              <label htmlFor="register-email">
+                Email address
+              </label>
+              <input
+                id="register-email"
+                name="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="register-page__input"
+                required
+                autoComplete="email"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div className="register-page__field">
+              <div className="register-page__field-header">
+                <label htmlFor="register-password">
+                  Password
+                </label>
+              </div>
+              <div className="register-page__password-field">
+                <input
+                  id="register-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="register-page__input"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  placeholder="Create a password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  disabled={loading}
+                  className="register-page__password-toggle"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+            </div>
+
+            <div className="register-page__field">
+              <div className="register-page__field-header">
+                <label htmlFor="register-password-confirm">
+                  Confirm Password
+                </label>
+              </div>
+              <div className="register-page__password-field">
+                <input
+                  id="register-password-confirm"
+                  name="passwordConfirm"
+                  type={showPasswordConfirm ? 'text' : 'password'}
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  className="register-page__input"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  placeholder="Repeat your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordConfirm((visible) => !visible)}
+                  disabled={loading}
+                  className="register-page__password-toggle"
+                  aria-label={showPasswordConfirm ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPasswordConfirm}
+                >
+                  {showPasswordConfirm ? 'Hide' : 'Show'}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <p id="register-error" role="alert" className="register-page__error">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="register-page__submit"
+            >
+              {loading && <span aria-hidden="true" className="register-page__spinner" />}
+              {loading ? 'Creating account...' : 'Create Account'}
+            </button>
+          </form>
+
+          <div className="register-page__signin">
+            Already have an account?{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/login')}
+              className="register-page__text-link"
+            >
+              Sign in
+            </button>
+          </div>
+        </div>
+
+        <p className="register-page__security-note">
+          Your account is protected with secure authentication.
+        </p>
+      </section>
     </div>
   );
 };
