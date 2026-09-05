@@ -64,7 +64,6 @@ const OrganizerEventLayout = lazy(() => import('./features/events/components/Org
 const SettingsLayout = lazy(() => import('./features/settings/components/SettingsLayout'));
 const MyTicketsLayout = lazy(() => import('./features/tickets/components/MyTicketsLayout'));
 const AdminLayout = lazy(() => import('./features/admin/components/AdminLayout'));
-const AdminDashboardPage = lazy(() => import('./features/admin/pages/AdminDashboardPage'));
 const DashboardLayout = lazy(() => import('./features/dashboard/components/DashboardLayout'));
 const AccessDeniedPage = lazy(() => import('./features/common').then(m => ({ default: m.AccessDeniedPage })));
 const MyOrganizerProfilePage = lazy(() => import('./features/organizer-profile/pages/MyOrganizerProfilePage'));
@@ -414,8 +413,8 @@ function App() {
               <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />
               <Route path="analytics" element={<AdminAnalyticsPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
-              <Route path="settings/email-templates" element={<AdminEmailTemplateManagementPage />} />
               <Route path="settings/push-templates" element={<AdminPushTemplateManagementPage />} />
+              <Route path="settings/email-templates" element={<AdminEmailTemplateManagementPage />} />
               <Route path="settlements/dashboard" element={<AdminSettlementDashboardPage />} />
               <Route path="refunds" element={<AdminRefundDashboardPage />} />
               <Route path="refunds/dashboard" element={<AdminRefundDashboardPage />} />

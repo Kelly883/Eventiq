@@ -14,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Global CORS handling so the browser at localhost:3000 can reach the
+        // backend at localhost:8000 for *all* API routes. Without this the
+        // browser blocks responses that lack Access-Control-Allow-Origin, and
+        // Sanctum's stateful cookie auth never gets a chance to run.
+        $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
+
         // API consumers must always receive an authentication response, even
         // when their client does not send an Accept: application/json header.
         // Without this, Laravel attempts to redirect guests to a named web
@@ -29,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // instead of bearer tokens.
         $middleware->api(append: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            \Illuminate\Session\Middleware\StartSession::class,
         ]);
 
         $middleware->alias([

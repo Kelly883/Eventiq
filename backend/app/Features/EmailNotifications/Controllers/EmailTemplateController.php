@@ -70,4 +70,16 @@ class EmailTemplateController extends Controller
 
         return response()->json(['sent' => $sent], $sent ? 200 : 422);
     }
+
+    /**
+     * POST /api/email-templates/seed - creates default email templates
+     */
+    public function seed()
+    {
+        $this->authorize('create', EmailTemplate::class);
+        
+        $created = $this->templateService->seed();
+        
+        return EmailTemplateResource::collection($created);
+    }
 }

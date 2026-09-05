@@ -38,11 +38,15 @@ function isAuthenticationRequest(url?: string): boolean {
   return Boolean(url?.includes('/auth/'));
 }
 
-const baseURL = ((import.meta as unknown) as { env: Env }).env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
+const baseURL = ((import.meta as unknown) as { env: Env }).env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
-      // Ensure baseURL always includes /api prefix (Laravel expects it)
-const normalizedBaseURL = baseURL.endsWith('/api') ? baseURL : `${baseURL}/api`;
-const csrfCookieUrl = `${normalizedBaseURL.replace(/\/api$/, '')}/sanctum/csrf-cookie`;
+// Use the baseURL as-is without unconditionally appending /api.
+// The backend auth routes (login, me, logout, csrf-cookie) live at
+// the host root (e.g. /auth/login, /sanctum/csrf-cookie), so the baseURL
+// must not include a /api prefix for axios to hit the right paths.
+const normalizedBaseURL = baseURL;
+// Strip any trailing /api from the root so the CSRF cookie URL works.
+const csrfCookieUrl = baseURL.replace(/\/api$/, '') + '/sanctum/csrf-cookie'
 
 export const api = axios.create({
   baseURL: normalizedBaseURL,
