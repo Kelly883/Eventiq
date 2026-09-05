@@ -20,6 +20,10 @@ import AdminAnalyticsPage from '../analytics/pages/AdminAnalyticsPage';
 import AdminSettlementDashboardPage from '../payouts/pages/AdminSettlementDashboardPage';
 // @ts-ignore
 import AdminRefundDashboardPage from '../refunds/pages/AdminRefundDashboardPage';
+// @ts-ignore
+import AuditLogsViewerPage from '../compliance/pages/AuditLogsViewerPage';
+// @ts-ignore
+import ComplianceReportsPage from '../compliance/pages/ComplianceReportsPage';
 
 const AdminRoutes = () => {
   const routes = [
@@ -30,6 +34,8 @@ const AdminRoutes = () => {
     { path: 'fraud/dashboard', element: <FraudDetectionDashboardPage /> },
     { path: 'delivery/dashboard', element: <AdminDeliveryDashboardPage /> },
     { path: 'analytics', element: <AdminAnalyticsPage /> },
+    { path: 'compliance/audit-logs', element: <AuditLogsViewerPage /> },
+    { path: 'compliance/reports', element: <ComplianceReportsPage /> },
     { path: 'settings', element: <AdminSettingsPage /> },
     { path: 'settlements/dashboard', element: <AdminSettlementDashboardPage /> },
     { path: 'refunds', element: <AdminRefundDashboardPage /> },

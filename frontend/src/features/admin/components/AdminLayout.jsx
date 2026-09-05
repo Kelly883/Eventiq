@@ -10,6 +10,8 @@ const adminNavItems = [
   { to: '/admin/fraud/dashboard', label: 'Fraud Detection', icon: '🕵️', description: 'Monitor flagged transactions', group: 'management' },
   { to: '/admin/delivery/dashboard', label: 'Delivery', icon: '📦', description: 'Ticket delivery management', group: 'management' },
   { to: '/admin/analytics', label: 'Analytics', icon: '📈', description: 'Platform-wide analytics', group: 'management' },
+  { to: '/admin/compliance/audit-logs', label: 'Audit Logs', icon: '📋', description: 'Platform audit trail and activity logs', group: 'compliance' },
+  { to: '/admin/compliance/reports', label: 'Compliance Reports', icon: '📄', description: 'Generated compliance reports and exports', group: 'compliance' },
   { to: '/admin/settlements/dashboard', label: 'Settlements', icon: '📊', description: 'Platform-wide financial overview across all events and organizers.', group: 'management' },
   {
     to: '/admin/settings',
@@ -51,6 +53,7 @@ const AdminLayout = () => {
   // behind <ProtectedRoute requiredRole="admin">. Every visitor here is an admin,
   // so the sub-items are always visible — there's no further role gate.
   const managementItems = adminNavItems.filter(item => item.group === 'management');
+  const complianceItems = adminNavItems.filter(item => item.group === 'compliance');
   const settingsItems = adminNavItems.filter(item => item.group === 'settings');
 
   // ── Session-expiry guard ──
@@ -153,6 +156,37 @@ const AdminLayout = () => {
                       <NavLink
                         to={item.to}
                         end={item.to === '/admin'}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+                            isActive
+                              ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600'
+                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-l-4 border-transparent'
+                          }`
+                        }
+                      >
+                        <span className="text-lg">{item.icon}</span>
+                        <div>
+                          <div className="font-semibold">{item.label}</div>
+                          <div className="text-xs text-slate-400 font-normal">{item.description}</div>
+                        </div>
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Compliance Section */}
+              <div>
+                <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    Compliance
+                  </span>
+                </div>
+                <ul className="divide-y divide-slate-100">
+                  {complianceItems.map((item) => (
+                    <li key={item.to}>
+                      <NavLink
+                        to={item.to}
                         className={({ isActive }) =>
                           `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
                             isActive

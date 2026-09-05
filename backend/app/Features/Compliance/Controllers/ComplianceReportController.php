@@ -49,5 +49,23 @@ class ComplianceReportController extends Controller
             'status' => $generation->status,
         ]);
     }
+
+    public function download(string $reportId)
+    {
+        $report = ComplianceReportGeneration::findOrFail($reportId);
+
+        return response()->json([
+            'id' => $report->id,
+            'report_code' => $report->report_code,
+            'status' => $report->status,
+        ]);
+    }
+
+    public function checklist(Request $request)
+    {
+        return response()->json([
+            'checklist' => [],
+        ]);
+    }
 }
 
