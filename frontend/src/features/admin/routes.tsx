@@ -2,6 +2,8 @@ import React from 'react';
 import { Route } from 'react-router-dom';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminSettingsPage from './pages/AdminSettingsPage';
+import AdminUserManagementPage from './pages/AdminUserManagementPage';
+import AdminEventModerationPage from './pages/AdminEventModerationPage';
 import AdminRoleManagementPage from '../roles/pages/AdminRoleManagementPage';
 import FraudDetectionDashboardPage from '../fraud/pages/FraudDetectionDashboardPage';
 import AdminDeliveryDashboardPage from '../ticket-delivery/pages/AdminDeliveryDashboardPage';
@@ -12,6 +14,8 @@ import AdminRefundDashboardPage from '../refunds/pages/AdminRefundDashboardPage'
 const AdminRoutes = () => {
   const routes = [
     { path: '', element: <AdminDashboardPage /> },
+    { path: 'users', element: <AdminUserManagementPage /> },
+    { path: 'events', element: <AdminEventModerationPage /> },
     { path: 'roles', element: <AdminRoleManagementPage /> },
     { path: 'fraud/dashboard', element: <FraudDetectionDashboardPage /> },
     { path: 'delivery/dashboard', element: <AdminDeliveryDashboardPage /> },

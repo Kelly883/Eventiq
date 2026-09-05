@@ -4,6 +4,8 @@ import { useAuthContext } from '../../auth/context/AuthContext';
 
 const adminNavItems = [
   { to: '/admin', label: 'Dashboard', icon: '📊', description: 'Platform overview & delivery status', group: 'management' },
+  { to: '/admin/users', label: 'Users', icon: '👥', description: 'Platform user management', group: 'management' },
+  { to: '/admin/events', label: 'Events', icon: '📅', description: 'Platform event moderation and management', group: 'management' },
   { to: '/admin/roles', label: 'Roles', icon: '🛡️', description: 'Manage admin roles and permissions', group: 'management' },
   { to: '/admin/fraud/dashboard', label: 'Fraud Detection', icon: '🕵️', description: 'Monitor flagged transactions', group: 'management' },
   { to: '/admin/delivery/dashboard', label: 'Delivery', icon: '📦', description: 'Ticket delivery management', group: 'management' },
