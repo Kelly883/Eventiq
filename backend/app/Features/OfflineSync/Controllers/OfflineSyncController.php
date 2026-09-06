@@ -89,6 +89,7 @@ class OfflineSyncController
             ->where('offline_enabled', true)
             ->firstOrFail();
 
+        $device->markAsUsed();
         $user = $device->user;
         $lastSyncAt = $request->query('last_sync_at');
         $syncVersion = (int) $request->query('sync_version', 0);
@@ -132,6 +133,15 @@ class OfflineSyncController
     {
         $user = $request->user();
         $lastSyncAt = $request->query('last_sync_at');
+        $perPage = (int) $request->query('per_page', 50);
+        $cursor = $request->query('cursor');
+
+        $deviceToken = $request->header('X-Device-Token');
+        if ($deviceToken) {
+            PushNotificationDevice::where('token', strtolower($deviceToken))
+                ->where('user_id', $user->id)
+                ->update(['last_used_at' => now()]);
+        }
 
         $eventsQuery = \App\Models\Event::where('organizer_id', $user->id)
             ->orWhere('user_id', $user->id);
@@ -145,7 +155,12 @@ class OfflineSyncController
             $ticketsQuery->where('updated_at', '>', $lastSyncAt);
         }
 
-        $tickets = $ticketsQuery->get();
+        if ($cursor) {
+            $ticketsQuery->where('id', '>', $cursor);
+        }
+
+        $tickets = $ticketsQuery->orderBy('id')->limit($perPage)->get();
+        $nextCursor = $tickets->last()?->id;
 
         return response()->json([
             'data' => $tickets->map(fn ($ticket) => [
@@ -171,6 +186,11 @@ class OfflineSyncController
                     'attendee_email' => $ticket->order->attendee_email,
                 ],
             ]),
+            'pagination' => [
+                'per_page' => $perPage,
+                'next_cursor' => $nextCursor,
+                'has_more' => $tickets->count() === $perPage,
+            ],
         ]);
     }
 }

@@ -66,6 +66,7 @@ class DeviceTokenController extends Controller
         $device->update([
             'offline_enabled' => $data['offline_enabled'],
         ]);
+        $device->markAsUsed();
 
         return response()->json([
             'token' => $device->token,
