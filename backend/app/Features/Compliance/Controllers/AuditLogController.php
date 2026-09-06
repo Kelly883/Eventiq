@@ -5,6 +5,7 @@ namespace App\Features\Compliance\Controllers;
 use App\Features\Compliance\Requests\AuditLogIndexRequest;
 use App\Features\Compliance\Services\AuditLogService;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class AuditLogController extends Controller
 {
@@ -12,11 +13,20 @@ class AuditLogController extends Controller
     {
     }
 
+    private function touchAdminLastUsedAt(Request $request): void
+    {
+        if ($request->user()?->admin_last_used_at !== null) {
+            $request->user()->update(['admin_last_used_at' => now()]);
+        }
+    }
+
     /**
      * GET /api/admin/compliance/audit-logs
      */
     public function index(AuditLogIndexRequest $request)
     {
+        $this->touchAdminLastUsedAt($request);
+
         $results = $this->auditLogService->filter($request->validated());
 
         return response()->json([
@@ -29,8 +39,10 @@ class AuditLogController extends Controller
         ]);
     }
 
-    public function show(string $logId)
+    public function show(Request $request, string $logId)
     {
+        $this->touchAdminLastUsedAt($request);
+
         $log = $this->auditLogService->find($logId);
 
         return response()->json([
@@ -40,6 +52,8 @@ class AuditLogController extends Controller
 
     public function export(AuditLogIndexRequest $request)
     {
+        $this->touchAdminLastUsedAt($request);
+
         $results = $this->auditLogService->filter($request->validated());
 
         return response()->json([
@@ -54,6 +68,8 @@ class AuditLogController extends Controller
 
     public function bulkTag(Request $request)
     {
+        $this->touchAdminLastUsedAt($request);
+
         $validated = $request->validate([
             'logIds' => ['required', 'array'],
             'logIds.*' => ['uuid', 'exists:audit_logs,id'],

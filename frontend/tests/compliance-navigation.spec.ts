@@ -119,5 +119,36 @@ test.describe('Compliance feature navigation and authorization', () => {
 
     await page.waitForURL(`${BASE_URL}/login`, { timeout: 10000 });
     expect(page.url()).toContain('/login');
+
+    // Re-login and verify redirect back to the original compliance page
+    await page.waitForSelector('#login-email', { timeout: 60000 });
+    await page.fill('#login-email', 'admin@eventiq.test');
+    await page.fill('#login-password', 'password');
+    await page.click('button[type="submit"]');
+    await page.waitForTimeout(3000);
+
+    expect(page.url()).toContain('/admin/compliance/audit-logs');
+  });
+
+  test('non-admin API returns 403 for audit logs', async ({ page }) => {
+    await loginViaUi(page, 'attendee@eventiq.test', 'password');
+
+    const responsePromise = page.waitForResponse(
+      (resp) => resp.url().includes('/api/admin/compliance/audit-logs') && resp.status() === 403
+    );
+    await page.goto(`${BASE_URL}/admin/compliance/audit-logs`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    const response = await responsePromise;
+    expect(response.status()).toBe(403);
+  });
+
+  test('non-admin API returns 403 for compliance reports', async ({ page }) => {
+    await loginViaUi(page, 'attendee@eventiq.test', 'password');
+
+    const responsePromise = page.waitForResponse(
+      (resp) => resp.url().includes('/api/admin/compliance/reports') && resp.status() === 403
+    );
+    await page.goto(`${BASE_URL}/admin/compliance/reports`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    const response = await responsePromise;
+    expect(response.status()).toBe(403);
   });
 });

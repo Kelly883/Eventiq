@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api, refreshCsrf, showToast } from '../../../lib/api';
+import { clearStoredDeviceToken } from '../../offline/services/deviceToken';
 
 const AuthContext = createContext(null);
 
@@ -211,6 +212,19 @@ export const AuthProvider = ({ children }) => {
         } catch {
           // ignore parse errors
         }
+      } else if (e.key === 'eventiqDeviceToken' && e.newValue) {
+        // Sync device token across tabs when it changes in another tab.
+        try {
+          const newToken = e.newValue;
+          if (typeof window !== 'undefined' && window.EventiqDevice?.getDeviceToken) {
+            const currentToken = window.EventiqDevice.getDeviceToken();
+            if (currentToken !== newToken) {
+              localStorage.setItem('eventiqDeviceToken', newToken);
+            }
+          }
+        } catch {
+          // ignore token sync failures
+        }
       }
     };
 
@@ -299,6 +313,13 @@ export const AuthProvider = ({ children }) => {
     } catch {
       // logout must not fail because device-token cleanup did
     }
+
+    try {
+      await clearStoredDeviceToken();
+    } catch {
+      // ignore local cleanup failures
+    }
+
     await api.post('/auth/logout');
     localStorage.removeItem(REMEMBER_ME_KEY);
     setUser(null);

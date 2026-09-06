@@ -16,8 +16,17 @@ class ComplianceReportController extends Controller
     {
     }
 
+    private function touchAdminLastUsedAt(Request $request): void
+    {
+        if ($request->user()?->admin_last_used_at !== null) {
+            $request->user()->update(['admin_last_used_at' => now()]);
+        }
+    }
+
     public function index(Request $request)
     {
+        $this->touchAdminLastUsedAt($request);
+
         // TODO: list available reports
         return response()->json([
             'reports' => [],
@@ -26,6 +35,8 @@ class ComplianceReportController extends Controller
 
     public function generate(GenerateComplianceReportRequest $request)
     {
+        $this->touchAdminLastUsedAt($request);
+
         $validated = $request->validated();
         $reportCode = $validated['reportCode'];
         $filters = $validated['filters'] ?? [];
@@ -50,8 +61,10 @@ class ComplianceReportController extends Controller
         ]);
     }
 
-    public function download(string $reportId)
+    public function download(Request $request, string $reportId)
     {
+        $this->touchAdminLastUsedAt($request);
+
         $report = ComplianceReportGeneration::findOrFail($reportId);
 
         return response()->json([
@@ -63,6 +76,8 @@ class ComplianceReportController extends Controller
 
     public function checklist(Request $request)
     {
+        $this->touchAdminLastUsedAt($request);
+
         return response()->json([
             'checklist' => [],
         ]);

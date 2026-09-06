@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Features\PushNotifications\Models\PushNotificationDevice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -62,6 +63,12 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        $userId = $request->user()?->id;
+
+        if ($userId) {
+            PushNotificationDevice::where('user_id', $userId)->delete();
+        }
+
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

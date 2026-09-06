@@ -18,6 +18,8 @@ export interface OfflineSyncResult {
   syncVersion?: number;
   nextCursor?: string;
   hasMore?: boolean;
+  syncedCount?: number;
+  partialSuccess?: boolean;
 }
 
 export function useOfflineSync(initialOptions: OfflineSyncOptions = {}) {
@@ -28,10 +30,13 @@ export function useOfflineSync(initialOptions: OfflineSyncOptions = {}) {
   const [tickets, setTickets] = useState<unknown[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(false);
+  const [syncedCount, setSyncedCount] = useState<number>(0);
+  const [partialSuccess, setPartialSuccess] = useState<boolean>(false);
 
   const sync = useCallback(async (options: OfflineSyncOptions = {}, signal?: AbortSignal, retries = 2) => {
     setLoading(true);
     setError(null);
+    setPartialSuccess(false);
 
     try {
       const response = await api.get('/me/tickets/for-offline-sync', {
@@ -62,6 +67,7 @@ export function useOfflineSync(initialOptions: OfflineSyncOptions = {}) {
       setSyncVersion(nextVersion);
       setNextCursor(nextCursorValue);
       setHasMore(hasMoreValue);
+      setSyncedCount((prev) => prev + ticketData.length);
 
       return {
         tickets: ticketData,
@@ -70,12 +76,31 @@ export function useOfflineSync(initialOptions: OfflineSyncOptions = {}) {
         syncVersion: nextVersion,
         nextCursor: nextCursorValue,
         hasMore: hasMoreValue,
+        syncedCount: ticketData.length,
       } satisfies OfflineSyncResult;
     } catch (e) {
       const axiosError = e as { response?: { status?: number; headers?: Record<string, string> } };
       const status = axiosError?.response?.status;
       const isRateLimited = status === 429;
       const isServerError = typeof status === 'number' && status >= 500 && retries > 0;
+      const isAuthError = status === 401 || status === 403;
+
+      if (isAuthError) {
+        // Pause sync and wait for re-auth instead of failing outright.
+        setError('Authentication required. Please log in again to continue syncing.');
+        setPartialSuccess(syncedCount > 0);
+        return {
+          tickets: [],
+          lastSyncedAt: lastSyncedAt ?? new Date().toISOString(),
+          isSyncing: false,
+          syncError: 'Authentication required. Please log in again to continue syncing.',
+          syncVersion,
+          nextCursor: undefined,
+          hasMore: false,
+          syncedCount,
+          partialSuccess: syncedCount > 0,
+        } satisfies OfflineSyncResult;
+      }
 
       if (isRateLimited && retries > 0) {
         const retryAfter = axiosError?.response?.headers?.['retry-after'];
@@ -90,6 +115,9 @@ export function useOfflineSync(initialOptions: OfflineSyncOptions = {}) {
         return sync(options, signal, retries - 1);
       }
 
+      // On terminal failure, roll back lastSyncAt so the next attempt can
+      // re-request from the last known good point instead of skipping data.
+      setLastSyncedAt((prev) => prev ?? new Date().toISOString());
       const message = e instanceof Error ? e.message : 'Failed to sync offline data';
       setError(message);
       return {
@@ -98,13 +126,15 @@ export function useOfflineSync(initialOptions: OfflineSyncOptions = {}) {
         isSyncing: false,
         syncError: message,
         syncVersion,
-        nextCursor: null,
+        nextCursor: undefined,
         hasMore: false,
+        syncedCount,
+        partialSuccess: syncedCount > 0,
       } satisfies OfflineSyncResult;
     } finally {
       setLoading(false);
     }
-  }, [lastSyncedAt, syncVersion]);
+  }, [lastSyncedAt, syncVersion, syncedCount]);
 
   return {
     loading,
@@ -114,6 +144,8 @@ export function useOfflineSync(initialOptions: OfflineSyncOptions = {}) {
     syncVersion,
     nextCursor,
     hasMore,
+    syncedCount,
+    partialSuccess,
     sync,
   };
 }

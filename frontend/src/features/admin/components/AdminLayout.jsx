@@ -45,6 +45,23 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, sessionExpired } = useAuthContext();
 
+  const isAdmin = user?.roles?.some((r) => r.name === 'admin');
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 p-8 shadow-sm text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 border border-amber-100 text-2xl">🔒</div>
+          <h2 className="text-xl font-bold text-slate-900">Not Authorized</h2>
+          <p className="mt-2 text-sm text-slate-500">You don't have permission to access the admin panel.</p>
+          <div className="mt-6 flex justify-center gap-3">
+            <a href="/" className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">← Back to Home</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const activeItem = adminNavItems
     .filter((item) => item.to === location.pathname || location.pathname.startsWith(item.to + '/'))
     .sort((a, b) => b.to.length - a.to.length)[0];

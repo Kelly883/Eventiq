@@ -44,6 +44,7 @@ class User extends Authenticatable
         'trial_ends_at',
         'two_factor_secret',
         'two_factor_recovery_codes',
+        'admin_last_used_at',
     ];
 
     /**
@@ -76,6 +77,7 @@ class User extends Authenticatable
             'lastLoginAt' => 'datetime',
             'trial_ends_at' => 'datetime',
             'email_verified_at' => 'datetime',
+            'admin_last_used_at' => 'datetime',
         ];
     }
 

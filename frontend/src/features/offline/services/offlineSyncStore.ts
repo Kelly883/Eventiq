@@ -221,6 +221,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         if (!get().isOnline) return;
 
         const { lastSyncAt, syncVersion, clockDriftOffset } = get();
+        const previousSyncAt = lastSyncAt;
         set({ isSyncing: true });
 
         try {
@@ -254,7 +255,12 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
           });
         } catch (err) {
           console.error('Failed to sync tickets:', err);
-          set({ isSyncing: false });
+          // Roll back to the previous known-good sync point so the next
+          // attempt does not skip data or create duplicates.
+          set({
+            lastSyncAt: previousSyncAt,
+            isSyncing: false,
+          });
         }
       },
 
