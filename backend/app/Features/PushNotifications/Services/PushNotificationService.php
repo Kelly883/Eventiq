@@ -92,7 +92,7 @@ class PushNotificationService
      *
      * @return array{sent: int, failed: int}
      */
-    public function sendToUser(int $userId, string $title, string $body, array $data = []): array
+    public function sendToUser(string $userId, string $title, string $body, array $data = []): array
     {
         $tokens = PushNotificationDevice::where('user_id', $userId)->pluck('token');
 
@@ -117,7 +117,7 @@ class PushNotificationService
      * otherwise sendToUser() would keep trying (and failing) to send to
      * tokens that no longer exist.
      */
-    public function registerDevice(int $userId, string $token, string $provider, string $deviceType, ?string $previousToken = null): PushNotificationDevice
+    public function registerDevice(string $userId, string $token, string $provider, string $deviceType, ?string $previousToken = null): PushNotificationDevice
     {
         if ($previousToken && $previousToken !== $token) {
             PushNotificationDevice::where('token', $previousToken)->delete();

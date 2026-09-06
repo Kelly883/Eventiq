@@ -52,7 +52,7 @@ const AccessibilitySettingsPage = () => {
     };
   }, []);
 
-  const updatePreference = (key: string, value: unknown) => {
+  const updatePreference = (key, value) => {
     setPreferences((prev) => ({ ...prev, [key]: value }));
   };
 

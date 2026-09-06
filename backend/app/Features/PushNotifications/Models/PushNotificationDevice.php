@@ -87,11 +87,9 @@ class PushNotificationDevice extends Model
             Validator::validate([
                 'token' => $model->token,
                 'user_id' => $model->user_id,
-                'offline_enabled' => $model->offline_enabled,
             ], [
                 'token' => ['required', 'string', 'max:255', 'unique:push_notification_devices,token'],
                 'user_id' => ['required', 'string', 'exists:users,id'],
-                'offline_enabled' => ['required', 'boolean'],
             ]);
         });
 
