@@ -276,7 +276,7 @@ function App() {
   const processedFromRef = useRef(null);
 
   useEffect(() => {
-    if (!user || !location.state?.from) return;
+    if (!user || !location.state?.from || location.pathname !== '/login') return;
     const fromPath = normalizeFromPath(location.state.from);
 
     if (processedFromRef.current === fromPath) return;

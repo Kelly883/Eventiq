@@ -7,22 +7,32 @@ const CartPage = () => {
   const navigate = useNavigate();
   const { cart, addToCart, removeFromCart, clearCart } = useCartContext();
   const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState(null);
   const itemCount = cart.length;
 
   // Verify cart on mount - lightweight check that items are still valid
   useEffect(() => {
+    let cancelled = false;
     setVerifying(true);
+    setVerifyError(null);
     const cartItems = cart.map(item => item.id || item.ticketId || item.ticket_id || item.id);
     if (cartItems.length > 0) {
       api.post('/cart/verify', { items: cart })
         .then(() => {
-          // Cart verification successful
+          if (!cancelled) setVerifyError(null);
         })
         .catch(() => {
-          // Verification failed - continue anyway, cart items will be re-verified at checkout
+          if (!cancelled) setVerifyError('Some cart items may be unavailable. Please review before checkout.');
+        })
+        .finally(() => {
+          if (!cancelled) setVerifying(false);
         });
+    } else {
+      setVerifying(false);
     }
-    setVerifying(false);
+    return () => {
+      cancelled = true;
+    };
   }, [cart]);
 
   return (
@@ -42,6 +52,25 @@ const CartPage = () => {
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
             <h2 className="text-lg font-bold text-slate-800 mb-4">Cart Items</h2>
+            {verifyError && (
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                {verifyError}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVerifyError(null);
+                    setVerifying(true);
+                    api.post('/cart/verify', { items: cart })
+                      .then(() => setVerifyError(null))
+                      .catch(() => setVerifyError('Verification failed again. Please remove unavailable items or try later.'))
+                      .finally(() => setVerifying(false));
+                  }}
+                  className="ml-3 text-xs font-semibold underline"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
             <p className="text-sm text-slate-500 mb-4">
               <span className="font-medium">Items: {itemCount}</span>
               <span className="ml-2 text-slate-400">

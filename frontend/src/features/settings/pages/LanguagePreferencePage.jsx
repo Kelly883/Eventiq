@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../../lib/api';
-import { showToast } from '../../lib/api';
+import { api, showToast } from '../../../lib/api';
 
 const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English' },
