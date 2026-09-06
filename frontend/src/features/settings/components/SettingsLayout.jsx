@@ -5,6 +5,9 @@ import { useAuthContext } from '../../auth/context/AuthContext';
 const settingsNavItems = [
   { to: '/settings/permissions', label: 'Permissions', icon: '🛡️', description: 'View and request access roles' },
   { to: '/settings/delivery-preferences', label: 'Delivery Preferences', icon: '📧', description: 'Email and notification settings' },
+  { to: '/settings/accessibility', label: 'Accessibility', icon: '♿', description: 'Accessibility preferences' },
+  { to: '/settings/language', label: 'Language & Region', icon: '🌐', description: 'Language and regional formats' },
+  { to: '/settings/device-localization', label: 'Device Sync', icon: '📱', description: 'Offline ticket sync and device token' },
 ];
 
 const SettingsLayout = () => {

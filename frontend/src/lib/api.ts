@@ -80,6 +80,21 @@ export async function refreshCsrf(): Promise<boolean> {
 }
 
 /* -------------------------------------------------------------------------- */
+/*                               Request Interceptor                          */
+/* -------------------------------------------------------------------------- */
+
+api.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const deviceToken = getDeviceToken();
+    if (deviceToken) {
+      config.headers = config.headers ?? {};
+      config.headers['X-Device-Token'] = deviceToken;
+    }
+  }
+  return config;
+});
+
+/* -------------------------------------------------------------------------- */
 /*                         Response Interceptor                               */
 /* -------------------------------------------------------------------------- */
 

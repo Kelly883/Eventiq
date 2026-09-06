@@ -287,11 +287,22 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(async () => {
+    try {
+      const deviceToken = typeof window !== 'undefined' && window.EventiqDevice?.getDeviceToken
+        ? window.EventiqDevice.getDeviceToken()
+        : null;
+      if (deviceToken) {
+        await api.patch(`/notifications/device-tokens/${deviceToken}/offline-status`, {
+          offline_enabled: false,
+        });
+      }
+    } catch {
+      // logout must not fail because device-token cleanup did
+    }
     await api.post('/auth/logout');
     localStorage.removeItem(REMEMBER_ME_KEY);
     setUser(null);
     setOrganizerId(null);
-    // Broadcast session invalidation to all tabs
     broadcastAuthEvent('session-ended');
   }, []);
 

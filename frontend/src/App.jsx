@@ -31,7 +31,17 @@ const TicketStatusPage = lazy(() => import('./features/ticket-delivery/pages/Tic
 const DeliverySettingsPage = lazy(() => import('./features/ticket-delivery/pages/DeliverySettingsPage'));
 const DeliveryStatusPage = lazy(() => import('./features/ticket-delivery/pages').then(m => ({ default: m.DeliveryStatusPage })));
 const AdminDashboardPage = lazy(() => import('./features/admin/pages/AdminDashboardPage'));
-const AdminRoutes = lazy(() => import('./features/admin/routes'));
+const AdminSettingsPage = lazy(() => import('./features/admin/pages/AdminSettingsPage'));
+const AdminUserManagementPage = lazy(() => import('./features/admin/pages/AdminUserManagementPage'));
+const AdminEventModerationPage = lazy(() => import('./features/admin/pages/AdminEventModerationPage'));
+const AdminRoleManagementPage = lazy(() => import('./features/roles/pages/AdminRoleManagementPage'));
+const FraudDetectionDashboardPage = lazy(() => import('./features/fraud/pages/FraudDetectionDashboardPage'));
+const AdminDeliveryDashboardPage = lazy(() => import('./features/ticket-delivery/pages/AdminDeliveryDashboardPage'));
+const AdminAnalyticsPage = lazy(() => import('./features/analytics/pages/AdminAnalyticsPage'));
+const AdminSettlementDashboardPage = lazy(() => import('./features/payouts/pages/AdminSettlementDashboardPage'));
+const AdminRefundDashboardPage = lazy(() => import('./features/refunds/pages/AdminRefundDashboardPage'));
+const AuditLogsViewerPage = lazy(() => import('./features/compliance/pages/AuditLogsViewerPage'));
+const ComplianceReportsPage = lazy(() => import('./features/compliance/pages/ComplianceReportsPage'));
 const UserPermissionsPage = lazy(() => import('./features/roles/pages/UserPermissionsPage'));
 const LoginPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.RegisterPage })));
@@ -57,16 +67,17 @@ const TicketTierManagementPage = lazy(() => import('./features/ticketing/pages')
 const EventPricingConfigPage = lazy(() => import('./features/pricing/pages').then(m => ({ default: m.EventPricingConfigPage })));
 const OrganizerEventLayout = lazy(() => import('./features/events/components/OrganizerEventLayout'));
 const SettingsLayout = lazy(() => import('./features/settings/components/SettingsLayout'));
+const AccessibilitySettingsPage = lazy(() => import('./features/settings/pages/AccessibilitySettingsPage'));
+const LanguagePreferencePage = lazy(() => import('./features/settings/pages/LanguagePreferencePage'));
+const DeviceLocalizationSyncPage = lazy(() => import('./features/settings/pages/DeviceLocalizationSyncPage'));
 const MyTicketsLayout = lazy(() => import('./features/tickets/components/MyTicketsLayout'));
 const AdminLayout = lazy(() => import('./features/admin/components/AdminLayout'));
 const DashboardLayout = lazy(() => import('./features/dashboard/components/DashboardLayout'));
 const AccessDeniedPage = lazy(() => import('./features/common').then(m => ({ default: m.AccessDeniedPage })));
 const MyOrganizerProfilePage = lazy(() => import('./features/organizer-profile/pages/MyOrganizerProfilePage'));
 const OrganizerPayoutDashboardPage = lazy(() => import('./features/payouts/pages/OrganizerPayoutDashboardPage'));
-const AdminSettlementDashboardPage = lazy(() => import('./features/payouts/pages/AdminSettlementDashboardPage'));
 const UserRefundRequestPage = lazy(() => import('./features/refunds/pages/UserRefundRequestPage'));
 const UserRefundStatusPage = lazy(() => import('./features/refunds/pages/UserRefundStatusPage'));
-const AdminRefundDashboardPage = lazy(() => import('./features/refunds/pages/AdminRefundDashboardPage'));
 const AdminPushTemplateManagementPage = lazy(() => import('./features/push-notifications/components/AdminPushTemplateManagementPage'));
 const TrustSafetyPage = lazy(() => import('./features/static-pages/pages/TrustSafetyPage'));
 const AboutPage = lazy(() => import('./features/static-pages/pages/AboutPage'));
@@ -401,15 +412,29 @@ function App() {
               <Route path=":ticketId/refund-request" element={<UserRefundRequestPage />} />
               <Route path=":ticketId/refund-status" element={<UserRefundStatusPage />} />
             </Route>
-             <Route path="/admin" element={<ProtectedRoute requiredRole="admin" unauthenticatedToast={false}><AdminLayout /></ProtectedRoute>}>
-               <Route index element={<AdminDashboardPage />} />
-               <AdminRoutes />
+              <Route path="/admin" element={<ProtectedRoute requiredRole="admin" unauthenticatedToast={false}><AdminLayout /></ProtectedRoute>}>
+                <Route index element={<AdminDashboardPage />} />
+                <Route path="users" element={<AdminUserManagementPage />} />
+                <Route path="events" element={<AdminEventModerationPage />} />
+                <Route path="roles" element={<AdminRoleManagementPage />} />
+                <Route path="fraud/dashboard" element={<FraudDetectionDashboardPage />} />
+                <Route path="delivery/dashboard" element={<AdminDeliveryDashboardPage />} />
+                <Route path="analytics" element={<AdminAnalyticsPage />} />
+                <Route path="compliance/audit-logs" element={<AuditLogsViewerPage />} />
+                <Route path="compliance/reports" element={<ComplianceReportsPage />} />
+                <Route path="settings" element={<AdminSettingsPage />} />
+                <Route path="settlements/dashboard" element={<AdminSettlementDashboardPage />} />
+                <Route path="refunds" element={<AdminRefundDashboardPage />} />
+                <Route path="refunds/dashboard" element={<AdminRefundDashboardPage />} />
+              </Route>
+             <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
+               <Route index element={<DeliverySettingsPage />} />
+               <Route path="permissions" element={<UserPermissionsPage />} />
+               <Route path="delivery-preferences" element={<DeliverySettingsPage />} />
+               <Route path="accessibility" element={<AccessibilitySettingsPage />} />
+               <Route path="language" element={<LanguagePreferencePage />} />
+               <Route path="device-localization" element={<DeviceLocalizationSyncPage />} />
              </Route>
-            <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
-              <Route index element={<DeliverySettingsPage />} />
-              <Route path="permissions" element={<UserPermissionsPage />} />
-              <Route path="delivery-preferences" element={<DeliverySettingsPage />} />
-            </Route>
             <Route path="/events/category/:categoryId" element={<CategoryBrowsePage />} />
             <Route path="/events/:eventId" element={<EventDetailPage />} />
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />

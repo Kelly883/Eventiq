@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import BrandLogo from '../../common/components/BrandLogo';
 import './RegisterPage.css';
@@ -58,14 +58,9 @@ const RegisterPage = () => {
 
       <section className="register-page__content">
         <div className="register-page__brand-row">
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="register-page__brand"
-            aria-label="eventIQ home"
-          >
+          <Link to="/" className="register-page__brand" aria-label="eventIQ home">
             <BrandLogo />
-          </button>
+          </Link>
           <span className="register-page__secure-badge">
             Create account
           </span>
@@ -195,13 +190,9 @@ const RegisterPage = () => {
 
           <div className="register-page__signin">
             Already have an account?{' '}
-            <button
-              type="button"
-              onClick={() => navigate('/login')}
-              className="register-page__text-link"
-            >
+            <Link to="/login" className="register-page__text-link">
               Sign in
-            </button>
+            </Link>
           </div>
         </div>
 

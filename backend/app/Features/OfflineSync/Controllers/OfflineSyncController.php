@@ -127,5 +127,51 @@ class OfflineSyncController
 
         return new OfflineSyncResponse($payload);
     }
+
+    public function getTicketsForOfflineSync(Request $request)
+    {
+        $user = $request->user();
+        $lastSyncAt = $request->query('last_sync_at');
+
+        $eventsQuery = \App\Models\Event::where('organizer_id', $user->id)
+            ->orWhere('user_id', $user->id);
+
+        $eventIds = $eventsQuery->pluck('id')->all();
+
+        $ticketsQuery = \App\Features\Checkout\Models\Ticket::whereIn('event_id', $eventIds)
+            ->with(['event', 'event.organizer', 'ticketTier', 'order']);
+
+        if ($lastSyncAt) {
+            $ticketsQuery->where('updated_at', '>', $lastSyncAt);
+        }
+
+        $tickets = $ticketsQuery->get();
+
+        return response()->json([
+            'data' => $tickets->map(fn ($ticket) => [
+                'id' => (string) $ticket->id,
+                'event_id' => (string) $ticket->event_id,
+                'ticket_code' => $ticket->ticket_code,
+                'status' => $ticket->status,
+                'updated_at' => $ticket->updated_at?->toIso8601String(),
+                'event' => [
+                    'id' => (string) $ticket->event->id,
+                    'name' => $ticket->event->name,
+                    'start_date' => $ticket->event->start_date?->toIso8601String(),
+                    'end_date' => $ticket->event->end_date?->toIso8601String(),
+                ],
+                'ticket_tier' => [
+                    'id' => (string) $ticket->ticketTier->id,
+                    'name' => $ticket->ticketTier->name,
+                ],
+                'order' => [
+                    'id' => (string) $ticket->order->id,
+                    'order_number' => $ticket->order->order_number,
+                    'attendee_name' => $ticket->order->attendee_name,
+                    'attendee_email' => $ticket->order->attendee_email,
+                ],
+            ]),
+        ]);
+    }
 }
 

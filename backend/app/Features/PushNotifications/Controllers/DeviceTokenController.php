@@ -43,4 +43,42 @@ class DeviceTokenController extends Controller
 
         return response()->noContent();
     }
+
+    public function updateOfflineStatus(Request $request, string $token): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'offline_enabled' => ['required', 'boolean'],
+        ]);
+
+        $device = $this->pushNotificationService->registerDevice(
+            $request->user()->id,
+            $token,
+            $request->input('provider', 'unknown'),
+            $request->input('device_type', 'unknown')
+        );
+
+        $device->update([
+            'offline_enabled' => $data['offline_enabled'],
+        ]);
+
+        return response()->json([
+            'token' => $device->token,
+            'offline_enabled' => $device->offline_enabled,
+        ]);
+    }
+
+    public function rotate(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $currentToken = $request->header('X-Device-Token');
+
+        if ($currentToken) {
+            PushNotificationDevice::where('token', strtolower($currentToken))
+                ->where('user_id', $request->user()->id)
+                ->delete();
+        }
+
+        return response()->json([
+            'message' => 'Device token rotated. Generate a new client-side token.',
+        ]);
+    }
 }
