@@ -434,6 +434,7 @@ function App() {
                <Route path="accessibility" element={<AccessibilitySettingsPage />} />
                <Route path="language" element={<LanguagePreferencePage />} />
                <Route path="device-localization" element={<DeviceLocalizationSyncPage />} />
+               <Route path="*" element={<Navigate to="/settings" replace />} />
              </Route>
             <Route path="/events/category/:categoryId" element={<CategoryBrowsePage />} />
             <Route path="/events/:eventId" element={<EventDetailPage />} />

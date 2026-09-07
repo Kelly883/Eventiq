@@ -44,12 +44,12 @@ function applyDirToDocument(language?: string | null) {
 }
 
 async function fetchUserPreferredLanguage() {
-  // "user preferences API" — expected to exist on backend.
-  // If it fails / is not present, fallback to null.
+  // Best-effort: only honored when the session is authenticated and a
+  // language preference exists. Falls back to null otherwise.
+  // Canonical user language preferences endpoint (see Localization feature routes).
   const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
 
-  // Conservative default endpoint; backend can be adjusted later.
-  const url = `${baseUrl}/user/preferences/language`
+  const url = `${baseUrl}/users/me/language-preferences`
 
   try {
     const res = await fetch(url, {

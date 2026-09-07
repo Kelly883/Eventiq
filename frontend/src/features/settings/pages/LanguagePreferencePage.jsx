@@ -36,11 +36,11 @@ const LanguagePreferencePage = () => {
         setPreferences({
           language: data.language ?? 'en',
           region: data.region ?? 'US',
-          dateFormat: data.date_format ?? 'MM/DD/YYYY',
-          timeFormat: data.time_format ?? '12-hour',
+          dateFormat: data.dateFormat ?? 'MM/DD/YYYY',
+          timeFormat: data.timeFormat ?? '12-hour',
           currency: data.currency ?? 'USD',
-          numberFormat: data.number_format ?? 'period',
-          rtlEnabled: data.rtl_enabled ?? false,
+          numberFormat: data.numberFormat ?? 'period',
+          rtlEnabled: data.rtlEnabled ?? false,
         });
       })
       .catch(() => {
