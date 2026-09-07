@@ -16,7 +16,7 @@ async function postJson<T>(url: string, body: any): Promise<T> {
 export async function enqueueOfflineOperation(
   req: OfflineEnqueueRequest<Record<string, any>>
 ): Promise<OfflineEnqueueResponse> {
-  return postJson<OfflineEnqueueResponse>('/api/offline-sync/enqueue', {
+  return postJson<OfflineEnqueueResponse>('/offline-sync/enqueue', {
     ...req,
     client_id: req.client_id ?? getDeviceToken(),
   });
@@ -25,7 +25,7 @@ export async function enqueueOfflineOperation(
 export async function applyDueOfflineOperations(
   limit = 50
 ): Promise<ApplyDueResponse> {
-  const response = await api.post<ApplyDueResponse>(`/api/offline-sync/apply-due?limit=${limit}`, {});
+  const response = await api.post<ApplyDueResponse>(`/offline-sync/apply-due?limit=${limit}`, {});
   return response.data;
 }
 
@@ -38,7 +38,7 @@ export async function syncOfflineTickets(
   if (lastSyncAt) params.set('last_sync_at', lastSyncAt);
   params.set('sync_version', String(syncVersion));
 
-  const response = await api.get<OfflineSyncState>('/api/offline-sync/tickets', {
+  const response = await api.get<OfflineSyncState>('/offline-sync/tickets', {
     headers,
     params,
   });

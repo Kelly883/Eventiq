@@ -29,6 +29,25 @@ class OfflineSyncEngine
         return $item;
     }
 
+    /**
+     * Delete queued/conflicted/failed operations whose owning device no
+     * longer exists (token rotated, device unregistered, pruned as stale, or
+     * the user logged out). Applied rows are kept: they carry the audit trail
+     * and idempotency history for the sync inbox.
+     */
+    public function purgeDeviceOperations(array $clientIds): int
+    {
+        $clientIds = array_values(array_filter(array_map('strval', $clientIds)));
+        if ($clientIds === []) {
+            return 0;
+        }
+
+        return OfflineSyncInboxItem::query()
+            ->whereIn('client_id', $clientIds)
+            ->whereNotIn('status', ['applied'])
+            ->delete();
+    }
+
     public function applyDueQueue(int $limit = 50, ?string $deviceToken = null): array
     {
         $results = [];

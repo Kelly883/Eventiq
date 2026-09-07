@@ -1,10 +1,8 @@
 import SHA256 from 'crypto-js/sha256';
 import Hex from 'crypto-js/enc-hex';
-import { openDB, type IDBPDatabase } from 'idb';
+import { offlineTicketStore } from './offlineTicketStore';
 
 const DEVICE_TOKEN_STORAGE_KEY = 'eventiqDeviceToken';
-const DEVICE_TOKEN_IDB_DB = 'eventiq-offline-sync-db';
-const DEVICE_TOKEN_IDB_STORE = 'syncMetadata';
 const DEVICE_TOKEN_IDB_KEY = 'deviceToken';
 let inMemoryDeviceToken: string | null = null;
 
@@ -30,32 +28,6 @@ function readStoredDeviceToken(): string | null {
   }
 }
 
-let idbDevicePromise: Promise<string | null> | null = null;
-
-async function readIndexedDbDeviceToken(): Promise<string | null> {
-  if (typeof window === 'undefined') return null;
-  if (!idbDevicePromise) {
-    idbDevicePromise = (async (): Promise<string | null> => {
-      try {
-        const db = await openDB(DEVICE_TOKEN_IDB_DB, 2, {
-          upgrade(db) {
-            if (!db.objectStoreNames.contains(DEVICE_TOKEN_IDB_STORE)) {
-              db.createObjectStore(DEVICE_TOKEN_IDB_STORE, { keyPath: 'key' });
-            }
-          },
-        });
-        const record = (await db.get(DEVICE_TOKEN_IDB_STORE, DEVICE_TOKEN_IDB_KEY)) as
-          | { value?: string }
-          | undefined;
-        return record?.value ?? null;
-      } catch {
-        return null;
-      }
-    })();
-  }
-  return idbDevicePromise;
-}
-
 function writeStoredDeviceToken(token: string): void {
   try {
     localStorage.setItem(DEVICE_TOKEN_STORAGE_KEY, token);
@@ -63,29 +35,26 @@ function writeStoredDeviceToken(token: string): void {
     // Private browsing/storage policy may reject persistence.
   }
 
-  writeIndexedDbDeviceToken(token).catch(() => {
+  // Best-effort IDB backup. Persistence goes through offlineTicketStore so
+  // there is exactly ONE owner of the 'eventiq-offline-sync-db' schema.
+  offlineTicketStore.setMetadata(DEVICE_TOKEN_IDB_KEY, token).catch(() => {
     // best-effort persistence
   });
 }
 
-async function writeIndexedDbDeviceToken(token: string): Promise<void> {
-  if (typeof window === 'undefined') return;
+/**
+ * Mint a genuinely fresh device token, ignoring the in-memory cache. Use after
+ * the server has rotated/deleted the previous token: getDeviceToken() alone
+ * would keep returning the cached (now invalid) identity from memory.
+ */
+export function forceNewDeviceToken(): string {
+  inMemoryDeviceToken = null;
   try {
-    const db = await openDB(DEVICE_TOKEN_IDB_DB, 2, {
-      upgrade(db) {
-        if (!db.objectStoreNames.contains(DEVICE_TOKEN_IDB_STORE)) {
-          db.createObjectStore(DEVICE_TOKEN_IDB_STORE, { keyPath: 'key' });
-        }
-      },
-    });
-    await db.put(DEVICE_TOKEN_IDB_STORE, {
-      key: DEVICE_TOKEN_IDB_KEY,
-      value: token,
-      updatedAt: new Date().toISOString(),
-    });
+    localStorage.removeItem(DEVICE_TOKEN_STORAGE_KEY);
   } catch {
-    // ignore persistence failures
+    // ignore
   }
+  return getDeviceToken();
 }
 
 export async function clearStoredDeviceToken(): Promise<void> {
@@ -95,19 +64,10 @@ export async function clearStoredDeviceToken(): Promise<void> {
     // ignore
   }
 
-  if (typeof window !== 'undefined') {
-    try {
-      const db = await openDB(DEVICE_TOKEN_IDB_DB, 2, {
-        upgrade(db) {
-          if (!db.objectStoreNames.contains(DEVICE_TOKEN_IDB_STORE)) {
-            db.createObjectStore(DEVICE_TOKEN_IDB_STORE, { keyPath: 'key' });
-          }
-        },
-      });
-      await db.delete(DEVICE_TOKEN_IDB_STORE, DEVICE_TOKEN_IDB_KEY);
-    } catch {
-      // ignore
-    }
+  try {
+    await offlineTicketStore.deleteMetadata(DEVICE_TOKEN_IDB_KEY);
+  } catch {
+    // ignore
   }
 
   inMemoryDeviceToken = null;
@@ -133,15 +93,54 @@ export function getDeviceToken(): string {
   return token;
 }
 
+/**
+ * Recover the device token persisted to IndexedDB when localStorage was
+ * evicted or cleared. Keeps the same device association server-side (device
+ * rows, offline_enabled flag, queued operations) instead of silently minting a
+ * brand-new pseudonymous identity on the next request.
+ */
+export async function restoreDeviceToken(): Promise<string | null> {
+  const stored = readStoredDeviceToken();
+  if (stored) {
+    return stored;
+  }
+
+  // Both in-memory and IndexedDB can hold a valid token. Whenever one exists
+  // but localStorage does not (eviction/clearing), re-persist it so the next
+  // session does not lose the identity again.
+  let candidate = inMemoryDeviceToken;
+  if (!candidate) {
+    try {
+      candidate = await offlineTicketStore.getMetadata<string>(DEVICE_TOKEN_IDB_KEY);
+    } catch {
+      // IDB unavailable — a fresh token will be generated on first use.
+    }
+  }
+
+  if (candidate && typeof candidate === 'string' && /^[a-f0-9]{64}$/i.test(candidate)) {
+    writeStoredDeviceToken(candidate);
+    return candidate;
+  }
+
+  return null;
+}
+
 export function getDeviceTokenStorageKey(): string {
   return DEVICE_TOKEN_STORAGE_KEY;
 }
 
 if (typeof window !== 'undefined') {
+  // Best-effort early restore: the request interceptor reads the token
+  // synchronously, so recovering the persisted identity before the first
+  // network call matters. If localStorage is intact this is a no-op.
+  restoreDeviceToken();
+
   window.EventiqDevice = {
     getDeviceToken,
+    forceNewDeviceToken,
     storageKey: DEVICE_TOKEN_STORAGE_KEY,
     clearToken: clearStoredDeviceToken,
+    restoreToken: restoreDeviceToken,
   };
 }
 
@@ -149,8 +148,10 @@ declare global {
   interface Window {
     EventiqDevice?: {
       getDeviceToken: () => string;
+      forceNewDeviceToken: () => string;
       storageKey: string;
       clearToken: () => Promise<void>;
+      restoreToken: () => Promise<string | null>;
     };
   }
 }

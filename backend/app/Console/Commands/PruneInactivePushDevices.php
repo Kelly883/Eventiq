@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Features\OfflineSync\Services\OfflineSyncEngine;
 use App\Features\PushNotifications\Models\PushNotificationDevice;
 use Illuminate\Console\Command;
 
@@ -23,12 +24,19 @@ class PruneInactivePushDevices extends Command
 
         $cutoff = now()->subDays($days);
 
-        $deleted = PushNotificationDevice::where('last_used_at', '<', $cutoff)
+        $query = PushNotificationDevice::where('last_used_at', '<', $cutoff)
             ->orWhere(function ($query) use ($cutoff) {
                 $query->whereNull('last_used_at')
                     ->where('created_at', '<', $cutoff);
-            })
-            ->delete();
+            });
+
+        $tokens = (clone $query)->pluck('token')->all();
+
+        $deleted = (clone $query)->delete();
+
+        // A pruned device is gone for good — drop any operations it still had
+        // queued so the offline-sync inbox does not accrue orphaned rows.
+        (new OfflineSyncEngine())->purgeDeviceOperations($tokens);
 
         $this->info("Pruned {$deleted} inactive push device(s) older than {$days} day(s).");
 

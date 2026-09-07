@@ -13,6 +13,14 @@ class OfflineTicketResource extends JsonResource
 
         return [
             'id' => (string) $ticket->id,
+            // ticket_code feeds the frontend's by_ticket_code IDB index and
+            // matches how check-in looks tickets up (ticket id / qr_code_data).
+            'ticket_code' => $ticket->qr_code_data,
+            // snake_case mirrors of event_id/updated_at so the frontend's
+            // IndexedDB 'tickets' index (by_event_id / by_updated_at) can
+            // resolve them; they are additive and ignored by typed consumers.
+            'event_id' => (string) $ticket->event_id,
+            'updated_at' => $ticket->updated_at?->toIso8601String(),
             'eventId' => (string) $ticket->event_id,
             'eventName' => $ticket->event->title ?? null,
             'eventStartDate' => $ticket->event->start_datetime?->toIso8601String(),

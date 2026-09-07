@@ -161,7 +161,7 @@ Route::middleware(['auth:sanctum', 'role:admin', 'throttle:admin'])->prefix('adm
 // Offline sync routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('throttle:30,1')->patch('/notifications/device-tokens/{token}/offline-status', [App\Features\PushNotifications\Controllers\DeviceTokenController::class, 'updateOfflineStatus']);
-    Route::middleware('throttle:10,1')->get('/me/tickets/for-offline-sync', [App\Features\OfflineSync\Controllers\OfflineSyncController::class, 'getTicketsForOfflineSync']);
+    Route::middleware('throttle:60,1')->get('/me/tickets/for-offline-sync', [App\Features\OfflineSync\Controllers\OfflineSyncController::class, 'getTicketsForOfflineSync']);
     Route::post('/me/device-token/rotate', [App\Features\PushNotifications\Controllers\DeviceTokenController::class, 'rotate'])->middleware('throttle:5,1');
 });
 

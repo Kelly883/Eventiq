@@ -5,6 +5,38 @@ import { api } from '../../../lib/api';
 import Skeleton from '../../../components/Skeleton';
 import { CheckInNavigation } from '../components';
 import EventSelector from '../../analytics/components/EventSelector';
+import { offlineTicketStore } from '../../offline/services/offlineTicketStore';
+
+const toTicketResult = (ticket) => ({
+  id: ticket.id,
+  eventId: ticket.event_id ?? ticket.eventId ?? null,
+  attendeeName: ticket.attendeeName ?? 'Unknown attendee',
+  attendeeEmail: ticket.attendeeEmail ?? '',
+  qrCodeData: ticket.ticket_code ?? ticket.qrCodeData ?? null,
+  status: ticket.status ?? 'valid',
+  checkedInAt: ticket.checkedInAt ?? null,
+  checkedIn: Boolean(ticket.checkedInAt),
+});
+
+async function searchLocalTickets(search, eventId) {
+  const normalized = search.trim().toLowerCase();
+  const exactByCode = await offlineTicketStore.getTicketByCode(search.trim());
+
+  const candidates = exactByCode
+    ? [exactByCode]
+    : eventId
+      ? await offlineTicketStore.getTicketsByEventId(eventId)
+      : await offlineTicketStore.getTickets();
+
+  return candidates
+    .filter((ticket) => {
+      const code = String(ticket.ticket_code ?? '').toLowerCase();
+      const name = String(ticket.attendeeName ?? '').toLowerCase();
+      const email = String(ticket.attendeeEmail ?? '').toLowerCase();
+      return code.includes(normalized) || name.includes(normalized) || email.includes(normalized);
+    })
+    .map(toTicketResult);
+}
 
 const CheckInSearchPage = () => {
   const { user } = useAuthContext();
@@ -26,6 +58,10 @@ const CheckInSearchPage = () => {
     setLoading(true);
     setError('');
     try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setResults(await searchLocalTickets(query, eventId));
+        return;
+      }
       const response = await api.get(`/venue/check-ins/search`, {
         params: { q: query, event_id: eventId },
       });
@@ -118,13 +154,13 @@ const CheckInSearchPage = () => {
               <div key={item.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-semibold text-slate-900">{item.name || item.email}</p>
-                    <p className="text-sm text-slate-500">Ticket: {item.ticket_code}</p>
+                    <p className="font-semibold text-slate-900">{item.attendeeName || item.name || item.email || 'Unknown attendee'}</p>
+                    <p className="text-sm text-slate-500">Ticket: {item.qrCodeData ?? item.ticket_code ?? item.ticketId}</p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    item.checked_in ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'
+                    (item.checkedInAt || item.checked_in) ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'
                   }`}>
-                    {item.checked_in ? 'Checked In' : 'Not Checked In'}
+                    {(item.checkedInAt || item.checked_in) ? 'Checked In' : 'Not Checked In'}
                   </span>
                 </div>
               </div>

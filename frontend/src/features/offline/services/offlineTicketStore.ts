@@ -17,7 +17,7 @@ export type OfflineSyncMetadata = {
 };
 
 const DB_NAME = 'eventiq-offline-sync-db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const TICKETS_STORE = 'tickets';
 const METADATA_STORE = 'syncMetadata';
 const TICKET_CODE_INDEX = 'by_ticket_code';
@@ -52,6 +52,13 @@ function getDB(): Promise<IDBPDatabase> {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion, _newVersion, transaction) {
+        // NOTE: this module is the single owner of the 'eventiq-offline-sync-db'
+        // schema. deviceToken.ts previously opened the SAME database at the SAME
+        // version and created ONLY the 'syncMetadata' store. Because the version
+        // never changed, this store-open's upgrade handler never fired and the
+        // 'tickets' store was never created — offline sync fetched but never
+        // cached anything. Bumping to v3 reparses those stale v2 databases and
+        // guarantees both stores exist regardless of which feature opens first.
         let ticketStore: IDBPObjectStore<unknown, ArrayLike<string>, string, 'versionchange'>;
 
         if (!db.objectStoreNames.contains(TICKETS_STORE)) {
@@ -60,9 +67,9 @@ function getDB(): Promise<IDBPDatabase> {
           ticketStore = transaction.objectStore(TICKETS_STORE) as IDBPObjectStore<unknown, ArrayLike<string>, string, 'versionchange'>;
         }
 
-        if (oldVersion < 2) {
-          ensureTicketIndexes(ticketStore);
-        }
+        // ensureTicketIndexes is idempotent, so it is safe to run for both
+        // freshly-created stores and pre-existing ones.
+        ensureTicketIndexes(ticketStore);
 
         if (!db.objectStoreNames.contains(METADATA_STORE)) {
           db.createObjectStore(METADATA_STORE, { keyPath: 'key' });
@@ -100,11 +107,6 @@ export const offlineTicketStore = {
     return db.getAllFromIndex(TICKETS_STORE, EVENT_ID_INDEX, eventId);
   },
 
-  async getTicketsUpdatedSince(updatedAt: string): Promise<OfflineTicketRecord[]> {
-    const db = await getDB();
-    return db.getAllFromIndex(TICKETS_STORE, UPDATED_AT_INDEX, IDBKeyRange.lowerBound(updatedAt, true));
-  },
-
   async removeTickets(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
     const db = await getDB();
@@ -131,5 +133,10 @@ export const offlineTicketStore = {
     const db = await getDB();
     const record = (await db.get(METADATA_STORE, key)) as OfflineSyncMetadata | undefined;
     return (record?.value as TValue | undefined) ?? null;
+  },
+
+  async deleteMetadata(key: string): Promise<void> {
+    const db = await getDB();
+    await db.delete(METADATA_STORE, key);
   },
 };

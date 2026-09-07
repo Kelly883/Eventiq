@@ -4,6 +4,7 @@ namespace App\Features\PushNotifications\Services;
 
 use App\Features\PushNotifications\Models\PushNotificationDevice;
 use App\Features\PushNotifications\Models\PushNotificationHistory;
+use App\Features\OfflineSync\Services\OfflineSyncEngine;
 use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Contract\Messaging;
 use Kreait\Firebase\Messaging\CloudMessage;
@@ -121,6 +122,7 @@ class PushNotificationService
     {
         if ($previousToken && $previousToken !== $token) {
             PushNotificationDevice::where('token', $previousToken)->delete();
+            (new OfflineSyncEngine())->purgeDeviceOperations([strtolower($previousToken)]);
         }
 
         return PushNotificationDevice::updateOrCreate(
@@ -132,5 +134,6 @@ class PushNotificationService
     public function unregisterDevice(string $token): void
     {
         PushNotificationDevice::where('token', $token)->delete();
+        (new OfflineSyncEngine())->purgeDeviceOperations([strtolower($token)]);
     }
 }

@@ -133,7 +133,7 @@ class OfflineSyncController
     {
         $user = $request->user();
         $lastSyncAt = $request->query('last_sync_at');
-        $perPage = (int) $request->query('per_page', 50);
+        $perPage = max(1, min((int) $request->query('per_page', 200), 200));
         $cursor = $request->query('cursor');
 
         $deviceToken = $request->header('X-Device-Token');
@@ -163,29 +163,7 @@ class OfflineSyncController
         $nextCursor = $tickets->last()?->id;
 
         return response()->json([
-            'data' => $tickets->map(fn ($ticket) => [
-                'id' => (string) $ticket->id,
-                'event_id' => (string) $ticket->event_id,
-                'ticket_code' => $ticket->ticket_code,
-                'status' => $ticket->status,
-                'updated_at' => $ticket->updated_at?->toIso8601String(),
-                'event' => [
-                    'id' => (string) $ticket->event->id,
-                    'name' => $ticket->event->name,
-                    'start_date' => $ticket->event->start_date?->toIso8601String(),
-                    'end_date' => $ticket->event->end_date?->toIso8601String(),
-                ],
-                'ticket_tier' => [
-                    'id' => (string) $ticket->ticketTier->id,
-                    'name' => $ticket->ticketTier->name,
-                ],
-                'order' => [
-                    'id' => (string) $ticket->order->id,
-                    'order_number' => $ticket->order->order_number,
-                    'attendee_name' => $ticket->order->attendee_name,
-                    'attendee_email' => $ticket->order->attendee_email,
-                ],
-            ]),
+            'data' => OfflineTicketResource::collection($tickets)->toArray($request),
             'pagination' => [
                 'per_page' => $perPage,
                 'next_cursor' => $nextCursor,

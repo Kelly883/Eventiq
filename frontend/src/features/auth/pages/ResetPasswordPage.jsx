@@ -5,6 +5,7 @@ import { useAuthContext } from '../context/AuthContext';
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
+  const email = searchParams.get('email');
   const navigate = useNavigate();
   const { resetPassword } = useAuthContext();
 
@@ -18,6 +19,11 @@ const ResetPasswordPage = () => {
 
     if (!token) {
       setError('Reset token is missing from the URL.');
+      return;
+    }
+
+    if (!email) {
+      setError('Reset email is missing from the URL.');
       return;
     }
 
@@ -35,7 +41,7 @@ const ResetPasswordPage = () => {
     setError('');
 
     try {
-      await resetPassword(token, password);
+      await resetPassword(token, email, password);
       navigate('/login', { state: { message: 'Password reset successful. Please log in.', messageType: 'success' } });
     } catch (err) {
       setError(err.message || 'Failed to reset password.');

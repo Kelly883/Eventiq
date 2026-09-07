@@ -285,7 +285,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const register = useCallback(async (email, password, name, passwordConfirmation = null) => {
-    await api.get('/sanctum/csrf-cookie');
+    await refreshCsrf();
     await api.post('/auth/register', {
       email,
       password,
@@ -331,9 +331,14 @@ export const AuthProvider = ({ children }) => {
     await api.post('/auth/forgot-password', { email });
   }, []);
 
-  const resetPassword = useCallback(async (token, email, newPassword, passwordConfirmation) => {
-    await api.get('/sanctum/csrf-cookie');
-    await api.post('/auth/reset-password', { token, email, newPassword, password_confirmation: passwordConfirmation });
+  const resetPassword = useCallback(async (token, email, password, passwordConfirmation = null) => {
+    await refreshCsrf();
+    await api.post('/auth/reset-password', {
+      token,
+      email,
+      password,
+      password_confirmation: passwordConfirmation ?? password,
+    });
     localStorage.removeItem(REMEMBER_ME_KEY);
     setUser(null);
     // Broadcast session invalidation to all tabs

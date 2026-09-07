@@ -1,10 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BrandLogo from '../common/components/BrandLogo';
+import { useAuthContext } from '../auth/context/AuthContext';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { user } = useAuthContext();
+  const isLoggedIn = Boolean(user);
+  const roles = user?.roles?.map((r) => r.name) || [];
+
+  // Mirrors PublicRoute's logged-in routing so the marketing header never
+  // advertises "Sign in / Create account" to users who already have a session
+  // (PublicRoute would just bounce them to a dashboard).
+  const dashboardTarget = roles.some((r) => ['venue_staff', 'organizer'].includes(r))
+    ? '/venue/dashboard'
+    : roles.some((r) => r.name === 'admin')
+      ? '/admin'
+      : '/dashboard';
 
   // Two visual states: transparent white text over the hero, then a solid
   // white surface once scrolled. A 6px threshold keeps the swap from firing
@@ -34,8 +47,14 @@ const Header = () => {
         </nav>
 
         <div className="nav-actions">
-          <Link to="/login" className="btn-text">Sign in</Link>
-          <Link to="/register" className="btn-primary">Create account</Link>
+          {isLoggedIn ? (
+            <Link to={dashboardTarget} className="btn-primary">Dashboard</Link>
+          ) : (
+            <>
+              <Link to="/login" className="btn-text">Sign in</Link>
+              <Link to="/register" className="btn-primary">Create account</Link>
+            </>
+          )}
         </div>
 
         <button
@@ -68,8 +87,14 @@ const Header = () => {
           <Link to="/organizer/events/create" className="mobile-nav-link" onClick={handleNavClick}>For Organizers</Link>
           <Link to="/trust" className="mobile-nav-link" onClick={handleNavClick}>Trust &amp; Safety</Link>
           <div className="mobile-nav-actions">
-            <Link to="/login" className="btn-text" onClick={handleNavClick}>Sign in</Link>
-            <Link to="/register" className="btn-primary" onClick={handleNavClick}>Create account</Link>
+            {isLoggedIn ? (
+              <Link to={dashboardTarget} className="btn-primary" onClick={handleNavClick}>Dashboard</Link>
+            ) : (
+              <>
+                <Link to="/login" className="btn-text" onClick={handleNavClick}>Sign in</Link>
+                <Link to="/register" className="btn-primary" onClick={handleNavClick}>Create account</Link>
+              </>
+            )}
           </div>
         </nav>
       )}

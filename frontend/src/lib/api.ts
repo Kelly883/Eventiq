@@ -4,7 +4,7 @@ import axios, {
   type AxiosRequestConfig,
   type AxiosResponse,
 } from 'axios';
-import { getDeviceToken } from '../features/offline/services/deviceToken';
+import { getDeviceToken, restoreDeviceToken } from '../features/offline/services/deviceToken';
 
 /* -------------------------------------------------------------------------- */
 /*                              Toast System                                  */
@@ -51,6 +51,16 @@ const csrfCookieUrl = baseURL.replace(/\/api$/, '') + '/sanctum/csrf-cookie'
 export const api = axios.create({
   baseURL: normalizedBaseURL,
   withCredentials: true,
+  // Sanctum's stateful middleware requires the X-XSRF-TOKEN header on cross-
+  // origin requests from the SPA (the vite proxy is not used for the absolute
+  // baseURL). axios' default withXSRFToken filter only attaches the token for
+  // SAME-ORIGIN requests, so login always returned 419 against the real
+  // backend. We still only send it when the XSRF-TOKEN cookie is present —
+  // which is only set by refreshCsrf()/auth flows — so the CSRF guarantee
+  // (header must match cookie) is preserved.
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
+  withXSRFToken: true,
 });
 
 /* -------------------------------------------------------------------------- */
@@ -83,8 +93,12 @@ export async function refreshCsrf(): Promise<boolean> {
 /*                               Request Interceptor                          */
 /* -------------------------------------------------------------------------- */
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
   if (typeof window !== 'undefined') {
+    // Await the IDB→localStorage recovery BEFORE minting a token: the request
+    // header must carry the persisted device identity, not a fresh one, when
+    // localStorage was evicted but IndexedDB still holds the token.
+    await restoreDeviceToken();
     const deviceToken = getDeviceToken();
     if (deviceToken) {
       config.headers = config.headers ?? {};

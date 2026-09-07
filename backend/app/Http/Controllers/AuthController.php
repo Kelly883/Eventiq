@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Features\PushNotifications\Models\PushNotificationDevice;
+use App\Features\OfflineSync\Services\OfflineSyncEngine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -24,7 +25,7 @@ class AuthController extends Controller
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'passwordHash' => Hash::make($validated['password']),
         ]);
 
         Auth::login($user);
@@ -66,7 +67,12 @@ class AuthController extends Controller
         $userId = $request->user()?->id;
 
         if ($userId) {
+            $tokens = PushNotificationDevice::where('user_id', $userId)->pluck('token')->all();
             PushNotificationDevice::where('user_id', $userId)->delete();
+
+            // The device token rows are gone, so any offline operations they
+            // had queued are orphaned too — purge them.
+            (new OfflineSyncEngine())->purgeDeviceOperations($tokens);
         }
 
         Auth::guard('web')->logout();
@@ -106,7 +112,7 @@ class AuthController extends Controller
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (User $user, string $password) {
                 $user->forceFill([
-                    'password' => Hash::make($password)
+                    'passwordHash' => Hash::make($password)
                 ]);
                 $user->save();
             }

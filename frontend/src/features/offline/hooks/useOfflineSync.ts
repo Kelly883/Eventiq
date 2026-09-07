@@ -43,7 +43,7 @@ export function useOfflineSync(initialOptions: OfflineSyncOptions = {}) {
         params: {
           last_sync_at: options.lastSyncAt ?? lastSyncedAt ?? '',
           sync_version: options.syncVersion ?? syncVersion,
-          per_page: options.perPage ?? 50,
+          per_page: Math.min(options.perPage ?? 200, 200),
           cursor: options.cursor,
         },
         headers: {

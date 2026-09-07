@@ -2,6 +2,8 @@
 
 namespace App\Features\PushNotifications\Controllers;
 
+use App\Features\OfflineSync\Services\OfflineSyncEngine;
+use App\Features\PushNotifications\Models\PushNotificationDevice;
 use App\Features\PushNotifications\Requests\StoreDeviceTokenRequest;
 use App\Features\PushNotifications\Services\PushNotificationService;
 use App\Http\Controllers\Controller;
@@ -79,9 +81,14 @@ class DeviceTokenController extends Controller
         $currentToken = $request->header('X-Device-Token');
 
         if ($currentToken) {
-            PushNotificationDevice::where('token', strtolower($currentToken))
+            $currentToken = strtolower($currentToken);
+            PushNotificationDevice::where('token', $currentToken)
                 ->where('user_id', $request->user()->id)
                 ->delete();
+
+            // The rotated token no longer exists — its queued offline
+            // operations are orphaned.
+            (new OfflineSyncEngine())->purgeDeviceOperations([$currentToken]);
         }
 
         return response()->json([

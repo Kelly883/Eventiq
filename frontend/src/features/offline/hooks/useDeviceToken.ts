@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getDeviceToken, getDeviceTokenStorageKey } from '../services/deviceToken';
+import { forceNewDeviceToken, getDeviceToken, restoreDeviceToken } from '../services/deviceToken';
 
 export function useDeviceToken() {
   const [token, setToken] = useState<string | null>(null);
@@ -10,15 +10,21 @@ export function useDeviceToken() {
       setLoading(false);
       return;
     }
-    const existing = getDeviceToken();
-    setToken(existing);
-    setLoading(false);
+    let cancelled = false;
+    (async () => {
+      const restored = await restoreDeviceToken();
+      if (cancelled) return;
+      setToken(restored ?? getDeviceToken());
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const regenerate = useCallback(() => {
     if (typeof window === 'undefined') return null;
-    localStorage.removeItem(getDeviceTokenStorageKey());
-    const newToken = getDeviceToken();
+    const newToken = forceNewDeviceToken();
     setToken(newToken);
     return newToken;
   }, []);
