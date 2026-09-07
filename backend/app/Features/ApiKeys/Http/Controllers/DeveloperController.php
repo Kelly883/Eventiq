@@ -3,6 +3,9 @@
 namespace App\Features\ApiKeys\Http\Controllers;
 
 use App\Features\ApiKeys\Resources\ApiKeyResource;
+use App\Features\ApiKeys\Requests\StoreApiKeyRequest;
+use App\Features\ApiKeys\Services\ApiKeyService;
+use App\Models\ApiKey;
 use App\Models\AuditLog;
 use App\Models\Webhook;
 use App\Models\WebhookDeliveryLog;
@@ -14,20 +17,93 @@ use Illuminate\Support\Facades\Auth;
 
 /**
  * Developer portal controller for organizers managing API keys, webhooks,
- * and API usage logs. All endpoints are organizer-scoped via policies.
+ * and API usage logs. All endpoints are organizer-scoped via the
+ * `role:organizer` route middleware plus organizer-owner filters below.
  */
 class DeveloperController extends Controller
 {
+    public function __construct(private ApiKeyService $apiKeyService)
+    {
+    }
+
     /**
      * GET /api/developer/api-keys
      */
-    public function listApiKeys(): ResourceCollection
+    public function listApiKeys(): JsonResponse
     {
-        $keys = ApiKey::where('organizer_id', Auth::id())
+        $organizer = $this->organizer();
+
+        if (! $organizer) {
+            return response()->json(['message' => 'Not an organizer account.'], 403);
+        }
+
+        $keys = ApiKey::where('organizer_id', $organizer->id)
             ->latest()
             ->get();
 
-        return ApiKeyResource::collection($keys);
+        return response()->json([
+            'data' => ApiKeyResource::collection($keys),
+            'message' => 'API keys loaded',
+        ], 200);
+    }
+
+    /**
+     * POST /api/developer/api-keys
+     *
+     * The full key is returned exactly once (its hash is stored via
+     * ApiKeyService). The frontend must show it immediately so the user
+     * can copy it — it is never retrievable again.
+     */
+    public function createApiKey(StoreApiKeyRequest $request): JsonResponse
+    {
+        $organizer = $this->organizer();
+
+        if (! $organizer) {
+            return response()->json(['message' => 'Not an organizer account.'], 403);
+        }
+
+        $result = $this->apiKeyService->generate(
+            $organizer,
+            $request->validated('name'),
+            $request->validated('scopes', []),
+            $request->validated('expires_at')
+        );
+
+        return response()->json([
+            'api_key' => new ApiKeyResource($result['model']),
+            'raw_key' => $result['raw_key'],
+            'warning' => 'This is the only time the full key will be shown. Store it securely now.',
+        ], 201);
+    }
+
+    /**
+     * DELETE /api/developer/api-keys/{keyId}
+     */
+    public function deleteApiKey(Request $request, string $keyId): JsonResponse
+    {
+        $organizer = $this->organizer();
+
+        if (! $organizer) {
+            return response()->json(['message' => 'Not an organizer account.'], 403);
+        }
+
+        $apiKey = ApiKey::where('id', $keyId)->where('organizer_id', $organizer->id)->first();
+
+        if (! $apiKey) {
+            return response()->json(['message' => 'API key not found'], 404);
+        }
+
+        $this->apiKeyService->revoke($apiKey);
+
+        return response()->json(['message' => 'API key revoked'], 200);
+    }
+
+    /**
+     * Resolve the authenticated user's Organizer record, or null.
+     */
+    private function organizer()
+    {
+        return Auth::user()?->organizer;
     }
 
     /**
@@ -66,6 +142,7 @@ class DeveloperController extends Controller
             'organizer_id' => Auth::id(),
             'url' => $validated['url'],
             'description' => $validated['description'] ?? null,
+            'secret' => Webhook::generateSecret(),
             'subscribed_events' => $validated['subscribedEvents'],
             'status' => 'active',
             'failure_count' => 0,
@@ -81,7 +158,7 @@ class DeveloperController extends Controller
             'status' => 'success',
             'source' => 'developer_portal',
             'ip_address' => $request->ip(),
-            'details' => ['url' => $validated['url'], 'events' => $validated['subscribedEvents']],
+            'metadata' => ['url' => $validated['url'], 'events' => $validated['subscribedEvents']],
         ]);
 
         return response()->json(
@@ -124,7 +201,7 @@ class DeveloperController extends Controller
                 'targetId' => $log->target_id,
                 'status' => $log->status,
                 'source' => $log->source,
-                'path' => $log->details['path'] ?? null,
+                'path' => $log->metadata['path'] ?? ($log->metadata['url'] ?? null),
                 'ipAddress' => $log->ip_address,
                 'createdAt' => $log->created_at?->toIso8601String(),
             ]),

@@ -76,6 +76,7 @@ const DashboardLayout = lazy(() => import('./features/dashboard/components/Dashb
 const AccessDeniedPage = lazy(() => import('./features/common').then(m => ({ default: m.AccessDeniedPage })));
 const MyOrganizerProfilePage = lazy(() => import('./features/organizer-profile/pages/MyOrganizerProfilePage'));
 const OrganizerPayoutDashboardPage = lazy(() => import('./features/payouts/pages/OrganizerPayoutDashboardPage'));
+const DeveloperPortalPage = lazy(() => import('./features/developer/pages/DeveloperPortalPage'));
 const UserRefundRequestPage = lazy(() => import('./features/refunds/pages/UserRefundRequestPage'));
 const UserRefundStatusPage = lazy(() => import('./features/refunds/pages/UserRefundStatusPage'));
 const AdminPushTemplateManagementPage = lazy(() => import('./features/push-notifications/components/AdminPushTemplateManagementPage'));
@@ -215,6 +216,11 @@ const NAV_ITEMS = [
   {
     to: '/organizer/payouts',
     label: '💰 Payouts',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
+  },
+  {
+    to: '/developer',
+    label: '🧑‍💻 Developer',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
   },
   {
@@ -446,6 +452,7 @@ function App() {
               <Route index element={<UserDashboardPage />} />
             </Route>
             <Route path="/organizer/payouts" element={<ProtectedRoute requiredRole="organizer"><OrganizerPayoutDashboardPage /></ProtectedRoute>} />
+            <Route path="/developer" element={<ProtectedRoute requiredRole="organizer" deniedPage={<AccessDeniedPage title="Access Denied" message="Only organizers can access the developer portal." />}><DeveloperPortalPage /></ProtectedRoute>} />
             <Route path="/organizer/events" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventListPage /></ProtectedRoute>} />
             <Route path="/organizer/events/create" element={<ProtectedRoute requiredRole="organizer"><EventCreatePage /></ProtectedRoute>} />
             <Route path="/organizer/events/:eventId" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventLayout /></ProtectedRoute>}>

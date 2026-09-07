@@ -24,7 +24,7 @@ const ToastRedirect = ({ to, state = undefined, title, description, type }) => {
   return <Navigate to={to} replace state={state} />;
 };
 
-export const ProtectedRoute = ({ children, requiredRole = null, requiredRoles = null, unauthenticatedToast = true }) => {
+export const ProtectedRoute = ({ children, requiredRole = null, requiredRoles = null, unauthenticatedToast = true, deniedPage = null }) => {
   const { user, loading, checkAdminAccess } = useAuthContext();
   const location = useLocation();
 
@@ -51,6 +51,7 @@ export const ProtectedRoute = ({ children, requiredRole = null, requiredRoles = 
     const userRoles = user?.roles?.map((r) => r.name) || [];
     const hasRequiredRole = requiredRoles.some((role) => userRoles.includes(role));
     if (!hasRequiredRole) {
+      if (deniedPage) return deniedPage;
       const isCheckInRoute = location.pathname.startsWith('/check-in') || location.pathname.startsWith('/venue');
       if (isCheckInRoute) {
         return (
@@ -85,6 +86,7 @@ export const ProtectedRoute = ({ children, requiredRole = null, requiredRoles = 
   }
 
   if (requiredRole === 'admin' && !checkAdminAccess()) {
+    if (deniedPage) return deniedPage;
     return (
       <ToastRedirect
         to="/access-denied"
@@ -102,6 +104,7 @@ export const ProtectedRoute = ({ children, requiredRole = null, requiredRoles = 
   }
 
   if (requiredRole === 'organizer' && !user?.roles?.some((r) => r.name === 'organizer')) {
+    if (deniedPage) return deniedPage;
     return (
       <ToastRedirect
         to="/dashboard"
