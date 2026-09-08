@@ -35,9 +35,7 @@ export interface Transaction {
   readonly netAmount?: number;
   readonly paymentChannel?: string;
   readonly customerEmail?: string;
-  readonly customerCode?: string;
   readonly gatewayResponse?: Record<string, unknown>;
-  readonly lastError?: string;
   readonly paidAt?: string;
   readonly refundedAmount?: number;
   readonly refundReference?: string;

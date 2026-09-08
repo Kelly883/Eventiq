@@ -28,7 +28,7 @@ export function safeRedirectPath(from, user, fallback = '/dashboard') {
     return '/access-denied';
   }
   if (target.startsWith('/organizer/') && !roles.includes('organizer')) {
-    return '/dashboard';
+    return '/access-denied';
   }
   return target;
 }
