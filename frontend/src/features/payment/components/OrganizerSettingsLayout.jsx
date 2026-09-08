@@ -1,22 +1,19 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
-import { useAuthContext } from '../../auth/context/AuthContext';
 
-const settingsNavItems = [
-  { to: '/settings/permissions', label: 'Permissions', icon: '🛡️', description: 'View and request access roles' },
-  { to: '/settings/payment-methods', label: 'Payment Methods', icon: '💳', description: 'Saved cards and payment preferences' },
-  { to: '/settings/delivery-preferences', label: 'Delivery Preferences', icon: '📧', description: 'Email and notification settings' },
-  { to: '/settings/accessibility', label: 'Accessibility', icon: '♿', description: 'Accessibility preferences' },
-  { to: '/settings/language', label: 'Language & Region', icon: '🌐', description: 'Language and regional formats' },
-  { to: '/settings/device-localization', label: 'Device Sync', icon: '📱', description: 'Offline ticket sync and device token' },
+const organizerSettingsNavItems = [
+  {
+    to: '/organizer/settings/payments',
+    label: 'Payment Settings',
+    icon: '💳',
+    description: 'Gateway status, subaccounts, and payout methods',
+  },
 ];
 
-const SettingsLayout = () => {
+const OrganizerSettingsLayout = () => {
   const location = useLocation();
-  const { user } = useAuthContext();
-  const isAdmin = user?.roles?.some((r) => r.name === 'admin');
 
-  const activeItem = settingsNavItems.find(
+  const activeItem = organizerSettingsNavItems.find(
     (item) => item.to === location.pathname
   );
 
@@ -25,19 +22,19 @@ const SettingsLayout = () => {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            Settings
+            Organizer Settings
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Manage your account settings and preferences.
+            Manage your seller account, payments, and payout preferences.
           </p>
         </div>
 
         <div className="flex flex-col md:flex-row gap-8">
           {/* Sidebar Navigation */}
-          <nav className="w-full md:w-64 flex-shrink-0">
+          <nav className="w-full md:w-64 flex-shrink-0" aria-label="Organizer settings">
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <ul className="divide-y divide-slate-100">
-                {settingsNavItems.map((item) => (
+                {organizerSettingsNavItems.map((item) => (
                   <li key={item.to}>
                     <NavLink
                       to={item.to}
@@ -58,22 +55,20 @@ const SettingsLayout = () => {
                   </li>
                 ))}
               </ul>
-              {isAdmin && (
-                <div className="p-4 bg-indigo-50/70 border-t border-indigo-100">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-900">
-                    <span>⚡</span> Administrator Access
-                  </div>
-                  <p className="text-xs text-indigo-700 mt-1">
-                    Looking to manage platform email templates or push notifications?
-                  </p>
-                  <Link
-                    to="/admin/settings"
-                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
-                  >
-                    Go to Admin Settings →
-                  </Link>
-                </div>
-              )}
+              <div className="p-4 border-t border-slate-100 flex flex-col gap-2">
+                <Link
+                  to="/organizer/payouts"
+                  className="flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+                >
+                  <span>💰</span> View Payouts →
+                </Link>
+                <Link
+                  to="/settings"
+                  className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors"
+                >
+                  <span>⚙️</span> Account Settings →
+                </Link>
+              </div>
             </div>
           </nav>
 
@@ -94,4 +89,4 @@ const SettingsLayout = () => {
   );
 };
 
-export default SettingsLayout;
+export default OrganizerSettingsLayout;

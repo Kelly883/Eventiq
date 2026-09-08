@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Models\Role;
+use App\Models\Organizer;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -19,6 +20,11 @@ class TestUsersSeeder extends Seeder
         $attendeeRole = Role::firstOrCreate(
             ['name' => 'attendee'],
             ['description' => 'Attendee']
+        );
+
+        $organizerRole = Role::firstOrCreate(
+            ['name' => 'organizer'],
+            ['description' => 'Organizer']
         );
 
         User::updateOrCreate(
@@ -40,6 +46,24 @@ class TestUsersSeeder extends Seeder
                 'role' => 'attendee',
                 'emailVerified' => true,
                 'status' => 'active',
+            ]
+        );
+
+        $organizerUser = User::updateOrCreate(
+            ['email' => 'organizer@eventiq.test'],
+            [
+                'name' => 'Test Organizer',
+                'passwordHash' => Hash::make('password'),
+                'role' => 'organizer',
+                'emailVerified' => true,
+                'status' => 'active',
+            ]
+        );
+
+        Organizer::updateOrCreate(
+            ['user_id' => $organizerUser->id],
+            [
+                'displayName' => 'Test Organizer',
             ]
         );
     }

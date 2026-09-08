@@ -21,9 +21,8 @@ export const formatStatus = (status) => {
 export const formatPayoutMethod = (method) => {
   const methodMap = {
     bank_transfer: 'Bank Transfer',
-    paypal: 'PayPal',
-    stripe: 'Stripe',
-    check: 'Check',
+    paystack: 'Paystack',
+    flutterwave: 'Flutterwave',
   };
   return methodMap[method] || method;
 };

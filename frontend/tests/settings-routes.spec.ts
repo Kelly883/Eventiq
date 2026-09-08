@@ -147,3 +147,84 @@ test.describe('Settings Routes and Deep Linking', () => {
     }
   });
 });
+
+test.describe('Payment settings routes and deep linking', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.context().clearCookies();
+    await page.goto(BASE_URL);
+  });
+
+  test('logged-out /settings/payment-methods redirects to /login', async ({ page }) => {
+    await page.goto(`${BASE_URL}/settings/payment-methods`);
+    await page.waitForURL('**/login');
+    expect(page.url()).toContain('/login');
+  });
+
+  test('deep link: /settings/payment-methods while logged out → login → redirect back', async ({ page }) => {
+    await page.goto(`${BASE_URL}/settings/payment-methods`);
+    await page.waitForURL('**/login');
+
+    await page.fill('input[name="email"]', 'attendee@eventiq.test');
+    await page.fill('input[name="password"]', 'password');
+    await page.click('button[type="submit"]');
+
+    await page.waitForURL('**/settings/payment-methods', { timeout: 15000 });
+    expect(page.url()).toContain('/settings/payment-methods');
+  });
+
+  test('logged-out /organizer/settings/payments redirects to /login', async ({ page }) => {
+    await page.goto(`${BASE_URL}/organizer/settings/payments`);
+    await page.waitForURL('**/login');
+    expect(page.url()).toContain('/login');
+  });
+
+  test('deep link: /organizer/settings/payments as organizer → login → redirect back', async ({ page }) => {
+    await page.goto(`${BASE_URL}/organizer/settings/payments`);
+    await page.waitForURL('**/login');
+
+    await page.fill('input[name="email"]', 'organizer@eventiq.test');
+    await page.fill('input[name="password"]', 'password');
+    await page.click('button[type="submit"]');
+
+    await page.waitForURL('**/organizer/settings/payments', { timeout: 15000 });
+    expect(page.url()).toContain('/organizer/settings/payments');
+  });
+
+  test('non-organizer deep link to /organizer/settings/payments shows access denied', async ({ page }) => {
+    await page.goto(`${BASE_URL}/login`);
+    await page.fill('input[name="email"]', 'attendee@eventiq.test');
+    await page.fill('input[name="password"]', 'password');
+    await page.click('button[type="submit"]');
+    await page.waitForURL('**/dashboard', { timeout: 15000 });
+
+    await page.goto(`${BASE_URL}/organizer/settings/payments`);
+    await page.waitForTimeout(2000);
+    await expect(page.locator('text=Access Denied').first()).toBeVisible({ timeout: 15000 });
+  });
+
+  test('organizer settings page shows gateway status summary', async ({ page }) => {
+    await page.goto(`${BASE_URL}/login`);
+    await page.fill('input[name="email"]', 'organizer@eventiq.test');
+    await page.fill('input[name="password"]', 'password');
+    await page.click('button[type="submit"]');
+    await page.waitForURL('**/organizer/settings', { timeout: 15000 });
+
+    await expect(page.locator('nav a[href="/organizer/settings/payments"]')).toBeVisible({ timeout: 15000 });
+  });
+
+  test('back button from payment methods returns to settings', async ({ page }) => {
+    await page.goto(`${BASE_URL}/login`);
+    await page.fill('input[name="email"]', 'attendee@eventiq.test');
+    await page.fill('input[name="password"]', 'password');
+    await page.click('button[type="submit"]');
+    await page.waitForURL('**/dashboard', { timeout: 15000 });
+
+    await page.goto(`${BASE_URL}/settings`);
+    await page.click('nav a[href="/settings/payment-methods"]');
+    await page.waitForURL('**/settings/payment-methods');
+
+    await page.goBack();
+    await page.waitForURL('**/settings');
+    expect(page.url()).toContain('/settings');
+  });
+});

@@ -25,8 +25,8 @@ Route::post('/payments/paystack/verify', [PaystackVerifyController::class, '__in
 Route::post('/payments/flutterwave/initialize', [FlutterwaveInitializeController::class, '__invoke']);
 Route::post('/payments/flutterwave/verify', [FlutterwaveVerifyController::class, '__invoke']);
 
-// Organizer payout methods
-Route::middleware('auth:sanctum')->prefix('organizer/payout-methods')->group(function () {
+// Organizer payout methods (auth + organizer role enforced)
+Route::middleware(['auth:sanctum', 'role:organizer'])->prefix('organizer/payout-methods')->group(function () {
     Route::get('/', [OrganizerPayoutMethodController::class, 'index']);
     Route::post('/', [OrganizerPayoutMethodController::class, 'store']);
     Route::delete('/{id}', [OrganizerPayoutMethodController::class, 'destroy']);
@@ -42,8 +42,8 @@ Route::middleware('auth:sanctum')->prefix('user/payment-methods')->group(functio
     Route::post('/{id}/set-default', [PaymentMethodController::class, 'setDefault']);
 });
 
-// Organizer payment settings
-Route::middleware('auth:sanctum')->prefix('organizer/payment-settings')->group(function () {
+// Organizer payment settings (auth + organizer role enforced)
+Route::middleware(['auth:sanctum', 'role:organizer'])->prefix('organizer/payment-settings')->group(function () {
     Route::get('/', [OrganizerPaymentSettingsController::class, 'index']);
     Route::put('/', [OrganizerPaymentSettingsController::class, 'update']);
 });

@@ -27,8 +27,6 @@ class TransactionResource extends JsonResource
             'paymentChannel' => $this->payment_channel,
             'customerEmail' => $this->customer_email,
             'customerCode' => $this->customer_code,
-            'authorizationCode' => $this->authorization_code,
-            'authorizationType' => $this->authorization_type,
             'fees' => $this->fees !== null ? (float) $this->fees : null,
             'netAmount' => $this->net_amount !== null ? (float) $this->net_amount : null,
             'refundedAmount' => $this->refunded_amount !== null ? (float) $this->refunded_amount : null,

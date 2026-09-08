@@ -80,6 +80,10 @@ const DeveloperPortalPage = lazy(() => import('./features/developer/pages/Develo
 const UserRefundRequestPage = lazy(() => import('./features/refunds/pages/UserRefundRequestPage'));
 const UserRefundStatusPage = lazy(() => import('./features/refunds/pages/UserRefundStatusPage'));
 const AdminPushTemplateManagementPage = lazy(() => import('./features/push-notifications/components/AdminPushTemplateManagementPage'));
+const OrganizerSettingsLayout = lazy(() => import('./features/payment/components/OrganizerSettingsLayout'));
+const OrganizerSettingsPage = lazy(() => import('./features/payment/pages/OrganizerSettingsPage'));
+const PaymentMethodsPage = lazy(() => import('./features/payment/pages/PaymentMethodsPage'));
+const OrganizerPaymentSettingsPage = lazy(() => import('./features/payment/pages/OrganizerPaymentSettingsPage'));
 const TrustSafetyPage = lazy(() => import('./features/static-pages/pages/TrustSafetyPage'));
 const AboutPage = lazy(() => import('./features/static-pages/pages/AboutPage'));
 const ContactPage = lazy(() => import('./features/static-pages/pages/ContactPage'));
@@ -216,6 +220,11 @@ const NAV_ITEMS = [
   {
     to: '/organizer/payouts',
     label: '💰 Payouts',
+    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
+  },
+  {
+    to: '/organizer/settings',
+    label: '🔧 Organizer Settings',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
   },
   {
@@ -440,6 +449,7 @@ function App() {
                <Route path="accessibility" element={<AccessibilitySettingsPage />} />
                <Route path="language" element={<LanguagePreferencePage />} />
                <Route path="device-localization" element={<DeviceLocalizationSyncPage />} />
+               <Route path="payment-methods" element={<PaymentMethodsPage />} />
                <Route path="*" element={<Navigate to="/settings" replace />} />
              </Route>
             <Route path="/events/category/:categoryId" element={<CategoryBrowsePage />} />
@@ -452,6 +462,21 @@ function App() {
               <Route index element={<UserDashboardPage />} />
             </Route>
             <Route path="/organizer/payouts" element={<ProtectedRoute requiredRole="organizer"><OrganizerPayoutDashboardPage /></ProtectedRoute>} />
+            <Route
+              path="/organizer/settings"
+              element={
+                <ProtectedRoute
+                  requiredRole="organizer"
+                  deniedPage={<AccessDeniedPage title="Access Denied" message="Only organizers can access organizer settings." />}
+                >
+                  <OrganizerSettingsLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<OrganizerSettingsPage />} />
+              <Route path="payments" element={<OrganizerPaymentSettingsPage />} />
+              <Route path="*" element={<Navigate to="/organizer/settings" replace />} />
+            </Route>
             <Route path="/developer" element={<ProtectedRoute requiredRole="organizer" deniedPage={<AccessDeniedPage title="Access Denied" message="Only organizers can access the developer portal." />}><DeveloperPortalPage /></ProtectedRoute>} />
             <Route path="/organizer/events" element={<ProtectedRoute requiredRole="organizer"><OrganizerEventListPage /></ProtectedRoute>} />
             <Route path="/organizer/events/create" element={<ProtectedRoute requiredRole="organizer"><EventCreatePage /></ProtectedRoute>} />

@@ -219,8 +219,8 @@ const OrganizerProfileEditPage = () => {
               onChange={handleInputChange}
               className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             >
-              <option value="true">Stripe</option>
-              <option value="false">PayPal</option>
+              <option value="true">Paystack</option>
+              <option value="false">Flutterwave</option>
             </select>
           </div>
           <div>

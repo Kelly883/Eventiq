@@ -124,3 +124,120 @@ test.describe('Settings pages navigation and authentication', () => {
     expect(page.url()).toContain('/settings/device-localization');
   });
 });
+
+test.describe('Payment methods settings navigation', () => {
+  test.beforeEach(async ({ context }) => {
+    await context.addInitScript(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+    });
+  });
+
+  test('settings menu contains a Payment Methods link', async ({ page }) => {
+    await loginViaUi(page, 'attendee@eventiq.test', 'password');
+    await page.goto(`${BASE_URL}/settings`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(2000);
+
+    const paymentMethodsLink = page.locator('nav a[href="/settings/payment-methods"]');
+    await expect(paymentMethodsLink).toBeVisible({ timeout: 30000 });
+  });
+
+  test('clicking Payment Methods navigates to /settings/payment-methods', async ({ page }) => {
+    await loginViaUi(page, 'attendee@eventiq.test', 'password');
+    await page.goto(`${BASE_URL}/settings`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(2000);
+
+    const paymentMethodsLink = page.locator('nav a[href="/settings/payment-methods"]');
+    await expect(paymentMethodsLink).toBeVisible({ timeout: 30000 });
+    await paymentMethodsLink.click();
+    await page.waitForTimeout(2000);
+
+    expect(page.url()).toContain('/settings/payment-methods');
+  });
+
+  test('payment methods page shows Paystack and Flutterwave gateways', async ({ page }) => {
+    await loginViaUi(page, 'attendee@eventiq.test', 'password');
+    await page.goto(`${BASE_URL}/settings/payment-methods`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(2000);
+    expect(page.url()).toContain('/settings/payment-methods');
+
+    await expect(page.locator('text=Paystack').first()).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('text=Flutterwave').first()).toBeVisible({ timeout: 30000 });
+  });
+
+  test('back button on payment methods returns to settings', async ({ page }) => {
+    await loginViaUi(page, 'attendee@eventiq.test', 'password');
+    await page.goto(`${BASE_URL}/settings`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(2000);
+
+    const paymentMethodsLink = page.locator('nav a[href="/settings/payment-methods"]');
+    await paymentMethodsLink.click();
+    await page.waitForTimeout(2000);
+    expect(page.url()).toContain('/settings/payment-methods');
+
+    await page.click('a[href="/settings"]');
+    await page.waitForTimeout(2000);
+    expect(page.url()).toContain('/settings');
+  });
+
+  test('logged-out /settings/payment-methods redirects to login', async ({ page }) => {
+    await page.goto(`${BASE_URL}/settings/payment-methods`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(2000);
+    expect(page.url()).toContain('/login');
+  });
+});
+
+test.describe('Organizer payment settings navigation', () => {
+  test.beforeEach(async ({ context }) => {
+    await context.addInitScript(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+    });
+  });
+
+  test('organizer settings menu contains a Payment Settings link', async ({ page }) => {
+    await loginViaUi(page, 'organizer@eventiq.test', 'password');
+    await page.goto(`${BASE_URL}/organizer/settings`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(2000);
+
+    const paymentSettingsLink = page.locator('nav a[href="/organizer/settings/payments"]');
+    await expect(paymentSettingsLink).toBeVisible({ timeout: 30000 });
+  });
+
+  test('clicking Payment Settings navigates to /organizer/settings/payments', async ({ page }) => {
+    await loginViaUi(page, 'organizer@eventiq.test', 'password');
+    await page.goto(`${BASE_URL}/organizer/settings`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(2000);
+
+    const paymentSettingsLink = page.locator('nav a[href="/organizer/settings/payments"]');
+    await expect(paymentSettingsLink).toBeVisible({ timeout: 30000 });
+    await paymentSettingsLink.click();
+    await page.waitForTimeout(2000);
+
+    expect(page.url()).toContain('/organizer/settings/payments');
+  });
+
+  test('organizer payment settings page shows Paystack and Flutterwave gateways', async ({ page }) => {
+    await loginViaUi(page, 'organizer@eventiq.test', 'password');
+    await page.goto(`${BASE_URL}/organizer/settings/payments`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(2000);
+    expect(page.url()).toContain('/organizer/settings/payments');
+
+    await expect(page.locator('text=Paystack').first()).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('text=Flutterwave').first()).toBeVisible({ timeout: 30000 });
+  });
+
+  test('non-organizer is denied access to /organizer/settings/payments', async ({ page }) => {
+    await loginViaUi(page, 'attendee@eventiq.test', 'password');
+    await page.goto(`${BASE_URL}/organizer/settings/payments`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(2000);
+
+    await expect(page.locator('text=Access Denied').first()).toBeVisible({ timeout: 30000 });
+  });
+
+  test('logged-out /organizer/settings/payments redirects to login', async ({ page }) => {
+    await page.goto(`${BASE_URL}/organizer/settings/payments`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(2000);
+    expect(page.url()).toContain('/login');
+  });
+});

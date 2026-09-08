@@ -8,7 +8,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Applies to API routes and Sanctum's stateful CSRF cookie route so the
-    | Vite-served React frontend (localhost:5173 in dev) can call this API.
+    | Vite-served React frontend (localhost:3000 in dev) can call this API.
     |
     */
 
@@ -17,8 +17,8 @@ return [
     'allowed_methods' => ['*'],
 
     // Comma-separated list in CORS_ALLOWED_ORIGINS, e.g.
-    // "http://localhost:5173,https://app.eventiq.example"
-    'allowed_origins' => array_filter(explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173'))),
+    // "http://localhost:3000,https://app.eventiq.example"
+    'allowed_origins' => array_filter(explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:3000'))),
 
     'allowed_origins_patterns' => [],
 

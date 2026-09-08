@@ -20,7 +20,7 @@ class UpdateSettlementPolicyRequest extends FormRequest
             'payout_frequency' => ['required', 'string', 'in:daily,weekly,biweekly,monthly,manual'],
             'minimum_payout_amount' => ['required', 'numeric', 'min:0'],
             'payment_methods' => ['sometimes', 'array'],
-            'payment_methods.*' => ['string', 'in:bank_transfer,paypal,stripe,check'],
+            'payment_methods.*' => ['string', 'in:bank_transfer,paystack,flutterwave'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

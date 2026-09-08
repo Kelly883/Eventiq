@@ -7,6 +7,12 @@ const TABS = [
   { id: 'api-logs', label: 'API Logs' },
 ];
 
+const TAB_HINTS = {
+  'api-keys': 'Create a key, then send it in the Authorization: Bearer header to read your events, orders, and tickets over the Eventiq API.',
+  webhooks: 'Subscribe one of your endpoint URLs to events — Eventiq sends a JSON POST whenever one of them happens.',
+  'api-logs': 'See which requests your API keys have made, whether they succeeded, and when.',
+};
+
 const EVENTS = [
   'order.created',
   'order.updated',
@@ -20,11 +26,17 @@ const EVENTS = [
 ];
 
 const SCOPES = [
-  'events:read',
+  { name: 'events:read', description: 'Read your events and their ticketing setup.' },
+  { name: 'orders:read', description: 'Read orders and sales activity.' },
+  { name: 'tickets:read', description: 'Read issued tickets and check-in status.' },
+];
+
+// Write scopes have no effect yet: the REST v1 and GraphQL surfaces are
+// read-only today. They stay visible so the vocabulary is discoverable,
+// but they cannot be granted until a mutation surface ships.
+const RESERVED_SCOPES = [
   'events:write',
-  'orders:read',
   'orders:write',
-  'tickets:read',
   'tickets:write',
 ];
 
@@ -243,6 +255,11 @@ const DeveloperPortalPage = () => {
           ))}
         </div>
 
+        <div className="mb-6 rounded-lg border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-sm leading-relaxed text-indigo-900">
+          <span className="font-semibold">How it works: </span>
+          {TAB_HINTS[activeTab]}
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center min-h-[40vh]">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-100 border-t-indigo-600"></div>
@@ -255,6 +272,10 @@ const DeveloperPortalPage = () => {
                   <div>
                     <h2 className="text-lg font-bold text-slate-900">API Keys</h2>
                     <p className="text-sm text-slate-500">Personal access tokens for the public API.</p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Each key acts as your organizer account. There is no OAuth app authorization — to give a third-party
+                      service access, create a dedicated key for it and share that key.
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -286,11 +307,22 @@ const DeveloperPortalPage = () => {
                             )}
                           </div>
                           <div className="mt-1 flex flex-wrap gap-1.5">
-                            {(key.scopes || []).map((scope) => (
-                              <span key={scope} className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs font-medium rounded-full">
-                                {scope}
-                              </span>
-                            ))}
+                            {(key.scopes || []).map((scope) => {
+                              const reserved = RESERVED_SCOPES.includes(scope);
+                              return (
+                                <span
+                                  key={scope}
+                                  className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                    reserved
+                                      ? 'bg-slate-100 text-slate-400 line-through'
+                                      : 'bg-indigo-50 text-indigo-600'
+                                  }`}
+                                >
+                                  {scope}
+                                  {reserved && <span className="ml-1 normal-case not-italic no-underline">· reserved</span>}
+                                </span>
+                              );
+                            })}
                           </div>
                           <p className="mt-1 text-xs text-slate-400">Created {formatDate(key.created_at)}</p>
                         </div>
@@ -433,18 +465,44 @@ const DeveloperPortalPage = () => {
             </label>
             <div className="mt-4">
               <span className="text-sm font-semibold text-slate-700">Scopes</span>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {SCOPES.map((scope) => (
-                  <label key={scope} className="flex items-center gap-2 text-sm text-slate-700">
+              <div className="mt-2 space-y-2">
+                {SCOPES.map(({ name, description }) => (
+                  <label
+                    key={name}
+                    className={`flex items-start gap-2 rounded-lg border p-2.5 text-sm cursor-pointer ${
+                      newKeyScopes.includes(name) ? 'border-indigo-300 bg-indigo-50' : 'border-slate-200'
+                    }`}
+                  >
                     <input
                       type="checkbox"
-                      checked={newKeyScopes.includes(scope)}
-                      onChange={() => toggleScope(scope)}
+                      checked={newKeyScopes.includes(name)}
+                      onChange={() => toggleScope(name)}
+                      className="mt-0.5"
                     />
-                    <span className="font-mono">{scope}</span>
+                    <span>
+                      <span className="block font-mono text-slate-700">{name}</span>
+                      <span className="block text-xs text-slate-500">{description}</span>
+                    </span>
                   </label>
                 ))}
+                {RESERVED_SCOPES.map((name) => (
+                  <div
+                    key={name}
+                    title="Not available yet — the Eventiq API is read-only today."
+                    className="flex items-start gap-2 rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-sm opacity-60 cursor-not-allowed"
+                  >
+                    <input type="checkbox" disabled className="mt-0.5" aria-disabled="true" />
+                    <span>
+                      <span className="block font-mono text-slate-500">{name}</span>
+                      <span className="block text-xs text-slate-400">Coming soon</span>
+                    </span>
+                  </div>
+                ))}
               </div>
+              <p className="mt-2 text-xs text-slate-400">
+                The Eventiq API is read-only today. Write scopes are reserved for upcoming create/update
+                endpoints and cannot be granted yet.
+              </p>
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <button
@@ -522,6 +580,10 @@ const DeveloperPortalPage = () => {
             </label>
             <div className="mt-4">
               <span className="text-sm font-semibold text-slate-700">Subscribe to events</span>
+              <p className="mt-1 text-xs text-slate-400">
+                Eventiq POSTs a JSON payload to your URL whenever one of the selected events happens.
+                Payloads are signed with the webhook secret so your server can verify them.
+              </p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {EVENTS.map((eventName) => (
                   <label key={eventName} className="flex items-center gap-2 text-sm text-slate-700">

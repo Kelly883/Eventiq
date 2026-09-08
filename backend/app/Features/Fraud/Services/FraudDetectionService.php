@@ -418,9 +418,9 @@ class FraudDetectionService
 
             $detectionMethod = 'rule_based';
             if (!empty($event['provider']) && $event['provider'] === 'paystack') {
-                $detectionMethod = 'stripe_radar';
+                $detectionMethod = 'rule_based';
             } elseif (!empty($event['provider']) && $event['provider'] === 'flutterwave') {
-                $detectionMethod = 'sift_science';
+                $detectionMethod = 'rule_based';
             }
 
             $status = match ($decision) {

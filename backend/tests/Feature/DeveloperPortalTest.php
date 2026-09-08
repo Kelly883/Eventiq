@@ -126,6 +126,21 @@ class DeveloperPortalTest extends TestCase
         ]);
     }
 
+    public function test_creating_key_with_reserved_write_scope_is_rejected(): void
+    {
+        ['user' => $user] = $this->makeOrganizer();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/developer/api-keys', [
+                'name' => 'Write-scoped key',
+                'scopes' => ['events:read', 'events:write'],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', fn (string $message) => str_contains($message, 'cannot be granted'));
+
+        $this->assertDatabaseMissing('api_keys', ['name' => 'Write-scoped key']);
+    }
+
     public function test_organizer_can_revoke_their_api_key(): void
     {
         ['user' => $user, 'organizer' => $organizer] = $this->makeOrganizer();

@@ -29,8 +29,6 @@ export interface Transaction {
   readonly reference: string;
   readonly gatewayTransactionId?: string;
   readonly gatewayReference?: string;
-  readonly authorizationCode?: string;
-  readonly authorizationType?: string;
   readonly amount: number;
   readonly currency: string;
   readonly fees?: number;

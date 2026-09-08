@@ -19,7 +19,7 @@ class StorePayoutRequest extends FormRequest
             'settlement_policy_id' => ['required', 'exists:settlement_policies,id'],
             'amount' => ['required', 'numeric', 'min:0'],
             'currency' => ['sometimes', 'string', 'max:3'],
-            'payout_method' => ['required', 'string', 'in:bank_transfer,paypal,stripe,check'],
+            'payout_method' => ['required', 'string', 'in:bank_transfer,paystack,flutterwave'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'calculation' => ['sometimes', 'array'],
             'calculation.total_revenue' => ['required_with:calculation', 'numeric', 'min:0'],

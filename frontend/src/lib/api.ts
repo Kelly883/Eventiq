@@ -147,13 +147,6 @@ api.interceptors.response.use(
     const isFirstRetry = !originalConfig?._retry;
     originalConfig._retry = true;
 
-    // Show session expired toast
-    showToast(
-      'Session expired',
-      'Your session has ended. Please log in again.',
-      'warning'
-    );
-
     // If refreshing is already in progress, queue this request
     if (isRefreshing) {
       queuedRequests.push({

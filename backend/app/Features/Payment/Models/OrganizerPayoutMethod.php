@@ -20,6 +20,10 @@ class OrganizerPayoutMethod extends Model
         'is_default' => 'boolean',
     ];
 
+    protected $hidden = [
+        'account_number',
+    ];
+
     public function organizer(): BelongsTo
     {
         return $this->belongsTo(Organizer::class);
