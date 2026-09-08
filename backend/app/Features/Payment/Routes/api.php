@@ -42,10 +42,11 @@ Route::middleware('auth:sanctum')->prefix('user/payment-methods')->group(functio
     Route::post('/{id}/set-default', [PaymentMethodController::class, 'setDefault']);
 });
 
-// Organizer payment settings (auth + organizer role enforced)
+// Organizer payment settings (auth + organizer role enforced).
+// Read-only: gateway subaccount/recipient config + connect status are managed
+// through onboarding, not by the organizer. No writable endpoint is exposed.
 Route::middleware(['auth:sanctum', 'role:organizer'])->prefix('organizer/payment-settings')->group(function () {
     Route::get('/', [OrganizerPaymentSettingsController::class, 'index']);
-    Route::put('/', [OrganizerPaymentSettingsController::class, 'update']);
 });
 
 // User transaction history

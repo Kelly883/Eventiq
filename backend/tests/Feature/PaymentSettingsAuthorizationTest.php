@@ -69,6 +69,26 @@ class PaymentSettingsAuthorizationTest extends TestCase
             ->assertJsonMissing(['secret_key', 'private_key', 'api_secret']);
     }
 
+    public function test_organizer_cannot_self_assert_connect_status_or_write_payment_settings(): void
+    {
+        $user = $this->makeOrganizerUser();
+
+        $this->actingAs($user, 'sanctum')
+            ->putJson('/api/organizer/payment-settings', [
+                'paystack_connect_status' => 'enabled',
+                'paystack_subaccount_code' => 'SUB_SELF_ASSERTED',
+                'paystack_recipient_code' => 'RCP_SELF_ASSERTED',
+            ])
+            ->assertStatus(405);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/organizer/payment-settings')
+            ->assertOk()
+            ->assertJsonPath('paystackConnectStatus', 'enabled')
+            ->assertJsonPath('paystackSubaccountCode', 'SUB_TEST_0001')
+            ->assertJsonPath('paystackRecipientCode', 'RCP_TEST_0001');
+    }
+
     public function test_guest_cannot_access_payout_methods(): void
     {
         $this->getJson('/api/organizer/payout-methods')->assertUnauthorized();
