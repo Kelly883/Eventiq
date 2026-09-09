@@ -28,13 +28,23 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Generic auth throttle for register/reset (less strict than login/forgot).
+        // Bumped from 5 to 10/min to avoid false 429s during normal user flows
+        // (register→login→forgot→reset) on file cache in production.
         RateLimiter::for('auth', function ($request) {
-            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
         });
 
-        // Login: 5 attempts per 15 minutes per IP (brute-force protection).
+        // Login: 5 attempts per 15 minutes per IP + 10 per 15m per email.
+        // The per-email limit prevents distributed brute-force (botnet rotating
+        // IPs against a single account). Both must pass (array).
         RateLimiter::for('login', function ($request) {
-            return Limit::perMinutes(15, 5)->by($request->ip());
+            $email = strtolower((string) $request->input('email', ''));
+            $emailKey = $email !== '' ? 'login_email_' . sha1($email) : 'login_email_unknown';
+            return [
+                Limit::perMinutes(15, 5)->by($request->ip()),
+                Limit::perMinutes(15, 10)->by($emailKey),
+            ];
         });
 
         // Forgot-password: 3 requests per hour per IP (abuse prevention), plus

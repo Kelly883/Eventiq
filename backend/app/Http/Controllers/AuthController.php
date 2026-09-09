@@ -8,6 +8,7 @@ use App\Models\PasswordResetToken;
 use App\Models\Session;
 use App\Models\User;
 use App\Notifications\ResetPassword as ResetPasswordNotification;
+use App\Services\CaptchaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -27,17 +28,67 @@ class AuthController extends Controller
         $validated = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
+            'captcha_token' => ['nullable', 'string'],
         ]);
+
+        // CAPTCHA after 2 failures in 15m (per IP or per email) when enabled.
+        // Frontend should show Turnstile widget when it receives 428 or
+        // when /auth/login returns `captcha_required: true`.
+        $ip = $request->ip();
+        $emailForCaptcha = strtolower((string) ($validated['email'] ?? ''));
+        if (CaptchaService::shouldChallenge($ip, $emailForCaptcha)) {
+            $token = $validated['captcha_token'] ?? $request->input('captcha_token');
+            if (!CaptchaService::verify($token, $ip)) {
+                return response()->json([
+                    'message' => 'Captcha verification required',
+                    'captcha_required' => true,
+                ], 428);
+            }
+        }
 
         $user = User::where('email', $validated['email'])->first();
 
-        // Constant-time comparison; same message whether email or password is wrong
-        // so the response never reveals which field was incorrect.
-        if (!$user || !Hash::check($validated['password'], $user->passwordHash)) {
+        // Mitigate timing-based email enumeration: always perform a bcrypt
+        // verification even when the user does not exist, so response time is
+        // uniform (~400ms) whether the email is unknown or the password is wrong.
+        // The dummy hash is a valid bcrypt hash with cost 12, never matches any input.
+        $dummyHash = '$2y$12$Mi6thFWFFYdofMs3jpA8PuRAekPRX3ywiZsv/27opJnbbTprjLnh2';
+        $hashToCheck = $user ? $user->passwordHash : $dummyHash;
+        $passwordValid = Hash::check($validated['password'], $hashToCheck);
+
+        if (!$user || !$passwordValid) {
+            // Record failure for CAPTCHA + throttle. Do not clear on non-existent user
+            // to avoid leaking, but still count per-IP to slow enumeration.
+            CaptchaService::recordFailure($ip, $emailForCaptcha);
             return response()->json(['message' => 'Invalid email or password'], 401);
         }
 
+        // Success → clear failure counters so legitimate user is not challenged.
+        CaptchaService::clearFailures($ip, $emailForCaptcha);
+
+        // Prevent suspended/disabled accounts from obtaining new sessions.
+        // Keep the same generic 401 message to avoid revealing account status,
+        // but distinguish with 403 if caller is auditing; we choose 403 with
+        // a neutral message for compliance and monitoring.
+        if (($user->status ?? 'active') !== 'active') {
+            return response()->json(['message' => 'Account is not active'], 403);
+        }
+
         $plainToken = Str::random(64);
+
+        // Cap active sessions per user to prevent unbounded growth / DoS.
+        // Keep the 5 most recent active sessions, revoke the oldest excess.
+        $activeCount = $user->sessions()->whereNull('revokedAt')->where('expiresAt', '>', now())->count();
+        if ($activeCount >= 5) {
+            $excess = $activeCount - 4; // make room for the new one
+            $oldestIds = $user->sessions()
+                ->whereNull('revokedAt')
+                ->where('expiresAt', '>', now())
+                ->orderBy('createdAt')
+                ->limit($excess)
+                ->pluck('id');
+            $user->sessions()->whereIn('id', $oldestIds)->update(['revokedAt' => now()]);
+        }
 
         Session::create([
             'userId' => $user->id,
@@ -73,16 +124,28 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:8'],
         ]);
 
+        // Use a DB unique constraint as the source of truth to avoid a race
+        // where two concurrent requests both pass the exists() check.
+        // We keep the fast pre-check for the common case (nice 409), but
+        // catch a duplicate-key exception for the race condition.
         if (User::where('email', $validated['email'])->exists()) {
             return response()->json(['message' => 'This email is already registered'], 409);
         }
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'passwordHash' => Hash::make($validated['password'], ['rounds' => 12]),
-            'role' => 'attendee',
-        ]);
+        try {
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'passwordHash' => Hash::make($validated['password']),
+                'role' => 'attendee',
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // SQLSTATE 23000 = integrity constraint violation (unique index)
+            if (str_contains($e->getMessage(), 'users_email_unique') || $e->getCode() === '23000') {
+                return response()->json(['message' => 'This email is already registered'], 409);
+            }
+            throw $e;
+        }
 
         return response()->json([
             'id' => $user->id,
@@ -112,7 +175,7 @@ class AuthController extends Controller
 
             PasswordResetToken::create([
                 'userId' => $user->id,
-                'token' => Hash::make($plainToken, ['rounds' => 12]),
+                'token' => Hash::make($plainToken),
                 'token_hash' => hash('sha256', $plainToken),
                 'expiresAt' => now()->addHour(),
             ]);
@@ -138,42 +201,47 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $validated = $request->validate([
-            'token' => ['required'],
+            'token' => ['required', 'string', 'max:256'],
             'newPassword' => ['required', 'string', 'min:8'],
         ]);
 
         $plainToken = $validated['token'];
         $tokenHash = hash('sha256', $plainToken);
 
-        // Wrap in a transaction with row locking to prevent concurrent reuse.
-        $resetToken = DB::transaction(function () use ($plainToken, $tokenHash) {
-            // O(1) lookup via the deterministic sha-256 hash, then lock the row.
+        // Atomic transaction: mark token used, rotate password, and revoke
+        // sessions together. If any step fails the token remains unused.
+        $result = DB::transaction(function () use ($plainToken, $tokenHash, $validated) {
             $token = PasswordResetToken::where('token_hash', $tokenHash)
                 ->whereNull('usedAt')
                 ->where('expiresAt', '>', now())
                 ->lockForUpdate()
                 ->first();
 
-            // Verify against the bcrypt hash before trusting the lookup.
             if (! $token || ! Hash::check($plainToken, $token->token)) {
                 return null;
             }
 
-            // Mark as used inside the same transaction so concurrent requests
-            // that pass the lock see the updated state.
             $token->update(['usedAt' => now()]);
+
+            $user = $token->user;
+            // Defensive: token may point to a deleted user
+            if (!$user) {
+                return null;
+            }
+
+            $user->update(['passwordHash' => Hash::make($validated['newPassword'])]);
+            $user->invalidateAllSessions();
+            // Also revoke Sanctum personal access tokens (if any)
+            if (method_exists($user, 'tokens')) {
+                $user->tokens()->delete();
+            }
 
             return $token;
         });
 
-        if (! $resetToken) {
+        if (! $result) {
             return response()->json(['message' => 'This link has expired or is invalid'], 400);
         }
-
-        $user = $resetToken->user;
-
-        $user->update(['passwordHash' => Hash::make($validated['newPassword'], ['rounds' => 12])]);
-        $user->invalidateAllSessions();
 
         return response()->json(['message' => 'Password reset successfully']);
     }

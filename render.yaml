@@ -75,6 +75,16 @@ services:
         sync: false
       - key: MJML_ENABLED
         value: false
+      - key: TRUSTED_PROXIES
+        value: "*"
+      - key: HASH_DRIVER
+        value: bcrypt
+      - key: BCRYPT_ROUNDS
+        value: 12
+      - key: TURNSTILE_ENABLED
+        value: false
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
 
   # Frontend (React SPA)
   - type: static

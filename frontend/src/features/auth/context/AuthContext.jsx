@@ -263,9 +263,11 @@ export const AuthProvider = ({ children }) => {
     };
   }, [fetchCurrentUser]);
 
-  const login = useCallback(async (email, password, rememberMe = false) => {
+  const login = useCallback(async (email, password, rememberMe = false, captchaToken = null) => {
     await refreshCsrf();
-    const response = await api.post('/auth/login', { email, password, remember_me: rememberMe });
+    const payload = { email, password, remember_me: rememberMe };
+    if (captchaToken) payload.captcha_token = captchaToken;
+    const response = await api.post('/auth/login', payload);
 
     localStorage.setItem(REMEMBER_ME_KEY, rememberMe ? 'true' : '');
 

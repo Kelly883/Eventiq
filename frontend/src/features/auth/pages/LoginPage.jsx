@@ -13,6 +13,8 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuthContext();
@@ -49,13 +51,35 @@ const LoginPage = () => {
     }
   }, [sessionExpiredReturn]);
 
+  // Load Turnstile when challenged
+  useEffect(() => {
+    if (!captchaRequired) return;
+    const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    if (!siteKey) return; // dev with TURNSTILE_ENABLED=false
+    if (document.querySelector('script[src*="challenges.cloudflare.com/turnstile"]')) return;
+    const s = document.createElement('script');
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    s.async = true;
+    s.defer = true;
+    document.head.appendChild(s);
+  }, [captchaRequired]);
+
+  useEffect(() => {
+    window.onTurnstileCallback = (token) => setCaptchaToken(token);
+    window.onTurnstileExpired = () => setCaptchaToken('');
+    return () => {
+      delete window.onTurnstileCallback;
+      delete window.onTurnstileExpired;
+    };
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      const { user: authenticatedUser } = await login(email, password, rememberMe);
+      const { user: authenticatedUser } = await login(email, password, rememberMe, captchaToken || undefined);
       showToast('Session Extended', 'Your session will remain active.', 'info');
       const fromPath = normalizeFromPath(location.state?.from) || sessionExpiredReturn || null;
       const redirectTo = safeRedirectPath(
@@ -67,12 +91,25 @@ const LoginPage = () => {
     } catch (err) {
       if (err.response?.status === 419) {
         setError('Security token expired. Please refresh the page and try again.');
+      } else if (err.response?.status === 428) {
+        setCaptchaRequired(true);
+        setError('Please complete the captcha to continue.');
+        // Reset token so next submit forces a fresh challenge
+        setCaptchaToken('');
+        // Re-render Turnstile widget
+        if (window.turnstile) {
+          try { window.turnstile.reset(); } catch { /* ignore */ }
+        }
       } else {
         setError(
           err.response?.data?.message ||
           err.message ||
           'Invalid email or password.'
         );
+        // If backend ever returns 429 for login throttle, also show captcha next time
+        if (err.response?.status === 429 && err.response?.data?.captcha_required) {
+          setCaptchaRequired(true);
+        }
       }
     } finally {
       setLoading(false);
@@ -175,9 +212,32 @@ const LoginPage = () => {
               Keep me signed in on this device
             </label>
 
+            {captchaRequired && (
+              <div className="login-page__captcha" style={{ margin: '12px 0' }}>
+                {import.meta.env.VITE_TURNSTILE_SITE_KEY ? (
+                  <div
+                    className="cf-turnstile"
+                    data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                    data-callback="onTurnstileCallback"
+                    data-expired-callback="onTurnstileExpired"
+                  />
+                ) : (
+                  <p style={{ fontSize: 12, color: '#666' }}>
+                    Captcha required after 2 fails (dev: set <code>TURNSTILE_ENABLED=false</code> to disable, or set <code>VITE_TURNSTILE_SITE_KEY</code> for prod).
+                    <input
+                      placeholder="dev captcha_token"
+                      value={captchaToken}
+                      onChange={(e) => setCaptchaToken(e.target.value)}
+                      style={{ display: 'block', marginTop: 8, width: '100%' }}
+                    />
+                  </p>
+                )}
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (captchaRequired && import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)}
               className="login-page__submit"
             >
               {loading && <span aria-hidden="true" className="login-page__spinner" />}

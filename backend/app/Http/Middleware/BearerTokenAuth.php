@@ -40,19 +40,28 @@ class BearerTokenAuth
         if (str_starts_with($header, 'Bearer ')) {
             $plainToken = substr($header, 7);
 
-            if ($plainToken !== '' && $plainToken !== '0') {
-                $session = Session::where('token', hash('sha256', $plainToken))
-                    ->whereNull('revokedAt')
-                    ->where('expiresAt', '>', now())
-                    ->first();
+            // Reject abnormally long tokens before hashing to avoid DoS
+            // (10MB token → hash + DB lookup). Legit tokens are 64 chars.
+            if ($plainToken === '' || $plainToken === '0' || strlen($plainToken) > 256) {
+                return response()->json(['message' => 'Unauthorized'], 401);
+            }
 
-                if ($session) {
-                    $user = $session->user;
-                    $request->setUserResolver(fn () => $user);
-                    $request->attributes->set('auth_session', $session);
+            // Avoid logging the plain token; hash is safe to query.
+            if (strlen($plainToken) < 32) {
+                return response()->json(['message' => 'Unauthorized'], 401);
+            }
 
-                    return $next($request);
-                }
+            $session = Session::where('token', hash('sha256', $plainToken))
+                ->whereNull('revokedAt')
+                ->where('expiresAt', '>', now())
+                ->first();
+
+            if ($session) {
+                $user = $session->user;
+                $request->setUserResolver(fn () => $user);
+                $request->attributes->set('auth_session', $session);
+
+                return $next($request);
             }
         }
 
