@@ -32,6 +32,25 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Login: 5 attempts per 15 minutes per IP (brute-force protection).
+        RateLimiter::for('login', function ($request) {
+            return Limit::perMinutes(15, 5)->by($request->ip());
+        });
+
+        // Forgot-password: 3 requests per hour per IP (abuse prevention), plus
+        // 5 requests per hour per email to slow distributed attacks that
+        // rotate IPs while targeting a single address. Returning an array of
+        // Limit objects applies every constraint (all must pass).
+        RateLimiter::for('forgot-password', function ($request) {
+            $email = (string) $request->input('email', '');
+            $emailKey = $email !== '' ? 'email_' . sha1(strtolower($email)) : 'email_unknown';
+
+            return [
+                Limit::perMinutes(60, 3)->by($request->ip()),
+                Limit::perMinutes(60, 5)->by($emailKey),
+            ];
+        });
+
         // event-ticketing-prd-export: EventBrowsePage and CategoryBrowsePage
         // both explicitly specify "Rate limit 30/min per IP to prevent
         // scraping" under SECURITY. Always by IP specifically, not

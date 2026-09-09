@@ -42,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => App\Http\Middleware\CheckRole::class,
             'api.key' => App\Http\Middleware\ApiKeyMiddleware::class,
             'session.auth' => App\Http\Middleware\ValidateSessionToken::class,
+            'bearer' => App\Http\Middleware\BearerTokenAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

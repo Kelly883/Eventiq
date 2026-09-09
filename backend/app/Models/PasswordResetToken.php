@@ -22,6 +22,7 @@ class PasswordResetToken extends Model
         'id',
         'userId',
         'token',
+        'token_hash',
         'expiresAt',
         'usedAt',
         'createdAt',
