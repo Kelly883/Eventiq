@@ -47,10 +47,9 @@ class AuthControllerTest extends TestCase
     {
         $response = $this->postJson('/api/auth/register', $this->registerPayload());
 
-        $response->assertStatus(201)
-            ->assertJsonPath('email', 'jane@example.test')
-            ->assertJsonPath('role', 'attendee')
-            ->assertJsonStructure(['id', 'email', 'name', 'role']);
+        // Generic 200 to avoid enumeration (same as duplicate case) — no user object returned
+        $response->assertOk()
+            ->assertJsonPath('message', 'If this email is not already registered, an account has been created. Please check your email to continue.');
 
         $this->assertDatabaseHas('users', [
             'email' => 'jane@example.test',
@@ -64,11 +63,12 @@ class AuthControllerTest extends TestCase
 
         $this->assertArrayNotHasKey('passwordHash', $response->json());
         $this->assertArrayNotHasKey('password', $response->json());
+        $this->assertArrayNotHasKey('id', $response->json());
     }
 
     public function test_register_does_not_issue_a_token(): void
     {
-        $this->postJson('/api/auth/register', $this->registerPayload())->assertStatus(201);
+        $this->postJson('/api/auth/register', $this->registerPayload())->assertOk();
         $this->assertDatabaseCount('sessions', 0);
     }
 
@@ -78,8 +78,12 @@ class AuthControllerTest extends TestCase
 
         $response = $this->postJson('/api/auth/register', $this->registerPayload());
 
-        $response->assertStatus(409)
-            ->assertJsonPath('message', 'This email is already registered');
+        // 409 would leak existence — now generic 200 same as success (timing equalized via dummy Hash::make)
+        $response->assertOk()
+            ->assertJsonPath('message', 'If this email is not already registered, an account has been created. Please check your email to continue.');
+
+        // Still only one user — second create was not inserted (unique index + generic handling)
+        $this->assertEquals(1, User::where('email', 'jane@example.test')->count());
     }
 
     public function test_register_rejects_short_password(): void

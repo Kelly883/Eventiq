@@ -112,9 +112,12 @@ class AuthController extends Controller
     /**
      * POST /api/auth/register
      *
-     * Validates input, rejects duplicate email with 409, hashes the password
-     * with bcrypt (cost 12), and creates an attendee. Returns 201 with the
-     * public user fields only — no token, no password hash.
+     * Validates input, hashes the password with bcrypt (cost 12), and creates
+     * an attendee. To prevent email enumeration (409 leaks existence vs
+     * login/forgot generic), always returns a generic 200 whether the email
+     * already exists or was just created — same status, body and timing.
+     * Uses a dummy Hash::make on the exists path to equalize bcrypt timing
+     * (~400ms) so an attacker cannot distinguish via response time.
      */
     public function register(Request $request)
     {
@@ -124,12 +127,14 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:8'],
         ]);
 
-        // Use a DB unique constraint as the source of truth to avoid a race
-        // where two concurrent requests both pass the exists() check.
-        // We keep the fast pre-check for the common case (nice 409), but
-        // catch a duplicate-key exception for the race condition.
+        // Generic message used for both cases to avoid enumeration
+        $genericMessage = 'If this email is not already registered, an account has been created. Please check your email to continue.';
+
+        // Fast pre-check — but do not return 409. Use same timing as creation.
         if (User::where('email', $validated['email'])->exists()) {
-            return response()->json(['message' => 'This email is already registered'], 409);
+            // Equalize timing: Hash::make is ~400ms, matches creation path
+            Hash::make($validated['password']);
+            return response()->json(['message' => $genericMessage], 200);
         }
 
         try {
@@ -141,19 +146,16 @@ class AuthController extends Controller
                 'role' => 'attendee',
             ]));
         } catch (\Illuminate\Database\QueryException $e) {
-            // SQLSTATE 23000 = integrity constraint violation (unique index)
+            // Race: two concurrent creates for same email — second hits unique index
             if (str_contains($e->getMessage(), 'users_email_unique') || $e->getCode() === '23000') {
-                return response()->json(['message' => 'This email is already registered'], 409);
+                Hash::make($validated['password']); // keep timing uniform
+                return response()->json(['message' => $genericMessage], 200);
             }
             throw $e;
         }
 
-        return response()->json([
-            'id' => $user->id,
-            'email' => $user->email,
-            'name' => $user->name,
-            'role' => $user->role,
-        ], 201);
+        // Do not return user object — that would leak existence via body difference
+        return response()->json(['message' => $genericMessage], 200);
     }
 
     /**

@@ -288,17 +288,16 @@ export const AuthProvider = ({ children }) => {
 
   const register = useCallback(async (email, password, name, passwordConfirmation = null) => {
     await refreshCsrf();
-    await api.post('/auth/register', {
+    const res = await api.post('/auth/register', {
       email,
       password,
       password_confirmation: passwordConfirmation ?? password,
       name,
     });
+    // Register now returns generic 200 to avoid email enumeration (same
+    // response whether email existed or was created). Do not auto-login;
+    // caller should redirect to /login with the generic message.
     localStorage.removeItem(REMEMBER_ME_KEY);
-    const res = await api.get('/auth/me');
-    setUser(res.data);
-    setSessionExpired(false);
-    broadcastAuthEvent('session-established');
     return res.data;
   }, []);
 

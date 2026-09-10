@@ -38,11 +38,15 @@ const RegisterPage = () => {
     setError('');
 
     try {
-      await register(email, password, name, passwordConfirm);
-      navigate('/login', { state: { message: 'Account created successfully. Please log in.', messageType: 'success' } });
+      const res = await register(email, password, name, passwordConfirm);
+      // Backend returns generic message to avoid enumeration — same whether
+      // email was new or already existed
+      const msg = res?.message || 'If this email is not already registered, an account has been created. Please check your email to continue.';
+      navigate('/login', { state: { message: msg, messageType: 'success' } });
     } catch (err) {
       setError(
         err.response?.data?.message ||
+        err.response?.data?.errors?.email?.[0] ||
         err.message ||
         'Failed to create account.'
       );

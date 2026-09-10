@@ -14,6 +14,7 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('tickets:expire-qr-codes')->daily();
         $schedule->command('push:prune-inactive')->daily();
+        $schedule->command('auth:prune-expired-tokens --days=7')->daily();
     }
 
     /**
