@@ -63,6 +63,12 @@ class UserManagementController extends Controller
         $search = $validated['search'] ?? null;
 
         try {
+            // Escape LIKE wildcards to prevent wildcard injection, but keep
+            // literal '_' searches working (e.g., 'john_search'). Use ESCAPE '\'
+            // so DB treats '\%' and '\_' as literals. Fallback to plain LIKE if
+            // DB driver does not support ESCAPE.
+            $escapedSearch = $search !== null ? str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $search) : null;
+
             $query = User::query()
                 ->with(['roles', 'permissions', 'roleRelation'])
                 ->when($roleFilter, function ($q) use ($roleFilter) {
@@ -73,10 +79,12 @@ class UserManagementController extends Controller
                             ->orWhereHas('roleRelation', fn($r) => $r->where('name', $roleFilter));
                     });
                 })
-                ->when($search, function ($q) use ($search) {
-                    $q->where(function ($qq) use ($search) {
-                        $qq->where('email', 'like', "%{$search}%")
-                            ->orWhere('name', 'like', "%{$search}%");
+                ->when($escapedSearch, function ($q) use ($escapedSearch) {
+                    $q->where(function ($qq) use ($escapedSearch) {
+                        // Use raw with ESCAPE so '\%' and '\_' are treated correctly in SQLite/Postgres/MySQL
+                        $like = "%{$escapedSearch}%";
+                        $qq->whereRaw("email LIKE ? ESCAPE '\\'", [$like])
+                            ->orWhereRaw("name LIKE ? ESCAPE '\\'", [$like]);
                     });
                 })
                 ->orderByDesc('created_at');
@@ -188,22 +196,17 @@ class UserManagementController extends Controller
                         'role_id' => $role->id,
                         'role' => $role->name,
                     ]);
-                    // Sync roles pivot (keep single role model consistent)
-                    $user->roles()->syncWithoutDetaching([$role->id]);
-                    // For non-admin roles, ensure admin role is removed if demoting
-                    if (strtolower($role->name) !== 'admin') {
-                        $adminRoleIds = Role::where('name', 'admin')->pluck('id');
-                        if ($adminRoleIds->isNotEmpty()) {
-                            // Only detach admin role if target is not admin role
-                            $otherAdminRoles = $adminRoleIds->diff([$role->id]);
-                            if ($otherAdminRoles->isNotEmpty()) {
-                                $user->roles()->detach($otherAdminRoles);
-                            }
-                        }
-                    }
+                    // Enforce single-role invariant: replace all roles with the new one.
+                    // Use sync to atomically remove stale pivot rows that would otherwise
+                    // accumulate across repeated assignments (e.g., organizer -> moderator
+                    // would leave both rows and cause hasRole checks to be ambiguous).
+                    $user->roles()->sync([$role->id]);
 
-                    // Invalidate sessions
+                    // Invalidate sessions — both custom sessions and Sanctum PATs
                     $user->invalidateAllSessions();
+                    if (method_exists($user, 'tokens')) {
+                        $user->tokens()->delete();
+                    }
 
                     // Audit log
                     $this->auditLogService->log(
@@ -307,6 +310,7 @@ class UserManagementController extends Controller
                 $user->load(['permissions', 'roles']);
                 $permsRelation = $user->getRelation('permissions');
                 $oldPerms = $permsRelation->pluck('id')->map(fn($v) => (string) $v)->toArray();
+                $newIdStrs = $permissions->pluck('id')->map(fn($v) => (string) $v)->toArray();
 
                 if ($action === 'grant') {
                     $user->permissions()->syncWithoutDetaching($permissions->pluck('id'));
@@ -314,25 +318,25 @@ class UserManagementController extends Controller
                     $user->permissions()->detach($permissions->pluck('id'));
                 }
 
-                $newPerms = $user->permissions()->pluck('id')->toArray();
-                // Calculate actually changed
+                $newPerms = $user->permissions()->pluck('id')->map(fn($v) => (string) $v)->toArray();
+                // Calculate actually changed using string-normalized ids for accurate diff
                 if ($action === 'grant') {
-                    $updated = count(array_diff($permissions->pluck('id')->toArray(), $oldPerms));
-                    // If all already had, still count as updated per spec? Use permission count
+                    $diff = array_diff($newIdStrs, $oldPerms);
+                    $updated = count($diff);
                     if ($updated === 0) {
-                        $updated = $permissions->count(); // idempotent
+                        $updated = $permissions->count(); // idempotent — already had perms
                     } else {
                         $updated = count(array_diff($newPerms, $oldPerms));
                     }
                 } else {
-                    $updated = count(array_intersect($oldPerms, $permissions->pluck('id')->toArray()));
-                    if ($updated === 0) {
-                        $updated = 0;
-                    }
+                    $updated = count(array_intersect($oldPerms, $newIdStrs));
                 }
 
-                // Invalidate sessions
+                // Invalidate sessions — both custom sessions and Sanctum PATs
                 $user->invalidateAllSessions();
+                if (method_exists($user, 'tokens')) {
+                    $user->tokens()->delete();
+                }
 
                 foreach ($permissions as $perm) {
                     $this->auditLogService->log(
@@ -404,11 +408,16 @@ class UserManagementController extends Controller
             $total = (clone $query)->count();
             $logs = $query->forPage($page, $limit)->get();
 
-            $mapped = $logs->map(function (AuditLog $log) {
-                // Resolve targetUser
+            // Batch-load target users to avoid N+1 (was User::find per log)
+            $targetIds = $logs->filter(fn($l) => $l->target_type === 'user' && $l->target_id)
+                ->pluck('target_id')->unique()->values();
+            $userMap = User::whereIn('id', $targetIds)->select('id','name','email')->get()->keyBy('id');
+
+            $mapped = $logs->map(function (AuditLog $log) use ($userMap) {
+                // Resolve targetUser via pre-loaded map
                 $targetUser = null;
                 if ($log->target_type === 'user' && $log->target_id) {
-                    $target = User::select('id', 'name', 'email')->find($log->target_id);
+                    $target = $userMap->get($log->target_id);
                     if ($target) {
                         $targetUser = ['id' => $target->id, 'name' => $target->name, 'email' => $target->email];
                     } else {

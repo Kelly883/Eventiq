@@ -20,22 +20,27 @@ Route::middleware(['auth:sanctum', 'role:admin', 'throttle:admin'])->prefix('adm
 // Step 137: User Role & Permission Management — 4 admin endpoints (spec)
 // All admin-only, IsAdmin middleware + Policy checks inside controller, 10/min per admin where noted
 // Uses `bearer` (handles both Sanctum cookie and Bearer token from POST /auth/login)
-Route::middleware(['bearer'])->prefix('admin')->group(function () {
-    Route::middleware(['isAdmin'])->group(function () {
-        // GET /api/admin/users/list — paginated users with roles/permissions
-        Route::get('/users/list', [\App\Http\Controllers\Admin\UserManagementController::class, 'listUsers'])
-            ->middleware('throttle:admin-users');
+// Throttle runs AFTER bearer (so it can key by user id) but BEFORE isAdmin
+// so even non-admin requests are rate-limited. An outer api throttle (60/min by IP)
+// also applies before bearer to stop unauthenticated floods from bypassing.
+Route::middleware(['throttle:api', 'bearer'])->prefix('admin')->group(function () {
+    // GET /api/admin/users/list — paginated users with roles/permissions (10/min)
+    Route::middleware(['throttle:admin-users', 'isAdmin'])->group(function () {
+        Route::get('/users/list', [\App\Http\Controllers\Admin\UserManagementController::class, 'listUsers']);
+    });
 
-        // POST /api/admin/roles/assign — assign role to users (transactional, audit, session invalidation)
-        Route::post('/roles/assign', [\App\Http\Controllers\Admin\UserManagementController::class, 'assignRole'])
-            ->middleware('throttle:admin-roles-assign');
+    // POST /api/admin/roles/assign — assign role to users (10/min)
+    Route::middleware(['throttle:admin-roles-assign', 'isAdmin'])->group(function () {
+        Route::post('/roles/assign', [\App\Http\Controllers\Admin\UserManagementController::class, 'assignRole']);
+    });
 
-        // POST /api/admin/permissions/update — grant/revoke permissions (high-risk check)
-        Route::post('/permissions/update', [\App\Http\Controllers\Admin\UserManagementController::class, 'updatePermissions'])
-            ->middleware('throttle:admin-permissions');
+    // POST /api/admin/permissions/update — grant/revoke permissions (10/min)
+    Route::middleware(['throttle:admin-permissions', 'isAdmin'])->group(function () {
+        Route::post('/permissions/update', [\App\Http\Controllers\Admin\UserManagementController::class, 'updatePermissions']);
+    });
 
-        // GET /api/admin/audit-log/list — audit logs sorted desc, filtered
-        Route::get('/audit-log/list', [\App\Http\Controllers\Admin\UserManagementController::class, 'auditLogList'])
-            ->middleware('throttle:admin-audit-log');
+    // GET /api/admin/audit-log/list — audit logs sorted desc, filtered (general api limit: 60/min)
+    Route::middleware(['throttle:api', 'isAdmin'])->group(function () {
+        Route::get('/audit-log/list', [\App\Http\Controllers\Admin\UserManagementController::class, 'auditLogList']);
     });
 });
