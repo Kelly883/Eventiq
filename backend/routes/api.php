@@ -99,6 +99,7 @@ Route::middleware('bearer')->group(function () {
 
         // Organizer events
         Route::apiResource('events', EventController::class);
+        Route::post('events/{event}/upload-banner', [EventController::class, 'uploadBanner']);
 
         // Event ticketing
         Route::prefix('events/{event}')->group(function () {

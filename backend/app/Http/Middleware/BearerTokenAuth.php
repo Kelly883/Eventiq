@@ -28,6 +28,7 @@ class BearerTokenAuth
 
             if ($sanctumUser) {
                 $request->setUserResolver(fn () => $sanctumUser);
+                Auth::setUser($sanctumUser);
                 return $next($request);
             }
         } catch (\Throwable $e) {
@@ -68,6 +69,11 @@ class BearerTokenAuth
                 }
                 $request->setUserResolver(fn () => $user);
                 $request->attributes->set('auth_session', $session);
+                // Also set Auth guard user so Gate::authorize() (which uses Auth::user()) works
+                Auth::setUser($user);
+                try {
+                    Auth::guard('sanctum')->setUser($user);
+                } catch (\Throwable $e) {}
 
                 return $next($request);
             }
