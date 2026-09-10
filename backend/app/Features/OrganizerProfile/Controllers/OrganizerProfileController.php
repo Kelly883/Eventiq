@@ -10,6 +10,7 @@ use App\Features\OrganizerProfile\Requests\UpdateOrganizerProfileRequest;
 use App\Features\Compliance\Services\AuditLogService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -29,7 +30,7 @@ class OrganizerProfileController extends Controller
             return response()->json(['message' => 'Organizer not found'], 404);
         }
 
-        // isPublic false and requester is not the organizer → 404 (don't reveal)
+        // Manual isPublic check (policy also covers this, but keep explicit for clarity and to avoid Gate confusion with multiple Organizer policies)
         if (!$organizer->isPublic) {
             $user = $request->user();
             $ownerId = $organizer->user_id ?? $organizer->userId;
@@ -277,7 +278,8 @@ class OrganizerProfileController extends Controller
             };
             $userId = $user->id;
             $timestamp = time();
-            $path = "avatars/{$userId}/{$timestamp}.{$ext}";
+            $unique = \Illuminate\Support\Str::random(6);
+            $path = "avatars/{$userId}/{$timestamp}_{$unique}.{$ext}";
 
             // Resize to 400x400 using GD (sharp equivalent)
             $imageContent = file_get_contents($file->getRealPath());

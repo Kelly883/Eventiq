@@ -21,6 +21,7 @@ class AuthServiceProvider extends ServiceProvider
         Permission::class => PermissionPolicy::class,
         EmailTemplate::class => EmailTemplatePolicy::class,
         OrganizerProfile::class => OrganizerProfilePolicy::class,
+        \App\Models\Organizer::class => \App\Features\OrganizerProfile\Policies\OrganizerProfilePolicy::class,
         ApiKey::class => ApiKeyPolicy::class,
         Webhook::class => WebhookPolicy::class,
     ];

@@ -140,38 +140,6 @@ class Organizer extends Model
         return $this->flutterwave_connect_status ?? 'not_connected';
     }
 
-    public function setSocialLinksAttribute($value): void
-    {
-        if (is_array($value)) {
-            $value = array_map(function ($link) {
-                return $link === '' ? null : $link;
-            }, $value);
-        }
-
-        $this->attributes['socialLinks'] = $value;
-    }
-
-    public function setBrandingColorsAttribute($value): void
-    {
-        if (is_array($value)) {
-            $value = array_map(function ($color) {
-                if ($color === null || $color === '') {
-                    return null;
-                }
-
-                $color = strtolower(trim($color));
-
-                if (preg_match('/^#([a-f0-9]{3})$/', $color, $matches)) {
-                    $color = '#' . $matches[1][0] . $matches[1][0] . $matches[1][1] . $matches[1][1] . $matches[1][2] . $matches[1][2];
-                }
-
-                return $color;
-            }, $value);
-        }
-
-        $this->attributes['brandingColors'] = $value;
-    }
-
     public function setBioAttribute($value): void
     {
         $this->attributes['bio'] = $value !== null ? trim(substr($value, 0, 500)) : null;

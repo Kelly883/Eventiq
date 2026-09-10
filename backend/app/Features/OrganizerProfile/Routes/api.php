@@ -12,12 +12,13 @@ Route::middleware('bearer')->group(function () {
 });
 
 // Public organizer profile — 20/min per IP, no auth
+// Explicitly exclude "me" so /organizers/me is not captured as {id}=me (defense in depth, order already fixes)
 Route::middleware('throttle:organizer-public')->group(function () {
-    Route::get('/organizers/{id}', [OrganizerProfileController::class, 'show'])->where('id', '[^/]+');
+    Route::get('/organizers/{id}', [OrganizerProfileController::class, 'show'])->where('id', '^(?!me$)[^/]+');
 });
 
 Route::middleware('throttle:organizer-public-events')->group(function () {
-    Route::get('/organizers/{id}/events', [OrganizerProfileController::class, 'events'])->where('id', '[^/]+');
+    Route::get('/organizers/{id}/events', [OrganizerProfileController::class, 'events'])->where('id', '^(?!me$)[^/]+');
 });
 
 // Legacy singular routes for backward compat (frontend still uses /organizer/profile)
