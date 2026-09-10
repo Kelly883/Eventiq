@@ -71,6 +71,20 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(30)->by($request->ip());
         });
 
+        // Admin user/role/permission management — 10/min per admin (strict)
+        RateLimiter::for('admin-users', function ($request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('admin-roles-assign', function ($request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('admin-permissions', function ($request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('admin-audit-log', function ($request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
+
         Event::observe(EventObserver::class);
         Ticket::observe(TicketObserver::class);
     }
