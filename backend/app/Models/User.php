@@ -38,6 +38,7 @@ class User extends Authenticatable
         'suspension_reason',
         'suspension_date',
         'lastLoginAt',
+        'password_changed_at',
         'paystack_customer_code',
         'flutterwave_customer_id',
         'default_payment_gateway',
@@ -86,6 +87,7 @@ class User extends Authenticatable
         return [
             'emailVerified' => 'boolean',
             'lastLoginAt' => 'datetime',
+            'password_changed_at' => 'datetime',
             'trial_ends_at' => 'datetime',
             'email_verified_at' => 'datetime',
             'admin_last_used_at' => 'datetime',

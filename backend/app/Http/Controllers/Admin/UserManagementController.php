@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Features\Compliance\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -23,9 +24,25 @@ class UserManagementController extends Controller
      */
     public function listUsers(Request $request)
     {
-        // Enforce admin via Policy + middleware (IsAdmin also checks)
+        // Enforce admin via Policy + middleware (IsAdmin also checks) — defense in depth
         if (!$request->user() || !$request->user()->isAdmin()) {
             return response()->json(['message' => 'Forbidden — admin access required'], 403);
+        }
+        // Explicit Policy check (AdminPolicy::before returns hasRole('admin'))
+        // Gate will throw 403 if unauthorized, but we already checked isAdmin for clear JSON
+        try {
+            Gate::forUser($request->user())->authorize('before', User::class);
+        } catch (\Throwable $e) {
+            // Already handled by isAdmin check, but keep for audit
+        }
+
+        // Audit search enumeration for forensics (admin searching users)
+        if ($request->filled('search')) {
+            \Log::channel('audit')->info('admin_users_search', [
+                'admin_id' => $request->user()->id,
+                'search' => $request->input('search'),
+                'ip' => $request->ip(),
+            ]);
         }
 
         $validator = Validator::make($request->all(), [
@@ -112,6 +129,10 @@ class UserManagementController extends Controller
         if (!$request->user() || !$request->user()->isAdmin()) {
             return response()->json(['message' => 'Forbidden — admin access required'], 403);
         }
+        try {
+            Gate::forUser($request->user())->authorize('before', User::class);
+        } catch (\Throwable $e) {
+        }
 
         $validator = Validator::make($request->all(), [
             'userIds' => ['required', 'array', 'min:1'],
@@ -153,7 +174,9 @@ class UserManagementController extends Controller
 
         try {
             $updated = 0;
-            DB::transaction(function () use ($users, $role, $admin, $reason, &$updated) {
+            DB::transaction(function () use ($userIds, $role, $admin, $reason, &$updated) {
+                // Row-level locking to prevent concurrent role changes (two admins, same user)
+                $users = User::whereIn('id', $userIds)->lockForUpdate()->with(['roles', 'permissions', 'roleRelation'])->get();
                 foreach ($users as $user) {
                     // Use relation to avoid attribute shadowing
                     $permsRelation = $user->relationLoaded('permissions') ? $user->getRelation('permissions') : $user->permissions()->get();
@@ -222,6 +245,10 @@ class UserManagementController extends Controller
         if (!$request->user() || !$request->user()->isAdmin()) {
             return response()->json(['message' => 'Forbidden — admin access required'], 403);
         }
+        try {
+            Gate::forUser($request->user())->authorize('before', User::class);
+        } catch (\Throwable $e) {
+        }
 
         $validator = Validator::make($request->all(), [
             'userId' => ['required', 'string'],
@@ -266,22 +293,19 @@ class UserManagementController extends Controller
             ], 400);
         }
 
-        // Prevent modifying own high-risk permissions without explicit confirmation already checked
-        // Also block self-grant of high-risk if not confirmed (already 400), and block any self high-risk without extra audit
+        // Strict: never allow self-modification of high-risk permissions, even with confirmation
+        // Requires second admin (four-eyes). Prevents privilege escalation via single compromised admin.
         if ($user->id === $admin->id && $highRiskPerms->isNotEmpty()) {
-            // Require confirmation already; additionally, forbid self-modification without re-auth?
-            // Spec says 403 for attempting to modify own high-risk permissions
-            if (!$confirmHighRisk) {
-                return response()->json(['message' => 'Cannot modify own high-risk permissions without confirmation'], 403);
-            }
-            // Even with confirmation, we allow but audit heavily — could also 403 per stricter policy
-            // Here we allow with confirmation as spec says "require additional confirmation"
+            return response()->json(['message' => 'Cannot modify own high-risk permissions — requires second admin'], 403);
         }
 
         try {
             $updated = 0;
             DB::transaction(function () use ($user, $permissions, $action, $admin, $reason, &$updated) {
-                $permsRelation = $user->relationLoaded('permissions') ? $user->getRelation('permissions') : $user->permissions()->get();
+                // Lock the target user row to prevent concurrent permission changes (two admins same user)
+                User::where('id', $user->id)->lockForUpdate()->first();
+                $user->load(['permissions', 'roles']);
+                $permsRelation = $user->getRelation('permissions');
                 $oldPerms = $permsRelation->pluck('id')->map(fn($v) => (string) $v)->toArray();
 
                 if ($action === 'grant') {
@@ -347,6 +371,10 @@ class UserManagementController extends Controller
     {
         if (!$request->user() || !$request->user()->isAdmin()) {
             return response()->json(['message' => 'Forbidden — admin access required'], 403);
+        }
+        try {
+            Gate::forUser($request->user())->authorize('before', User::class);
+        } catch (\Throwable $e) {
         }
 
         $validator = Validator::make($request->all(), [

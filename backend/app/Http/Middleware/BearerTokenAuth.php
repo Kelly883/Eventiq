@@ -58,6 +58,14 @@ class BearerTokenAuth
 
             if ($session) {
                 $user = $session->user;
+                // Concurrent session invalidation defense: if password was changed
+                // after this session was created, reject even if not yet revoked
+                // (covers race where login creates session after invalidateAllSessions).
+                if ($user && $user->password_changed_at && $session->createdAt) {
+                    if ($session->createdAt->lt($user->password_changed_at)) {
+                        return response()->json(['message' => 'Unauthorized'], 401);
+                    }
+                }
                 $request->setUserResolver(fn () => $user);
                 $request->attributes->set('auth_session', $session);
 

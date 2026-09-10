@@ -229,7 +229,10 @@ class AuthController extends Controller
                 return null;
             }
 
-            $user->update(['passwordHash' => Hash::make($validated['newPassword'])]);
+            $user->update([
+                'passwordHash' => Hash::make($validated['newPassword']),
+                'password_changed_at' => now(),
+            ]);
             $user->invalidateAllSessions();
             // Also revoke Sanctum personal access tokens (if any)
             if (method_exists($user, 'tokens')) {
