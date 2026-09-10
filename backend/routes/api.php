@@ -126,9 +126,7 @@ Route::middleware('throttle:discovery')->group(function () {
     Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe']);
 });
 
-// Public organizer profile
-Route::get('/organizers/{organizer}', [OrganizerController::class, 'show']);
-
+// Public organizer profile is handled in OrganizerProfile Routes (with isPublic + rate limit)
 // Ticket Delivery Endpoints
 Route::middleware('auth:sanctum')->group(function () {
     // User delivery routes

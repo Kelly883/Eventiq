@@ -14,7 +14,7 @@ class UpdateOrganizerProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'displayName' => 'sometimes|string|max:255',
+            'displayName' => 'required|string|max:255',
             'bio' => 'nullable|string|max:500',
             'avatarUrl' => 'nullable|string|max:2048',
             'email' => 'nullable|email|max:255',
@@ -26,8 +26,8 @@ class UpdateOrganizerProfileRequest extends FormRequest
             'socialLinks.linkedin' => 'nullable|url|max:2048',
             'socialLinks.youtube' => 'nullable|url|max:2048',
             'brandingColors' => 'nullable|array',
-            'brandingColors.primaryColor' => 'nullable|string|regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/',
-            'brandingColors.accentColor' => 'nullable|string|regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/',
+            'brandingColors.primaryColor' => ['nullable', 'string', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
+            'brandingColors.accentColor' => ['nullable', 'string', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
             'timezone' => 'nullable|string|max:100',
             'currency' => 'nullable|string|size:3',
             'country' => 'nullable|string|max:2',
