@@ -168,38 +168,38 @@ class OrganizerProfileController extends Controller
             }
         }
 
-        $organizer = Organizer::where('user_id', $user->id)->orWhere('userId', $user->id)->first();
-        if (!$organizer) {
-            return response()->json(['message' => 'Organizer profile not found'], 404);
-        }
-
-        $validated = $request->validated();
-        $oldValues = $organizer->getPrivateProfile();
-
         try {
-            $organizer->update($validated);
-            $organizer->refresh();
+            return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $user) {
+                $organizer = Organizer::where('user_id', $user->id)->orWhere('userId', $user->id)->lockForUpdate()->first();
+                if (!$organizer) {
+                    return response()->json(['message' => 'Organizer profile not found'], 404);
+                }
+
+                $validated = $request->validated();
+                $oldValues = $organizer->getPrivateProfile();
+
+                $organizer->update($validated);
+                $organizer->refresh();
+
+                $newValues = $organizer->getPrivateProfile();
+
+                try {
+                    $this->auditLogService->log('profile_updated', 'organizer', $organizer->id, [
+                        'oldValue' => $oldValues,
+                        'newValue' => $newValues,
+                        'updated_fields' => array_keys($validated),
+                    ], $user->id);
+                } catch (\Throwable $e) {
+                }
+
+                return response()->json([
+                    'data' => $newValues,
+                    'message' => 'Profile updated successfully.',
+                ]);
+            });
         } catch (\Throwable $e) {
             return response()->json(['message' => 'Failed to update profile', 'error' => $e->getMessage()], 500);
         }
-
-        $newValues = $organizer->getPrivateProfile();
-
-        // Audit log
-        try {
-            $this->auditLogService->log('profile_updated', 'organizer', $organizer->id, [
-                'oldValue' => $oldValues,
-                'newValue' => $newValues,
-                'updated_fields' => array_keys($validated),
-            ], $user->id);
-        } catch (\Throwable $e) {
-            // don't fail update if audit fails
-        }
-
-        return response()->json([
-            'data' => $newValues,
-            'message' => 'Profile updated successfully.',
-        ]);
     }
 
     /**
@@ -231,12 +231,7 @@ class OrganizerProfileController extends Controller
             }
         }
 
-        $organizer = Organizer::where('user_id', $user->id)->orWhere('userId', $user->id)->first();
-        if (!$organizer) {
-            return response()->json(['message' => 'Organizer profile not found'], 404);
-        }
-
-        // Validate file — handle 413 for too large explicitly
+        // Validate file — handle 413 for too large explicitly (before DB lock to fail fast)
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'avatar' => 'required|file|mimes:jpeg,png,webp|max:5120', // 5MB = 5120 KB
         ], [
@@ -270,6 +265,14 @@ class OrganizerProfileController extends Controller
         }
 
         try {
+            // Lock organizer row to prevent concurrent avatar race (two uploads same second)
+            $organizer = \Illuminate\Support\Facades\DB::transaction(function () use ($user) {
+                return Organizer::where('user_id', $user->id)->orWhere('userId', $user->id)->lockForUpdate()->first();
+            });
+            if (!$organizer) {
+                return response()->json(['message' => 'Organizer profile not found'], 404);
+            }
+
             $ext = $file->getClientOriginalExtension() ?: match ($mime) {
                 'image/jpeg' => 'jpg',
                 'image/png' => 'png',
@@ -296,7 +299,7 @@ class OrganizerProfileController extends Controller
 
             $oldAvatarUrl = $organizer->avatarUrl;
 
-            // Store resized image
+            // Store resized image (outside DB tx — S3 cannot be rolled back)
             $disk->put($path, $resizedContent, 'public');
 
             // Generate URL — for s3, Storage::url will give S3 URL; for public, give /storage/...
@@ -306,7 +309,11 @@ class OrganizerProfileController extends Controller
                 $avatarUrl = $path;
             }
 
-            $organizer->update(['avatarUrl' => $avatarUrl]);
+            // Update DB with row lock to prevent concurrent overwrites
+            \Illuminate\Support\Facades\DB::transaction(function () use ($organizer, $avatarUrl) {
+                Organizer::where('id', $organizer->id)->lockForUpdate()->first();
+                $organizer->update(['avatarUrl' => $avatarUrl]);
+            });
 
             // Delete old avatar if exists
             if ($oldAvatarUrl) {
