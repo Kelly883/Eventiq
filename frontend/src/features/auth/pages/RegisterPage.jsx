@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
+import { showToast } from '../../../lib/api';
 import BrandLogo from '../../common/components/BrandLogo';
 import './RegisterPage.css';
 
@@ -44,12 +45,38 @@ const RegisterPage = () => {
       const msg = res?.message || 'If this email is not already registered, an account has been created. Please check your email to continue.';
       navigate('/login', { state: { message: msg, messageType: 'success' } });
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        err.response?.data?.errors?.email?.[0] ||
-        err.message ||
-        'Failed to create account.'
-      );
+      // Distinct handling for network vs validation vs rate-limit vs CSRF.
+      // Axios network errors have no response (e.g., CORS block, backend down,
+      // wrong VITE_API_BASE_URL). err.message is often bare "Network Error".
+      const status = err.response?.status;
+      if (!err.response) {
+        const friendly = 'Network error. Please check your connection and try again.';
+        setError(friendly);
+        showToast('Network error', friendly, 'error');
+      } else if (status === 419) {
+        const msg = 'Security token expired. Please refresh the page and try again.';
+        setError(msg);
+        showToast('Session expired', msg, 'warning');
+      } else if (status === 429) {
+        const msg = err.response?.data?.message || 'Too many attempts. Please wait a moment and try again.';
+        setError(msg);
+        showToast('Too many attempts', msg, 'warning');
+      } else if (status === 422) {
+        const validationMsg =
+          err.response?.data?.errors?.email?.[0] ||
+          err.response?.data?.errors?.password?.[0] ||
+          err.response?.data?.errors?.name?.[0] ||
+          err.response?.data?.message ||
+          'Please check your details and try again.';
+        setError(validationMsg);
+      } else {
+        setError(
+          err.response?.data?.message ||
+          err.response?.data?.errors?.email?.[0] ||
+          err.message ||
+          'Failed to create account.'
+        );
+      }
     } finally {
       setLoading(false);
     }

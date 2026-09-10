@@ -1,4 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/admin';
+const _rawBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace(/\/+$/, '');
+const _normalizedBase = _rawBase.endsWith('/api') ? _rawBase : `${_rawBase}/api`;
+const API_BASE_URL = `${_normalizedBase}/admin`;
 
 export const roleService = {
   getRoles: async () => {

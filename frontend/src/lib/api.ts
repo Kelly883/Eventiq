@@ -38,15 +38,20 @@ function isAuthenticationRequest(url?: string): boolean {
   return Boolean(url?.includes('/auth/'));
 }
 
-const baseURL = ((import.meta as unknown) as { env: Env }).env.VITE_API_BASE_URL ?? 'http://localhost:8000';
+const rawBaseURL = (
+  ((import.meta as unknown) as { env: Env }).env.VITE_API_BASE_URL ?? 'http://localhost:8000/api'
+).replace(/\/+$/, '');
 
-// Use the baseURL as-is without unconditionally appending /api.
-// The backend auth routes (login, me, logout, csrf-cookie) live at
-// the host root (e.g. /auth/login, /sanctum/csrf-cookie), so the baseURL
-// must not include a /api prefix for axios to hit the right paths.
-const normalizedBaseURL = baseURL;
-// Strip any trailing /api from the root so the CSRF cookie URL works.
-const csrfCookieUrl = baseURL.replace(/\/api$/, '') + '/sanctum/csrf-cookie'
+// Ensure the axios baseURL always ends with /api so requests like
+// `/auth/register` resolve to `/api/auth/register`, which is where
+// Laravel's api.php routes are mounted. The previous "use as-is"
+// approach broke production where RENDER_EXTERNAL_URL has no /api
+// suffix (e.g. https://eventiq-api.onrender.com → 404 on
+// /auth/register, CORS missing → browser reports Network Error).
+// The CSRF cookie itself lives outside /api at /sanctum/csrf-cookie,
+// so strip that prefix back off for the token fetch.
+const normalizedBaseURL = rawBaseURL.endsWith('/api') ? rawBaseURL : `${rawBaseURL}/api`;
+const csrfCookieUrl = rawBaseURL.replace(/\/api$/, '') + '/sanctum/csrf-cookie';
 
 export const api = axios.create({
   baseURL: normalizedBaseURL,

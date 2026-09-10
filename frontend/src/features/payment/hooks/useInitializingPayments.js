@@ -6,7 +6,9 @@ export function useInitializingPayments() {
   const initialize = async ({ gateway, amount, currency, email, reference, callbackUrl, metadata }) => {
     setLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/payments/${gateway}/initialize`, {
+      const rawBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+      const normalizedBase = rawBase.endsWith('/api') ? rawBase : rawBase ? `${rawBase}/api` : '/api';
+      const res = await fetch(`${normalizedBase}/payments/${gateway}/initialize`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

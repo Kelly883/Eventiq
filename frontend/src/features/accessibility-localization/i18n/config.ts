@@ -47,9 +47,9 @@ async function fetchUserPreferredLanguage() {
   // Best-effort: only honored when the session is authenticated and a
   // language preference exists. Falls back to null otherwise.
   // Canonical user language preferences endpoint (see Localization feature routes).
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
-
-  const url = `${baseUrl}/users/me/language-preferences`
+  const rawBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+  const normalizedBase = rawBase.endsWith('/api') ? rawBase : rawBase ? `${rawBase}/api` : '';
+  const url = `${normalizedBase}/users/me/language-preferences`
 
   try {
     const res = await fetch(url, {

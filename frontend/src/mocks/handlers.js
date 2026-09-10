@@ -124,6 +124,40 @@ export const handlers = [
     isAuthenticated = false
     return json({ data: { success: true } })
   }),
+  http.post('*/auth/register', async ({ request }) => {
+    const body = await request.json()
+    await delay(250)
+    if (!body?.name || String(body.name).trim().length < 2) {
+      return json(
+        { message: 'The name field must be at least 2 characters.', errors: { name: ['The name field must be at least 2 characters.'] } },
+        422,
+      )
+    }
+    if (!body?.email || !/^\S+@\S+\.\S+$/.test(body.email)) {
+      return json(
+        { message: 'The email field must be a valid email address.', errors: { email: ['The email field must be a valid email address.'] } },
+        422,
+      )
+    }
+    if (!body?.password || String(body.password).length < 8) {
+      return json(
+        { message: 'The password field must be at least 8 characters.', errors: { password: ['The password field must be at least 8 characters.'] } },
+        422,
+      )
+    }
+    // Generic success (same whether email existed or was created) to avoid enumeration
+    return json({ message: 'If this email is not already registered, an account has been created. Please check your email to continue.' })
+  }),
+  http.post('*/auth/forgot-password', async () => {
+    await delay(150)
+    return json({ message: 'If an account exists, a reset link has been sent' })
+  }),
+  http.post('*/auth/reset-password', async ({ request }) => {
+    const body = await request.json()
+    await delay(200)
+    if (!body?.token) return json({ message: 'This link has expired or is invalid' }, 400)
+    return json({ message: 'Password reset successfully' })
+  }),
   http.get('*/organizers/:userId', async () => json({ data: null })),
 
   /* ------------------------------ check-in ------------------------------ */

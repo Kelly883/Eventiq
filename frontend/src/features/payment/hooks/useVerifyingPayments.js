@@ -6,7 +6,9 @@ export function useVerifyingPayments() {
   const verify = async ({ gateway, reference }) => {
     setLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/payments/${gateway}/verify`, {
+      const rawBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+      const normalizedBase = rawBase.endsWith('/api') ? rawBase : rawBase ? `${rawBase}/api` : '/api';
+      const res = await fetch(`${normalizedBase}/payments/${gateway}/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
