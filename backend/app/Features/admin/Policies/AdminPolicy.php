@@ -17,6 +17,16 @@ class AdminPolicy
         // (they live in the magic $attributes array), so that branch
         // could never actually fire. hasRole() is the model's real,
         // working mechanism.
+        return $user->hasRole('admin') ? true : null;
+    }
+
+    public function viewAny(User $user): bool
+    {
+        return $user->hasRole('admin');
+    }
+
+    public function view(User $user, User $model): bool
+    {
         return $user->hasRole('admin');
     }
 }

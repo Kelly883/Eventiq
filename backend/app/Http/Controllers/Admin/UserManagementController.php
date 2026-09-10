@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminRoleRequest;
 use App\Models\AuditLog;
 use App\Models\Permission;
 use App\Models\Role;
@@ -36,13 +37,26 @@ class UserManagementController extends Controller
             // Already handled by isAdmin check, but keep for audit
         }
 
-        // Audit search enumeration for forensics (admin searching users)
+        // Audit search enumeration for forensics (admin searching users) — dual trail:
+        // file channel survives DB outage, DB audit enables admin UI forensics.
         if ($request->filled('search')) {
             \Log::channel('audit')->info('admin_users_search', [
                 'admin_id' => $request->user()->id,
                 'search' => $request->input('search'),
                 'ip' => $request->ip(),
             ]);
+            // DB trail for compliance review (non-blocking, best-effort)
+            try {
+                $this->auditLogService->log(
+                    'admin_users_search',
+                    'user',
+                    $request->user()->id,
+                    ['search' => $request->input('search'), 'ip' => $request->ip()],
+                    $request->user()->id
+                );
+            } catch (\Throwable $e) {
+                // File log already succeeded; DB failure should not block search
+            }
         }
 
         $validator = Validator::make($request->all(), [
@@ -87,7 +101,7 @@ class UserManagementController extends Controller
                             ->orWhereRaw("name LIKE ? ESCAPE '\\'", [$like]);
                     });
                 })
-                ->orderByDesc('created_at');
+                ->orderByDesc('created_at')->orderByDesc('id');
 
             $total = (clone $query)->count();
             $users = $query->forPage($page, $limit)->get();
@@ -171,12 +185,59 @@ class UserManagementController extends Controller
             return response()->json(['message' => 'Some users not found', 'missing' => array_values($missing)], 404);
         }
 
-        // Prevent self-demotion: if admin tries to assign a non-admin role to themselves
+        // Prevent privilege escalation: block ALL self-role mutations, even low-risk.
+        // Requires second admin (four-eyes). Previously only demotion was blocked, leaving
+        // grant to self (e.g., promote to admin if somehow not admin) and lateral moves open.
         if (in_array($admin->id, $userIds, true)) {
-            $isTargetAdminRole = strtolower($role->name) === 'admin';
-            $currentlyAdmin = $admin->isAdmin();
-            if ($currentlyAdmin && !$isTargetAdminRole) {
-                return response()->json(['message' => 'Cannot demote yourself'], 403);
+            return response()->json(['message' => 'Cannot modify own role — requires second admin'], 403);
+        }
+
+        // Second-admin approval for admin role elevation (four-eyes)
+        // Single admin can no longer directly grant admin — must be approved by a different admin
+        $isAdminRole = strtolower($role->name) === 'admin';
+        if ($isAdminRole) {
+            $needsApprovalUsers = [];
+            foreach ($users as $u) {
+                if (!$u->hasRole('admin')) {
+                    $needsApprovalUsers[] = $u;
+                }
+            }
+            if (!empty($needsApprovalUsers)) {
+                $created = [];
+                foreach ($needsApprovalUsers as $targetUser) {
+                    $existing = AdminRoleRequest::where('target_user_id', $targetUser->id)
+                        ->where('role_id', $role->id)
+                        ->where('status', AdminRoleRequest::STATUS_PENDING)
+                        ->first();
+                    if ($existing) {
+                        $created[] = $existing;
+                        continue;
+                    }
+                    $req = AdminRoleRequest::create([
+                        'requester_id' => $admin->id,
+                        'target_user_id' => $targetUser->id,
+                        'role_id' => $role->id,
+                        'reason' => $reason,
+                        'status' => AdminRoleRequest::STATUS_PENDING,
+                    ]);
+                    $created[] = $req;
+                    $this->auditLogService->log('admin_role_requested', 'user', $targetUser->id, [
+                        'role_id' => $role->id,
+                        'role_name' => $role->name,
+                        'request_id' => $req->id,
+                        'reason' => $reason,
+                    ], $admin->id);
+                }
+
+                return response()->json([
+                    'message' => 'Admin role assignment requires second admin approval',
+                    'requires_second_approval' => true,
+                    'requests' => collect($created)->map(fn($r) => [
+                        'id' => $r->id,
+                        'target_user_id' => $r->target_user_id,
+                        'status' => $r->status,
+                    ]),
+                ], 202);
             }
         }
 
@@ -191,11 +252,12 @@ class UserManagementController extends Controller
                     $oldRoleId = $user->role_id ?? $user->roleRelation?->id ?? $user->role ?? null;
                     $oldPermissions = $permsRelation->pluck('name')->toArray();
 
-                    // Update legacy string column and role_id + pivot
-                    $user->update([
+                    // Update role_id + legacy string (bypass fillable guard for 'role')
+                    // 'role' was removed from $fillable to prevent mass-assignment via $request->all()
+                    $user->forceFill([
                         'role_id' => $role->id,
                         'role' => $role->name,
-                    ]);
+                    ])->save();
                     // Enforce single-role invariant: replace all roles with the new one.
                     // Use sync to atomically remove stale pivot rows that would otherwise
                     // accumulate across repeated assignments (e.g., organizer -> moderator
@@ -296,10 +358,11 @@ class UserManagementController extends Controller
             ], 400);
         }
 
-        // Strict: never allow self-modification of high-risk permissions, even with confirmation
-        // Requires second admin (four-eyes). Prevents privilege escalation via single compromised admin.
-        if ($user->id === $admin->id && $highRiskPerms->isNotEmpty()) {
-            return response()->json(['message' => 'Cannot modify own high-risk permissions — requires second admin'], 403);
+        // Strict: never allow self-modification of ANY permissions, even low/medium with confirmation.
+        // Requires second admin (four-eyes). Previously only high-risk was blocked, leaving low-risk
+        // like `events.create` → publish arbitrary events as privilege escalation.
+        if ($user->id === $admin->id) {
+            return response()->json(['message' => 'Cannot modify own permissions — requires second admin'], 403);
         }
 
         try {
@@ -403,7 +466,7 @@ class UserManagementController extends Controller
                 ->with(['user:id,name,email'])
                 ->when($targetUserId, fn($q) => $q->where('target_id', $targetUserId)->where('target_type', 'user'))
                 ->when($action, fn($q) => $q->where('action', $action))
-                ->orderByDesc('created_at');
+                ->orderByDesc('created_at')->orderByDesc('id');
 
             $total = (clone $query)->count();
             $logs = $query->forPage($page, $limit)->get();
@@ -462,5 +525,117 @@ class UserManagementController extends Controller
             \Log::error('admin audit log list failed', ['error' => $e->getMessage()]);
             return response()->json(['message' => 'Database error'], 500);
         }
+    }
+
+    /**
+     * GET /api/admin/roles/requests — list pending admin role requests
+     */
+    public function listRoleRequests(Request $request)
+    {
+        if (!$request->user() || !$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Forbidden — admin access required'], 403);
+        }
+
+        $requests = AdminRoleRequest::with(['requester:id,name,email', 'targetUser:id,name,email', 'role:id,name'])
+            ->where('status', AdminRoleRequest::STATUS_PENDING)
+            ->orderByDesc('created_at')
+            ->paginate($request->integer('limit', 20));
+
+        return response()->json([
+            'requests' => $requests->items(),
+            'total' => $requests->total(),
+            'page' => $requests->currentPage(),
+            'limit' => $requests->perPage(),
+        ]);
+    }
+
+    /**
+     * POST /api/admin/roles/requests/{id}/approve — second admin approves
+     */
+    public function approveRoleRequest(Request $request, string $id)
+    {
+        if (!$request->user() || !$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Forbidden — admin access required'], 403);
+        }
+
+        $req = AdminRoleRequest::find($id);
+        if (!$req) {
+            return response()->json(['message' => 'Request not found'], 404);
+        }
+        if (!$req->isPending()) {
+            return response()->json(['message' => 'Request already resolved'], 409);
+        }
+        if ($req->requester_id === $request->user()->id) {
+            return response()->json(['message' => 'Cannot approve own request — requires second admin'], 403);
+        }
+
+        try {
+            DB::transaction(function () use ($req, $request) {
+                $req->lockForUpdate();
+                if (!$req->isPending()) {
+                    throw new \RuntimeException('Already resolved');
+                }
+
+                $target = User::where('id', $req->target_user_id)->lockForUpdate()->firstOrFail();
+                $role = Role::findOrFail($req->role_id);
+
+                $oldRoleId = $target->role_id ?? $target->role ?? null;
+                $target->forceFill(['role_id' => $role->id, 'role' => $role->name])->save();
+                $target->roles()->sync([$role->id]);
+                $target->invalidateAllSessions();
+                if (method_exists($target, 'tokens')) {
+                    $target->tokens()->delete();
+                }
+
+                $req->update([
+                    'status' => AdminRoleRequest::STATUS_APPROVED,
+                    'approved_by' => $request->user()->id,
+                    'resolved_at' => now(),
+                ]);
+
+                $this->auditLogService->log('role_assigned', 'user', $target->id, [
+                    'old_role' => $oldRoleId,
+                    'new_role' => $role->id,
+                    'request_id' => $req->id,
+                    'approved_by' => $request->user()->id,
+                ], $request->user()->id);
+            });
+
+            return response()->json(['message' => 'Role assignment approved', 'request' => $req->fresh()]);
+        } catch (\Throwable $e) {
+            \Log::error('approve role request failed', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Database error'], 500);
+        }
+    }
+
+    /**
+     * POST /api/admin/roles/requests/{id}/reject
+     */
+    public function rejectRoleRequest(Request $request, string $id)
+    {
+        if (!$request->user() || !$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Forbidden — admin access required'], 403);
+        }
+
+        $req = AdminRoleRequest::find($id);
+        if (!$req) {
+            return response()->json(['message' => 'Request not found'], 404);
+        }
+        if (!$req->isPending()) {
+            return response()->json(['message' => 'Request already resolved'], 409);
+        }
+
+        $req->update([
+            'status' => AdminRoleRequest::STATUS_REJECTED,
+            'approved_by' => $request->user()->id,
+            'resolved_at' => now(),
+        ]);
+
+        $this->auditLogService->log('admin_role_rejected', 'user', $req->target_user_id, [
+            'role_id' => $req->role_id,
+            'request_id' => $req->id,
+        ], $request->user()->id);
+
+        return response()->json(['message' => 'Request rejected']);
     }
 }

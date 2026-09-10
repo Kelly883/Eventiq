@@ -85,6 +85,21 @@ services:
         value: false
       - key: TURNSTILE_SECRET_KEY
         sync: false
+      - key: CACHE_STORE
+        value: redis
+      - key: REDIS_URL
+        fromService:
+          name: eventiq-redis
+          type: redis
+          property: connectionString
+      - key: REDIS_CACHE_DB
+        value: 1
+
+  - type: redis
+    name: eventiq-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: [] # only internal connections from eventiq-api
 
   # Frontend (React SPA)
   - type: static

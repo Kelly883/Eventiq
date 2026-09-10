@@ -43,4 +43,11 @@ Route::middleware(['throttle:api', 'bearer'])->prefix('admin')->group(function (
     Route::middleware(['throttle:api', 'isAdmin'])->group(function () {
         Route::get('/audit-log/list', [\App\Http\Controllers\Admin\UserManagementController::class, 'auditLogList']);
     });
+
+    // Admin role second-approval flow (four-eyes) — also 10/min per admin
+    Route::middleware(['throttle:admin-roles-assign', 'isAdmin'])->group(function () {
+        Route::get('/roles/requests', [\App\Http\Controllers\Admin\UserManagementController::class, 'listRoleRequests']);
+        Route::post('/roles/requests/{id}/approve', [\App\Http\Controllers\Admin\UserManagementController::class, 'approveRoleRequest']);
+        Route::post('/roles/requests/{id}/reject', [\App\Http\Controllers\Admin\UserManagementController::class, 'rejectRoleRequest']);
+    });
 });

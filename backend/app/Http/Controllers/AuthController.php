@@ -133,12 +133,13 @@ class AuthController extends Controller
         }
 
         try {
-            $user = User::create([
+            // 'role' is not fillable (hardening against mass-assignment), use unguarded create
+            $user = User::unguarded(fn() => User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'passwordHash' => Hash::make($validated['password']),
                 'role' => 'attendee',
-            ]);
+            ]));
         } catch (\Illuminate\Database\QueryException $e) {
             // SQLSTATE 23000 = integrity constraint violation (unique index)
             if (str_contains($e->getMessage(), 'users_email_unique') || $e->getCode() === '23000') {

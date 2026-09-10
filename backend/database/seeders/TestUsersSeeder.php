@@ -27,7 +27,7 @@ class TestUsersSeeder extends Seeder
             ['description' => 'Organizer']
         );
 
-        User::updateOrCreate(
+        User::unguarded(fn() => User::updateOrCreate(
             ['email' => 'admin@eventiq.test'],
             [
                 'name' => 'Test Admin',
@@ -36,9 +36,9 @@ class TestUsersSeeder extends Seeder
                 'emailVerified' => true,
                 'status' => 'active',
             ]
-        );
+        ));
 
-        User::updateOrCreate(
+        User::unguarded(fn() => User::updateOrCreate(
             ['email' => 'attendee@eventiq.test'],
             [
                 'name' => 'Test Attendee',
@@ -47,9 +47,9 @@ class TestUsersSeeder extends Seeder
                 'emailVerified' => true,
                 'status' => 'active',
             ]
-        );
+        ));
 
-        $organizerUser = User::updateOrCreate(
+        $organizerUser = User::unguarded(fn() => User::updateOrCreate(
             ['email' => 'organizer@eventiq.test'],
             [
                 'name' => 'Test Organizer',
@@ -58,7 +58,7 @@ class TestUsersSeeder extends Seeder
                 'emailVerified' => true,
                 'status' => 'active',
             ]
-        );
+        ));
 
         Organizer::updateOrCreate(
             ['user_id' => $organizerUser->id],
