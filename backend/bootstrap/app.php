@@ -76,10 +76,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Validation: ensure api/* always returns JSON 422 even without Accept header
         // (otherwise Laravel redirects 302 to "/"). Keep 422 to match tests.
+        // Use the exception's aggregated message so FormRequest custom
+        // messages (e.g. ApiKey "cannot be granted") are preserved instead
+        // of being flattened to a generic string.
         $exceptions->render(function (\Illuminate\Validation\ValidationException $e, $request) {
             if ($request->is('api/*')) {
                 return response()->json([
-                    'message' => 'The given data was invalid.',
+                    'message' => $e->getMessage(),
                     'errors' => $e->errors(),
                 ], 422);
             }
