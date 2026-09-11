@@ -29,4 +29,13 @@ return [
         'enabled' => env('TURNSTILE_ENABLED', false),
     ],
 
+    'clamav' => [
+        'enabled' => env('CLAMAV_ENABLED', false),
+        'socket' => env('CLAMAV_SOCKET', '/var/run/clamav/clamd.ctl'),
+        'host' => env('CLAMAV_HOST', '127.0.0.1'),
+        'port' => env('CLAMAV_PORT', 3310),
+        'timeout' => env('CLAMAV_TIMEOUT', 10),
+        'fail_open' => env('CLAMAV_FAIL_OPEN', true),
+    ],
+
 ];

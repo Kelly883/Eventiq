@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // browser blocks responses that lack Access-Control-Allow-Origin, and
         // Sanctum's stateful cookie auth never gets a chance to run.
         $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
+        $middleware->append(App\Http\Middleware\SecurityHeaders::class);
 
         // API consumers must always receive an authentication response, even
         // when their client does not send an Accept: application/json header.

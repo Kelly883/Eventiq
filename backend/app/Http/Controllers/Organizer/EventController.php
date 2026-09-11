@@ -148,20 +148,25 @@ class EventController extends Controller
     {
         $user = $request->user();
         if (!$user) {
+            \Illuminate\Support\Facades\Log::info('organizer_event_show_attempt', ['user_id' => $user?->id, 'event_id' => $id, 'ip' => $request->ip()]);
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
         $event = Event::without('analyticsEventsMetric')->with(['ticketTiers', 'organizer'])->find($id);
 
         if (!$event) {
+            \Illuminate\Support\Facades\Log::warning('organizer_event_show_not_found', ['user_id' => $user?->id, 'event_id' => $id, 'ip' => $request->ip()]);
             return response()->json(['message' => 'Event not found'], 404);
         }
 
         try {
             Gate::forUser($user)->authorize('view', $event);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            \Illuminate\Support\Facades\Log::warning('organizer_event_show_unauthorized', ['user_id' => $user?->id, 'event_id' => $event->id, 'ip' => $request->ip()]);
             return response()->json(['message' => 'Forbidden — you do not own this event'], 403);
         }
+
+        \Illuminate\Support\Facades\Log::info('organizer_event_show', ['user_id' => $user?->id, 'event_id' => $event->id, 'ip' => $request->ip()]);
 
         return new EventResource($event);
     }
@@ -464,11 +469,7 @@ class EventController extends Controller
                 }
             }
 
-            $response = (new EventResource($event))->response();
-            // CSP for images — restrict to self and our storage hosts
-            $cspHosts = implode(' ', array_map(fn($h) => "https://$h", $allowedHosts));
-            $response->headers->set('Content-Security-Policy', "img-src 'self' $cspHosts data:; default-src 'self'");
-            return $response;
+            return new EventResource($event);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Banner upload failed', ['event_id' => $id, 'error' => $e->getMessage()]);
             return response()->json(['message' => 'Failed to upload banner', 'error' => $e->getMessage()], 500);
