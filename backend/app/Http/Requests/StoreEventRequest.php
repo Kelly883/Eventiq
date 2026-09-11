@@ -94,6 +94,10 @@ class StoreEventRequest extends FormRequest
             // Also allow camelCase inside tiers for frontend compat
             'ticket_tiers.*.salesStartDate' => ['nullable', 'date'],
             'ticket_tiers.*.salesEndDate' => ['nullable', 'date'],
+            'ticket_tiers.*.early_bird_price' => ['nullable', 'numeric', 'min:0', 'lt:price'],
+            'ticket_tiers.*.earlyBirdPrice' => ['nullable', 'numeric', 'min:0', 'lt:price'],
+            'ticket_tiers.*.early_bird_end_date' => ['nullable', 'date', 'after:sales_start_date', 'before:sales_end_date'],
+            'ticket_tiers.*.earlyBirdEndDate' => ['nullable', 'date', 'after:salesStartDate', 'before:salesEndDate'],
         ];
     }
 
@@ -107,6 +111,14 @@ class StoreEventRequest extends FormRequest
             'capacity.required' => 'Capacity is required.',
             'status.in' => 'Status must be draft or published.',
             'ticket_tiers.max' => 'Maximum 10 ticket tiers per event.',
+            'ticket_tiers.*.early_bird_price.lt' => 'Early bird price must be less than regular price.',
+            'ticket_tiers.*.earlyBirdPrice.lt' => 'Early bird price must be less than regular price.',
+            'ticket_tiers.*.sales_end_date.after' => 'Sales end date must be after sales start date.',
+            'ticket_tiers.*.salesEndDate.after' => 'Sales end date must be after sales start date.',
+            'ticket_tiers.*.early_bird_end_date.after' => 'Early bird end date must be after sales start date.',
+            'ticket_tiers.*.earlyBirdEndDate.after' => 'Early bird end date must be after sales start date.',
+            'ticket_tiers.*.early_bird_end_date.before' => 'Early bird end date must be before sales end date.',
+            'ticket_tiers.*.earlyBirdEndDate.before' => 'Early bird end date must be before sales end date.',
         ];
     }
 }

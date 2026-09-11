@@ -80,9 +80,27 @@ class UpdateEventRequest extends FormRequest
             'ticket_tiers.*.price' => ['required_with:ticket_tiers', 'numeric', 'min:0'],
             'ticket_tiers.*.quantity' => ['nullable', 'integer', 'min:0'],
             'ticket_tiers.*.sales_start_date' => ['nullable', 'date'],
-            'ticket_tiers.*.sales_end_date' => ['nullable', 'date'],
+            'ticket_tiers.*.sales_end_date' => ['nullable', 'date', 'after:sales_start_date'],
             'ticket_tiers.*.salesStartDate' => ['nullable', 'date'],
-            'ticket_tiers.*.salesEndDate' => ['nullable', 'date'],
+            'ticket_tiers.*.salesEndDate' => ['nullable', 'date', 'after:salesStartDate'],
+            'ticket_tiers.*.early_bird_price' => ['nullable', 'numeric', 'min:0', 'lt:price'],
+            'ticket_tiers.*.earlyBirdPrice' => ['nullable', 'numeric', 'min:0', 'lt:price'],
+            'ticket_tiers.*.early_bird_end_date' => ['nullable', 'date', 'after:sales_start_date', 'before:sales_end_date'],
+            'ticket_tiers.*.earlyBirdEndDate' => ['nullable', 'date', 'after:salesStartDate', 'before:salesEndDate'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'ticket_tiers.*.early_bird_price.lt' => 'Early bird price must be less than regular price.',
+            'ticket_tiers.*.earlyBirdPrice.lt' => 'Early bird price must be less than regular price.',
+            'ticket_tiers.*.sales_end_date.after' => 'Sales end date must be after sales start date.',
+            'ticket_tiers.*.salesEndDate.after' => 'Sales end date must be after sales start date.',
+            'ticket_tiers.*.early_bird_end_date.after' => 'Early bird end date must be after sales start date.',
+            'ticket_tiers.*.earlyBirdEndDate.after' => 'Early bird end date must be after sales start date.',
+            'ticket_tiers.*.early_bird_end_date.before' => 'Early bird end date must be before sales end date.',
+            'ticket_tiers.*.earlyBirdEndDate.before' => 'Early bird end date must be before sales end date.',
         ];
     }
 }

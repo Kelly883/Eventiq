@@ -14,6 +14,7 @@ use App\Models\TicketTier;
 use App\Services\Audit\AuditLogger;
 use App\Services\VirusScanning\ScanResult;
 use App\Services\VirusScanning\VirusScanner;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -253,105 +254,109 @@ class EventController extends Controller
 
         $validated = $request->validated();
 
-        try {
-            $updatedEvent = DB::transaction(function () use ($event, $validated, $user, $request) {
-                // Lock event row for concurrent update safety
-                $lockedEvent = Event::where('id', $event->id)->lockForUpdate()->firstOrFail();
-                // Update event fields if present
-                $eventData = $this->mapEventData($validated, $lockedEvent->organizer_id, true);
-                if (!empty($eventData)) {
-                    $lockedEvent->update($eventData);
-                }
+        $maxRetries = 3;
+        $retryDelay = 0.1; // 100ms
 
-                // Handle ticket tiers if provided
-                if (array_key_exists('ticket_tiers', $validated)) {
-                    $incomingTiers = $validated['ticket_tiers'] ?? [];
-                    // Lock tiers for this event to prevent race
-                    $existingTiers = TicketTier::where('event_id', $lockedEvent->id)->lockForUpdate()->get()->keyBy('id');
-                    $keepIds = [];
+        for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
+            try {
+                $updatedEvent = DB::transaction(function () use ($event, $validated, $user, $request) {
+                    // Lock event row for concurrent update safety
+                    $lockedEvent = Event::where('id', $event->id)->lockForUpdate()->firstOrFail();
+                    // Update event fields if present
+                    $eventData = $this->mapEventData($validated, $lockedEvent->organizer_id, true);
+                    if (!empty($eventData)) {
+                        $lockedEvent->update($eventData);
+                    }
 
-                    foreach ($incomingTiers as $index => $tierData) {
-                        // Normalize alternative keys
-                        if (isset($tierData['salesStartDate']) && !isset($tierData['sales_start_date'])) {
-                            $tierData['sales_start_date'] = $tierData['salesStartDate'];
-                        }
-                        if (isset($tierData['salesEndDate']) && !isset($tierData['sales_end_date'])) {
-                            $tierData['sales_end_date'] = $tierData['salesEndDate'];
-                        }
+                    // Handle ticket tiers if provided
+                    if (array_key_exists('ticket_tiers', $validated)) {
+                        $incomingTiers = $validated['ticket_tiers'] ?? [];
+                        // Lock tiers for this event to prevent race
+                        $existingTiers = TicketTier::where('event_id', $lockedEvent->id)->lockForUpdate()->get()->keyBy('id');
+                        $keepIds = [];
 
-                        $tierId = $tierData['id'] ?? null;
-
-                        if ($tierId && $existingTiers->has($tierId)) {
-                            // Update existing tier — ensure it belongs to this event
-                            $tier = $existingTiers->get($tierId);
-                            if ((int) $tier->event_id !== (int) $lockedEvent->id) {
-                                throw new \Illuminate\Validation\ValidationException(
-                                    validator([], []),
-                                    response()->json(['message' => 'Ticket tier does not belong to this event'], 422)
-                                );
+                        foreach ($incomingTiers as $index => $tierData) {
+                            // Normalize alternative keys
+                            if (isset($tierData['salesStartDate']) && !isset($tierData['sales_start_date'])) {
+                                $tierData['sales_start_date'] = $tierData['salesStartDate'];
                             }
-                            $payload = $this->mapTierData($tierData, $lockedEvent->id, $index, true);
-                            unset($payload['event_id']); // don't change FK
-                            $tier->update($payload);
-                            $keepIds[] = $tierId;
-                        } else {
-                            // Create new tier
-                            $payload = $this->mapTierData($tierData, $lockedEvent->id, $index);
-                            $newTier = TicketTier::create($payload);
-                            $keepIds[] = $newTier->id;
+                            if (isset($tierData['salesEndDate']) && !isset($tierData['sales_end_date'])) {
+                                $tierData['sales_end_date'] = $tierData['salesEndDate'];
+                            }
+
+                            $tierId = $tierData['id'] ?? null;
+
+                            if ($tierId && $existingTiers->has($tierId)) {
+                                // Update existing tier — ensure it belongs to this event
+                                $tier = $existingTiers->get($tierId);
+                                if ((int) $tier->event_id !== (int) $lockedEvent->id) {
+                                    throw new \Illuminate\Validation\ValidationException(
+                                        validator([], []),
+                                        response()->json(['message' => 'Ticket tier does not belong to this event'], 422)
+                                    );
+                                }
+                                $payload = $this->mapTierData($tierData, $lockedEvent->id, $index, true);
+                                unset($payload['event_id']); // don't change FK
+                                $tier->update($payload);
+                                $keepIds[] = $tierId;
+                            } else {
+                                // Create new tier
+                                $payload = $this->mapTierData($tierData, $lockedEvent->id, $index);
+                                $newTier = TicketTier::create($payload);
+                                $keepIds[] = $newTier->id;
+                            }
+                        }
+
+                        // Delete tiers not in incoming payload
+                        $toDelete = $existingTiers->keys()->diff($keepIds);
+                        if ($toDelete->isNotEmpty()) {
+                            TicketTier::whereIn('id', $toDelete->toArray())
+                                ->where('event_id', $lockedEvent->id)
+                                ->delete(); // soft delete if trait
                         }
                     }
 
-                    // Delete tiers not in incoming payload
-                    $toDelete = $existingTiers->keys()->diff($keepIds);
-                    if ($toDelete->isNotEmpty()) {
-                        TicketTier::whereIn('id', $toDelete->toArray())
-                            ->where('event_id', $lockedEvent->id)
-                            ->delete(); // soft delete if trait
-                    }
+                    $lockedEvent->refresh();
+                    $lockedEvent->load(['ticketTiers', 'organizer']);
+
+                    AuditLogger::forEvent(
+                        action: 'event.updated',
+                        user: $user,
+                        eventId: (string) $lockedEvent->id,
+                        oldValues: $event->toArray(),
+                        newValues: $lockedEvent->toArray(),
+                        request: $request,
+                        description: "Event '{$lockedEvent->title}' updated"
+                    );
+
+                    return $lockedEvent;
+                });
+
+                return new EventResource($updatedEvent);
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Retry on deadlock or serialization failure
+                $sqlState = $e->getCode();
+                $isDeadlock = in_array($sqlState, ['40001', 'serialization_failure'], true);
+                $isLockWaitTimeout = $sqlState === 'HY000' && str_contains($e->getMessage(), 'lock');
+
+                if (($isDeadlock || $isLockWaitTimeout) && $attempt < $maxRetries - 1) {
+                    \Illuminate\Support\Facades\Log::warning('Deadlock detected, retrying', [
+                        'event_id' => $event->id,
+                        'attempt' => $attempt + 1,
+                        'error' => $e->getMessage(),
+                    ]);
+                    usleep((int) ($retryDelay * 1000000));
+                    $retryDelay *= 2; // exponential backoff
+
+                    continue;
                 }
 
-                $lockedEvent->refresh();
-                $lockedEvent->load(['ticketTiers', 'organizer']);
-
-                AuditLogger::forEvent(
-                    action: 'event.updated',
-                    user: $user,
-                    eventId: (string) $lockedEvent->id,
-                    oldValues: $event->toArray(),
-                    newValues: $lockedEvent->toArray(),
-                    request: $request,
-                    description: "Event '{$lockedEvent->title}' updated"
-                );
-
-                return $lockedEvent;
-            });
-
-            return new EventResource($updatedEvent);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            AuditLogger::forEvent(
-                action: 'event.update_validation_failed',
-                user: $user,
-                eventId: (string) $event->id,
-                request: $request,
-                description: 'Event update validation failed'
-            );
-            throw $e;
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Event update failed', ['event_id' => $id, 'error' => $e->getMessage()]);
-            AuditLogger::forEvent(
-                action: 'event.update_failed',
-                user: $user,
-                eventId: (string) $event->id,
-                request: $request,
-                description: 'Failed to update event: ' . $e->getMessage()
-            );
-            $debug = app()->hasDebugModeEnabled();
-            return response()->json([
-                'message' => 'Failed to update event',
-                'error' => $debug ? $e->getMessage() : 'An internal error occurred.',
-            ], 500);
+                throw $e;
+            }
         }
+
+        // This should never be reached, but just in case
+        return response()->json(['message' => 'Failed to update event'], 500);
     }
 
     /**
@@ -703,6 +708,8 @@ class EventController extends Controller
         $quantity = $tierData['quantity'] ?? $tierData['capacity'] ?? null;
         $salesStart = $tierData['sales_start_date'] ?? $tierData['salesStartDate'] ?? null;
         $salesEnd = $tierData['sales_end_date'] ?? $tierData['salesEndDate'] ?? null;
+        $earlyBirdPrice = $tierData['early_bird_price'] ?? $tierData['earlyBirdPrice'] ?? null;
+        $earlyBirdEndDate = $tierData['early_bird_end_date'] ?? $tierData['earlyBirdEndDate'] ?? null;
 
         $payload = [
             'event_id' => $eventId,
@@ -711,6 +718,8 @@ class EventController extends Controller
             'quantity' => $quantity !== null && $quantity !== '' ? (int) $quantity : null,
             'sales_start_date' => $salesStart,
             'sales_end_date' => $salesEnd,
+            'early_bird_price' => $earlyBirdPrice !== null ? (float) $earlyBirdPrice : null,
+            'early_bird_end_date' => $earlyBirdEndDate,
             'tier_order' => $tierData['tier_order'] ?? $index,
             'is_active' => $tierData['is_active'] ?? true,
             'currency' => $tierData['currency'] ?? 'NGN',
