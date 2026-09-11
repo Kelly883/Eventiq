@@ -29,6 +29,8 @@ const EventEditPage = () => {
   });
 
   const [tiers, setTiers] = useState([{ name: 'Regular', price: '', quantity: '' }]);
+  const [bannerFile, setBannerFile] = useState(null);
+  const [bannerPreview, setBannerPreview] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -74,7 +76,7 @@ const EventEditPage = () => {
     if (!validateForm()) return;
     setSaving(true);
     try {
-      await api.put(`/organizer/events/${eventId}`, {
+      await api.patch(`/organizer/events/${eventId}`, {
         title: form.title,
         description: form.description,
         category: form.category,
@@ -87,23 +89,41 @@ const EventEditPage = () => {
         capacity: form.capacity ? Number(form.capacity) : null,
         isPublic: form.isPublic,
         ticketTiers: tiers.map((t) => ({
+          id: t.id || undefined,
           name: t.name,
           price: t.price === '' ? 0 : Number(t.price),
           quantity: t.quantity === '' ? 0 : Number(t.quantity),
         })),
-        bannerUrl: form.bannerUrl,
       });
+      // Upload banner if a new file was selected
+      if (bannerFile) {
+        const fd = new FormData();
+        fd.append('banner', bannerFile);
+        try {
+          await api.post(`/organizer/events/${eventId}/upload-banner`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+          showToast('Banner updated', 'Event banner saved.', 'success');
+        } catch (bannerErr) {
+          const bStatus = bannerErr?.response?.status;
+          const bMsg = bannerErr?.response?.data?.message || 'Banner upload failed';
+          if (bStatus === 413) showToast('File too large', 'Maximum size is 5MB.', 'error');
+          else if (bStatus === 422) showToast('Invalid banner', bMsg, 'error');
+          else showToast('Banner upload failed', bMsg, 'warning');
+        }
+      }
       showToast('Changes saved', 'Event updated successfully!', 'success');
       navigate('/organizer/events');
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Failed to save changes';
+      const msg = err?.response?.data?.message || err?.response?.data?.errors?.title?.[0] || 'Failed to save changes';
       const status = err?.response?.status;
       if (status === 404) setError('Event not found');
+      else if (status === 429) showToast('Too many requests', 'Please wait and try again.', 'warning');
       else showToast('Save failed', msg, 'error');
     } finally {
       setSaving(false);
     }
-  }, [validateForm, form, tiers, eventId, navigate]);
+  }, [validateForm, form, tiers, bannerFile, eventId, navigate]);
 
   const handleArchive = useCallback(async () => {
     if (!window.confirm('Archive this event? This will hide it from listings.')) return;
@@ -152,6 +172,7 @@ const EventEditPage = () => {
         const apiTiers = data.ticket_tiers || data.ticketTiers || data.tiers;
         if (Array.isArray(apiTiers) && apiTiers.length) {
           setTiers(apiTiers.map((t) => ({
+            id: t.id,
             name: t.name || '',
             price: t.price != null ? String(t.price) : '',
             quantity: t.quantity != null ? String(t.quantity) : t.available != null ? String(t.available) : '',
@@ -319,21 +340,28 @@ const EventEditPage = () => {
           {/* Media */}
           <div className="bg-white rounded-xl border border-[#E3E4E6] p-6 md:p-8 shadow-sm mb-6">
             <h2 className="text-xl font-semibold text-[#333333] mb-1">Media</h2>
-            {form.bannerUrl ? (
+            {(bannerPreview || form.bannerUrl) ? (
               <div className="mb-4">
-                <img src={form.bannerUrl} alt={`${form.title} banner`} className="w-full rounded-lg h-48 object-cover border border-[#E3E4E6]" />
+                <img src={bannerPreview || form.bannerUrl} alt={`${form.title} banner`} className="w-full rounded-lg h-48 object-cover border border-[#E3E4E6]" />
                 <p className="mt-2 text-xs text-[#999999]">Current banner — upload a new file to replace it</p>
+                {bannerFile && <p className="mt-1 text-xs text-[#FF6B6B]">New file selected: {bannerFile.name} (will upload on save)</p>}
               </div>
             ) : <p className="text-sm text-[#999999] mb-4">No banner yet — add one below</p>}
             <label className="flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl p-8 text-center hover:border-[#FF6B6B] hover:bg-[#FF6B6B]/5 cursor-pointer group">
               <span className="text-2xl mb-2">📷</span>
               <span className="text-sm font-medium text-[#333333]">Click to upload banner</span>
-              <span className="text-xs text-[#999999]">1200×628 JPG/PNG</span>
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+              <span className="text-xs text-[#999999]">1200×628 JPG/PNG/GIF/WEBP, max 5MB</span>
+              <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) {
+                  if (f.size > 5 * 1024 * 1024) {
+                    showToast('File too large', 'Maximum size is 5MB.', 'error');
+                    e.target.value = '';
+                    return;
+                  }
+                  setBannerFile(f);
                   const r = new FileReader();
-                  r.onload = () => setForm((p) => ({ ...p, bannerUrl: r.result }));
+                  r.onload = () => setBannerPreview(r.result);
                   r.readAsDataURL(f);
                 }
               }} />

@@ -76,6 +76,17 @@ const EventCreatePage = () => {
   const handleBannerChange = useCallback((e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('File too large', 'Maximum size is 5MB.', 'error');
+      e.target.value = '';
+      return;
+    }
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowed.includes(file.type) && !['jpg','jpeg','png','gif','webp'].includes(file.name.split('.').pop().toLowerCase())) {
+      showToast('Invalid file type', 'Only jpg, png, gif, webp allowed.', 'error');
+      e.target.value = '';
+      return;
+    }
     setBannerFile(file);
     const reader = new FileReader();
     reader.onload = () => setBannerPreview(reader.result);
@@ -117,19 +128,26 @@ const EventCreatePage = () => {
     })),
   }), [form, tiers]);
 
-  const uploadBannerIfNeeded = useCallback(async () => {
-    if (!bannerFile) return null;
+  const uploadBannerForEvent = useCallback(async (eventId) => {
+    if (!bannerFile || !eventId) return;
     const fd = new FormData();
     fd.append('banner', bannerFile);
     try {
-      const res = await api.post('/organizer/events/banner', fd, {
+      await api.post(`/organizer/events/${eventId}/upload-banner`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      return res.data?.url || res.data?.bannerUrl || null;
-    } catch {
-      // Fallback: endpoint may not exist yet, warn but continue
-      showToast('Banner upload skipped', 'Banner will be uploaded separately.', 'warning');
-      return null;
+      showToast('Banner uploaded', 'Event banner saved.', 'success');
+    } catch (err) {
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.message || err?.response?.data?.errors?.banner?.[0] || 'Banner upload failed';
+      if (status === 413) {
+        showToast('File too large', 'Maximum size is 5MB.', 'error');
+      } else if (status === 422) {
+        showToast('Invalid banner', msg, 'error');
+      } else {
+        showToast('Banner upload failed', msg, 'warning');
+      }
+      // Do not block navigation — event is already created
     }
   }, [bannerFile]);
 
@@ -138,38 +156,52 @@ const EventCreatePage = () => {
     if (!validateForm()) return;
     setSavingDraft(true);
     try {
-      const bannerUrl = await uploadBannerIfNeeded();
       const payload = buildPayload('draft');
-      if (bannerUrl) payload.bannerUrl = bannerUrl;
-      await api.post('/organizer/events', payload);
+      const res = await api.post('/organizer/events', payload);
+      const eventId = res.data?.data?.id || res.data?.id;
+      if (bannerFile && eventId) {
+        await uploadBannerForEvent(eventId);
+      }
       showToast('Event created', 'Event created successfully!', 'success');
       navigate('/organizer/events');
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Failed to save draft';
-      showToast('Save failed', msg, 'error');
+      const msg = err?.response?.data?.message || err?.response?.data?.errors?.title?.[0] || 'Failed to save draft';
+      const status = err?.response?.status;
+      if (status === 429) {
+        showToast('Too many requests', 'Please wait a moment and try again.', 'warning');
+      } else {
+        showToast('Save failed', msg, 'error');
+      }
     } finally {
       setSavingDraft(false);
     }
-  }, [validateForm, uploadBannerIfNeeded, buildPayload, navigate]);
+  }, [validateForm, buildPayload, bannerFile, uploadBannerForEvent, navigate]);
 
   const handlePublish = useCallback(async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
     setPublishing(true);
     try {
-      const bannerUrl = await uploadBannerIfNeeded();
       const payload = buildPayload('published');
-      if (bannerUrl) payload.bannerUrl = bannerUrl;
-      await api.post('/organizer/events', payload);
+      const res = await api.post('/organizer/events', payload);
+      const eventId = res.data?.data?.id || res.data?.id;
+      if (bannerFile && eventId) {
+        await uploadBannerForEvent(eventId);
+      }
       showToast('Event published', 'Event created successfully!', 'success');
       navigate('/organizer/events');
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Failed to publish event';
-      showToast('Publish failed', msg, 'error');
+      const msg = err?.response?.data?.message || err?.response?.data?.errors?.title?.[0] || 'Failed to publish event';
+      const status = err?.response?.status;
+      if (status === 429) {
+        showToast('Too many requests', 'Please wait a moment and try again.', 'warning');
+      } else {
+        showToast('Publish failed', msg, 'error');
+      }
     } finally {
       setPublishing(false);
     }
-  }, [validateForm, uploadBannerIfNeeded, buildPayload, navigate]);
+  }, [validateForm, buildPayload, bannerFile, uploadBannerForEvent, navigate]);
 
   const isSaving = savingDraft || publishing;
 
@@ -450,7 +482,7 @@ const EventCreatePage = () => {
           {/* Card: Media */}
           <div className="bg-white rounded-xl border border-[#E3E4E6] p-6 md:p-8 shadow-sm mb-6">
             <h2 className="text-xl font-semibold text-[#333333] mb-1">Media</h2>
-            <p className="text-sm text-[#999999] mb-4">Event banner — recommended 1200×628 JPG/PNG</p>
+            <p className="text-sm text-[#999999] mb-4">Event banner — 1200×628 JPG/PNG/GIF/WEBP, max 5MB</p>
 
             {bannerPreview ? (
               <div className="mb-4 relative group">
@@ -477,7 +509,7 @@ const EventCreatePage = () => {
               <p className="text-sm font-medium text-[#333333]">Add Cover Image</p>
               <p className="text-xs text-[#999999] mt-1">Click to upload banner image</p>
             </button>
-            <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleBannerChange} />
+            <input ref={fileInputRef} type="file" className="hidden" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleBannerChange} />
           </div>
 
           {/* Sticky footer */}

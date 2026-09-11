@@ -20,9 +20,7 @@ class UpdateEventRequest extends FormRequest
         if ($this->has('venueAddress') && !$this->has('venue_address')) {
             $merge['venue_address'] = $this->input('venueAddress');
         }
-        if ($this->has('bannerUrl') && !$this->has('banner_image_url')) {
-            $merge['banner_image_url'] = $this->input('bannerUrl');
-        }
+        // banner_image_url only via upload-banner, ignore direct payload
         // Combine split dates if present
         if (!$this->has('start_datetime') && $this->has('startDate')) {
             $date = $this->input('startDate');
@@ -66,12 +64,11 @@ class UpdateEventRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:5000'],
             'category' => ['nullable', 'string', 'max:100'],
             'start_datetime' => ['sometimes', 'date'],
-            'end_datetime' => ['sometimes', 'date', 'after:start_datetime'],
+            'end_datetime' => ['sometimes', 'date', 'after_or_equal:start_datetime'],
             'venue_name' => ['nullable', 'string', 'max:255'],
             'venue_address' => ['nullable', 'string', 'max:500'],
-            'capacity' => ['sometimes', 'integer', 'min:1'],
+            'capacity' => ['sometimes', 'integer', 'min:0'],
             'status' => ['sometimes', 'string', 'in:draft,published'],
-            'banner_image_url' => ['nullable', 'string', 'max:2048', 'url'],
             'ticket_tiers' => ['nullable', 'array', 'max:10'],
             'ticket_tiers.*.id' => ['nullable', 'integer', 'exists:ticket_tiers,id'],
             'ticket_tiers.*.name' => ['required_with:ticket_tiers', 'string', 'max:100'],

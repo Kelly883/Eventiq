@@ -85,17 +85,28 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
         });
 
-        // Organizer profile — public 20/min per IP (scraping), update 5/min per user, avatar 10/min per user
+        // Organizer profile — public 20/min per IP (scraping) but per-user if authed to avoid campus NAT throttling legit users
         RateLimiter::for('organizer-public', function ($request) {
-            return Limit::perMinute(20)->by($request->ip());
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
         RateLimiter::for('organizer-public-events', function ($request) {
-            return Limit::perMinute(20)->by($request->ip());
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
         RateLimiter::for('organizer-update', function ($request) {
             return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
         });
         RateLimiter::for('organizer-avatar', function ($request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
+
+        // Organizer event management — 60/min general, 30/min create, 10/min banner upload
+        RateLimiter::for('organizer-events', function ($request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('organizer-events-create', function ($request) {
+            return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('organizer-banner', function ($request) {
             return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
         });
 

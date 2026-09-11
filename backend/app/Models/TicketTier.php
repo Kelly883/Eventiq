@@ -81,8 +81,8 @@ class TicketTier extends Model
                 throw new \InvalidArgumentException('Sold count cannot exceed quantity.');
             }
 
-            if ($tier->price <= 0) {
-                throw new \InvalidArgumentException('Price must be greater than zero.');
+            if ($tier->price < 0) {
+                throw new \InvalidArgumentException('Price must be greater than or equal to zero.');
             }
 
             if ($tier->early_bird_price !== null && $tier->early_bird_price >= $tier->price) {

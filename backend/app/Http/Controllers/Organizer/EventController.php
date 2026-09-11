@@ -46,7 +46,7 @@ class EventController extends Controller
             ], 422);
         }
 
-        $query = Event::with(['ticketTiers', 'organizer'])
+        $query = Event::without('analyticsEventsMetric')->with(['ticketTiers', 'organizer'])
             ->where('organizer_id', $organizer->id)
             ->orderByDesc('created_at');
 
@@ -104,7 +104,7 @@ class EventController extends Controller
                 \Illuminate\Support\Facades\Log::warning('Failed to dispatch IncrementTotalEventsCreated', ['error' => $e->getMessage()]);
             }
 
-            $event->load(['ticketTiers', 'organizer', 'analyticsEventsMetric']);
+            $event->load(['ticketTiers', 'organizer']);
 
             return (new EventResource($event))->response()->setStatusCode(201);
         } catch (\Throwable $e) {
@@ -123,7 +123,7 @@ class EventController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $event = Event::with(['ticketTiers', 'organizer'])->find($id);
+        $event = Event::without('analyticsEventsMetric')->with(['ticketTiers', 'organizer'])->find($id);
 
         if (!$event) {
             return response()->json(['message' => 'Event not found'], 404);
@@ -149,7 +149,7 @@ class EventController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $event = Event::with('ticketTiers')->find($id);
+        $event = Event::without('analyticsEventsMetric')->with('ticketTiers')->find($id);
 
         if (!$event) {
             return response()->json(['message' => 'Event not found'], 404);
@@ -165,16 +165,19 @@ class EventController extends Controller
 
         try {
             $updatedEvent = DB::transaction(function () use ($event, $validated) {
+                // Lock event row for concurrent update safety
+                $lockedEvent = Event::where('id', $event->id)->lockForUpdate()->firstOrFail();
                 // Update event fields if present
-                $eventData = $this->mapEventData($validated, $event->organizer_id, true);
+                $eventData = $this->mapEventData($validated, $lockedEvent->organizer_id, true);
                 if (!empty($eventData)) {
-                    $event->update($eventData);
+                    $lockedEvent->update($eventData);
                 }
 
                 // Handle ticket tiers if provided
                 if (array_key_exists('ticket_tiers', $validated)) {
                     $incomingTiers = $validated['ticket_tiers'] ?? [];
-                    $existingTiers = $event->ticketTiers->keyBy('id');
+                    // Lock tiers for this event to prevent race
+                    $existingTiers = TicketTier::where('event_id', $lockedEvent->id)->lockForUpdate()->get()->keyBy('id');
                     $keepIds = [];
 
                     foreach ($incomingTiers as $index => $tierData) {
@@ -191,19 +194,19 @@ class EventController extends Controller
                         if ($tierId && $existingTiers->has($tierId)) {
                             // Update existing tier — ensure it belongs to this event
                             $tier = $existingTiers->get($tierId);
-                            if ((int) $tier->event_id !== (int) $event->id) {
+                            if ((int) $tier->event_id !== (int) $lockedEvent->id) {
                                 throw new \Illuminate\Validation\ValidationException(
                                     validator([], []),
                                     response()->json(['message' => 'Ticket tier does not belong to this event'], 422)
                                 );
                             }
-                            $payload = $this->mapTierData($tierData, $event->id, $index, true);
+                            $payload = $this->mapTierData($tierData, $lockedEvent->id, $index, true);
                             unset($payload['event_id']); // don't change FK
                             $tier->update($payload);
                             $keepIds[] = $tierId;
                         } else {
                             // Create new tier
-                            $payload = $this->mapTierData($tierData, $event->id, $index);
+                            $payload = $this->mapTierData($tierData, $lockedEvent->id, $index);
                             $newTier = TicketTier::create($payload);
                             $keepIds[] = $newTier->id;
                         }
@@ -213,15 +216,15 @@ class EventController extends Controller
                     $toDelete = $existingTiers->keys()->diff($keepIds);
                     if ($toDelete->isNotEmpty()) {
                         TicketTier::whereIn('id', $toDelete->toArray())
-                            ->where('event_id', $event->id)
+                            ->where('event_id', $lockedEvent->id)
                             ->delete(); // soft delete if trait
                     }
                 }
 
-                $event->refresh();
-                $event->load(['ticketTiers', 'organizer']);
+                $lockedEvent->refresh();
+                $lockedEvent->load(['ticketTiers', 'organizer']);
 
-                return $event;
+                return $lockedEvent;
             });
 
             return new EventResource($updatedEvent);
@@ -243,7 +246,7 @@ class EventController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $event = Event::find($id);
+        $event = Event::without('analyticsEventsMetric')->find($id);
 
         if (!$event) {
             return response()->json(['message' => 'Event not found'], 404);
@@ -256,10 +259,16 @@ class EventController extends Controller
         }
 
         try {
-            $organizerId = $event->organizer_id;
+            // Lock for concurrent delete safety
+            $locked = Event::where('id', $event->id)->lockForUpdate()->first();
+            if (!$locked) {
+                return response()->json(['message' => 'Event not found'], 404);
+            }
+            $organizerId = $locked->organizer_id;
 
             // Soft delete (uses SoftDeletes trait)
-            $event->delete();
+            $locked->delete();
+            $event = $locked;
 
             try {
                 DecrementTotalEventsCreated::dispatch($organizerId);
@@ -284,7 +293,7 @@ class EventController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $event = Event::find($id);
+        $event = Event::without('analyticsEventsMetric')->find($id);
 
         if (!$event) {
             return response()->json(['message' => 'Event not found'], 404);
@@ -296,7 +305,7 @@ class EventController extends Controller
             return response()->json(['message' => 'Forbidden — you do not own this event'], 403);
         }
 
-        // Validate file
+        // Validate file - also check actual image content via getimagesize
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'banner' => ['required', 'file', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:5120'],
             // Also support field name 'banner_image' for compat
@@ -327,6 +336,11 @@ class EventController extends Controller
             return response()->json(['message' => 'File too large. Maximum size is 5MB.'], 413);
         }
 
+        // Validate actual image content (not just extension) to prevent malicious upload with spoofed mime
+        $imageInfo = @getimagesize($file->getRealPath());
+        if (!$imageInfo || !in_array($imageInfo[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_GIF, IMAGETYPE_WEBP], true)) {
+            return response()->json(['message' => 'Invalid image content. File is not a valid image.'], 422);
+        }
         // Validate Mime by actual content via finfo, not just extension
         $mime = $file->getMimeType();
         $allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
@@ -354,7 +368,8 @@ class EventController extends Controller
         }
         if ($ext === 'jpeg') $ext = 'jpg';
 
-        $path = "events/{$event->id}/banner.{$ext}";
+        // Versioned path to avoid CDN caching race and concurrent overwrite
+        $path = "events/{$event->id}/banner_" . time() . "_" . Str::random(6) . ".{$ext}";
 
         // Choose disk: s3 if configured, else public
         $disk = $this->resolveDisk();
@@ -449,9 +464,8 @@ class EventController extends Controller
         if (isset($validated['status'])) {
             $map['status'] = $validated['status'];
         }
-        if (isset($validated['banner_image_url'])) {
-            $map['banner_image_url'] = $validated['banner_image_url'];
-        }
+        // banner_image_url only via upload-banner, ignore direct payload to prevent external URL injection
+        // if (isset($validated['banner_image_url'])) { $map['banner_image_url'] = $validated['banner_image_url']; }
         // For create, ensure required organizer linkage
         if (!$isUpdate) {
             $map['organizer_id'] = $organizerId;

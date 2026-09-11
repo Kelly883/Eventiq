@@ -22,14 +22,9 @@ class EventPolicy
         if (!$organizer) {
             return false;
         }
-        $ownerOrganizerId = $event->organizer_id;
-        if ($ownerOrganizerId != $organizer->id) {
-            if (isset($event->user_id) && $event->user_id === $user->id) {
-                return true;
-            }
-            return false;
-        }
-        return true;
+        // Strict organizer ownership — no fallback via event->user_id to prevent
+        // bypass where a stale user_id on event could grant access to non-owner.
+        return (int) $event->organizer_id === (int) $organizer->id;
     }
 
     public function create(User $user): bool
