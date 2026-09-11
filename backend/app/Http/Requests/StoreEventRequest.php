@@ -61,6 +61,10 @@ class StoreEventRequest extends FormRequest
         if ($this->has('capacity') && is_string($this->input('capacity')) && $this->input('capacity') !== '') {
             $merge['capacity'] = (int) $this->input('capacity');
         }
+        // isPublic vs status: frontend sends isPublic boolean, backend stores is_public
+        if ($this->has('isPublic') && !$this->has('is_public')) {
+            $merge['is_public'] = $this->boolean('isPublic');
+        }
 
         if (!empty($merge)) {
             $this->merge($merge);
@@ -79,6 +83,8 @@ class StoreEventRequest extends FormRequest
             'venue_address' => ['nullable', 'string', 'max:500'],
             'capacity' => ['required', 'integer', 'min:0'],
             'status' => ['required', 'string', 'in:draft,published'],
+            'is_public' => ['nullable', 'boolean'],
+            'isPublic' => ['nullable', 'boolean'],
             'ticket_tiers' => ['nullable', 'array', 'max:10'],
             'ticket_tiers.*.name' => ['required_with:ticket_tiers', 'string', 'max:100'],
             'ticket_tiers.*.price' => ['required_with:ticket_tiers', 'numeric', 'min:0'],

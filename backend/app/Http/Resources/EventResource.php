@@ -16,6 +16,9 @@ class EventResource extends JsonResource
             'archived' => 'past',
             default => $this->status,
         };
+        // is_public / isPublic compat for frontend (EventCreatePage sends isPublic, spec expects is_public)
+        $data['is_public'] = $this->is_public ?? true;
+        $data['isPublic'] = $this->is_public ?? true;
 
         $data['ticket_tiers'] = TicketTierResource::collection($this->whenLoaded('ticketTiers'));
         $data['organizer'] = $this->whenLoaded('organizer', function () {

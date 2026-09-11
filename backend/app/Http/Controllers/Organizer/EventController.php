@@ -523,6 +523,11 @@ class EventController extends Controller
         if (isset($validated['status'])) {
             $map['status'] = $validated['status'];
         }
+        if (array_key_exists('is_public', $validated)) {
+            $map['is_public'] = (bool) $validated['is_public'];
+        } elseif (array_key_exists('isPublic', $validated)) {
+            $map['is_public'] = (bool) $validated['isPublic'];
+        }
         // banner_image_url only via upload-banner, ignore direct payload to prevent external URL injection
         // if (isset($validated['banner_image_url'])) { $map['banner_image_url'] = $validated['banner_image_url']; }
         // For create, ensure required organizer linkage

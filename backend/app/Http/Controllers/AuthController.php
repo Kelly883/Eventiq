@@ -284,8 +284,17 @@ class AuthController extends Controller
             (new OfflineSyncEngine())->purgeDeviceOperations($tokens);
 
             // Revoke the current Bearer session if one was used.
-            if ($request->attributes->has('auth_session')) {
-                $request->attributes->get('auth_session')->update(['revokedAt' => now()]);
+            $header = $request->header('Authorization', '');
+            if (str_starts_with($header, 'Bearer ')) {
+                $plainToken = substr($header, 7);
+                if ($plainToken !== '' && strlen($plainToken) >= 32) {
+                    $session = Session::where('token', hash('sha256', $plainToken))
+                        ->where('expiresAt', '>', now())
+                        ->first();
+                    if ($session) {
+                        $session->update(['revokedAt' => now()]);
+                    }
+                }
             }
         }
 

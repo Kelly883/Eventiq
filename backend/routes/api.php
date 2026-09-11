@@ -97,10 +97,11 @@ Route::middleware('bearer')->group(function () {
         Route::get('/profile', [OrganizerController::class, 'edit']);
         Route::put('/profile', [OrganizerController::class, 'update']);
 
-        // Organizer events — throttled per organizer (60/min) with stricter banner limit (10/min)
+        // Organizer events — throttled per organizer (60/min) with stricter create (30/min) and banner (10/min)
         Route::middleware('throttle:organizer-events')->group(function () {
-            Route::apiResource('events', EventController::class);
+            Route::apiResource('events', EventController::class)->except(['store']);
         });
+        Route::post('events', [EventController::class, 'store'])->middleware('throttle:organizer-events-create');
         Route::post('events/{event}/upload-banner', [EventController::class, 'uploadBanner'])->middleware('throttle:organizer-banner');
 
         // Event ticketing

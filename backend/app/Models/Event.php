@@ -38,6 +38,7 @@ class Event extends Model
         'banner_image_url',
         'capacity',
         'status',
+        'is_public',
         'flag_reason',
         'flag_date',
         'category',
@@ -49,6 +50,7 @@ class Event extends Model
         'latitude' => 'decimal:7',
         'longitude' => 'decimal:7',
         'capacity' => 'integer',
+        'is_public' => 'boolean',
         'deleted_at' => 'datetime',
     ];
 

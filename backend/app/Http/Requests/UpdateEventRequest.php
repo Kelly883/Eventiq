@@ -52,6 +52,9 @@ class UpdateEventRequest extends FormRequest
         if ($this->has('capacity') && is_string($this->input('capacity')) && $this->input('capacity') !== '') {
             $merge['capacity'] = (int) $this->input('capacity');
         }
+        if ($this->has('isPublic') && !$this->has('is_public')) {
+            $merge['is_public'] = $this->boolean('isPublic');
+        }
         if (!empty($merge)) {
             $this->merge($merge);
         }
@@ -69,6 +72,8 @@ class UpdateEventRequest extends FormRequest
             'venue_address' => ['nullable', 'string', 'max:500'],
             'capacity' => ['sometimes', 'integer', 'min:0'],
             'status' => ['sometimes', 'string', 'in:draft,published'],
+            'is_public' => ['nullable', 'boolean'],
+            'isPublic' => ['nullable', 'boolean'],
             'ticket_tiers' => ['nullable', 'array', 'max:10'],
             'ticket_tiers.*.id' => ['nullable', 'integer', 'exists:ticket_tiers,id'],
             'ticket_tiers.*.name' => ['required_with:ticket_tiers', 'string', 'max:100'],
