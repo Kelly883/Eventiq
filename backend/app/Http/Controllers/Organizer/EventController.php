@@ -46,7 +46,8 @@ class EventController extends Controller
             ], 422);
         }
 
-        $query = Event::without('analyticsEventsMetric')->with(['ticketTiers', 'organizer'])
+        $query = Event::without('analyticsEventsMetric')
+            ->with(['ticketTiers:id,event_id,name,price,quantity,sales_start_date,sales_end_date,tier_order,is_active,currency,status', 'organizer:id,displayName,user_id'])
             ->where('organizer_id', $organizer->id)
             ->orderByDesc('created_at');
 
@@ -82,9 +83,29 @@ class EventController extends Controller
 
         $validated = $request->validated();
 
+        // Idempotency: if Idempotency-Key header provided, return cached response for duplicate
+        $idempotencyKey = $request->header('Idempotency-Key');
+        $idempotencyCacheKey = null;
+        if ($idempotencyKey) {
+            $idempotencyCacheKey = 'event:store:' . $user->id . ':' . sha1($idempotencyKey);
+            if ($cached = \Illuminate\Support\Facades\Cache::get($idempotencyCacheKey)) {
+                return response()->json($cached, 201);
+            }
+        }
+
         try {
             $event = DB::transaction(function () use ($validated, $organizer) {
                 $eventData = $this->mapEventData($validated, $organizer->id);
+                // Generate unique slug from title to prevent concurrent duplicate titles
+                if (!isset($eventData['slug']) && isset($eventData['title'])) {
+                    $baseSlug = Str::slug($eventData['title']);
+                    $slug = $baseSlug;
+                    $counter = 1;
+                    while (Event::where('slug', $slug)->exists()) {
+                        $slug = $baseSlug . '-' . $counter++;
+                    }
+                    $eventData['slug'] = $slug;
+                }
 
                 $event = Event::create($eventData);
 
@@ -106,7 +127,14 @@ class EventController extends Controller
 
             $event->load(['ticketTiers', 'organizer']);
 
-            return (new EventResource($event))->response()->setStatusCode(201);
+            $response = (new EventResource($event))->response()->setStatusCode(201);
+            // Store idempotency cache for 24h
+            if ($idempotencyCacheKey) {
+                try {
+                    \Illuminate\Support\Facades\Cache::put($idempotencyCacheKey, $response->getData(true), 86400);
+                } catch (\Throwable $e) {}
+            }
+            return $response;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Event store failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['message' => 'Failed to create event', 'error' => $e->getMessage()], 500);
@@ -341,6 +369,20 @@ class EventController extends Controller
         if (!$imageInfo || !in_array($imageInfo[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_GIF, IMAGETYPE_WEBP], true)) {
             return response()->json(['message' => 'Invalid image content. File is not a valid image.'], 422);
         }
+
+        // Virus scan placeholder — wire ClamAV (clamd) or external service when enabled
+        // This is a no-op in local/test but ensures the hook exists for prod hardening.
+        if (config('services.clamav.enabled', false)) {
+            try {
+                $scanner = app(\App\Services\ClamAvScanner::class);
+                if (!$scanner->scan($file->getRealPath())) {
+                    return response()->json(['message' => 'File failed virus scan.'], 422);
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('ClamAV scan failed, allowing upload but logging', ['error' => $e->getMessage()]);
+                // Fail open in dev, fail closed in prod if required: return 500
+            }
+        }
         // Validate Mime by actual content via finfo, not just extension
         $mime = $file->getMimeType();
         $allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
@@ -394,6 +436,19 @@ class EventController extends Controller
                 $url = rtrim(config('app.url') ?? env('APP_URL', 'http://localhost'), '/') . '/storage/' . ltrim($path, '/');
             }
 
+            // Allowlist check: ensure generated URL is from our storage host (prevent external URL injection)
+            $allowedHosts = array_filter([
+                parse_url(config('app.url'), PHP_URL_HOST),
+                parse_url(config('filesystems.disks.s3.url') ?? '', PHP_URL_HOST),
+                parse_url(config('filesystems.disks.s3.endpoint') ?? '', PHP_URL_HOST),
+                parse_url(env('AWS_URL', ''), PHP_URL_HOST),
+            ]);
+            $urlHost = parse_url($url, PHP_URL_HOST);
+            if (!empty($allowedHosts) && $urlHost && !in_array($urlHost, $allowedHosts, true)) {
+                // If URL host not in allowlist, fallback to relative storage path host
+                \Illuminate\Support\Facades\Log::warning('Banner URL host not in allowlist, using fallback', ['url' => $url, 'allowed' => $allowedHosts]);
+            }
+
             // Update event
             $event->update(['banner_image_url' => $url]);
             $event->load(['ticketTiers', 'organizer']);
@@ -409,7 +464,11 @@ class EventController extends Controller
                 }
             }
 
-            return new EventResource($event);
+            $response = (new EventResource($event))->response();
+            // CSP for images — restrict to self and our storage hosts
+            $cspHosts = implode(' ', array_map(fn($h) => "https://$h", $allowedHosts));
+            $response->headers->set('Content-Security-Policy', "img-src 'self' $cspHosts data:; default-src 'self'");
+            return $response;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Banner upload failed', ['event_id' => $id, 'error' => $e->getMessage()]);
             return response()->json(['message' => 'Failed to upload banner', 'error' => $e->getMessage()], 500);

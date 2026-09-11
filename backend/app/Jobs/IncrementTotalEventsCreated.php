@@ -3,16 +3,24 @@
 namespace App\Jobs;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
-class IncrementTotalEventsCreated implements ShouldQueue
+class IncrementTotalEventsCreated implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public int $uniqueFor = 60;
+
     public function __construct(public int|string $organizerId) {}
+
+    public function uniqueId(): string
+    {
+        return 'organizer:' . $this->organizerId;
+    }
 
     public function handle(): void
     {

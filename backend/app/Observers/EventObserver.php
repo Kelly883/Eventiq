@@ -33,9 +33,8 @@ class EventObserver
             EventsCalendarSummary::refreshForDate($event->start_datetime->format('Y-m-d'));
         }
 
-        if ($event->organizer_id) {
-            \App\Models\Organizer::where('id', $event->organizer_id)->increment('totalEventsCreated');
-        }
+        // totalEventsCreated is now handled by IncrementTotalEventsCreated job (dispatched from EventController@store)
+        // to avoid double-count and allow ShouldBeUnique deduplication. Observer no longer increments directly.
     }
 
     public function updated(Event $event): void
@@ -61,9 +60,7 @@ class EventObserver
             EventsCalendarSummary::refreshForDate($event->start_datetime->format('Y-m-d'));
         }
 
-        if ($event->organizer_id) {
-            \App\Models\Organizer::where('id', $event->organizer_id)->decrement('totalEventsCreated');
-        }
+        // totalEventsCreated handled by DecrementTotalEventsCreated job
     }
 
     public function restored(Event $event): void
@@ -72,8 +69,6 @@ class EventObserver
             EventsCalendarSummary::refreshForDate($event->start_datetime->format('Y-m-d'));
         }
 
-        if ($event->organizer_id) {
-            \App\Models\Organizer::where('id', $event->organizer_id)->increment('totalEventsCreated');
-        }
+        // totalEventsCreated handled by IncrementTotalEventsCreated job on restore if needed
     }
 }

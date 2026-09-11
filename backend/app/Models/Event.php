@@ -27,6 +27,7 @@ class Event extends Model
         'organizer_id',
         'user_id',
         'title',
+        'slug',
         'description',
         'start_datetime',
         'end_datetime',
