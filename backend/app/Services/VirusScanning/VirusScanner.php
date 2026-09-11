@@ -40,18 +40,34 @@ class VirusScanner
 
     private function resolveScanner(): void
     {
+        // 1. Try external API first (VirusTotal, etc.)
         try {
-            $scanner = new ClamAvVirusScanner();
-
-            if ($scanner->isAvailable()) {
-                $this->scanner = $scanner;
+            $apiScanner = new VirusTotalScanner();
+            if ($apiScanner->isAvailable()) {
+                $this->scanner = $apiScanner;
+                Log::info('Using VirusTotal scanner');
 
                 return;
             }
         } catch (\Throwable $e) {
-            Log::info('ClamAV scanner not available, falling back to basic scanner', ['error' => $e->getMessage()]);
+            Log::info('VirusTotal scanner not available', ['error' => $e->getMessage()]);
         }
 
+        // 2. Try ClamAV if available locally
+        try {
+            $clamAvScanner = new ClamAvVirusScanner();
+            if ($clamAvScanner->isAvailable()) {
+                $this->scanner = $clamAvScanner;
+                Log::info('Using ClamAV scanner');
+
+                return;
+            }
+        } catch (\Throwable $e) {
+            Log::info('ClamAV scanner not available', ['error' => $e->getMessage()]);
+        }
+
+        // 3. Fall back to basic validation
         $this->scanner = new BasicImageScanner();
+        Log::info('Using basic image scanner fallback');
     }
 }
