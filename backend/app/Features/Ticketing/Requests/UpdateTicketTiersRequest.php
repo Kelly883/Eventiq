@@ -104,6 +104,27 @@ class UpdateTicketTiersRequest extends FormRequest
                         }
                     } catch (\Throwable $e) {}
                 }
+
+                // tier_image_url allowlist — must be from our storage hosts if present
+                $tierImageUrl = $tier['tier_image_url'] ?? $tier['tierImageUrl'] ?? null;
+                if ($tierImageUrl) {
+                    $allowedHosts = array_filter([
+                        parse_url(config('app.url'), PHP_URL_HOST),
+                        parse_url(config('filesystems.disks.s3.url') ?? '', PHP_URL_HOST),
+                        parse_url(config('filesystems.disks.s3.endpoint') ?? '', PHP_URL_HOST),
+                        parse_url(env('AWS_URL', ''), PHP_URL_HOST),
+                    ]);
+                    $host = parse_url($tierImageUrl, PHP_URL_HOST);
+                    if (!empty($allowedHosts) && $host && !in_array($host, $allowedHosts, true)) {
+                        // Allow data: and blob: for previews, but not external http
+                        if (!str_starts_with($tierImageUrl, 'data:') && !str_starts_with($tierImageUrl, 'blob:')) {
+                            $validator->errors()->add(
+                                "ticketTiers.{$index}.tier_image_url",
+                                'Tier image URL must be from our storage.'
+                            );
+                        }
+                    }
+                }
             }
         });
     }
