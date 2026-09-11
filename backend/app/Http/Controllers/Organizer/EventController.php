@@ -254,7 +254,7 @@ class EventController extends Controller
         $validated = $request->validated();
 
         try {
-            $updatedEvent = DB::transaction(function () use ($event, $validated) {
+            $updatedEvent = DB::transaction(function () use ($event, $validated, $user, $request) {
                 // Lock event row for concurrent update safety
                 $lockedEvent = Event::where('id', $event->id)->lockForUpdate()->firstOrFail();
                 // Update event fields if present

@@ -36,7 +36,10 @@ class AuditLogger
 
         $changedFields = [];
         if ($oldValues !== null && $newValues !== null) {
-            $changedFields = array_keys(array_diff_assoc($newValues, $oldValues));
+            // Filter to scalar values to avoid Array to string conversion for nested relations like ticketTiers
+            $oldScalars = array_filter($oldValues, fn($v) => !is_array($v) && !is_object($v));
+            $newScalars = array_filter($newValues, fn($v) => !is_array($v) && !is_object($v));
+            $changedFields = array_keys(array_diff_assoc($newScalars, $oldScalars));
         }
 
         return ComplianceAuditLog::create([
