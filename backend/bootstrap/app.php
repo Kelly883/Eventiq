@@ -45,15 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Enable Sanctum's stateful SPA authentication for the API guard.
         // This allows the frontend to authenticate using secure cookies
         // instead of bearer tokens.
-        // Auth guards cache the resolved user for the process lifetime with no
-        // per-request reset (SessionGuard::user() / AuthManager::guard()). Reset
-        // them at the START of every API request so a user set by
-        // BearerTokenAuth in a previous request cannot leak into the next one
-        // (auth bypass, logout revocation appearing ineffective). Must run
-        // BEFORE Sanctum's session middleware. See ResetAuthState.
-        $middleware->api(prepend: [
-            App\Http\Middleware\ResetAuthState::class,
-        ], append: [
+        $middleware->api(append: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Session\Middleware\StartSession::class,
         ]);
