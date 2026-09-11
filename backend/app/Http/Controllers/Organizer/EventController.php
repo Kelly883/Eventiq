@@ -137,7 +137,11 @@ class EventController extends Controller
             return $response;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Event store failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            return response()->json(['message' => 'Failed to create event', 'error' => $e->getMessage()], 500);
+            $debug = app()->hasDebugModeEnabled();
+            return response()->json([
+                'message' => 'Failed to create event',
+                'error' => $debug ? $e->getMessage() : 'An internal error occurred.',
+            ], 500);
         }
     }
 
@@ -265,7 +269,11 @@ class EventController extends Controller
             throw $e;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Event update failed', ['event_id' => $id, 'error' => $e->getMessage()]);
-            return response()->json(['message' => 'Failed to update event', 'error' => $e->getMessage()], 500);
+            $debug = app()->hasDebugModeEnabled();
+            return response()->json([
+                'message' => 'Failed to update event',
+                'error' => $debug ? $e->getMessage() : 'An internal error occurred.',
+            ], 500);
         }
     }
 
@@ -472,7 +480,11 @@ class EventController extends Controller
             return new EventResource($event);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Banner upload failed', ['event_id' => $id, 'error' => $e->getMessage()]);
-            return response()->json(['message' => 'Failed to upload banner', 'error' => $e->getMessage()], 500);
+            $debug = app()->hasDebugModeEnabled();
+            return response()->json([
+                'message' => 'Failed to upload banner',
+                'error' => $debug ? $e->getMessage() : 'An internal error occurred.',
+            ], 500);
         }
     }
 
