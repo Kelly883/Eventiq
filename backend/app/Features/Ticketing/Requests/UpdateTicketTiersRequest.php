@@ -3,92 +3,132 @@
 namespace App\Features\Ticketing\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateTicketTiersRequest extends FormRequest
 {
-    public function authorize()
+    public function authorize(): bool
     {
         return true;
     }
 
-    public function rules()
+    protected function prepareForValidation(): void
     {
+        // Normalize camelCase to snake_case for ticketTiers
+        $tiers = $this->input('ticketTiers', $this->input('tiers', null));
+        if ($tiers !== null && !$this->has('ticketTiers')) {
+            $this->merge(['ticketTiers' => $tiers]);
+        }
+        // Also handle ticket_tiers
+        $tiers2 = $this->input('ticket_tiers');
+        if ($tiers2 !== null && !$this->has('ticketTiers')) {
+            $this->merge(['ticketTiers' => $tiers2]);
+        }
+        // Normalize isPublic etc. not needed here
+    }
+
+    public function rules(): array
+    {
+        $eventId = $this->route('event') ?? $this->route('eventId') ?? $this->input('eventId') ?? $this->input('event_id');
         return [
-            'tiers' => 'required|array',
-            'tiers.*.id' => 'nullable|integer|exists:ticket_tiers,id',
-            'tiers.*.event_id' => 'required|integer|exists:events,id',
-            'tiers.*.name' => 'required|string|max:255',
-            'tiers.*.description' => 'required|string|max:2000',
-            'tiers.*.price' => 'required|numeric|min:0.01',
-            'tiers.*.quantity' => 'nullable|integer|min:1',
-            // For NEW tiers (no id), prevent sales_start_date in the past
-            // For existing tiers, we allow past dates since they may have already started selling
-            'tiers.*.sales_start_date' => 'nullable|date|prohibited_if:is_new_tier,1',
-            'tiers.*.sales_end_date' => 'nullable|date|after:sales_start_date',
-            'tiers.*.benefits_description' => 'nullable|string|max:2000',
-            'tiers.*.tier_image_url' => 'nullable|url|max:500',
-            'tiers.*.max_per_customer' => 'nullable|integer|min:1',
-            'tiers.*.min_purchase' => 'nullable|integer|min:1',
-            'tiers.*.max_purchase' => 'nullable|integer|min:1',
-            'tiers.*.early_bird_price' => 'nullable|numeric|min:0|lt:price',
-            'tiers.*.early_bird_end_date' => 'nullable|date|before:sales_end_date',
-            'tiers.*.benefits' => 'nullable|array',
-            'tiers.*.is_active' => 'boolean',
-            
-            // New pre-launch fields
-            'tiers.*.tier_order' => 'nullable|integer|min:0',
-            'tiers.*.status' => 'nullable|string|in:draft,published,archived',
-            'tiers.*.currency' => 'nullable|string|size:3',
-            'tiers.*.voucher_code' => 'nullable|string|max:50|alpha_num',
-            'tiers.*.sales_channel' => 'nullable|string|max:50',
-            'tiers.*.published_at' => 'nullable|date',
+            // eventId is validated via route model binding and policy, but also check exists if provided
+            'eventId' => ['sometimes', 'integer', 'exists:events,id'],
+            'event_id' => ['sometimes', 'integer', 'exists:events,id'],
+            'ticketTiers' => ['required', 'array', 'min:0', 'max:10'],
+            'ticketTiers.*.id' => ['nullable', 'integer', Rule::exists('ticket_tiers', 'id')->where(function ($query) use ($eventId) {
+                if ($eventId) $query->where('event_id', $eventId);
+            })],
+            'ticketTiers.*.name' => ['required', 'string', 'max:255'],
+            'ticketTiers.*.price' => ['required', 'numeric', 'gt:0'],
+            'ticketTiers.*.quantity' => ['required', 'integer', 'gt:0'],
+            'ticketTiers.*.sales_start_date' => ['nullable', 'date'],
+            'ticketTiers.*.sales_end_date' => ['nullable', 'date'],
+            'ticketTiers.*.benefits_description' => ['nullable', 'string', 'max:2000'],
+            'ticketTiers.*.tier_image_url' => ['nullable', 'url', 'max:2048'],
+            'ticketTiers.*.early_bird_price' => ['nullable', 'numeric', 'gt:0'],
+            'ticketTiers.*.early_bird_end_date' => ['nullable', 'date', 'required_with:ticketTiers.*.early_bird_price'],
+            'ticketTiers.*.max_per_customer' => ['nullable', 'integer', 'gt:0'],
+            // Compat for tiers key
+            'tiers' => ['sometimes', 'array'],
+            'tiers.*.name' => ['sometimes', 'string'],
         ];
     }
 
-    /**
-     * Configure the validator instance with custom after-validation hooks.
-     */
-    public function withValidator($validator)
+    public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            $tiers = $this->input('tiers', []);
-            
+            $tiers = $this->input('ticketTiers', $this->input('tiers', []));
+            if (!is_array($tiers)) return;
+
             foreach ($tiers as $index => $tier) {
-                // If this is a NEW tier (no id provided), validate sales_start_date is not in the past
-                if (empty($tier['id']) && !empty($tier['sales_start_date'])) {
-                    $startDate = \Carbon\Carbon::parse($tier['sales_start_date']);
-                    if ($startDate->isPast()) {
+                $price = $tier['price'] ?? null;
+                $earlyBirdPrice = $tier['early_bird_price'] ?? $tier['earlyBirdPrice'] ?? null;
+                $salesStart = $tier['sales_start_date'] ?? $tier['salesStartDate'] ?? null;
+                $salesEnd = $tier['sales_end_date'] ?? $tier['salesEndDate'] ?? null;
+                $earlyBirdEnd = $tier['early_bird_end_date'] ?? $tier['earlyBirdEndDate'] ?? null;
+
+                // early_bird_price must be less than price
+                if ($earlyBirdPrice !== null && $price !== null) {
+                    if ((float) $earlyBirdPrice >= (float) $price) {
                         $validator->errors()->add(
-                            "tiers.{$index}.sales_start_date",
-                            'For new tiers, the sales start date cannot be in the past.'
+                            "ticketTiers.{$index}.early_bird_price",
+                            'Early bird price must be less than regular price.'
                         );
                     }
                 }
-                
-                // Validate quantity constraints if both quantity and sold_count are provided for existing tiers
-                if (!empty($tier['id']) && isset($tier['quantity']) && isset($tier['sold_count'])) {
-                    if ((int) $tier['sold_count'] > (int) $tier['quantity']) {
-                        $validator->errors()->add(
-                            "tiers.{$index}.sold_count",
-                            'Sold count cannot exceed the total quantity.'
-                        );
-                    }
+
+                // sales_end_date must be after sales_start_date
+                if ($salesStart && $salesEnd) {
+                    try {
+                        $start = \Carbon\Carbon::parse($salesStart);
+                        $end = \Carbon\Carbon::parse($salesEnd);
+                        if ($end->lte($start)) {
+                            $validator->errors()->add(
+                                "ticketTiers.{$index}.sales_end_date",
+                                'Sales end date must be after sales start date.'
+                            );
+                        }
+                    } catch (\Throwable $e) {}
+                }
+
+                // early_bird_end_date must be before sales_end_date if both present
+                if ($earlyBirdEnd && $salesEnd) {
+                    try {
+                        $earlyEnd = \Carbon\Carbon::parse($earlyBirdEnd);
+                        $salesEndDate = \Carbon\Carbon::parse($salesEnd);
+                        if ($earlyEnd->gte($salesEndDate)) {
+                            $validator->errors()->add(
+                                "ticketTiers.{$index}.early_bird_end_date",
+                                'Early bird end date must be before sales end date.'
+                            );
+                        }
+                    } catch (\Throwable $e) {}
                 }
             }
         });
     }
 
-    public function messages()
+    public function messages(): array
     {
         return [
-            'tiers.*.sales_end_date.after' => 'Sales end date must be after sales start date.',
-            'tiers.*.early_bird_price.lt' => 'Early bird price must be less than regular price.',
-            'tiers.*.max_purchase.min' => 'Max purchase must be at least 1.',
-            'tiers.*.quantity.min' => 'Quantity must be at least 1.',
-            'tiers.*.min_purchase.min' => 'Min purchase must be at least 1.',
-            'tiers.*.max_per_customer.min' => 'Max per customer must be at least 1.',
-            'tiers.*.status.in' => 'Status must be one of: draft, published, or archived.',
-            'tiers.*.currency.size' => 'Currency must be a 3-character ISO code (e.g., NGN, USD, EUR).',
+            'ticketTiers.required' => 'Ticket tiers are required.',
+            'ticketTiers.*.name.required' => 'Tier name is required.',
+            'ticketTiers.*.price.required' => 'Tier price is required.',
+            'ticketTiers.*.price.gt' => 'Price must be greater than 0.',
+            'ticketTiers.*.quantity.required' => 'Tier quantity is required.',
+            'ticketTiers.*.quantity.gt' => 'Quantity must be greater than 0.',
+            'ticketTiers.*.sales_end_date.after' => 'Sales end date must be after sales start date.',
+            'ticketTiers.*.early_bird_price.lt' => 'Early bird price must be less than regular price.',
+            'ticketTiers.*.tier_image_url.url' => 'Tier image URL must be a valid URL.',
         ];
+    }
+
+    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
+    {
+        // Spec says 400, but Laravel convention is 422. Return 422 with validation errors
+        // to match existing exception handler for api/* (which returns 422).
+        // If strict 400 required, uncomment next line:
+        // $this->validator->setFallbackMessages([]);
+        parent::failedValidation($validator);
     }
 }

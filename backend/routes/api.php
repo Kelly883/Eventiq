@@ -104,9 +104,9 @@ Route::middleware('bearer')->group(function () {
         Route::post('events', [EventController::class, 'store'])->middleware('throttle:organizer-events-create');
         Route::post('events/{event}/upload-banner', [EventController::class, 'uploadBanner'])->middleware('throttle:organizer-banner');
 
-        // Event ticketing
+        // Event ticketing — supports both PUT and PATCH per spec (ticketTiers sync)
         Route::prefix('events/{event}')->group(function () {
-            Route::put('/ticketing', [EventTicketingController::class, 'update']);
+            Route::match(['put', 'patch'], '/ticketing', [EventTicketingController::class, 'update']);
 
             // Event pricing (organizer)
             Route::apiResource('pricing-windows', PricingWindowController::class);
