@@ -166,6 +166,7 @@ class Organizer extends Model
             'website' => $this->website,
             'totalEventsCreated' => $this->totalEventsCreated,
             'totalTicketsSold' => $this->totalTicketsSold,
+            'isPublic' => true,
             'createdAt' => $this->created_at,
         ];
 

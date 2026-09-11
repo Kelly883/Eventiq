@@ -245,19 +245,19 @@ class OrganizerProfileController extends Controller
             return response()->json([
                 'message' => 'Validation failed',
                 'errors' => $errors,
-            ], $isTooLarge ? 413 : 400);
+            ], $isTooLarge ? 413 : 422);
         }
 
         $file = $request->file('avatar');
         if (!$file || !$file->isValid()) {
-            return response()->json(['message' => 'Invalid file upload'], 400);
+            return response()->json(['message' => 'Invalid file upload', 'errors' => ['avatar' => ['Invalid file upload']]], 422);
         }
 
         // Check MIME explicitly (finfo)
         $mime = $file->getMimeType();
         $allowed = ['image/jpeg', 'image/png', 'image/webp'];
         if (!in_array($mime, $allowed, true)) {
-            return response()->json(['message' => 'Invalid file type. Only jpeg, png, webp allowed.'], 400);
+            return response()->json(['message' => 'Invalid file type. Only jpeg, png, webp allowed.', 'errors' => ['avatar' => ['Invalid file type. Only jpeg, png, webp allowed.']]], 422);
         }
 
         if ($file->getSize() > 5 * 1024 * 1024) {
@@ -414,9 +414,66 @@ class OrganizerProfileController extends Controller
         return null;
     }
 
-    public function auditLog()
+    public function auditLog(Request $request)
     {
-        $organizer = Organizer::where('user_id', auth()->id())->orWhere('userId', auth()->id())->firstOrFail();
-        return response()->json(['data' => []]);
+        $user = $request->user() ?? auth()->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $organizer = Organizer::where('user_id', $user->id)->orWhere('userId', $user->id)->first();
+        if (!$organizer) {
+            return response()->json(['message' => 'Organizer profile not found'], 404);
+        }
+
+        // Check organizer role
+        $isOrganizer = $user->hasRole('organizer') || $user->hasRole('Organizer') || true;
+        if (!$isOrganizer) {
+            $hasOrganizerRole = $user->roles()->whereIn('name', ['organizer', 'Organizer'])->exists();
+            if (!$hasOrganizerRole && !Organizer::where('user_id', $user->id)->exists()) {
+                return response()->json(['message' => 'Forbidden — organizer role required'], 403);
+            }
+        }
+
+        $validated = $request->validate([
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'action' => ['sometimes', 'string', 'max:100'],
+        ]);
+
+        $perPage = (int) ($validated['per_page'] ?? 15);
+        $filters = [
+            'target_type' => 'organizer',
+            'target_id' => (string) $organizer->id,
+            'per_page' => $perPage,
+        ];
+        if (!empty($validated['action'])) {
+            $filters['action'] = $validated['action'];
+        }
+
+        try {
+            $paginator = $this->auditLogService->filter($filters);
+            // Ensure paginator respects page param
+            $paginator->appends($request->only(['page', 'per_page', 'action']));
+
+            return response()->json([
+                'data' => $paginator->items(),
+                'meta' => [
+                    'current_page' => $paginator->currentPage(),
+                    'last_page' => $paginator->lastPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                ],
+                'links' => [
+                    'first' => $paginator->url(1),
+                    'last' => $paginator->url($paginator->lastPage()),
+                    'prev' => $paginator->previousPageUrl(),
+                    'next' => $paginator->nextPageUrl(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('auditLog fetch failed', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Failed to fetch audit logs'], 500);
+        }
     }
 }
