@@ -46,7 +46,7 @@ const rawBaseURL = (
 // `/auth/register` resolve to `/api/auth/register`, which is where
 // Laravel's api.php routes are mounted. The previous "use as-is"
 // approach broke production where RENDER_EXTERNAL_URL has no /api
-// suffix (e.g. https://eventiq-api.onrender.com → 404 on
+// suffix (e.g. https://eventiq-qvh2.onrender.com → 404 on
 // /auth/register, CORS missing → browser reports Network Error).
 // The CSRF cookie itself lives outside /api at /sanctum/csrf-cookie,
 // so strip that prefix back off for the token fetch.

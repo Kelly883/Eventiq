@@ -16,8 +16,22 @@ services:
         value: production
       - key: APP_DEBUG
         value: false
+      # APP_URL is the BACKEND's own public URL (NOT the frontend). Laravel
+      # uses it to build absolute URLs pointing back at the API (storage file
+      # URLs, url()/redirect links). This matches the backend service's current
+      # public URL; update it if the service is renamed or gets a custom domain.
       - key: APP_URL
-        sync: false
+        value: https://eventiq-qvh2.onrender.com
+      # FRONTEND_URL is the SPA origin — deliberately separate from APP_URL.
+      # Used for absolute links INTO the SPA (e.g. the password-reset email:
+      #   FRONTEND_URL/reset-password?token=...&email=...
+      # Auto-wired from the static site's public URL so it follows renames and
+      # custom domains automatically.
+      - key: FRONTEND_URL
+        fromService:
+          name: eventiq-frontend
+          type: static
+          envVarKey: RENDER_EXTERNAL_URL
       - key: APP_KEY
         generateValue: true
       # Stateless sessions (signed cookies) so the web middleware group never
@@ -49,10 +63,19 @@ services:
         fromDatabase:
           name: eventiq-db
           property: password
+      # CORS + Sanctum stateful domains MUST include the deployed SPA origin or
+      # the browser blocks every cross-origin request and the app reports
+      # "Network error" on register/login. These were previously `sync: false`
+      # (dashboard-managed, never applied from this file) and were never set in
+      # production — that was the outage. CORS needs the full scheme;
+      # SANCTUM_STATEFUL_DOMAINS must be scheme-less (Sanctum strips the
+      # protocol before matching, see EnsureFrontendRequestsAreStateful).
+      # Keep both in sync. If the SPA gets a custom domain, update the host in
+      # both values.
       - key: CORS_ALLOWED_ORIGINS
-        sync: false
+        value: https://eventiq-frontend.onrender.com,http://localhost:3000,http://localhost:3001
       - key: SANCTUM_STATEFUL_DOMAINS
-        sync: false
+        value: eventiq-frontend.onrender.com,localhost:3000,localhost:3001
       - key: PAYSTACK_PUBLIC_KEY
         sync: false
       - key: PAYSTACK_SECRET_KEY
