@@ -11,10 +11,14 @@ use App\Jobs\IncrementTotalEventsCreated;
 use App\Models\Event;
 use App\Models\Organizer;
 use App\Models\TicketTier;
+use App\Services\Audit\AuditLogger;
+use App\Services\VirusScanning\ScanResult;
+use App\Services\VirusScanning\VirusScanner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -96,13 +100,22 @@ class EventController extends Controller
         try {
             $event = DB::transaction(function () use ($validated, $organizer) {
                 $eventData = $this->mapEventData($validated, $organizer->id);
-                // Generate unique slug from title to prevent concurrent duplicate titles
+                // Generate unique slug from title.
+                // A random 6-char suffix makes collisions astronomically unlikely even under
+                // concurrent identical-title creates, so the while(exists) loop is a safety
+                // net rather than the primary uniqueness mechanism.
                 if (!isset($eventData['slug']) && isset($eventData['title'])) {
                     $baseSlug = Str::slug($eventData['title']);
+                    // Try base slug first (clean URLs for unique titles), then add random suffix
                     $slug = $baseSlug;
-                    $counter = 1;
-                    while (Event::where('slug', $slug)->exists()) {
-                        $slug = $baseSlug . '-' . $counter++;
+                    if (Event::where('slug', $slug)->exists()) {
+                        $suffix = Str::random(6);
+                        $slug = $baseSlug . '-' . $suffix;
+                        // Safety net: if by some chance the random suffix collides, append counter
+                        $attempt = 1;
+                        while (Event::where('slug', $slug)->exists() && $attempt < 50) {
+                            $slug = $baseSlug . '-' . $suffix . '-' . $attempt++;
+                        }
                     }
                     $eventData['slug'] = $slug;
                 }
@@ -127,6 +140,15 @@ class EventController extends Controller
 
             $event->load(['ticketTiers', 'organizer']);
 
+            AuditLogger::forEvent(
+                action: 'event.created',
+                user: $user,
+                eventId: (string) $event->id,
+                newValues: $event->toArray(),
+                request: $request,
+                description: "Event '{$event->title}' created with " . count($event->ticketTiers) . " ticket tiers"
+            );
+
             $response = (new EventResource($event))->response()->setStatusCode(201);
             // Store idempotency cache for 24h
             if ($idempotencyCacheKey) {
@@ -137,6 +159,13 @@ class EventController extends Controller
             return $response;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Event store failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            AuditLogger::forEvent(
+                action: 'event.create_failed',
+                user: $user,
+                eventId: null,
+                request: $request,
+                description: 'Failed to create event: ' . $e->getMessage()
+            );
             $debug = app()->hasDebugModeEnabled();
             return response()->json([
                 'message' => 'Failed to create event',
@@ -152,25 +181,49 @@ class EventController extends Controller
     {
         $user = $request->user();
         if (!$user) {
-            \Illuminate\Support\Facades\Log::info('organizer_event_show_attempt', ['user_id' => $user?->id, 'event_id' => $id, 'ip' => $request->ip()]);
+            AuditLogger::forEvent(
+                action: 'event.show_attempt',
+                user: $user,
+                eventId: (string) $id,
+                request: $request,
+                description: 'Unauthenticated attempt to view event'
+            );
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
         $event = Event::without('analyticsEventsMetric')->with(['ticketTiers', 'organizer'])->find($id);
 
         if (!$event) {
-            \Illuminate\Support\Facades\Log::warning('organizer_event_show_not_found', ['user_id' => $user?->id, 'event_id' => $id, 'ip' => $request->ip()]);
+            AuditLogger::forEvent(
+                action: 'event.show_not_found',
+                user: $user,
+                eventId: (string) $id,
+                request: $request,
+                description: 'Attempted to view non-existent event'
+            );
             return response()->json(['message' => 'Event not found'], 404);
         }
 
         try {
             Gate::forUser($user)->authorize('view', $event);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
-            \Illuminate\Support\Facades\Log::warning('organizer_event_show_unauthorized', ['user_id' => $user?->id, 'event_id' => $event->id, 'ip' => $request->ip()]);
+            AuditLogger::forEvent(
+                action: 'event.show_unauthorized',
+                user: $user,
+                eventId: (string) $event->id,
+                request: $request,
+                description: 'Unauthorized attempt to view event'
+            );
             return response()->json(['message' => 'Forbidden — you do not own this event'], 403);
         }
 
-        \Illuminate\Support\Facades\Log::info('organizer_event_show', ['user_id' => $user?->id, 'event_id' => $event->id, 'ip' => $request->ip()]);
+        AuditLogger::forEvent(
+            action: 'event.viewed',
+            user: $user,
+            eventId: (string) $event->id,
+            request: $request,
+            description: "Event '{$event->title}' viewed"
+        );
 
         return new EventResource($event);
     }
@@ -261,14 +314,38 @@ class EventController extends Controller
                 $lockedEvent->refresh();
                 $lockedEvent->load(['ticketTiers', 'organizer']);
 
+                AuditLogger::forEvent(
+                    action: 'event.updated',
+                    user: $user,
+                    eventId: (string) $lockedEvent->id,
+                    oldValues: $event->toArray(),
+                    newValues: $lockedEvent->toArray(),
+                    request: $request,
+                    description: "Event '{$lockedEvent->title}' updated"
+                );
+
                 return $lockedEvent;
             });
 
             return new EventResource($updatedEvent);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            AuditLogger::forEvent(
+                action: 'event.update_validation_failed',
+                user: $user,
+                eventId: (string) $event->id,
+                request: $request,
+                description: 'Event update validation failed'
+            );
             throw $e;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Event update failed', ['event_id' => $id, 'error' => $e->getMessage()]);
+            AuditLogger::forEvent(
+                action: 'event.update_failed',
+                user: $user,
+                eventId: (string) $event->id,
+                request: $request,
+                description: 'Failed to update event: ' . $e->getMessage()
+            );
             $debug = app()->hasDebugModeEnabled();
             return response()->json([
                 'message' => 'Failed to update event',
@@ -311,6 +388,15 @@ class EventController extends Controller
             $locked->delete();
             $event = $locked;
 
+            AuditLogger::forEvent(
+                action: 'event.deleted',
+                user: $user,
+                eventId: (string) $event->id,
+                oldValues: $event->toArray(),
+                request: $request,
+                description: "Event '{$event->title}' soft deleted"
+            );
+
             try {
                 DecrementTotalEventsCreated::dispatch($organizerId);
             } catch (\Throwable $e) {
@@ -320,6 +406,13 @@ class EventController extends Controller
             return response()->json(null, 204);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Event delete failed', ['event_id' => $id, 'error' => $e->getMessage()]);
+            AuditLogger::forEvent(
+                action: 'event.delete_failed',
+                user: $user,
+                eventId: (string) $event->id,
+                request: $request,
+                description: 'Failed to delete event: ' . $e->getMessage()
+            );
             return response()->json(['message' => 'Failed to delete event'], 500);
         }
     }
@@ -337,12 +430,26 @@ class EventController extends Controller
         $event = Event::without('analyticsEventsMetric')->find($id);
 
         if (!$event) {
+            AuditLogger::forEvent(
+                action: 'event.banner_upload_not_found',
+                user: $user,
+                eventId: (string) $id,
+                request: $request,
+                description: 'Banner upload attempted for non-existent event'
+            );
             return response()->json(['message' => 'Event not found'], 404);
         }
 
         try {
             Gate::forUser($user)->authorize('update', $event);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            AuditLogger::forEvent(
+                action: 'event.banner_upload_unauthorized',
+                user: $user,
+                eventId: (string) $event->id,
+                request: $request,
+                description: 'Unauthorized banner upload attempt'
+            );
             return response()->json(['message' => 'Forbidden — you do not own this event'], 403);
         }
 
@@ -383,18 +490,33 @@ class EventController extends Controller
             return response()->json(['message' => 'Invalid image content. File is not a valid image.'], 422);
         }
 
-        // Virus scan placeholder — wire ClamAV (clamd) or external service when enabled
-        // This is a no-op in local/test but ensures the hook exists for prod hardening.
-        if (config('services.clamav.enabled', false)) {
-            try {
-                $scanner = app(\App\Services\ClamAvScanner::class);
-                if (!$scanner->scan($file->getRealPath())) {
-                    return response()->json(['message' => 'File failed virus scan.'], 422);
-                }
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('ClamAV scan failed, allowing upload but logging', ['error' => $e->getMessage()]);
-                // Fail open in dev, fail closed in prod if required: return 500
+        // Virus scan - uses ClamAV if available, falls back to basic validation
+        try {
+            $virusScanner = new VirusScanner();
+            $scanResult = $virusScanner->scan($file);
+
+            if (!$scanResult->isClean) {
+                \Illuminate\Support\Facades\Log::warning('Virus scan detected threat', [
+                    'event_id' => $id,
+                    'user_id' => $user->id,
+                    'threat' => $scanResult->threatName,
+                    'scanner' => $scanResult->scannerEngine,
+                ]);
+
+                return response()->json([
+                    'message' => 'File failed security scan. Upload rejected.',
+                    'error' => $scanResult->threatName,
+                ], 422);
             }
+
+            \Illuminate\Support\Facades\Log::info('Virus scan passed', [
+                'event_id' => $id,
+                'user_id' => $user->id,
+                'scanner' => $scanResult->scannerEngine,
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Virus scan failed, allowing upload but logging', ['error' => $e->getMessage()]);
+            // In production, consider failing closed (return 500) if scanner is required
         }
         // Validate Mime by actual content via finfo, not just extension
         $mime = $file->getMimeType();
@@ -465,6 +587,15 @@ class EventController extends Controller
             // Update event
             $event->update(['banner_image_url' => $url]);
             $event->load(['ticketTiers', 'organizer']);
+
+            AuditLogger::forEvent(
+                action: 'event.banner_uploaded',
+                user: $user,
+                eventId: (string) $event->id,
+                newValues: ['banner_image_url' => $url],
+                request: $request,
+                description: "Banner uploaded for event '{$event->title}'"
+            );
 
             // Optionally delete old if different path
             if ($oldUrl && $oldUrl !== $url) {
