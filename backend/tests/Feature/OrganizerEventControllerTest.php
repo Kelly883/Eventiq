@@ -6,9 +6,11 @@ use App\Models\Event;
 use App\Models\Organizer;
 use App\Models\TicketTier;
 use App\Models\User;
+use App\Services\VirusScanning\ScanResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Mockery\Mockery;
 use Tests\TestCase;
 
 class OrganizerEventControllerTest extends TestCase
@@ -443,5 +445,79 @@ class OrganizerEventControllerTest extends TestCase
             ->getJson('/api/organizer/events?per_page=500');
         $response->assertStatus(200);
         $this->assertLessThanOrEqual(100, $response->json('meta.per_page'));
+    }
+
+    // MIGRATION / DATA INTEGRITY: audit_logs table must exist after migrations
+    public function test_audit_logs_table_exists_after_migrations(): void
+    {
+        $this->assertTrue(
+            \Illuminate\Support\Facades\Schema::hasTable('audit_logs'),
+            'audit_logs table should exist after running migrations'
+        );
+    }
+
+    // AUDIT TRAIL: event creation writes audit log inside the same transaction
+    public function test_create_event_writes_audit_log(): void
+    {
+        $payload = [
+            'title' => 'Audited Event',
+            'start_datetime' => now()->addDays(5)->toDateTimeString(),
+            'end_datetime' => now()->addDays(5)->addHours(2)->toDateTimeString(),
+            'capacity' => 100,
+            'status' => 'draft',
+        ];
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->postJson('/api/organizer/events', $payload);
+        $response->assertStatus(201);
+        $eventId = $response->json('data.id');
+        $this->assertDatabaseHas('audit_logs', [
+            'target_type' => 'event',
+            'target_id' => (string) $eventId,
+            'action' => \App\Features\Compliance\Enums\AuditLogAction::EventCreated,
+            'user_id' => $this->organizerUser->id,
+        ]);
+    }
+
+    // VIRUS SCANNER: when scanner is unavailable, upload must be rejected (fail closed)
+    public function test_upload_banner_rejects_when_virus_scanner_unavailable(): void
+    {
+        Storage::fake('public');
+        $event = Event::factory()->create(['organizer_id' => $this->organizer->id]);
+        $file = UploadedFile::fake()->image('banner.jpg', 800, 600)->size(500);
+
+        // Mock VirusScanner to simulate scanner unavailable
+        $mock = \Mockery::mock(\App\Services\VirusScanning\VirusScanner::class);
+        $mock->shouldReceive('scan')->andReturn(
+            \App\Services\VirusScanning\ScanResult::unavailable('No scanner configured')
+        );
+        $this->app->instance(\App\Services\VirusScanning\VirusScanner::class, $mock);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->post("/api/organizer/events/{$event->id}/upload-banner", ['banner' => $file]);
+        $response->assertStatus(503);
+        $response->assertJsonPath('message', 'Security scan unavailable. Upload rejected.');
+    }
+
+    // BANNER URL ALLOWLIST: if storage returns an external host, reject the upload
+    public function test_upload_banner_rejects_external_storage_url(): void
+    {
+        Storage::fake('public');
+        $event = Event::factory()->create(['organizer_id' => $this->organizer->id]);
+        $file = UploadedFile::fake()->image('banner.jpg', 800, 600)->size(500);
+
+        // Mock disk to return an external URL
+        $disk = Storage::disk('public');
+        $reflection = new \ReflectionClass($disk);
+        $property = $reflection->getProperty('driver');
+        $property->setAccessible(true);
+        $mockDriver = \Mockery::mock(\Illuminate\Filesystem\FilesystemAdapter::class);
+        $mockDriver->shouldReceive('put')->andReturn(true);
+        $mockDriver->shouldReceive('url')->andReturn('https://evil.example.com/malicious.jpg');
+        $property->setValue($disk, $mockDriver);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->post("/api/organizer/events/{$event->id}/upload-banner", ['banner' => $file]);
+        $response->assertStatus(500);
+        $response->assertJsonPath('message', 'Failed to upload banner');
     }
 }

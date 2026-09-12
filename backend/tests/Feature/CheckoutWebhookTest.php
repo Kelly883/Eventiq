@@ -280,6 +280,7 @@ class CheckoutWebhookTest extends TestCase
             $table->integer('capacity')->default(100);
             $table->string('status')->default('draft');
             $table->string('currency', 3)->default('NGN');
+            $table->unsignedInteger('version')->default(1);
             $table->timestamps();
             $table->softDeletes();
         });

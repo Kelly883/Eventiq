@@ -99,7 +99,7 @@ class EventController extends Controller
         }
 
         try {
-            $event = DB::transaction(function () use ($validated, $organizer) {
+            $event = DB::transaction(function () use ($validated, $organizer, $request, $user) {
                 $eventData = $this->mapEventData($validated, $organizer->id);
                 // Generate unique slug from title.
                 // A random 6-char suffix makes collisions astronomically unlikely even under
@@ -129,26 +129,19 @@ class EventController extends Controller
                     TicketTier::create($tierPayload);
                 }
 
+                $event->load(['ticketTiers', 'organizer']);
+
+                AuditLogger::forEvent(
+                    action: 'event.created',
+                    user: $user,
+                    eventId: (string) $event->id,
+                    newValues: $event->toArray(),
+                    request: $request,
+                    description: "Event '{$event->title}' created with " . count($event->ticketTiers) . " ticket tiers"
+                );
+
                 return $event;
             });
-
-            // Dispatch job without blocking response
-            try {
-                IncrementTotalEventsCreated::dispatch($organizer->id);
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Failed to dispatch IncrementTotalEventsCreated', ['error' => $e->getMessage()]);
-            }
-
-            $event->load(['ticketTiers', 'organizer']);
-
-            AuditLogger::forEvent(
-                action: 'event.created',
-                user: $user,
-                eventId: (string) $event->id,
-                newValues: $event->toArray(),
-                request: $request,
-                description: "Event '{$event->title}' created with " . count($event->ticketTiers) . " ticket tiers"
-            );
 
             $response = (new EventResource($event))->response()->setStatusCode(201);
             // Store idempotency cache for 24h
@@ -382,28 +375,35 @@ class EventController extends Controller
         }
 
         try {
-            // Lock for concurrent delete safety
-            $locked = Event::where('id', $event->id)->lockForUpdate()->first();
-            if (!$locked) {
+            $deleted = DB::transaction(function () use ($event, $user, $request) {
+                // Lock for concurrent delete safety
+                $locked = Event::where('id', $event->id)->lockForUpdate()->first();
+                if (!$locked) {
+                    return null;
+                }
+                $organizerId = $locked->organizer_id;
+
+                // Soft delete (uses SoftDeletes trait)
+                $locked->delete();
+
+                AuditLogger::forEvent(
+                    action: 'event.deleted',
+                    user: $user,
+                    eventId: (string) $locked->id,
+                    oldValues: $locked->toArray(),
+                    request: $request,
+                    description: "Event '{$locked->title}' soft deleted"
+                );
+
+                return $organizerId;
+            });
+
+            if ($deleted === null) {
                 return response()->json(['message' => 'Event not found'], 404);
             }
-            $organizerId = $locked->organizer_id;
-
-            // Soft delete (uses SoftDeletes trait)
-            $locked->delete();
-            $event = $locked;
-
-            AuditLogger::forEvent(
-                action: 'event.deleted',
-                user: $user,
-                eventId: (string) $event->id,
-                oldValues: $event->toArray(),
-                request: $request,
-                description: "Event '{$event->title}' soft deleted"
-            );
 
             try {
-                DecrementTotalEventsCreated::dispatch($organizerId);
+                DecrementTotalEventsCreated::dispatch($deleted);
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('Failed to dispatch DecrementTotalEventsCreated', ['error' => $e->getMessage()]);
             }
@@ -500,6 +500,21 @@ class EventController extends Controller
             $virusScanner = new VirusScanner();
             $scanResult = $virusScanner->scan($file);
 
+            // Fail closed: if scanner is unavailable, reject the upload rather than
+            // silently accepting untrusted files when ClamAV/VirusTotal is down.
+            if ($scanResult->scannerEngine === 'unavailable') {
+                \Illuminate\Support\Facades\Log::warning('Virus scan unavailable, rejecting upload', [
+                    'event_id' => $id,
+                    'user_id' => $user->id,
+                    'reason' => $scanResult->rawOutput,
+                ]);
+
+                return response()->json([
+                    'message' => 'Security scan unavailable. Upload rejected.',
+                    'error' => $scanResult->rawOutput,
+                ], 503);
+            }
+
             if (!$scanResult->isClean) {
                 \Illuminate\Support\Facades\Log::warning('Virus scan detected threat', [
                     'event_id' => $id,
@@ -520,8 +535,14 @@ class EventController extends Controller
                 'scanner' => $scanResult->scannerEngine,
             ]);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Virus scan failed, allowing upload but logging', ['error' => $e->getMessage()]);
-            // In production, consider failing closed (return 500) if scanner is required
+            \Illuminate\Support\Facades\Log::error('Virus scan failed, rejecting upload', [
+                'event_id' => $id,
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'message' => 'Security scan failed. Upload rejected.',
+            ], 503);
         }
         // Validate Mime by actual content via finfo, not just extension
         $mime = $file->getMimeType();
@@ -559,10 +580,16 @@ class EventController extends Controller
         $oldUrl = $event->banner_image_url;
 
         try {
-            // Store file
-            $content = file_get_contents($file->getRealPath());
-            // Use put to allow overwrite
-            $disk->put($path, $content, 'public');
+            // Stream file to storage instead of loading entire file into memory
+            $stream = fopen($file->getRealPath(), 'rb');
+            if ($stream === false) {
+                return response()->json(['message' => 'Failed to read uploaded file'], 500);
+            }
+            // Use put to allow overwrite; close stream after write
+            $disk->put($path, $stream, 'public');
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
 
             // Generate URL
             try {
@@ -585,8 +612,16 @@ class EventController extends Controller
             ]);
             $urlHost = parse_url($url, PHP_URL_HOST);
             if (!empty($allowedHosts) && $urlHost && !in_array($urlHost, $allowedHosts, true)) {
-                // If URL host not in allowlist, fallback to relative storage path host
-                \Illuminate\Support\Facades\Log::warning('Banner URL host not in allowlist, using fallback', ['url' => $url, 'allowed' => $allowedHosts]);
+                \Illuminate\Support\Facades\Log::warning('Banner URL host not in allowlist, rejecting upload', [
+                    'url' => $url,
+                    'allowed' => $allowedHosts,
+                    'event_id' => $id,
+                    'user_id' => $user->id,
+                ]);
+                return response()->json([
+                    'message' => 'Failed to upload banner',
+                    'error' => 'Invalid storage host.',
+                ], 500);
             }
 
             // Update event
