@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import { showToast } from '../../../lib/api';
@@ -16,25 +16,6 @@ const RegisterPage = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { register } = useAuthContext();
-
-  // TEMP: eruda console for on-device debugging — remove before committing
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/eruda';
-    script.async = true;
-    script.onload = () => {
-      try {
-        window.eruda?.init();
-      } catch (_) {}
-    };
-    document.body.appendChild(script);
-    return () => {
-      try {
-        window.eruda?.destroy();
-      } catch (_) {}
-      script.remove();
-    };
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
