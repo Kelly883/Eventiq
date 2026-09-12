@@ -27,4 +27,8 @@ enum AuditLogAction: string
     case USER_PERMISSION_CHANGED = 'user_permission_changed';
     case DATA_EXPORT_REQUESTED = 'data_export_requested';
     case CHECK_IN = 'check_in';
+    case PRICING_WINDOW_CREATED = 'pricing_window.created';
+    case PRICING_WINDOW_UPDATED = 'pricing_window.updated';
+    case PRICING_WINDOW_DELETED = 'pricing_window.deleted';
+    case PRICING_WINDOW_RESTORED = 'pricing_window.restored';
 }

@@ -128,8 +128,12 @@ export const PublicRoute = ({ children }) => {
   const { user, loading } = useAuthContext();
   const location = useLocation();
 
+  // Don't block public routes (login/register) on initial auth check.
+  // Show the page immediately and only redirect after we know the user is logged in.
+  // This prevents "Checking authentication..." flash when an unauthenticated user
+  // clicks "Create account" from the homepage.
   if (loading) {
-    return <LoadingSpinner message="Checking authentication..." />;
+    return children;
   }
 
   if (user) {

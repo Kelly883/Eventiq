@@ -12,4 +12,5 @@ enum AuditLogTargetType: string
     case PAYMENT = 'payment';
     case SETTING = 'setting';
     case TICKET = 'ticket';
+    case PRICING_WINDOW = 'pricing_window';
 }

@@ -2,6 +2,7 @@
 
 namespace App\Features\Pricing\Controllers;
 
+use App\Features\Compliance\Enums\AuditLogAction;
 use App\Features\Pricing\Models\PricingWindow;
 use App\Features\Pricing\Requests\StorePricingWindowRequest;
 use App\Features\Pricing\Requests\UpdatePricingWindowRequest;
@@ -149,7 +150,7 @@ class PricingWindowController extends Controller
         $window = PricingWindow::create($data);
 
         AuditLogger::log(
-            action: 'pricing_window.created',
+            action: AuditLogAction::PRICING_WINDOW_CREATED,
             user: $user,
             resourceType: 'pricing_window',
             resourceId: (string) $window->id,
@@ -253,7 +254,7 @@ class PricingWindowController extends Controller
         $pricingWindow->update($validated);
 
         AuditLogger::log(
-            action: 'pricing_window.updated',
+            action: AuditLogAction::PRICING_WINDOW_UPDATED,
             user: $user,
             resourceType: 'pricing_window',
             resourceId: (string) $pricingWindow->id,
@@ -282,10 +283,11 @@ class PricingWindowController extends Controller
 
         $pricingWindow->delete();
 
-        AuditLogger::forEvent(
-            action: 'pricing_window.deleted',
+        AuditLogger::log(
+            action: AuditLogAction::PRICING_WINDOW_DELETED,
             user: $user,
-            eventId: (string) $eventId,
+            resourceType: 'pricing_window',
+            resourceId: (string) $pricingWindow->id,
             oldValues: $oldValues,
             request: request(),
             description: "Pricing window '{$pricingWindow->window_name}' soft deleted from event {$eventId}"
