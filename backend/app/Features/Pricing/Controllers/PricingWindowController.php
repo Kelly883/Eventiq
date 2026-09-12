@@ -256,5 +256,32 @@ class PricingWindowController extends Controller
             'data' => new PricingWindowResource($window->load(['event', 'ticketTier'])),
         ]);
     }
+
+    /**
+     * GET /api/organizer/events/{event}/pricing/preview — Preview pricing grouped by category.
+     */
+    public function preview(Request $request, $eventId): JsonResponse
+    {
+        $this->authorizeEventAccess($request, $eventId);
+
+        $windows = PricingWindow::forEvent($eventId)
+            ->with(['ticketTier'])
+            ->prioritized()
+            ->get();
+
+        $grouped = $windows->groupBy('ticket_category_id')->map(function ($group) {
+            return [
+                'ticket_category_id' => (string) $group->first()->ticket_category_id,
+                'ticket_category_name' => optional($group->first()->ticketTier)->name,
+                'windows' => PricingWindowResource::collection($group),
+            ];
+        })->values();
+
+        return response()->json([
+            'event_id' => (string) $eventId,
+            'total_windows' => $windows->count(),
+            'categories' => $grouped,
+        ]);
+    }
 }
 

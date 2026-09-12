@@ -111,6 +111,7 @@ Route::middleware('bearer')->group(function () {
 
             // Event pricing (organizer)
             Route::apiResource('pricing-windows', PricingWindowController::class);
+            Route::get('pricing/preview', [PricingWindowController::class, 'preview']);
         });
     });
 });
