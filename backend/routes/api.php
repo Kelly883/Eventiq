@@ -117,7 +117,8 @@ Route::middleware('bearer')->group(function () {
 });
 
 // Public event pricing (attendee)
-Route::get('/events/{event}/pricing', [PricingController::class, 'show']);
+Route::get('/events/{event}/pricing', [PricingController::class, 'show'])
+    ->middleware('throttle:discovery');
 
 // Public event discovery (homepage, anonymous browsing) -- was entirely
 // missing; frontend/src/features/homepage/hooks/useHomepageData.js has

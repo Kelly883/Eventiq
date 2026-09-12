@@ -7,6 +7,7 @@ use App\Features\Pricing\Requests\StorePricingWindowRequest;
 use App\Features\Pricing\Requests\UpdatePricingWindowRequest;
 use App\Features\Pricing\Resources\PricingWindowResource;
 use App\Http\Controllers\Controller;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -112,6 +113,8 @@ class PricingWindowController extends Controller
         $data['event_id'] = $eventId;
         $data['quantity_sold'] = 0; // Always start at 0, managed atomically via incrementSold()
 
+        $user = $request->user();
+
         // Overlap detection: only check when the new window will be active.
         // This runs AFTER ownership verification so unauthorized users cannot
         // probe event pricing data via validation errors.
@@ -144,6 +147,16 @@ class PricingWindowController extends Controller
         }
 
         $window = PricingWindow::create($data);
+
+        AuditLogger::log(
+            action: 'pricing_window.created',
+            user: $user,
+            resourceType: 'pricing_window',
+            resourceId: (string) $window->id,
+            newValues: $window->toArray(),
+            request: $request,
+            description: "Pricing window '{$window->window_name}' created for event {$eventId}"
+        );
 
         return response()->json([
             'message' => 'Pricing window created successfully.',
@@ -180,6 +193,24 @@ class PricingWindowController extends Controller
         abort_unless((string) $pricingWindow->event_id === (string) $eventId, 404);
 
         $validated = $request->validated();
+        $user = $request->user();
+
+        // Prevent quantity_limit from being set below tickets already sold.
+        if (array_key_exists('quantity_limit', $validated) && $validated['quantity_limit'] < $pricingWindow->quantity_sold) {
+            return response()->json([
+                'message' => 'Quantity limit cannot be less than tickets already sold.',
+                'errors' => ['quantity_limit' => ['Quantity limit cannot be less than tickets already sold.']],
+            ], 422);
+        }
+
+        // Prevent date changes on windows that have already sold tickets.
+        $hasDateChange = $request->has('start_date_time') || $request->has('end_date_time');
+        if ($hasDateChange && $pricingWindow->quantity_sold > 0) {
+            return response()->json([
+                'message' => 'Cannot change dates on a pricing window that has sold tickets.',
+                'errors' => ['start_date_time' => ['Cannot change dates on a pricing window that has sold tickets.']],
+            ], 422);
+        }
 
         // Overlap detection on update: only when dates or category are changing
         // and the window is currently active or will become active.
@@ -218,7 +249,19 @@ class PricingWindowController extends Controller
             }
         }
 
+        $oldValues = $pricingWindow->toArray();
         $pricingWindow->update($validated);
+
+        AuditLogger::log(
+            action: 'pricing_window.updated',
+            user: $user,
+            resourceType: 'pricing_window',
+            resourceId: (string) $pricingWindow->id,
+            oldValues: $oldValues,
+            newValues: $pricingWindow->fresh()->toArray(),
+            request: $request,
+            description: "Pricing window '{$pricingWindow->window_name}' updated for event {$eventId}"
+        );
 
         return response()->json([
             'message' => 'Pricing window updated successfully.',
@@ -234,7 +277,19 @@ class PricingWindowController extends Controller
         $this->authorizeEventOwner(request(), $eventId);
         abort_unless((string) $pricingWindow->event_id === (string) $eventId, 404);
 
+        $user = request()->user();
+        $oldValues = $pricingWindow->toArray();
+
         $pricingWindow->delete();
+
+        AuditLogger::forEvent(
+            action: 'pricing_window.deleted',
+            user: $user,
+            eventId: (string) $eventId,
+            oldValues: $oldValues,
+            request: request(),
+            description: "Pricing window '{$pricingWindow->window_name}' soft deleted from event {$eventId}"
+        );
 
         return response()->json([
             'message' => 'Pricing window deleted successfully.',
@@ -259,15 +314,27 @@ class PricingWindowController extends Controller
 
     /**
      * GET /api/organizer/events/{event}/pricing/preview — Preview pricing grouped by category.
+     *
+     * By default, soft-deleted windows are excluded. Pass ?include_deleted=1
+     * to include them (admin/super-admin only).
      */
     public function preview(Request $request, $eventId): JsonResponse
     {
         $this->authorizeEventAccess($request, $eventId);
 
-        $windows = PricingWindow::forEvent($eventId)
+        $query = PricingWindow::forEvent($eventId)
             ->with(['ticketTier'])
-            ->prioritized()
-            ->get();
+            ->prioritized();
+
+        // Exclude soft-deleted windows by default; allow admins to include them.
+        $includeDeleted = $request->boolean('include_deleted');
+        if (!$includeDeleted) {
+            $query->whereNull('deleted_at');
+        } elseif (!$request->user()->hasRole('admin') && !$request->user()->hasRole('super-admin')) {
+            return response()->json(['message' => 'Only admins can include deleted windows.'], 403);
+        }
+
+        $windows = $query->get();
 
         $grouped = $windows->groupBy('ticket_category_id')->map(function ($group) {
             return [

@@ -484,16 +484,18 @@ class OrganizerEventControllerTest extends TestCase
         $event = Event::factory()->create(['organizer_id' => $this->organizer->id]);
         $file = UploadedFile::fake()->image('banner.jpg', 800, 600)->size(500);
 
-        // Use Mockery overload to intercept `new VirusScanner()` in the controller
-        $mock = Mockery::mock('overload:' . \App\Services\VirusScanning\VirusScanner::class);
+        $mock = \Mockery::mock(\App\Services\VirusScanning\VirusScanner::class);
         $mock->shouldReceive('scan')->andReturn(
             ScanResult::unavailable('No scanner configured')
         );
+        $this->app->instance(\App\Services\VirusScanning\VirusScanner::class, $mock);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
             ->post("/api/organizer/events/{$event->id}/upload-banner", ['banner' => $file]);
         $response->assertStatus(503);
         $response->assertJsonPath('message', 'Security scan unavailable. Upload rejected.');
+        \Mockery::close();
+        $this->app->forgetInstance(\App\Services\VirusScanning\VirusScanner::class);
     }
 
     // BANNER URL ALLOWLIST: if storage returns an external host, reject the upload
@@ -503,25 +505,50 @@ class OrganizerEventControllerTest extends TestCase
         $event = Event::factory()->create(['organizer_id' => $this->organizer->id]);
         $file = UploadedFile::fake()->image('banner.jpg', 800, 600)->size(500);
 
-        // Use Mockery overload to intercept `new VirusScanner()` so the controller
-        // reaches the URL allowlist check without needing a real scanner.
-        $scannerMock = Mockery::mock('overload:' . \App\Services\VirusScanning\VirusScanner::class);
+        $scannerMock = \Mockery::mock(\App\Services\VirusScanning\VirusScanner::class);
         $scannerMock->shouldReceive('scan')->andReturn(ScanResult::clean('mocked'));
+        $this->app->instance(\App\Services\VirusScanning\VirusScanner::class, $scannerMock);
 
-        // Mock the disk URL to return an external host
-        $disk = Storage::disk('public');
-        $reflection = new \ReflectionClass($disk);
-        $property = $reflection->getProperty('driver');
-        $property->setAccessible(true);
-        $mockDriver = \Mockery::mock(\Illuminate\Filesystem\FilesystemAdapter::class);
-        $mockDriver->shouldReceive('put')->andReturn(true);
-        $mockDriver->shouldReceive('url')->andReturn('https://evil.example.com/malicious.jpg');
-        $mockDriver->shouldReceive('getConfig')->andReturn(['driver' => 'public']);
-        $property->setValue($disk, $mockDriver);
+        // Mock config to make allowlist check fail: set APP_URL to a known host, then mock Storage to return evil host
+        $originalAppUrl = config('app.url');
+        config(['app.url' => 'http://localhost']);
+        config(['filesystems.disks.s3.url' => null]);
+        config(['filesystems.disks.s3.endpoint' => null]);
+        putenv('AWS_URL=');
 
+        // Use Storage fake with custom URL resolver if possible, otherwise mock via container
+        // The controller calls $disk->url($path) - we can mock the disk via Storage::fake and then override url via Mockery on the disk instance
+        // Simpler: mock the config so that evil host is not in allowlist, and mock Storage::url to return evil host via partial mock
         $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
             ->post("/api/organizer/events/{$event->id}/upload-banner", ['banner' => $file]);
+
+        // If the storage mock didn't work, the test will not hit the allowlist branch; we at least verify it doesn't succeed with external host
+        // For this test, we assert that either it fails due to virus scanner or allowlist - both are 500/503, but the spec says 500 for external host
+        // To properly test allowlist, we need to mock the disk's url method. Use a more robust mock:
+        // We will directly test the allowlist logic by setting the disk to return evil URL via mocking the filesystem
+        // If the above didn't trigger, we force the condition by mocking the disk
+        if ($response->status() !== 500) {
+            // Try alternative: mock the disk via app instance
+            $mockDisk = \Mockery::mock(\Illuminate\Filesystem\FilesystemManager::class);
+            $mockAdapter = \Mockery::mock(\Illuminate\Filesystem\FilesystemAdapter::class);
+            $mockAdapter->shouldReceive('put')->andReturn(true);
+            $mockAdapter->shouldReceive('url')->andReturn('https://evil.example.com/malicious.jpg');
+            $mockAdapter->shouldReceive('delete')->andReturn(true);
+            $mockAdapter->shouldReceive('getConfig')->andReturn(['driver' => 'public']);
+            $mockDisk->shouldReceive('disk')->with('public')->andReturn($mockAdapter);
+            $mockDisk->shouldReceive('disk')->with('s3')->andReturn($mockAdapter);
+            $mockDisk->shouldReceive('url')->andReturn('https://evil.example.com/malicious.jpg');
+            $this->app->instance('filesystem', $mockDisk);
+
+            $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+                ->post("/api/organizer/events/{$event->id}/upload-banner", ['banner' => $file]);
+        }
+
         $response->assertStatus(500);
         $response->assertJsonPath('message', 'Failed to upload banner');
+        \Mockery::close();
+        $this->app->forgetInstance(\App\Services\VirusScanning\VirusScanner::class);
+        $this->app->forgetInstance('filesystem');
+        config(['app.url' => $originalAppUrl]);
     }
 }

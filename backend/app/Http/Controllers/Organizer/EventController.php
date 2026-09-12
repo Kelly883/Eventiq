@@ -496,8 +496,9 @@ class EventController extends Controller
         }
 
         // Virus scan - uses ClamAV if available, falls back to basic validation
+        // Resolved via container for testability (allows mocking via app()->instance)
         try {
-            $virusScanner = new VirusScanner();
+            $virusScanner = app(VirusScanner::class);
             $scanResult = $virusScanner->scan($file);
 
             // Fail closed: if scanner is unavailable, reject the upload rather than
