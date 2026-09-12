@@ -28,6 +28,7 @@ class InventoryAdjustment extends Model
         'adjustment_type',
         'quantity_before',
         'quantity_after',
+        'quantity_delta',
         'reason',
     ];
 

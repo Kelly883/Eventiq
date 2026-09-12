@@ -111,6 +111,23 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Ticket inventory — per spec (Step 142): summary 20/min, inventory 20/min, adjust 5/min, export 10/min, audit-log 20/min (all per user)
+        RateLimiter::for('inventory-summary', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('inventory-detail', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('inventory-adjust', function ($request) {
+            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('inventory-export', function ($request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('inventory-audit', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+
         Event::observe(EventObserver::class);
         Ticket::observe(TicketObserver::class);
 

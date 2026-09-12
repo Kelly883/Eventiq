@@ -15,11 +15,9 @@ class PricingWindowController extends Controller
 {
     public function __construct()
     {
-        // store/update/destroy are authorized per-method below because they
-        // need the URL event scope, which authorizeResource cannot provide.
-        $this->authorizeResource(PricingWindow::class, 'pricingWindow', [
-            'except' => ['create', 'store', 'update', 'destroy'],
-        ]);
+        // Authorization is handled per-method below because this controller
+        // does not extend Illuminate\Routing\Controller and therefore does
+        // not have the middleware() method required by authorizeResource().
     }
 
     /**
@@ -33,7 +31,43 @@ class PricingWindowController extends Controller
             return;
         }
 
-        abort_unless($user->hasRole('organizer'), 403, 'Only organizers can manage pricing windows.');
+        // Align with Organizer\EventController: accept either the role column
+        // or an attached organizer profile, because some seed data populates
+        // the legacy `role` string column without filling `role_id`.
+        $isOrganizer = $user->hasRole('organizer')
+            || (string) $user->getAttribute('role') === 'organizer'
+            || (bool) $user->organizer?->id;
+
+        abort_unless($isOrganizer, 403, 'Only organizers can manage pricing windows.');
+
+        $ownsEvent = \App\Models\Event::where('id', $eventId)
+            ->whereHas('organizer', fn ($q) => $q->where('user_id', $user->id))
+            ->exists();
+
+        abort_unless($ownsEvent, 403, 'You do not own this event.');
+    }
+
+    /**
+     * Authorize that the authenticated user can access the event's pricing.
+     * Admins/super-admins bypass ownership check. Organizers must own the event.
+     */
+    private function authorizeEventAccess(Request $request, $eventId): void
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            abort(401, 'Unauthenticated');
+        }
+
+        if ($user->hasRole('admin') || $user->hasRole('super-admin')) {
+            return;
+        }
+
+        $isOrganizer = $user->hasRole('organizer')
+            || (string) $user->getAttribute('role') === 'organizer'
+            || (bool) $user->organizer?->id;
+
+        abort_unless($isOrganizer, 403, 'Only organizers can manage pricing windows.');
 
         $ownsEvent = \App\Models\Event::where('id', $eventId)
             ->whereHas('organizer', fn ($q) => $q->where('user_id', $user->id))
@@ -47,6 +81,8 @@ class PricingWindowController extends Controller
      */
     public function index(Request $request, $eventId): AnonymousResourceCollection
     {
+        $this->authorizeEventAccess($request, $eventId);
+
         $query = PricingWindow::forEvent($eventId)->with(['event', 'ticketTier']);
 
         // Optional filters
@@ -76,6 +112,37 @@ class PricingWindowController extends Controller
         $data['event_id'] = $eventId;
         $data['quantity_sold'] = 0; // Always start at 0, managed atomically via incrementSold()
 
+        // Overlap detection: only check when the new window will be active.
+        // This runs AFTER ownership verification so unauthorized users cannot
+        // probe event pricing data via validation errors.
+        $willBeActive = $request->has('is_active') ? $request->boolean('is_active') : true;
+        if ($willBeActive) {
+            $startDate = $data['start_date_time'];
+            $endDate = $data['end_date_time'];
+            $catId = $data['ticket_category_id'];
+
+            $overlap = PricingWindow::where('event_id', $eventId)
+                ->where('ticket_category_id', $catId)
+                ->where('is_active', true)
+                ->whereNull('deleted_at')
+                ->where(function ($q) use ($startDate, $endDate) {
+                    $q->whereBetween('start_date_time', [$startDate, $endDate])
+                      ->orWhereBetween('end_date_time', [$startDate, $endDate])
+                      ->orWhere(function ($q) use ($startDate, $endDate) {
+                          $q->where('start_date_time', '<=', $startDate)
+                            ->where('end_date_time', '>=', $endDate);
+                      });
+                })
+                ->exists();
+
+            if ($overlap) {
+                return response()->json([
+                    'message' => 'An active pricing window already exists for this ticket category with overlapping dates.',
+                    'errors' => ['start_date_time' => ['An active pricing window already exists for this ticket category with overlapping dates.']],
+                ], 422);
+            }
+        }
+
         $window = PricingWindow::create($data);
 
         return response()->json([
@@ -89,6 +156,18 @@ class PricingWindowController extends Controller
      */
     public function show($eventId, PricingWindow $pricingWindow): PricingWindowResource
     {
+        $user = request()->user();
+        if (!$user) {
+            abort(401, 'Unauthenticated');
+        }
+
+        if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            $ownsEvent = \App\Models\Event::where('id', $eventId)
+                ->whereHas('organizer', fn ($q) => $q->where('user_id', $user->id))
+                ->exists();
+            abort_unless($ownsEvent, 403, 'You do not own this event.');
+        }
+
         return new PricingWindowResource($pricingWindow->load(['event', 'ticketTier']));
     }
 
@@ -100,7 +179,46 @@ class PricingWindowController extends Controller
         $this->authorizeEventOwner($request, $eventId);
         abort_unless((string) $pricingWindow->event_id === (string) $eventId, 404);
 
-        $pricingWindow->update($request->validated());
+        $validated = $request->validated();
+
+        // Overlap detection on update: only when dates or category are changing
+        // and the window is currently active or will become active.
+        $hasDateOrCategoryChange = $request->has('start_date_time')
+            || $request->has('end_date_time')
+            || $request->has('ticket_category_id');
+
+        if ($hasDateOrCategoryChange) {
+            $startDate = $validated['start_date_time'] ?? $pricingWindow->start_date_time;
+            $endDate = $validated['end_date_time'] ?? $pricingWindow->end_date_time;
+            $catId = $validated['ticket_category_id'] ?? $pricingWindow->ticket_category_id;
+            $willBeActive = $request->has('is_active') ? $request->boolean('is_active') : $pricingWindow->is_active;
+
+            if ($willBeActive && $startDate && $endDate) {
+                $overlap = PricingWindow::where('event_id', $eventId)
+                    ->where('ticket_category_id', $catId)
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')
+                    ->where('id', '!=', $pricingWindow->id)
+                    ->where(function ($q) use ($startDate, $endDate) {
+                        $q->whereBetween('start_date_time', [$startDate, $endDate])
+                          ->orWhereBetween('end_date_time', [$startDate, $endDate])
+                          ->orWhere(function ($q) use ($startDate, $endDate) {
+                              $q->where('start_date_time', '<=', $startDate)
+                                ->where('end_date_time', '>=', $endDate);
+                          });
+                    })
+                    ->exists();
+
+                if ($overlap) {
+                    return response()->json([
+                        'message' => 'An active pricing window already exists for this ticket category with overlapping dates.',
+                        'errors' => ['start_date_time' => ['An active pricing window already exists for this ticket category with overlapping dates.']],
+                    ], 422);
+                }
+            }
+        }
+
+        $pricingWindow->update($validated);
 
         return response()->json([
             'message' => 'Pricing window updated successfully.',
