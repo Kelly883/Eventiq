@@ -7,11 +7,13 @@ set -euo pipefail
 #   1. Validates critical environment variables
 #   2. Prepares writable directories
 #   3. Caches Laravel configuration/routes/views (safe to run at runtime)
-#   4. Creates the storage symlink if missing
-#   5. Starts services via supervisord
+#   4. Runs pending Laravel database migrations
+#   5. Creates the storage symlink if missing
+#   6. Configures nginx for Render's PORT
+#   7. Optionally enables ClamAV
+#   8. Starts services via supervisord
 #
 # It does NOT:
-#   - Run database migrations automatically
 #   - Generate APP_KEY
 #   - Expose secrets in logs
 #   - Run destructive database commands
@@ -21,8 +23,8 @@ echo "==> Eventiq backend starting..."
 
 # ─── 0. Set PORT for Render ──────────────────────────────────────────────────
 
-# Render provides PORT env var (default 8000). Nginx and PHP-FPM listen on 8080
-# internally; the Docker nginx template uses $NGINX_PORT which we set here.
+# Render provides PORT env var.
+# Nginx listens on the Render-provided port.
 export NGINX_PORT="${PORT:-8080}"
 
 # ─── 1. Validate critical config ─────────────────────────────────────────────
@@ -36,7 +38,7 @@ if [ -z "${APP_URL:-}" ]; then
     echo "WARNING: APP_URL is not set. Some features may not work correctly."
 fi
 
-# ─── 2. Prepare writable directories ────────────────────────────────────────
+# ─── 2. Prepare writable directories ─────────────────────────────────────────
 
 echo "==> Preparing writable directories..."
 
@@ -51,64 +53,105 @@ mkdir -p /var/www/html/bootstrap/cache
 # Ensure correct permissions
 chown -R www-data:www-data /var/www/html/storage 2>/dev/null || true
 chown -R www-data:www-data /var/www/html/bootstrap/cache 2>/dev/null || true
+
 chmod -R 775 /var/www/html/storage 2>/dev/null || true
 chmod -R 775 /var/www/html/bootstrap/cache 2>/dev/null || true
 
-# ─── 3. Laravel optimization (safe at runtime) ───────────────────────────────
+# ─── 3. Laravel configuration cache ──────────────────────────────────────────
 
 echo "==> Caching Laravel configuration..."
 
-# Only cache config when APP_KEY is set (required for encrypted values)
-if [ -n "${APP_KEY:-}" ]; then
-    php artisan config:cache --no-interaction 2>/dev/null || echo "WARNING: config:cache failed (non-fatal)"
-fi
+# APP_KEY has already been validated above.
+php artisan config:cache --no-interaction
 
-# Route caching is skipped because the application contains closure routes
-# (web.php /health and api.php /events) which are incompatible with
-# php artisan route:cache. This is safe - Laravel will cache routes per-request.
-# php artisan route:cache --no-interaction 2>/dev/null || echo "WARNING: route:cache skipped (closure routes present)"
+# ─── 3b. Database migrations ─────────────────────────────────────────────────
 
-# View caching
-php artisan view:cache --no-interaction 2>/dev/null || echo "WARNING: view:cache failed (non-fatal)"
+echo "==> Running database migrations..."
 
-# ─── 4. Storage symlink ─────────────────────────────────────────────────────
+# --force is required because this is a production environment.
+# Do NOT suppress errors here. If migrations fail, the container should stop
+# rather than start the application with an incomplete database schema.
+php artisan migrate --force --no-interaction
+
+echo "==> Database migrations completed."
+
+# ─── 3c. Route caching ────────────────────────────────────────────────────────
+
+# Route caching is intentionally skipped because the application contains
+# closure routes which are incompatible with php artisan route:cache.
+#
+# php artisan route:cache --no-interaction
+
+# ─── 3d. View caching ─────────────────────────────────────────────────────────
+
+echo "==> Caching Laravel views..."
+
+php artisan view:cache --no-interaction 2>/dev/null || {
+    echo "WARNING: view:cache failed (non-fatal)"
+}
+
+# ─── 4. Storage symlink ───────────────────────────────────────────────────────
 
 echo "==> Creating storage symlink..."
-php artisan storage:link --force --no-interaction 2>/dev/null || echo "WARNING: storage:link failed (non-fatal, may already exist)"
 
-# ─── 5. Fix permissions after caching ───────────────────────────────────────
+php artisan storage:link --force --no-interaction 2>/dev/null || {
+    echo "WARNING: storage:link failed (non-fatal, may already exist)"
+}
 
-# config:cache writes to bootstrap/cache as www-data or root; ensure www-data can read
+# ─── 5. Fix permissions after Laravel caching ─────────────────────────────────
+
+echo "==> Fixing Laravel storage permissions..."
+
+chown -R www-data:www-data /var/www/html/storage 2>/dev/null || true
 chown -R www-data:www-data /var/www/html/bootstrap/cache 2>/dev/null || true
+
+chmod -R 775 /var/www/html/storage 2>/dev/null || true
 chmod -R 775 /var/www/html/bootstrap/cache 2>/dev/null || true
 
-# ─── 6. Configure nginx for Render PORT ─────────────────────────────────────
+# ─── 6. Configure nginx for Render PORT ───────────────────────────────────────
 
-# Render provides PORT env var (default 8000). Substitute into nginx config.
-sed -i "s/listen 8080/listen ${NGINX_PORT}/g" /etc/nginx/conf.d/default.conf
+echo "==> Configuring nginx for port ${NGINX_PORT}..."
 
-# ─── 6b. ClamAV (optional) ───────────────────────────────────────────────────
+# Render provides PORT dynamically.
+# The nginx template initially contains "listen 8080".
+sed -i "s/listen 8080/listen ${NGINX_PORT}/g" \
+    /etc/nginx/conf.d/default.conf
 
-# ClamAV is disabled by default (CLAMAV_ENABLED=false). When enabled, update
-# signatures and start clamd via supervisord. The Docker image includes
-# clamav/clamav-daemon but supervisord's clamd program is autostart=false so
-# it does not run unless explicitly enabled here.
+# ─── 6b. ClamAV (optional) ────────────────────────────────────────────────────
+
+# ClamAV is disabled by default.
+# Set CLAMAV_ENABLED=true in Render only if you intentionally want ClamAV.
 if [ "${CLAMAV_ENABLED:-false}" = "true" ]; then
+
     echo "==> ClamAV enabled — updating signatures..."
-    mkdir -p /var/run/clamav /var/log/clamav
+
+    mkdir -p /var/run/clamav
+    mkdir -p /var/log/clamav
+
     chown -R www-data:www-data /var/run/clamav 2>/dev/null || true
-    freshclam --stdout 2>&1 | head -20 || echo "WARNING: freshclam failed (non-fatal, will retry at runtime)"
-    # Enable clamd in supervisord by starting it explicitly
-    # supervisord will manage it as a child program; we touch a flag that
-    # supervisord.conf's autostart can check via env, but simplest is to
-    # start via supervisorctl after supervisord launches. Instead, we sed-enable it:
-    sed -i 's/autostart=false/autostart=true/' /etc/supervisor/conf.d/supervisord.conf || true
-    echo "==> ClamAV daemon will be started by supervisord"
+    chown -R www-data:www-data /var/log/clamav 2>/dev/null || true
+
+    # Update virus definitions.
+    # Limit displayed output so logs do not become excessively large.
+    freshclam --stdout 2>&1 | head -20 || {
+        echo "WARNING: freshclam failed (non-fatal, will retry at runtime)"
+    }
+
+    # Enable clamd in supervisord.
+    sed -i 's/autostart=false/autostart=true/' \
+        /etc/supervisor/conf.d/supervisord.conf || true
+
+    echo "==> ClamAV daemon will be started by supervisord."
+
 else
+
     echo "==> ClamAV disabled (set CLAMAV_ENABLED=true to enable)"
+
 fi
 
-# ─── 7. Start services ──────────────────────────────────────────────────────
+# ─── 7. Start services ────────────────────────────────────────────────────────
 
 echo "==> Starting services on port ${NGINX_PORT}..."
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+
+exec /usr/bin/supervisord \
+    -c /etc/supervisor/conf.d/supervisord.conf
