@@ -63,7 +63,7 @@ class StoreEventRequest extends FormRequest
         }
         // isPublic vs status: frontend sends isPublic boolean, backend stores is_public
         if ($this->has('isPublic') && !$this->has('is_public')) {
-            $merge['is_public'] = $this->boolean('isPublic');
+            $merge['is_public'] = filter_var($this->input('isPublic'), FILTER_VALIDATE_BOOLEAN);
         }
 
         if (!empty($merge)) {

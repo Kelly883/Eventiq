@@ -35,7 +35,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'expiration' => null,
+         'expiration' => env('SANCTUM_TOKEN_EXPIRATION', 10080), // Fix #6: 7 days default token expiration (was null = never expires)
 
     /*
     |--------------------------------------------------------------------------

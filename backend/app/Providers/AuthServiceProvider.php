@@ -2,12 +2,17 @@
 
 namespace App\Providers;
 
+use App\Features\Pricing\Models\PricingWindow;
+use App\Features\Pricing\Policies\PricingWindowPolicy;
+use App\Models\Event;
+use App\Models\Organizer;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Policies\ApiKeyPolicy;
+use App\Policies\EventPolicy;
 use App\Policies\PermissionPolicy;
 use App\Policies\RolePolicy;
-use App\Policies\ApiKeyPolicy;
 use App\Policies\WebhookPolicy;
 use App\Features\EmailNotifications\Models\EmailTemplate;
 use App\Features\EmailNotifications\Policies\EmailTemplatePolicy;
@@ -28,6 +33,7 @@ class AuthServiceProvider extends ServiceProvider
         \App\Models\Event::class => \App\Policies\EventPolicy::class,
         ApiKey::class => ApiKeyPolicy::class,
         Webhook::class => WebhookPolicy::class,
+        PricingWindow::class => PricingWindowPolicy::class,
     ];
 
     public function register(): void

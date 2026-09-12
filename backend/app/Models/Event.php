@@ -23,7 +23,7 @@ class Event extends Model
      */
     protected $with = ['organizer', 'analyticsEventsMetric'];
 
-    protected $fillable = [
+        protected $fillable = [
         'organizer_id',
         'user_id',
         'title',
@@ -42,6 +42,7 @@ class Event extends Model
         'flag_reason',
         'flag_date',
         'category',
+        'version',
     ];
 
     protected $casts = [
@@ -52,20 +53,26 @@ class Event extends Model
         'capacity' => 'integer',
         'is_public' => 'boolean',
         'deleted_at' => 'datetime',
+        'version' => 'integer',
     ];
 
     protected static function booted(): void
     {
-        static::creating(function (Event $event) {
+                static::creating(function (Event $event) {
             if ($event->capacity === null || $event->capacity < 0) {
                 throw new \InvalidArgumentException('Event capacity is required and must be a non-negative integer.');
             }
+            // Fix #4: Initialize version for optimistic locking
+            if ($event->version === null) {
+                $event->version = 1;
+            }
         });
 
-        static::updating(function (Event $event) {
+                static::updating(function (Event $event) {
             if ($event->isDirty('capacity') && ($event->capacity === null || $event->capacity < 0)) {
                 throw new \InvalidArgumentException('Event capacity is required and must be a non-negative integer.');
             }
+            // Version is incremented explicitly in controller when optimistic locking is used
         });
     }
 

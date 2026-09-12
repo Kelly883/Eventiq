@@ -53,7 +53,7 @@ class UpdateEventRequest extends FormRequest
             $merge['capacity'] = (int) $this->input('capacity');
         }
         if ($this->has('isPublic') && !$this->has('is_public')) {
-            $merge['is_public'] = $this->boolean('isPublic');
+            $merge['is_public'] = filter_var($this->input('isPublic'), FILTER_VALIDATE_BOOLEAN);
         }
         if (!empty($merge)) {
             $this->merge($merge);

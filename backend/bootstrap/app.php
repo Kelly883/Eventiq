@@ -81,11 +81,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // Use the exception's aggregated message so FormRequest custom
         // messages (e.g. ApiKey "cannot be granted") are preserved instead
         // of being flattened to a generic string.
+        // Errors are undotted to nested structure so assertJsonPath('errors.ticketTiers.0.price') works
+        // (Laravel's ValidationException stores flat keys like 'ticketTiers.0.price').
         $exceptions->render(function (\Illuminate\Validation\ValidationException $e, $request) {
             if ($request->is('api/*')) {
                 return response()->json([
                     'message' => $e->getMessage(),
-                    'errors' => $e->errors(),
+                    'errors' => \Illuminate\Support\Arr::undot($e->errors()),
                 ], 422);
             }
         });

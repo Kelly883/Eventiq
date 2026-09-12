@@ -87,6 +87,27 @@ chmod -R 775 /var/www/html/bootstrap/cache 2>/dev/null || true
 # Render provides PORT env var (default 8000). Substitute into nginx config.
 sed -i "s/listen 8080/listen ${NGINX_PORT}/g" /etc/nginx/conf.d/default.conf
 
+# ─── 6b. ClamAV (optional) ───────────────────────────────────────────────────
+
+# ClamAV is disabled by default (CLAMAV_ENABLED=false). When enabled, update
+# signatures and start clamd via supervisord. The Docker image includes
+# clamav/clamav-daemon but supervisord's clamd program is autostart=false so
+# it does not run unless explicitly enabled here.
+if [ "${CLAMAV_ENABLED:-false}" = "true" ]; then
+    echo "==> ClamAV enabled — updating signatures..."
+    mkdir -p /var/run/clamav /var/log/clamav
+    chown -R www-data:www-data /var/run/clamav 2>/dev/null || true
+    freshclam --stdout 2>&1 | head -20 || echo "WARNING: freshclam failed (non-fatal, will retry at runtime)"
+    # Enable clamd in supervisord by starting it explicitly
+    # supervisord will manage it as a child program; we touch a flag that
+    # supervisord.conf's autostart can check via env, but simplest is to
+    # start via supervisorctl after supervisord launches. Instead, we sed-enable it:
+    sed -i 's/autostart=false/autostart=true/' /etc/supervisor/conf.d/supervisord.conf || true
+    echo "==> ClamAV daemon will be started by supervisord"
+else
+    echo "==> ClamAV disabled (set CLAMAV_ENABLED=true to enable)"
+fi
+
 # ─── 7. Start services ──────────────────────────────────────────────────────
 
 echo "==> Starting services on port ${NGINX_PORT}..."

@@ -106,7 +106,8 @@ Route::middleware('bearer')->group(function () {
 
         // Event ticketing — supports both PUT and PATCH per spec (ticketTiers sync)
         Route::prefix('events/{event}')->group(function () {
-            Route::match(['put', 'patch'], '/ticketing', [EventTicketingController::class, 'update']);
+            Route::match(['put', 'patch'], '/ticketing', [EventTicketingController::class, 'update'])
+                ->middleware('throttle:30,1'); // Fix #2: Rate limiting - 30 requests/minute
 
             // Event pricing (organizer)
             Route::apiResource('pricing-windows', PricingWindowController::class);

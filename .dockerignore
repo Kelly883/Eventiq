@@ -1,0 +1,23 @@
+# Root .dockerignore — for builds with repo-root context (e.g. docker build -f Dockerfile . or -f backend/Dockerfile .)
+# Keep backend and its docker assets; ignore everything not needed in the image.
+
+.git
+.gitignore
+.github
+.kilo
+.trae-html-share-packages
+frontend/node_modules
+frontend/dist
+backend/node_modules
+backend/storage/logs/*
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/vendor
+backend/.phpunit.result.cache
+backend/.env
+backend/.env.testing
+backend/.env.local
+*.md
+*.txt
+*.log

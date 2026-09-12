@@ -23,8 +23,9 @@ class EventFactory extends Factory
             'end_datetime' => now()->addDays(7)->addHours(3),
             'venue_name' => $this->faker->company() . ' Venue',
             'venue_address' => $this->faker->address(),
-            'status' => 'published',
+                                    'status' => 'published',
             'capacity' => 100,
+            'version' => 1,
         ];
     }
 }
