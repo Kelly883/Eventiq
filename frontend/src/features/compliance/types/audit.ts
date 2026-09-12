@@ -23,9 +23,13 @@ export type AuditLogAction =
   | 'admin_setting_changed'
   | 'user_permission_changed'
   | 'data_export_requested'
-  | 'check_in';
+  | 'check_in'
+  | 'pricing_window.created'
+  | 'pricing_window.updated'
+  | 'pricing_window.deleted'
+  | 'pricing_window.restored';
 
-export type AuditLogTargetType = 'user' | 'event' | 'order' | 'payout' | 'refund' | 'payment' | 'setting' | 'ticket';
+export type AuditLogTargetType = 'user' | 'event' | 'order' | 'payout' | 'refund' | 'payment' | 'setting' | 'ticket' | 'pricing_window';
 
 export type AuditLogStatus = 'success' | 'failure' | 'warning' | 'pending';
 
@@ -125,11 +129,15 @@ export function isAuditLogAction(value: string): value is AuditLogAction {
     'user_permission_changed',
     'data_export_requested',
     'check_in',
+    'pricing_window.created',
+    'pricing_window.updated',
+    'pricing_window.deleted',
+    'pricing_window.restored',
   ].includes(value);
 }
 
 export function isAuditLogTargetType(value: string): value is AuditLogTargetType {
-  return ['user', 'event', 'order', 'payout', 'refund', 'payment', 'setting', 'ticket'].includes(value);
+  return ['user', 'event', 'order', 'payout', 'refund', 'payment', 'setting', 'ticket', 'pricing_window'].includes(value);
 }
 
 export function isAuditLogStatus(value: string): value is AuditLogStatus {
