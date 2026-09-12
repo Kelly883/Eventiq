@@ -264,8 +264,14 @@ class EventController extends Controller
                     // Handle ticket tiers if provided
                     if (array_key_exists('ticket_tiers', $validated)) {
                         $incomingTiers = $validated['ticket_tiers'] ?? [];
-                        // Lock tiers for this event to prevent race
-                        $existingTiers = TicketTier::where('event_id', $lockedEvent->id)->lockForUpdate()->get()->keyBy('id');
+                        // Lock tiers for this event to prevent race — include soft-deleted for reactivation parity with ticketing service
+                        $existingTiers = TicketTier::withTrashed()->where('event_id', $lockedEvent->id)->lockForUpdate()->get()->keyBy('id');
+                        $activeCount = $existingTiers->filter(fn ($t) => !$t->trashed())->count();
+                        if (empty($incomingTiers) && $activeCount > 0) {
+                            throw \Illuminate\Validation\ValidationException::withMessages([
+                                'ticket_tiers' => ['Cannot delete all ticket tiers. At least one tier must remain.'],
+                            ]);
+                        }
                         $keepIds = [];
 
                         foreach ($incomingTiers as $index => $tierData) {
@@ -288,13 +294,17 @@ class EventController extends Controller
                                         response()->json(['message' => 'Ticket tier does not belong to this event'], 422)
                                     );
                                 }
+                                if ($tier->trashed()) {
+                                    $tier->restore();
+                                }
                                 $payload = $this->mapTierData($tierData, $lockedEvent->id, $index, true);
                                 unset($payload['event_id']); // don't change FK
                                 $tier->update($payload);
                                 $keepIds[] = $tierId;
                             } else {
-                                // Create new tier
+                                // Create new tier — if id was provided but not found (scoped validation should have already failed), treat as new
                                 $payload = $this->mapTierData($tierData, $lockedEvent->id, $index);
+                                unset($payload['id']);
                                 $newTier = TicketTier::create($payload);
                                 $keepIds[] = $newTier->id;
                             }
