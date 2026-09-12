@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use App\Models\Event;
 use App\Models\Organizer;
@@ -112,5 +113,29 @@ class AppServiceProvider extends ServiceProvider
 
         Event::observe(EventObserver::class);
         Ticket::observe(TicketObserver::class);
+
+        // Startup health check: verify critical tables exist to catch missing
+        // migrations early instead of failing with 500s on first request.
+        try {
+            $criticalTables = ['events', 'ticket_tiers', 'audit_logs', 'users', 'organizers', 'sessions', 'password_reset_tokens'];
+            $missing = [];
+            foreach ($criticalTables as $table) {
+                if (!Schema::hasTable($table)) {
+                    $missing[] = $table;
+                }
+            }
+
+            if ($missing !== []) {
+                \Illuminate\Support\Facades\Log::warning('Critical database tables missing', [
+                    'missing_tables' => $missing,
+                    'migrations_pending' => true,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // If the DB connection itself is down, we can't check tables.
+            \Illuminate\Support\Facades\Log::error('Startup health check failed: database connection error', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

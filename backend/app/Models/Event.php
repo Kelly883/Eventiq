@@ -15,13 +15,13 @@ class Event extends Model
     use HasFactory, SoftDeletes;
 
     /**
-     * Always eager-load these relationships to prevent N+1 queries on event lists.
-     * If you need a lean event query, use Event::without('organizer', 'analyticsEventsMetric')->get().
-     *
-     * Admin controllers may want to call Event::without('organizer', 'analyticsEventsMetric')
-     * for large list pages to reduce query weight, then eager-load only the columns needed.
+     * Always eager-load the organizer relation to prevent N+1 queries on
+     * event lists. Analytics metrics are intentionally NOT eager-loaded by
+     * default because they add query weight to every event list. Admin/detail
+     * controllers should call ->with('analyticsEventsMetric') explicitly
+     * when those metrics are actually needed.
      */
-    protected $with = ['organizer', 'analyticsEventsMetric'];
+    protected $with = ['organizer'];
 
         protected $fillable = [
         'organizer_id',
