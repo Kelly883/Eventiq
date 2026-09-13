@@ -107,7 +107,6 @@ return new class extends Migration
                 e.organizer_id,
                 e.title,
                 e.status,
-                {$eventCategoryExpression},
                 e.capacity,
                 e.{$eventStartColumn},
                 e.{$eventEndColumn}
