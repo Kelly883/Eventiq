@@ -60,7 +60,7 @@ return new class extends Migration
         }
 
         $row = DB::selectOne(
-            'SELECT index_name FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?',
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
             [$table, $indexName]
         );
 

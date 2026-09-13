@@ -21,7 +21,7 @@ return new class extends Migration
         if ($driver === 'pgsql') {
             $existingIndexes = DB::select("SELECT indexname FROM pg_indexes WHERE tablename = 'events'");
         } elseif ($driver === 'mysql') {
-            $existingIndexes = DB::select("SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'events'");
+            $existingIndexes = DB::select("SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = current_schema() AND TABLE_NAME = 'events'");
         } else {
             $existingIndexes = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='events'");
         }
@@ -65,7 +65,7 @@ return new class extends Migration
         if ($driver === 'pgsql') {
             $existingIndexes = DB::select("SELECT indexname FROM pg_indexes WHERE tablename = 'events'");
         } elseif ($driver === 'mysql') {
-            $existingIndexes = DB::select("SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'events'");
+            $existingIndexes = DB::select("SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = current_schema() AND TABLE_NAME = 'events'");
         } else {
             $existingIndexes = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='events'");
         }

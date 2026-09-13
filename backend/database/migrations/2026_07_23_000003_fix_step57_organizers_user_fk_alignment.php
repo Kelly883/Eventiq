@@ -189,7 +189,7 @@ return new class extends Migration
         }
 
         $row = DB::selectOne(
-            'SELECT index_name FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?',
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
             [$table, $indexName]
         );
 
@@ -210,7 +210,7 @@ return new class extends Migration
         }
 
         $row = DB::selectOne(
-            'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
+            'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
             [$table, $column]
         );
 
