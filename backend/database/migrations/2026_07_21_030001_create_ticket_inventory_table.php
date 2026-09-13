@@ -77,7 +77,7 @@ return new class extends Migration
             $table->integer('total_available')->storedAs('total_allocated - total_sold');
             $table->integer('low_stock_threshold')->nullable();
             $table->boolean('is_low_stock')->storedAs(
-                'CASE WHEN total_available > 0 AND total_available <= COALESCE(low_stock_threshold, 0) THEN 1 ELSE 0 END'
+                'CASE WHEN (total_allocated - total_sold) > 0 AND (total_allocated - total_sold) <= COALESCE(low_stock_threshold, 0) THEN 1 ELSE 0 END'
             );
 
             $table->timestamp('last_updated_at')->nullable();
