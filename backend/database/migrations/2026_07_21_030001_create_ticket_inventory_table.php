@@ -29,6 +29,28 @@ return new class extends Migration
      * No DROP ... CASCADE is used.
      * No production data is deleted.
      */
+    private function foreignKeyExists(string $table, string $column): bool
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            $rows = DB::select("PRAGMA foreign_key_list('{$table}')");
+
+            foreach ($rows as $row) {
+                if (($row->from ?? null) === $column) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        $row = DB::selectOne(
+            'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
+            [$table, $column]
+        );
+
+        return $row !== null;
+    }
+
     public function up(): void
     {
         // -----------------------------------------------------------------
@@ -42,9 +64,11 @@ return new class extends Migration
         // 2. Drop dependent foreign keys so ticket_inventory can be rebuilt
         // -----------------------------------------------------------------
         if (Schema::hasTable('inventory_adjustments') && Schema::hasColumn('inventory_adjustments', 'ticket_inventory_id')) {
-            Schema::table('inventory_adjustments', function (Blueprint $table) {
-                $table->dropForeign(['ticket_inventory_id']);
-            });
+            if ($this->foreignKeyExists('inventory_adjustments', 'ticket_inventory_id')) {
+                Schema::table('inventory_adjustments', function (Blueprint $table) {
+                    $table->dropForeign(['ticket_inventory_id']);
+                });
+            }
         }
 
         // -----------------------------------------------------------------
@@ -129,7 +153,6 @@ return new class extends Migration
 
             // Drop the old BIGINT column and rename the new one
             Schema::table('inventory_adjustments', function (Blueprint $table) {
-                $table->dropForeign(['ticket_inventory_id']);
                 $table->dropColumn('ticket_inventory_id');
                 $table->renameColumn('new_ticket_inventory_id', 'ticket_inventory_id');
             });
