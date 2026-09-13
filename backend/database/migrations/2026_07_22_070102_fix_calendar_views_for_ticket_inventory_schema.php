@@ -77,7 +77,6 @@ return new class extends Migration
                 e.organizer_id,
                 e.title,
                 e.status,
-                NULL,
                 e.capacity,
                 e.start_datetime,
                 e.end_datetime
