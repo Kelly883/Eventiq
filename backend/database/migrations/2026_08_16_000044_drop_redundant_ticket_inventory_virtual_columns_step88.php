@@ -28,7 +28,7 @@ return new class extends Migration
         Schema::table('ticket_inventory', function (Blueprint $table) {
             $table->integer('total_available')->virtualAs('total_allocated - total_sold');
             $table->boolean('is_low_stock')->virtualAs(
-                "CASE WHEN total_available > 0 AND total_available <= COALESCE(low_stock_threshold, 0) THEN 1 ELSE 0 END"
+                "CASE WHEN total_available > 0 AND total_available <= COALESCE(low_stock_threshold, 0) THEN TRUE ELSE FALSE END"
             );
         });
     }
