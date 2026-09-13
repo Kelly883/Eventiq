@@ -52,13 +52,13 @@ return new class extends Migration
 
         if (Schema::hasTable('ticket_inventory') && Schema::hasColumn('ticket_inventory', 'pricing_window_id')) {
             Schema::table('ticket_inventory', function (Blueprint $table) {
-                $table->foreignUuid('pricing_window_id')->nullable()->constrained('pricing_windows')->onDelete('cascade');
+                $table->foreign('pricing_window_id')->references('id')->on('pricing_windows')->onDelete('cascade');
             });
         }
 
         if (Schema::hasTable('analytics_sales_timeline') && Schema::hasColumn('analytics_sales_timeline', 'pricing_window_id')) {
             Schema::table('analytics_sales_timeline', function (Blueprint $table) {
-                $table->foreignUuid('pricing_window_id')->nullable()->constrained('pricing_windows')->onDelete('set null');
+                $table->foreign('pricing_window_id')->references('id')->on('pricing_windows')->onDelete('set null');
             });
         }
     }
@@ -93,13 +93,13 @@ return new class extends Migration
 
         if (Schema::hasTable('ticket_inventory') && Schema::hasColumn('ticket_inventory', 'pricing_window_id')) {
             Schema::table('ticket_inventory', function (Blueprint $table) {
-                $table->foreignUuid('pricing_window_id')->nullable()->constrained('pricing_windows')->onDelete('cascade');
+                $table->foreign('pricing_window_id')->references('id')->on('pricing_windows')->onDelete('cascade');
             });
         }
 
         if (Schema::hasTable('analytics_sales_timeline') && Schema::hasColumn('analytics_sales_timeline', 'pricing_window_id')) {
             Schema::table('analytics_sales_timeline', function (Blueprint $table) {
-                $table->foreignUuid('pricing_window_id')->nullable()->constrained('pricing_windows')->onDelete('set null');
+                $table->foreign('pricing_window_id')->references('id')->on('pricing_windows')->onDelete('set null');
             });
         }
     }
