@@ -10,11 +10,13 @@ return new class extends Migration
     {
         Schema::create('permission_requests', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->uuid('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('permission_id')->constrained()->onDelete('cascade');
             $table->text('reason');
             $table->string('status', 50)->default('pending');
-            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->uuid('approved_by')->nullable();
+            $table->foreign('approved_by')->references('id')->on('users')->onDelete('set null');
             $table->timestamps();
         });
     }

@@ -15,7 +15,7 @@ return new class extends Migration
         Schema::create('payout_calculations', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('payout_id');
-            $table->uuid('organizer_id');
+            $table->foreignId('organizer_id');
             $table->timestamp('settlement_period_start_date');
             $table->timestamp('settlement_period_end_date');
             $table->json('event_ids')->nullable();

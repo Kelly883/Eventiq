@@ -14,7 +14,7 @@ return new class extends Migration
 
         Schema::create('organizer_payouts', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('organizer_id');
+            $table->foreignId('organizer_id');
             $table->string('gateway');
             $table->string('reference');
             $table->string('status');

@@ -10,7 +10,8 @@ return new class extends Migration
     {
         Schema::create('organizer_dashboard_preferences', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->uuid('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->json('preferences')->nullable();
             $table->timestamps();
         });

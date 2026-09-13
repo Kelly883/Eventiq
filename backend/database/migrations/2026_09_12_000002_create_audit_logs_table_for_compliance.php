@@ -25,7 +25,8 @@ return new class extends Migration
             $table->string('status')->default('success');
             $table->string('compliance_classification')->default('internal');
             $table->json('metadata')->nullable();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->uuid('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
         });

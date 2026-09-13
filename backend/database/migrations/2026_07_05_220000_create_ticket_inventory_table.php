@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('event_id')->constrained()->onDelete('cascade');
             $table->foreignId('ticket_tier_id')->constrained()->onDelete('cascade');
-            $table->foreignId('pricing_window_id')->nullable()->constrained('pricing_windows')->onDelete('cascade');
+            $table->foreignUuid('pricing_window_id')->nullable()->constrained('pricing_windows')->onDelete('cascade');
             $table->integer('total_quantity')->default(0);
             $table->integer('sold_quantity')->default(0);
             $table->integer('reserved_quantity')->default(0);

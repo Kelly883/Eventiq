@@ -143,7 +143,8 @@ return new class extends Migration
                 $table->foreignId('event_id')->nullable()->constrained()->nullOnDelete();
             }
             if (! Schema::hasColumn('check_ins', 'scanned_by')) {
-                $table->foreignId('scanned_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->uuid('scanned_by')->nullable();
+                $table->foreign('scanned_by')->references('id')->on('users')->nullOnDelete();
             }
             if (! Schema::hasColumn('check_ins', 'status')) {
                 $table->string('status')->default('checked_in')->after('user_id');

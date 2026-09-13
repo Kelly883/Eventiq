@@ -134,7 +134,7 @@ return new class extends Migration
         // already added order_id, event_id, etc but no direct payment_id)
         if (Schema::hasTable('refund_requests') && !Schema::hasColumn('refund_requests', 'payment_id')) {
             Schema::table('refund_requests', function (Blueprint $table) {
-                $table->uuid('payment_id')->nullable()->after('event_id');
+                $table->foreignId('payment_id')->nullable()->after('event_id');
             });
         }
     }

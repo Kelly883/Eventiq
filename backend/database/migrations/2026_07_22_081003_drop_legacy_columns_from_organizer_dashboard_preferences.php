@@ -36,7 +36,8 @@ return new class extends Migration
 
         Schema::table('organizer_dashboard_preferences', function (Blueprint $table) {
             if (!Schema::hasColumn('organizer_dashboard_preferences', 'user_id')) {
-                $table->foreignId('user_id')->nullable()->after('id')->constrained()->cascadeOnDelete();
+                $table->uuid('user_id')->nullable()->after('id');
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             }
 
             if (!Schema::hasColumn('organizer_dashboard_preferences', 'preferences')) {

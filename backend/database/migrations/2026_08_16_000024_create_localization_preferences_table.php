@@ -14,7 +14,7 @@ return new class extends Migration
 
         Schema::create('localization_preferences', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('user_id');
+            $table->uuid('user_id');
             $table->string('language')->default('en');
             $table->string('region')->nullable();
             $table->string('date_format')->default('MM/DD/YYYY');

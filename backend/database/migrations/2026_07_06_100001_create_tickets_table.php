@@ -18,9 +18,11 @@ return new class extends Migration
     {
         Schema::create('tickets', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('order_id')->nullable()->constrained()->nullOnDelete();
+            $table->uuid('order_id')->nullable();
+            $table->foreign('order_id')->references('id')->on('orders')->nullOnDelete();
             $table->foreignId('event_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->uuid('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
             $table->foreignId('ticket_tier_id')->constrained()->cascadeOnDelete();
             $table->string('status')->default('valid'); // valid|cancelled|refunded
             $table->timestamps();

@@ -25,7 +25,8 @@ return new class extends Migration
             // user_id references the UUID-based users table
             $table->foreignUuid('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('event_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('order_id')->nullable()->constrained()->nullOnDelete();
+            $table->uuid('order_id')->nullable();
+            $table->foreign('order_id')->references('id')->on('orders')->nullOnDelete();
 
             // ── Channel & Status ──────────────────────────────────────
             $table->string('channel');                    // email | sms | dashboard | push

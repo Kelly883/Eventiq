@@ -11,12 +11,14 @@ return new class extends Migration
         Schema::create('refund_appeals', function (Blueprint $table) {
             $table->id();
             $table->foreignId('refund_request_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->uuid('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->text('reason');
             $table->string('status')->default('pending'); // pending, approved, rejected
             $table->text('admin_notes')->nullable();
             $table->timestamp('reviewed_at')->nullable();
-            $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->uuid('reviewed_by')->nullable();
+            $table->foreign('reviewed_by')->references('id')->on('users')->nullOnDelete();
             $table->timestamps();
         });
     }

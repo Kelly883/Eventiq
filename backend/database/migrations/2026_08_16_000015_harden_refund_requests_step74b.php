@@ -40,10 +40,10 @@ return new class extends Migration
     {
         Schema::create('refund_requests', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('ticket_id');
+            $table->foreignId('ticket_id');
             $table->uuid('order_id')->nullable();
             $table->uuid('user_id')->nullable();
-            $table->uuid('event_id')->nullable();
+            $table->foreignId('event_id')->nullable();
             $table->decimal('original_amount', 10, 2);
             $table->decimal('refund_amount', 10, 2);
             $table->decimal('refund_percentage', 5, 2);

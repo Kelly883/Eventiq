@@ -17,7 +17,7 @@ return new class extends Migration
                 $table->uuid('order_id')->nullable()->after('ticket_id');
             }
             if (!Schema::hasColumn('refund_requests', 'event_id')) {
-                $table->uuid('event_id')->nullable()->after('order_id');
+                $table->foreignId('event_id')->nullable()->after('order_id');
             }
             if (!Schema::hasColumn('refund_requests', 'original_amount')) {
                 $table->decimal('original_amount', 10, 2)->after('approved_amount');
@@ -90,7 +90,7 @@ return new class extends Migration
         // Update refund_policies table
         Schema::table('refund_policies', function (Blueprint $table) {
             if (!Schema::hasColumn('refund_policies', 'organizer_id')) {
-                $table->uuid('organizer_id')->nullable()->after('event_id');
+                $table->foreignId('organizer_id')->nullable()->after('event_id');
             }
             if (!Schema::hasColumn('refund_policies', 'refund_percentage_before_event')) {
                 $table->decimal('refund_percentage_before_event', 5, 2)->default(100)->after('refund_window_days');

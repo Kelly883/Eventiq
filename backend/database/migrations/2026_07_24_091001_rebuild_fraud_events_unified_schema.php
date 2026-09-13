@@ -19,7 +19,7 @@ return new class extends Migration
             $table->uuid('user_id');
             
             // Checkin-specific fraud (from the 071002 schema)
-            $table->uuid('ticket_id')->nullable();
+            $table->foreignId('ticket_id')->nullable();
             $table->foreignId('event_id')->nullable();
             
             // Fraud type classification

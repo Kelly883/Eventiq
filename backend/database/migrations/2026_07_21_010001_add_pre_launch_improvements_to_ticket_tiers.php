@@ -29,8 +29,8 @@ return new class extends Migration
             $table->timestamp('published_at')->nullable()->after('sales_channel');
 
             // 7. Add audit fields
-            $table->unsignedBigInteger('created_by')->nullable()->after('updated_at');
-            $table->unsignedBigInteger('updated_by')->nullable()->after('created_by');
+            $table->uuid('created_by')->nullable()->after('updated_at');
+            $table->uuid('updated_by')->nullable()->after('created_by');
 
             // 8. Add soft deletes
             $table->softDeletes()->after('updated_at');

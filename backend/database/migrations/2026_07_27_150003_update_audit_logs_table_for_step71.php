@@ -25,12 +25,12 @@ return new class extends Migration
             
             // Add event_id for event-specific audit logging
             if (! Schema::hasColumn('audit_logs', 'event_id')) {
-                $table->uuid('event_id')->nullable()->after('id');
+                $table->foreignId('event_id')->nullable()->after('id');
             }
 
             // Add ticket_id if not exists (nullable)
             if (! Schema::hasColumn('audit_logs', 'ticket_id')) {
-                $table->uuid('ticket_id')->nullable()->after('user_id');
+                $table->foreignId('ticket_id')->nullable()->after('user_id');
             }
 
             // Change changes to details if needed

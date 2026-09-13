@@ -17,7 +17,8 @@ return new class extends Migration
 
         Schema::create('orders', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->uuid('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreignId('event_id')->constrained()->onDelete('cascade');
             $table->decimal('total_amount', 10, 2);
             $table->string('currency', 3)->default('NGN');

@@ -12,9 +12,9 @@ return new class extends Migration
 
         Schema::create('check_ins', function (Blueprint $table) {
             $table->id();
-            $table->uuid('ticket_id');
+            $table->foreignId('ticket_id');
             $table->uuid('user_id')->nullable();
-            $table->uuid('event_id');
+            $table->foreignId('event_id');
             $table->uuid('scanned_by')->nullable();
 
             $table->string('status')->default('checked_in');

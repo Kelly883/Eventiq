@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('payout_calculation_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('payout_calculation_id');
-            $table->uuid('event_id')->nullable();
+            $table->foreignId('event_id')->nullable();
             $table->uuid('order_id')->nullable();
             $table->uuid('refund_request_id')->nullable();
             $table->decimal('gross_amount', 12, 2)->default(0);

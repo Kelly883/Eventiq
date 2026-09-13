@@ -81,8 +81,8 @@ return new class extends Migration
                 // If a tier is deleted, adjustments remain with ticket_tier_id = NULL
                 $table->foreignId('ticket_tier_id')->nullable()->constrained()->nullOnDelete();
                 
-                $table->foreignId('pricing_window_id')->nullable()->constrained()->onDelete('set null');
-                $table->foreignId('organizer_id')->constrained('users')->onDelete('cascade');
+                $table->foreignUuid('pricing_window_id')->nullable()->constrained()->onDelete('set null');
+                $table->uuid('organizer_id')->constrained('users')->onDelete('cascade');
                 $table->string('adjustment_type', 50);
                 $table->integer('quantity_before');
                 $table->integer('quantity_after');

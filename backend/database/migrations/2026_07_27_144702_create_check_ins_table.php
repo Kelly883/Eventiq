@@ -29,9 +29,11 @@ return new class extends Migration
             // through tickets.
             $table->foreignId('event_id')->constrained()->cascadeOnDelete();
             // `user_id` is the attendee who owns the ticket
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->uuid('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
             // `scanned_by` is the staff member or device that performed the scan
-            $table->foreignId('scanned_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->uuid('scanned_by')->nullable();
+            $table->foreign('scanned_by')->references('id')->on('users')->nullOnDelete();
 
             // ── Scan Context ──────────────────────────────────────────
             $table->string('status')->default('checked_in'); // checked_in | failed | duplicate | expired

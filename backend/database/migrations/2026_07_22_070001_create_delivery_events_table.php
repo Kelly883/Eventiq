@@ -14,10 +14,10 @@ return new class extends Migration
 
         Schema::create('delivery_events', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('ticket_id');
+            $table->foreignId('ticket_id');
             $table->uuid('order_id');
             $table->uuid('user_id');
-            $table->uuid('event_id');
+            $table->foreignId('event_id');
             $table->enum('delivery_method', ['email', 'sms', 'dashboard']);
             $table->string('recipient_email')->nullable();
             $table->string('recipient_phone')->nullable();

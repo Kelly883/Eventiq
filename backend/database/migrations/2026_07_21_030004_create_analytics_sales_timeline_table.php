@@ -14,7 +14,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignId('event_id')->constrained()->onDelete('cascade');
             $table->foreignId('ticket_tier_id')->constrained()->onDelete('cascade');
-            $table->foreignId('pricing_window_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignUuid('pricing_window_id')->nullable()->constrained()->onDelete('set null');
             $table->timestamp('sale_timestamp');
             $table->integer('quantity');
             $table->decimal('unit_price', 10, 2);

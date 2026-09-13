@@ -20,8 +20,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('orders', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->uuid('id')->primary();
+            $table->uuid('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
             $table->foreignId('event_id')->nullable()->constrained()->nullOnDelete();
             $table->string('status')->default('pending'); // pending|paid|cancelled|refunded
             $table->unsignedBigInteger('total_amount')->default(0); // smallest currency unit

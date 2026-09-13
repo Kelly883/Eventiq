@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('pricing_windows', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             $table->foreignId('event_id')->constrained()->onDelete('cascade');
             $table->string('name');
             $table->text('description')->nullable();

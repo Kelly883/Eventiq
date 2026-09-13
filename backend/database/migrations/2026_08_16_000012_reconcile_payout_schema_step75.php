@@ -43,7 +43,7 @@ return new class extends Migration
         Schema::create('settlement_policies', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('organizer_tier')->default('standard');
-            $table->uuid('organizer_id')->nullable();
+            $table->foreignId('organizer_id')->nullable();
             $table->decimal('platform_commission_percentage', 5, 2);
             $table->decimal('processing_fee_percentage', 5, 2);
             $table->string('payout_frequency');
@@ -67,7 +67,7 @@ return new class extends Migration
     {
         Schema::create('payouts', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('organizer_id');
+            $table->foreignId('organizer_id');
             $table->timestamp('settlement_period_start_date');
             $table->timestamp('settlement_period_end_date');
             $table->decimal('gross_revenue', 12, 2);
@@ -110,7 +110,7 @@ return new class extends Migration
         Schema::create('payout_calculations', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('payout_id');
-            $table->uuid('organizer_id');
+            $table->foreignId('organizer_id');
             $table->timestamp('settlement_period_start_date');
             $table->timestamp('settlement_period_end_date');
             $table->json('event_ids')->nullable();

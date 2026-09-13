@@ -13,7 +13,8 @@ return new class extends Migration
             $table->foreignId('event_id')->constrained()->cascadeOnDelete();
             $table->foreignId('tier_id')->nullable()->constrained('ticket_tiers')->nullOnDelete();
             $table->string('action'); // created, updated, deleted
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->uuid('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('organizer_id')->nullable()->constrained()->nullOnDelete();
             $table->json('changes')->nullable();
             $table->string('tier_name')->nullable();

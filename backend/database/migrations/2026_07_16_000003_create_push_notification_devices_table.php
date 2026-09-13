@@ -10,7 +10,8 @@ return new class extends Migration
     {
         Schema::create('push_notification_devices', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->uuid('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->string('fcm_token')->unique();
             $table->string('platform')->nullable(); // web|android|ios
             $table->timestamp('last_used_at')->nullable();

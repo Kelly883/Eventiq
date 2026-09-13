@@ -11,7 +11,8 @@ return new class extends Migration
         Schema::create('refund_requests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ticket_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->uuid('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('refund_policy_id')->nullable()->constrained()->nullOnDelete();
             $table->string('status')->default('pending'); // pending, approved, rejected, appealed
             $table->decimal('requested_amount', 10, 2);
@@ -19,7 +20,8 @@ return new class extends Migration
             $table->text('reason')->nullable();
             $table->text('admin_notes')->nullable();
             $table->timestamp('reviewed_at')->nullable();
-            $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->uuid('reviewed_by')->nullable();
+            $table->foreign('reviewed_by')->references('id')->on('users')->nullOnDelete();
             $table->timestamps();
         });
     }

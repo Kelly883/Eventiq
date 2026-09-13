@@ -12,8 +12,9 @@ return new class extends Migration
             return;
         }
         Schema::create('payout_calculations', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('payout_id')->constrained('payouts')->onDelete('cascade');
+            $table->uuid('id')->primary();
+            $table->uuid('payout_id');
+            $table->foreign('payout_id')->references('id')->on('payouts')->onDelete('cascade');
             $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
             $table->decimal('total_revenue', 12, 2);
             $table->decimal('platform_fee', 12, 2)->default(0);

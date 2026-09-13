@@ -12,7 +12,7 @@ return new class extends Migration
             return;
         }
         Schema::create('payouts', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             $table->foreignId('organizer_id')->constrained('organizers')->onDelete('cascade');
             $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
             $table->foreignId('settlement_policy_id')->nullable()->constrained('settlement_policies')->onDelete('set null');
@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('transaction_id')->nullable()->unique();
             $table->timestamp('processed_at')->nullable();
             $table->text('notes')->nullable();
-            $table->foreignId('processed_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->uuid('processed_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
 
             $table->index(['organizer_id', 'status']);

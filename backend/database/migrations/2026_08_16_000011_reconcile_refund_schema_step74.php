@@ -42,8 +42,8 @@ return new class extends Migration
     {
         Schema::create('refund_policies', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('event_id')->nullable();
-            $table->uuid('organizer_id')->nullable();
+            $table->foreignId('event_id')->nullable();
+            $table->foreignId('organizer_id')->nullable();
             $table->integer('refund_window_days')->default(14);
             $table->decimal('refund_percentage_before_event', 5, 2);
             $table->decimal('refund_percentage_after_event_start', 5, 2)->nullable();
@@ -68,10 +68,10 @@ return new class extends Migration
     {
         Schema::create('refund_requests', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('ticket_id');
+            $table->foreignId('ticket_id');
             $table->uuid('order_id')->nullable();
             $table->uuid('user_id');
-            $table->uuid('event_id');
+            $table->foreignId('event_id');
             $table->decimal('original_amount', 10, 2);
             $table->decimal('refund_amount', 10, 2);
             $table->decimal('refund_percentage', 5, 2);
@@ -133,7 +133,7 @@ return new class extends Migration
                 // May already be UUID
             }
             if (! Schema::hasColumn('refund_policies', 'organizer_id')) {
-                $table->uuid('organizer_id')->nullable()->after('event_id');
+                $table->foreignId('organizer_id')->nullable()->after('event_id');
             }
             if (! Schema::hasColumn('refund_policies', 'refund_percentage_before_event')) {
                 $table->decimal('refund_percentage_before_event', 5, 2)->after('refund_window_days');

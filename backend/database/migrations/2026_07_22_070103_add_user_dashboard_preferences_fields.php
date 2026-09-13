@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('user_dashboard_preferences', function (Blueprint $table) {
-            $table->string('user_id')->after('id');
+            $table->uuid('user_id')->after('id');
             $table->string('default_ticket_filter')->default('all')->after('user_id');
             $table->string('default_date_range')->default('30days')->after('default_ticket_filter');
             $table->boolean('show_recommendations')->default(true)->after('default_date_range');

@@ -40,7 +40,7 @@ return new class extends Migration
 
         if (! Schema::hasColumn('delivery_events', 'order_id')) {
             Schema::table('delivery_events', function (Blueprint $table) {
-                $table->foreignId('order_id')->nullable()->after('event_id');
+                $table->uuid('order_id')->nullable()->after('event_id');
             });
         }
 

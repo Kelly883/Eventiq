@@ -20,7 +20,8 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('order_id')->constrained()->cascadeOnDelete();
+            $table->uuid('order_id');
+            $table->foreign('order_id')->references('id')->on('orders')->cascadeOnDelete();
             $table->string('gateway_reference');
             $table->decimal('amount', 10, 2);
             $table->string('currency', 3)->default('NGN');

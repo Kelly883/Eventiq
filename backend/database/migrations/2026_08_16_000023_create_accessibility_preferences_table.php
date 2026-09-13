@@ -14,7 +14,7 @@ return new class extends Migration
 
         Schema::create('accessibility_preferences', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('user_id');
+            $table->uuid('user_id');
             $table->integer('font_size')->default(16);
             $table->boolean('high_contrast')->default(false);
             $table->boolean('screen_reader_optimized')->default(false);

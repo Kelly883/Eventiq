@@ -12,7 +12,7 @@ return new class extends Migration
         $this->dropCalendarViews();
 
         Schema::table('events', function (Blueprint $table) {
-            $table->unsignedBigInteger('user_id')->nullable()->after('id');
+            $table->uuid('user_id')->nullable()->after('id');
             $table->renameColumn('location', 'venue_name');
             $table->string('venue_address')->nullable()->after('venue_name');
             $table->renameColumn('banner_path', 'banner_image_url');

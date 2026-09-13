@@ -40,7 +40,8 @@ return new class extends Migration
             $table->string('entity');
             $table->unsignedBigInteger('entity_id')->nullable();
             $table->json('changes')->nullable();
-            $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null');
+            $table->uuid('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
             $table->string('request_id')->nullable()->index();
             $table->timestamps();
         });

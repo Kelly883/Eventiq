@@ -14,7 +14,7 @@ return new class extends Migration
 
         Schema::create('payouts', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('organizer_id');
+            $table->foreignId('organizer_id');
             $table->timestamp('settlement_period_start_date');
             $table->timestamp('settlement_period_end_date');
             $table->decimal('gross_revenue', 12, 2);

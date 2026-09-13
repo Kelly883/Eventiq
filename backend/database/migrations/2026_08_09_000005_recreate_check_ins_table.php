@@ -13,9 +13,11 @@ return new class extends Migration
         Schema::create('check_ins', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ticket_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->uuid('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
             $table->foreignId('event_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('scanned_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->uuid('scanned_by')->nullable();
+            $table->foreign('scanned_by')->references('id')->on('users')->nullOnDelete();
 
             $table->string('status')->default('checked_in');
             $table->string('device_type')->nullable();

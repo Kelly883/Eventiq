@@ -25,7 +25,8 @@ return new class extends Migration
             }
 
             if (! Schema::hasColumn('check_ins', 'scanned_by')) {
-                $table->foreignId('scanned_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->uuid('scanned_by')->nullable();
+                $table->foreign('scanned_by')->references('id')->on('users')->nullOnDelete();
             }
 
             // ── Scan Context ─────────────────────────────────────────
