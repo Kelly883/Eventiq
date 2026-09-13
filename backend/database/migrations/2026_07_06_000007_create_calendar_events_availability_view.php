@@ -45,9 +45,7 @@ return new class extends Migration
             GROUP BY
                 e.id,
                 e.status,
-                {$eventDateExpression},
-                {$categoryExpression},
-                {$locationExpression}
+                {$eventDateExpression}
         ");
     }
 
