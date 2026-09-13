@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('check_ins', function (Blueprint $table) {
-            if (!Schema::hasColumn('check_ins', 'client_mutation_id')) {
+        $hasCheckInsClientMutationId = Schema::hasColumn('check_ins', 'client_mutation_id');
+        Schema::table('check_ins', function (Blueprint $table) use ($hasCheckInsClientMutationId) {
+            if (!$hasCheckInsClientMutationId) {
                 $table->string('client_mutation_id')->nullable()->unique()->after('user_id');
             }
         });
@@ -23,8 +24,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('check_ins', function (Blueprint $table) {
-            if (Schema::hasColumn('check_ins', 'client_mutation_id')) {
+        $hasCheckInsClientMutationId = Schema::hasColumn('check_ins', 'client_mutation_id');
+        Schema::table('check_ins', function (Blueprint $table) use ($hasCheckInsClientMutationId) {
+            if ($hasCheckInsClientMutationId) {
                 $table->dropColumn('client_mutation_id');
             }
         });

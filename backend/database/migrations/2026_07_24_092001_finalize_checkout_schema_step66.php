@@ -142,30 +142,53 @@ return new class extends Migration
     public function down(): void
     {
         if (Schema::hasTable('orders')) {
-            Schema::table('orders', function (Blueprint $table) {
-                $columns = ['gateway_transaction_id', 'subtotal', 'tax_amount', 'discount_amount',
-                    'coupon_code', 'billing_name', 'billing_email', 'billing_phone'];
-                foreach ($columns as $col) {
-                    if (Schema::hasColumn('orders', $col)) {
-                        $table->dropColumn($col);
-                    }
+            $columns = ['gateway_transaction_id', 'subtotal', 'tax_amount', 'discount_amount',
+                'coupon_code', 'billing_name', 'billing_email', 'billing_phone'];
+            $existing = [];
+            foreach ($columns as $col) {
+                if (Schema::hasColumn('orders', $col)) {
+                    $existing[] = $col;
                 }
-                $table->dropIndex('idx_orders_created_at');
-            });
+            }
+            if (! empty($existing)) {
+                Schema::table('orders', function (Blueprint $table) use ($existing) {
+                    $table->dropColumn($existing);
+                });
+            }
+            try {
+                Schema::table('orders', function (Blueprint $table) {
+                    $table->dropIndex('idx_orders_created_at');
+                });
+            } catch (\Throwable $e) {
+            }
         }
 
         if (Schema::hasTable('payments')) {
-            Schema::table('payments', function (Blueprint $table) {
-                $columns = ['gateway_transaction_id', 'settlement_id', 'settled_at',
-                    'idempotency_key', 'refunded_by'];
-                foreach ($columns as $col) {
-                    if (Schema::hasColumn('payments', $col)) {
-                        $table->dropColumn($col);
-                    }
+            $columns = ['gateway_transaction_id', 'settlement_id', 'settled_at',
+                'idempotency_key', 'refunded_by'];
+            $existing = [];
+            foreach ($columns as $col) {
+                if (Schema::hasColumn('payments', $col)) {
+                    $existing[] = $col;
                 }
-                $table->dropIndex('idx_payments_created_at');
-                $table->dropIndex('idx_payments_gateway_status_date');
-            });
+            }
+            if (! empty($existing)) {
+                Schema::table('payments', function (Blueprint $table) use ($existing) {
+                    $table->dropColumn($existing);
+                });
+            }
+            try {
+                Schema::table('payments', function (Blueprint $table) {
+                    $table->dropIndex('idx_payments_created_at');
+                });
+            } catch (\Throwable $e) {
+            }
+            try {
+                Schema::table('payments', function (Blueprint $table) {
+                    $table->dropIndex('idx_payments_gateway_status_date');
+                });
+            } catch (\Throwable $e) {
+            }
         }
 
         if (Schema::hasTable('refund_requests') && Schema::hasColumn('refund_requests', 'payment_id')) {

@@ -17,12 +17,14 @@ return new class extends Migration
             $this->dropInvalidSqliteIndexes();
         }
 
-        Schema::table('organizer_dashboard_preferences', function (Blueprint $table) {
-            if (Schema::hasColumn('organizer_dashboard_preferences', 'user_id')) {
+        $hasOrganizerDashboardPreferencesUserId = Schema::hasColumn('organizer_dashboard_preferences', 'user_id');
+        $hasOrganizerDashboardPreferencesPreferences = Schema::hasColumn('organizer_dashboard_preferences', 'preferences');
+        Schema::table('organizer_dashboard_preferences', function (Blueprint $table) use ($hasOrganizerDashboardPreferencesUserId, $hasOrganizerDashboardPreferencesPreferences) {
+            if ($hasOrganizerDashboardPreferencesUserId) {
                 $table->dropConstrainedForeignId('user_id');
             }
 
-            if (Schema::hasColumn('organizer_dashboard_preferences', 'preferences')) {
+            if ($hasOrganizerDashboardPreferencesPreferences) {
                 $table->dropColumn('preferences');
             }
         });
@@ -34,13 +36,15 @@ return new class extends Migration
             return;
         }
 
-        Schema::table('organizer_dashboard_preferences', function (Blueprint $table) {
-            if (!Schema::hasColumn('organizer_dashboard_preferences', 'user_id')) {
+        $hasOrganizerDashboardPreferencesUserId = Schema::hasColumn('organizer_dashboard_preferences', 'user_id');
+        $hasOrganizerDashboardPreferencesPreferences = Schema::hasColumn('organizer_dashboard_preferences', 'preferences');
+        Schema::table('organizer_dashboard_preferences', function (Blueprint $table) use ($hasOrganizerDashboardPreferencesUserId, $hasOrganizerDashboardPreferencesPreferences) {
+            if (!$hasOrganizerDashboardPreferencesUserId) {
                 $table->uuid('user_id')->nullable()->after('id');
                 $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             }
 
-            if (!Schema::hasColumn('organizer_dashboard_preferences', 'preferences')) {
+            if (!$hasOrganizerDashboardPreferencesPreferences) {
                 $table->json('preferences')->nullable()->after('user_id');
             }
         });

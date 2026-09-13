@@ -8,8 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'password_changed_at')) {
+        $hasUsersPasswordChangedAt = Schema::hasColumn('users', 'password_changed_at');
+        Schema::table('users', function (Blueprint $table) use ($hasUsersPasswordChangedAt) {
+            if (!$hasUsersPasswordChangedAt) {
                 $table->timestamp('password_changed_at')->nullable()->after('passwordHash');
                 $table->index('password_changed_at');
             }
@@ -18,8 +19,9 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            if (Schema::hasColumn('users', 'password_changed_at')) {
+        $hasUsersPasswordChangedAt = Schema::hasColumn('users', 'password_changed_at');
+        Schema::table('users', function (Blueprint $table) use ($hasUsersPasswordChangedAt) {
+            if ($hasUsersPasswordChangedAt) {
                 $table->dropIndex(['password_changed_at']);
                 $table->dropColumn('password_changed_at');
             }

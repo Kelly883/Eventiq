@@ -26,28 +26,34 @@ return new class extends Migration
 			return;
 		}
 
-		Schema::table('organizer_dashboard_preferences', function (Blueprint $table) {
-			if (!Schema::hasColumn('organizer_dashboard_preferences', 'organizer_id')) {
+		$hasOrganizerDashboardPreferencesOrganizerId = Schema::hasColumn('organizer_dashboard_preferences', 'organizer_id');
+		$hasOrganizerDashboardPreferencesDefaultEventFilter = Schema::hasColumn('organizer_dashboard_preferences', 'default_event_filter');
+		$hasOrganizerDashboardPreferencesDefaultDateRange = Schema::hasColumn('organizer_dashboard_preferences', 'default_date_range');
+		$hasOrganizerDashboardPreferencesExpandedEventId = Schema::hasColumn('organizer_dashboard_preferences', 'expanded_event_id');
+		$hasOrganizerDashboardPreferencesShowActivityFeed = Schema::hasColumn('organizer_dashboard_preferences', 'show_activity_feed');
+		$hasOrganizerDashboardPreferencesAutoRefreshEnabled = Schema::hasColumn('organizer_dashboard_preferences', 'auto_refresh_enabled');
+		Schema::table('organizer_dashboard_preferences', function (Blueprint $table) use ($hasOrganizerDashboardPreferencesOrganizerId, $hasOrganizerDashboardPreferencesDefaultEventFilter, $hasOrganizerDashboardPreferencesDefaultDateRange, $hasOrganizerDashboardPreferencesExpandedEventId, $hasOrganizerDashboardPreferencesShowActivityFeed, $hasOrganizerDashboardPreferencesAutoRefreshEnabled) {
+			if (!$hasOrganizerDashboardPreferencesOrganizerId) {
 				$table->foreignId('organizer_id')->nullable()->after('id');
 			}
 
-			if (!Schema::hasColumn('organizer_dashboard_preferences', 'default_event_filter')) {
+			if (!$hasOrganizerDashboardPreferencesDefaultEventFilter) {
 				$table->string('default_event_filter')->default('all')->after('organizer_id');
 			}
 
-			if (!Schema::hasColumn('organizer_dashboard_preferences', 'default_date_range')) {
+			if (!$hasOrganizerDashboardPreferencesDefaultDateRange) {
 				$table->string('default_date_range')->default('30days')->after('default_event_filter');
 			}
 
-			if (!Schema::hasColumn('organizer_dashboard_preferences', 'expanded_event_id')) {
+			if (!$hasOrganizerDashboardPreferencesExpandedEventId) {
 				$table->foreignId('expanded_event_id')->nullable()->after('default_date_range');
 			}
 
-			if (!Schema::hasColumn('organizer_dashboard_preferences', 'show_activity_feed')) {
+			if (!$hasOrganizerDashboardPreferencesShowActivityFeed) {
 				$table->boolean('show_activity_feed')->default(true)->after('expanded_event_id');
 			}
 
-			if (!Schema::hasColumn('organizer_dashboard_preferences', 'auto_refresh_enabled')) {
+			if (!$hasOrganizerDashboardPreferencesAutoRefreshEnabled) {
 				$table->boolean('auto_refresh_enabled')->default(true)->after('show_activity_feed');
 			}
 		});
@@ -112,10 +118,28 @@ return new class extends Migration
 			return $row !== null;
 		}
 
+		if (DB::getDriverName() === 'pgsql') {
+			$row = DB::selectOne(
+				'SELECT i.relname FROM pg_index x '
+				. 'JOIN pg_class i ON x.indexrelid = i.oid '
+				. 'JOIN pg_class t ON x.indrelid = t.oid '
+				. 'JOIN pg_namespace n ON t.relnamespace = n.oid '
+				. 'WHERE n.nspname = current_schema() '
+				. 'AND t.relname = ? '
+				. 'AND i.relname = ?',
+				[$table, $indexName]
+			);
+
+			return $row !== null;
+		}
+
 		$row = DB::selectOne(
 			'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
 			[$table, $indexName]
 		);
+
+		return $row !== null;
+	}
 
 		return $row !== null;
 	}

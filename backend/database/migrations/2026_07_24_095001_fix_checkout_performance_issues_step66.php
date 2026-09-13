@@ -97,10 +97,11 @@ return new class extends Migration
     public function down(): void
     {
         if (Schema::hasTable('orders')) {
-            Schema::table('orders', function (Blueprint $table) {
+            $hasOrdersFailureReason = Schema::hasColumn('orders', 'failure_reason');
+            Schema::table('orders', function (Blueprint $table) use ($hasOrdersFailureReason) {
                 try { $table->dropIndex('idx_orders_event_id'); } catch (\Exception $e) {}
                 try { $table->dropIndex('idx_orders_user_status'); } catch (\Exception $e) {}
-                if (Schema::hasColumn('orders', 'failure_reason')) {
+                if ($hasOrdersFailureReason) {
                     $table->dropColumn('failure_reason');
                 }
             });
@@ -114,15 +115,19 @@ return new class extends Migration
         }
 
         if (Schema::hasTable('payments')) {
-            Schema::table('payments', function (Blueprint $table) {
-                $columns = ['refunded_at', 'fees', 'net_amount', 'refund_reason',
-                    'card_last_four', 'card_brand'];
-                foreach ($columns as $col) {
-                    if (Schema::hasColumn('payments', $col)) {
-                        $table->dropColumn($col);
-                    }
+            $columns = ['refunded_at', 'fees', 'net_amount', 'refund_reason',
+                'card_last_four', 'card_brand'];
+            $existing = [];
+            foreach ($columns as $col) {
+                if (Schema::hasColumn('payments', $col)) {
+                    $existing[] = $col;
                 }
-            });
+            }
+            if (! empty($existing)) {
+                Schema::table('payments', function (Blueprint $table) use ($existing) {
+                    $table->dropColumn($existing);
+                });
+            }
         }
     }
 };

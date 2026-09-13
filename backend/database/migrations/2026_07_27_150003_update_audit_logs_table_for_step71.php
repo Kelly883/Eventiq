@@ -18,23 +18,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('audit_logs', function (Blueprint $table) {
+        $hasAuditLogsEventId = Schema::hasColumn('audit_logs', 'event_id');
+        $hasAuditLogsTicketId = Schema::hasColumn('audit_logs', 'ticket_id');
+        $hasAuditLogsChanges = Schema::hasColumn('audit_logs', 'changes');
+        $hasAuditLogsDetails = Schema::hasColumn('audit_logs', 'details');
+        Schema::table('audit_logs', function (Blueprint $table) use ($hasAuditLogsEventId, $hasAuditLogsTicketId, $hasAuditLogsChanges, $hasAuditLogsDetails) {
             // Change id to UUID if currently bigint
             // Note: This requires raw SQL for existing data, but we'll add the column if needed
             // For fresh installs or if we can't alter, we'll focus on other fields
             
             // Add event_id for event-specific audit logging
-            if (! Schema::hasColumn('audit_logs', 'event_id')) {
+            if (! $hasAuditLogsEventId) {
                 $table->foreignId('event_id')->nullable()->after('id');
             }
 
             // Add ticket_id if not exists (nullable)
-            if (! Schema::hasColumn('audit_logs', 'ticket_id')) {
+            if (! $hasAuditLogsTicketId) {
                 $table->foreignId('ticket_id')->nullable()->after('user_id');
             }
 
             // Change changes to details if needed
-            if (Schema::hasColumn('audit_logs', 'changes') && ! Schema::hasColumn('audit_logs', 'details')) {
+            if ($hasAuditLogsChanges && ! $hasAuditLogsDetails) {
                 // Rename changes to details
                 try {
                     \DB::statement('ALTER TABLE audit_logs CHANGE changes details JSON');
@@ -44,7 +48,7 @@ return new class extends Migration
             }
 
             // Ensure details column exists as JSON
-            if (! Schema::hasColumn('audit_logs', 'details')) {
+            if (! $hasAuditLogsDetails) {
                 $table->json('details')->nullable()->after('ticket_id');
             }
 
@@ -65,8 +69,9 @@ return new class extends Migration
 
         // Add index on (event_id, created_at)
         try {
-            Schema::table('audit_logs', function (Blueprint $table) {
-                if (! Schema::hasIndex('audit_logs', 'idx_audit_event_created')) {
+            $hasAuditLogsIdxAuditEventCreatedIndex = Schema::hasIndex('audit_logs', 'idx_audit_event_created');
+            Schema::table('audit_logs', function (Blueprint $table) use ($hasAuditLogsIdxAuditEventCreatedIndex) {
+                if (! $hasAuditLogsIdxAuditEventCreatedIndex) {
                     $table->index(['event_id', 'created_at'], 'idx_audit_event_created');
                 }
             });
@@ -80,7 +85,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('audit_logs', function (Blueprint $table) {
+        $hasAuditLogsEventId = Schema::hasColumn('audit_logs', 'event_id');
+        $hasAuditLogsTicketId = Schema::hasColumn('audit_logs', 'ticket_id');
+        $hasAuditLogsDetails = Schema::hasColumn('audit_logs', 'details');
+        Schema::table('audit_logs', function (Blueprint $table) use ($hasAuditLogsEventId, $hasAuditLogsTicketId, $hasAuditLogsDetails) {
             // Drop FK
             try {
                 $table->dropForeign(['event_id']);
@@ -103,13 +111,13 @@ return new class extends Migration
 
             // Drop columns
             $columns = [];
-            if (Schema::hasColumn('audit_logs', 'event_id')) {
+            if ($hasAuditLogsEventId) {
                 $columns[] = 'event_id';
             }
-            if (Schema::hasColumn('audit_logs', 'ticket_id')) {
+            if ($hasAuditLogsTicketId) {
                 $columns[] = 'ticket_id';
             }
-            if (Schema::hasColumn('audit_logs', 'details')) {
+            if ($hasAuditLogsDetails) {
                 $columns[] = 'details';
             }
 

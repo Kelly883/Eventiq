@@ -30,30 +30,36 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
+        $hasTicketsQrCodeData = Schema::hasColumn('tickets', 'qr_code_data');
+        $hasTicketsQrCodeSecret = Schema::hasColumn('tickets', 'qr_code_secret');
+        $hasTicketsQrCodeGeneratedAt = Schema::hasColumn('tickets', 'qr_code_generated_at');
+        $hasTicketsQrCodeExpiresAt = Schema::hasColumn('tickets', 'qr_code_expires_at');
+        $hasTicketsQrCodeScannedCount = Schema::hasColumn('tickets', 'qr_code_scanned_count');
+        $hasTicketsLastQrScanAt = Schema::hasColumn('tickets', 'last_qr_scan_at');
+        Schema::table('tickets', function (Blueprint $table) use ($hasTicketsQrCodeData, $hasTicketsQrCodeSecret, $hasTicketsQrCodeGeneratedAt, $hasTicketsQrCodeExpiresAt, $hasTicketsQrCodeScannedCount, $hasTicketsLastQrScanAt) {
             // ── QR Code Fields ────────────────────────────────────
-            if (! Schema::hasColumn('tickets', 'qr_code_data')) {
+            if (! $hasTicketsQrCodeData) {
                 $table->text('qr_code_data')->nullable()->after('tier');
             }
 
-            if (! Schema::hasColumn('tickets', 'qr_code_secret')) {
+            if (! $hasTicketsQrCodeSecret) {
                 $table->string('qr_code_secret')->nullable()->after('qr_code_data');
             }
 
-            if (! Schema::hasColumn('tickets', 'qr_code_generated_at')) {
+            if (! $hasTicketsQrCodeGeneratedAt) {
                 $table->timestamp('qr_code_generated_at')->nullable()->after('qr_code_secret');
             }
 
-            if (! Schema::hasColumn('tickets', 'qr_code_expires_at')) {
+            if (! $hasTicketsQrCodeExpiresAt) {
                 $table->timestamp('qr_code_expires_at')->nullable()->after('qr_code_generated_at');
             }
 
             // ── QR Scan Tracking ──────────────────────────────────
-            if (! Schema::hasColumn('tickets', 'qr_code_scanned_count')) {
+            if (! $hasTicketsQrCodeScannedCount) {
                 $table->integer('qr_code_scanned_count')->default(0)->after('checked_in_by');
             }
 
-            if (! Schema::hasColumn('tickets', 'last_qr_scan_at')) {
+            if (! $hasTicketsLastQrScanAt) {
                 $table->timestamp('last_qr_scan_at')->nullable()->after('qr_code_scanned_count');
             }
 
@@ -88,7 +94,13 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
+        $hasTicketsQrCodeData = Schema::hasColumn('tickets', 'qr_code_data');
+        $hasTicketsQrCodeSecret = Schema::hasColumn('tickets', 'qr_code_secret');
+        $hasTicketsQrCodeGeneratedAt = Schema::hasColumn('tickets', 'qr_code_generated_at');
+        $hasTicketsQrCodeExpiresAt = Schema::hasColumn('tickets', 'qr_code_expires_at');
+        $hasTicketsQrCodeScannedCount = Schema::hasColumn('tickets', 'qr_code_scanned_count');
+        $hasTicketsLastQrScanAt = Schema::hasColumn('tickets', 'last_qr_scan_at');
+        Schema::table('tickets', function (Blueprint $table) use ($hasTicketsQrCodeData, $hasTicketsQrCodeSecret, $hasTicketsQrCodeGeneratedAt, $hasTicketsQrCodeExpiresAt, $hasTicketsQrCodeScannedCount, $hasTicketsLastQrScanAt) {
             // Drop index
             try {
                 $table->dropIndex('idx_tickets_qr_expires');
@@ -98,22 +110,22 @@ return new class extends Migration
 
             // Drop columns that were added
             $columns = [];
-            if (Schema::hasColumn('tickets', 'qr_code_data')) {
+            if ($hasTicketsQrCodeData) {
                 $columns[] = 'qr_code_data';
             }
-            if (Schema::hasColumn('tickets', 'qr_code_secret')) {
+            if ($hasTicketsQrCodeSecret) {
                 $columns[] = 'qr_code_secret';
             }
-            if (Schema::hasColumn('tickets', 'qr_code_generated_at')) {
+            if ($hasTicketsQrCodeGeneratedAt) {
                 $columns[] = 'qr_code_generated_at';
             }
-            if (Schema::hasColumn('tickets', 'qr_code_expires_at')) {
+            if ($hasTicketsQrCodeExpiresAt) {
                 $columns[] = 'qr_code_expires_at';
             }
-            if (Schema::hasColumn('tickets', 'qr_code_scanned_count')) {
+            if ($hasTicketsQrCodeScannedCount) {
                 $columns[] = 'qr_code_scanned_count';
             }
-            if (Schema::hasColumn('tickets', 'last_qr_scan_at')) {
+            if ($hasTicketsLastQrScanAt) {
                 $columns[] = 'last_qr_scan_at';
             }
 

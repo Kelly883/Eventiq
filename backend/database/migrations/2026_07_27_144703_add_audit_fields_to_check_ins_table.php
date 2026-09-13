@@ -18,44 +18,53 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('check_ins', function (Blueprint $table) {
+        $hasCheckInsEventId = Schema::hasColumn('check_ins', 'event_id');
+        $hasCheckInsScannedBy = Schema::hasColumn('check_ins', 'scanned_by');
+        $hasCheckInsStatus = Schema::hasColumn('check_ins', 'status');
+        $hasCheckInsDeviceType = Schema::hasColumn('check_ins', 'device_type');
+        $hasCheckInsDeviceId = Schema::hasColumn('check_ins', 'device_id');
+        $hasCheckInsIpAddress = Schema::hasColumn('check_ins', 'ip_address');
+        $hasCheckInsUserAgent = Schema::hasColumn('check_ins', 'user_agent');
+        $hasCheckInsQrVerified = Schema::hasColumn('check_ins', 'qr_verified');
+        $hasCheckInsFailureReason = Schema::hasColumn('check_ins', 'failure_reason');
+        Schema::table('check_ins', function (Blueprint $table) use ($hasCheckInsEventId, $hasCheckInsScannedBy, $hasCheckInsStatus, $hasCheckInsDeviceType, $hasCheckInsDeviceId, $hasCheckInsIpAddress, $hasCheckInsUserAgent, $hasCheckInsQrVerified, $hasCheckInsFailureReason) {
             // ── Additional Foreign Keys ─────────────────────────────
-            if (! Schema::hasColumn('check_ins', 'event_id')) {
+            if (! $hasCheckInsEventId) {
                 $table->foreignId('event_id')->nullable()->constrained()->nullOnDelete();
             }
 
-            if (! Schema::hasColumn('check_ins', 'scanned_by')) {
+            if (! $hasCheckInsScannedBy) {
                 $table->uuid('scanned_by')->nullable();
                 $table->foreign('scanned_by')->references('id')->on('users')->nullOnDelete();
             }
 
             // ── Scan Context ─────────────────────────────────────────
-            if (! Schema::hasColumn('check_ins', 'status')) {
+            if (! $hasCheckInsStatus) {
                 $table->string('status')->default('checked_in')->after('user_id');
             }
 
-            if (! Schema::hasColumn('check_ins', 'device_type')) {
+            if (! $hasCheckInsDeviceType) {
                 $table->string('device_type')->nullable()->after('status');
             }
 
-            if (! Schema::hasColumn('check_ins', 'device_id')) {
+            if (! $hasCheckInsDeviceId) {
                 $table->string('device_id')->nullable()->after('device_type');
             }
 
-            if (! Schema::hasColumn('check_ins', 'ip_address')) {
+            if (! $hasCheckInsIpAddress) {
                 $table->string('ip_address')->nullable()->after('device_id');
             }
 
-            if (! Schema::hasColumn('check_ins', 'user_agent')) {
+            if (! $hasCheckInsUserAgent) {
                 $table->string('user_agent')->nullable()->after('ip_address');
             }
 
             // ── QR Verification ──────────────────────────────────────
-            if (! Schema::hasColumn('check_ins', 'qr_verified')) {
+            if (! $hasCheckInsQrVerified) {
                 $table->boolean('qr_verified')->default(true)->after('user_agent');
             }
 
-            if (! Schema::hasColumn('check_ins', 'failure_reason')) {
+            if (! $hasCheckInsFailureReason) {
                 $table->text('failure_reason')->nullable()->after('qr_verified');
             }
 
@@ -95,33 +104,28 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('check_ins', function (Blueprint $table) {
-            // Drop indexes first
-            try { $table->dropIndex('check_ins_event_id_scanned_at_index'); } catch (\Exception $e) {}
-            try { $table->dropIndex('check_ins_ticket_id_scanned_at_index'); } catch (\Exception $e) {}
-            try { $table->dropIndex('check_ins_scanned_by_index'); } catch (\Exception $e) {}
-            try { $table->dropIndex('check_ins_scanned_at_index'); } catch (\Exception $e) {}
-
-            // Drop foreign keys
-            try { $table->dropForeign(['event_id']); } catch (\Exception $e) {}
-            try { $table->dropForeign(['scanned_by']); } catch (\Exception $e) {}
-
-            // Drop columns
-            $columns = [
+        $columns = [
                 'event_id', 'scanned_by', 'status', 'device_type', 'device_id',
                 'ip_address', 'user_agent', 'qr_verified', 'failure_reason',
             ];
-
-            $existing = [];
-            foreach ($columns as $col) {
-                if (Schema::hasColumn('check_ins', $col)) {
-                    $existing[] = $col;
-                }
+        $existing = [];
+        foreach ($columns as $col) {
+            if (Schema::hasColumn('check_ins', $col)) {
+                $existing[] = $col;
             }
-
-            if (! empty($existing)) {
-                $table->dropColumn($existing);
-            }
+        }
+        if (! empty($existing)) {
+            Schema::table('check_ins', function (Blueprint $table) use ($existing) {
+            $table->dropIndex('check_ins_scanned_at_index');
+        
+            $table->dropIndex('check_ins_scanned_by_index');
+        
+            $table->dropIndex('check_ins_ticket_id_scanned_at_index');
+        
+            $table->dropIndex('check_ins_event_id_scanned_at_index');
+        
+            $table->dropColumn($existing);
         });
+        }
     }
 };

@@ -8,14 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('ticket_tiers', function (Blueprint $table) {
-            if (!Schema::hasColumn('ticket_tiers', 'quantity')) {
+        $hasTicketTiersQuantity = Schema::hasColumn('ticket_tiers', 'quantity');
+        $hasTicketTiersSalesStartDate = Schema::hasColumn('ticket_tiers', 'sales_start_date');
+        $hasTicketTiersSalesEndDate = Schema::hasColumn('ticket_tiers', 'sales_end_date');
+        Schema::table('ticket_tiers', function (Blueprint $table) use ($hasTicketTiersQuantity, $hasTicketTiersSalesStartDate, $hasTicketTiersSalesEndDate) {
+            if (!$hasTicketTiersQuantity) {
                 $table->unsignedInteger('quantity')->nullable(false)->after('price');
             }
-            if (!Schema::hasColumn('ticket_tiers', 'sales_start_date')) {
+            if (!$hasTicketTiersSalesStartDate) {
                 $table->dateTime('sales_start_date')->nullable()->after('quantity');
             }
-            if (!Schema::hasColumn('ticket_tiers', 'sales_end_date')) {
+            if (!$hasTicketTiersSalesEndDate) {
                 $table->dateTime('sales_end_date')->nullable()->after('sales_start_date');
             }
         });
@@ -23,15 +26,18 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('ticket_tiers', function (Blueprint $table) {
+        $hasTicketTiersQuantity = Schema::hasColumn('ticket_tiers', 'quantity');
+        $hasTicketTiersSalesStartDate = Schema::hasColumn('ticket_tiers', 'sales_start_date');
+        $hasTicketTiersSalesEndDate = Schema::hasColumn('ticket_tiers', 'sales_end_date');
+        Schema::table('ticket_tiers', function (Blueprint $table) use ($hasTicketTiersQuantity, $hasTicketTiersSalesStartDate, $hasTicketTiersSalesEndDate) {
             $columns = [];
-            if (Schema::hasColumn('ticket_tiers', 'quantity')) {
+            if ($hasTicketTiersQuantity) {
                 $columns[] = 'quantity';
             }
-            if (Schema::hasColumn('ticket_tiers', 'sales_start_date')) {
+            if ($hasTicketTiersSalesStartDate) {
                 $columns[] = 'sales_start_date';
             }
-            if (Schema::hasColumn('ticket_tiers', 'sales_end_date')) {
+            if ($hasTicketTiersSalesEndDate) {
                 $columns[] = 'sales_end_date';
             }
             if (!empty($columns)) {

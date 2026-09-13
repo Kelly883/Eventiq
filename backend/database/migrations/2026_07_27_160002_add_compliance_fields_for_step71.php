@@ -15,15 +15,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
+        $hasTicketsOrderItemId = Schema::hasColumn('tickets', 'order_item_id');
+        $hasTicketsIdxTicketsOrderItemIndex = Schema::hasIndex('tickets', 'idx_tickets_order_item');
+        $hasTicketsPaymentMethod = Schema::hasColumn('tickets', 'payment_method');
+        Schema::table('tickets', function (Blueprint $table) use ($hasTicketsOrderItemId, $hasTicketsIdxTicketsOrderItemIndex, $hasTicketsPaymentMethod) {
             // Add order_item_id for traceability
-            if (!Schema::hasColumn('tickets', 'order_item_id')) {
+            if (!$hasTicketsOrderItemId) {
                 $table->uuid('order_item_id')->nullable()->after('order_id')
                       ->comment('Links to order_items for detailed purchase traceability');
                 
                 // Add index for order item lookups
                 try {
-                    if (!Schema::hasIndex('tickets', 'idx_tickets_order_item')) {
+                    if (!$hasTicketsIdxTicketsOrderItemIndex) {
                         $table->index('order_item_id', 'idx_tickets_order_item');
                     }
                 } catch (\Exception $e) {
@@ -32,28 +35,31 @@ return new class extends Migration
             }
 
             // Add payment_method for revenue tracking and analytics
-            if (!Schema::hasColumn('tickets', 'payment_method')) {
+            if (!$hasTicketsPaymentMethod) {
                 $table->string('payment_method', 50)->nullable()->after('payment_method')
                       ->comment('Payment method used: card, bank_transfer, mobile_money, etc');
             }
         });
 
-        Schema::table('audit_logs', function (Blueprint $table) {
+        $hasAuditLogsIpAddress = Schema::hasColumn('audit_logs', 'ip_address');
+        $hasAuditLogsUserAgent = Schema::hasColumn('audit_logs', 'user_agent');
+        $hasAuditLogsIdxAuditLogsIpIndex = Schema::hasIndex('audit_logs', 'idx_audit_logs_ip');
+        Schema::table('audit_logs', function (Blueprint $table) use ($hasAuditLogsIpAddress, $hasAuditLogsUserAgent, $hasAuditLogsIdxAuditLogsIpIndex) {
             // Add ip_address for security compliance
-            if (!Schema::hasColumn('audit_logs', 'ip_address')) {
+            if (!$hasAuditLogsIpAddress) {
                 $table->string('ip_address', 45)->nullable()->after('action')
                       ->comment('IP address of user performing action');
             }
 
             // Add user_agent for debugging and forensics
-            if (!Schema::hasColumn('audit_logs', 'user_agent')) {
+            if (!$hasAuditLogsUserAgent) {
                 $table->string('user_agent', 500)->nullable()->after('ip_address')
                       ->comment('User agent string for debugging');
             }
 
             // Add index for IP-based lookups (compliance investigations)
             try {
-                if (!Schema::hasIndex('audit_logs', 'idx_audit_logs_ip')) {
+                if (!$hasAuditLogsIdxAuditLogsIpIndex) {
                     $table->index('ip_address', 'idx_audit_logs_ip');
                 }
             } catch (\Exception $e) {
@@ -67,7 +73,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('audit_logs', function (Blueprint $table) {
+        $hasAuditLogsUserAgent = Schema::hasColumn('audit_logs', 'user_agent');
+        $hasAuditLogsIpAddress = Schema::hasColumn('audit_logs', 'ip_address');
+        Schema::table('audit_logs', function (Blueprint $table) use ($hasAuditLogsUserAgent, $hasAuditLogsIpAddress) {
             // Drop indexes
             try {
                 $table->dropIndex('idx_audit_logs_ip');
@@ -76,16 +84,18 @@ return new class extends Migration
             }
 
             // Drop columns
-            if (Schema::hasColumn('audit_logs', 'user_agent')) {
+            if ($hasAuditLogsUserAgent) {
                 $table->dropColumn('user_agent');
             }
 
-            if (Schema::hasColumn('audit_logs', 'ip_address')) {
+            if ($hasAuditLogsIpAddress) {
                 $table->dropColumn('ip_address');
             }
         });
 
-        Schema::table('tickets', function (Blueprint $table) {
+        $hasTicketsPaymentMethod = Schema::hasColumn('tickets', 'payment_method');
+        $hasTicketsOrderItemId = Schema::hasColumn('tickets', 'order_item_id');
+        Schema::table('tickets', function (Blueprint $table) use ($hasTicketsPaymentMethod, $hasTicketsOrderItemId) {
             // Drop indexes
             try {
                 $table->dropIndex('idx_tickets_order_item');
@@ -94,11 +104,11 @@ return new class extends Migration
             }
 
             // Drop columns
-            if (Schema::hasColumn('tickets', 'payment_method')) {
+            if ($hasTicketsPaymentMethod) {
                 $table->dropColumn('payment_method');
             }
 
-            if (Schema::hasColumn('tickets', 'order_item_id')) {
+            if ($hasTicketsOrderItemId) {
                 $table->dropColumn('order_item_id');
             }
         });

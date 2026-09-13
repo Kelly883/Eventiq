@@ -8,18 +8,21 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('fraud_events', function (Blueprint $table) {
-            if (!Schema::hasColumn('fraud_events', 'payment_intent_id')) {
+        $hasFraudEventsPaymentIntentId = Schema::hasColumn('fraud_events', 'payment_intent_id');
+        $hasFraudEventsChargebackFlag = Schema::hasColumn('fraud_events', 'chargeback_flag');
+        $hasFraudEventsAuthenticationMethod = Schema::hasColumn('fraud_events', 'authentication_method');
+        Schema::table('fraud_events', function (Blueprint $table) use ($hasFraudEventsPaymentIntentId, $hasFraudEventsChargebackFlag, $hasFraudEventsAuthenticationMethod) {
+            if (!$hasFraudEventsPaymentIntentId) {
                 $table->string('payment_intent_id', 100)->nullable()->after('gateway_response_code')
                       ->comment('Payment gateway intent/transaction ID for chargeback reconciliation');
             }
 
-            if (!Schema::hasColumn('fraud_events', 'chargeback_flag')) {
+            if (!$hasFraudEventsChargebackFlag) {
                 $table->boolean('chargeback_flag')->default(false)->after('payment_intent_id')
                       ->comment('Whether this order resulted in a chargeback');
             }
 
-            if (!Schema::hasColumn('fraud_events', 'authentication_method')) {
+            if (!$hasFraudEventsAuthenticationMethod) {
                 $table->string('authentication_method', 50)->nullable()->after('chargeback_flag')
                       ->comment('3DS, password, biometric — critical for liability shift');
             }

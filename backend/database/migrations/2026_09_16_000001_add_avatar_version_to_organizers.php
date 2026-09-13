@@ -9,8 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         if (!Schema::hasTable('organizers')) return;
-        Schema::table('organizers', function (Blueprint $table) {
-            if (!Schema::hasColumn('organizers', 'avatarVersion')) {
+        $hasOrganizersAvatarversion = Schema::hasColumn('organizers', 'avatarVersion');
+        Schema::table('organizers', function (Blueprint $table) use ($hasOrganizersAvatarversion) {
+            if (!$hasOrganizersAvatarversion) {
                 $table->unsignedInteger('avatarVersion')->default(0)->after('avatarUrl');
                 $table->index('avatarVersion');
             }

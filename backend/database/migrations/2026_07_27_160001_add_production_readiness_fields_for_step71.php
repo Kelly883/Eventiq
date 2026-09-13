@@ -17,27 +17,31 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
+        $hasTicketsSeatNumber = Schema::hasColumn('tickets', 'seat_number');
+        $hasTicketsSection = Schema::hasColumn('tickets', 'section');
+        $hasTicketsSyncStatus = Schema::hasColumn('tickets', 'sync_status');
+        $hasTicketsIdxTicketsSyncStatusIndex = Schema::hasIndex('tickets', 'idx_tickets_sync_status');
+        Schema::table('tickets', function (Blueprint $table) use ($hasTicketsSeatNumber, $hasTicketsSection, $hasTicketsSyncStatus, $hasTicketsIdxTicketsSyncStatusIndex) {
             // Add seat/section fields for venue management
-            if (!Schema::hasColumn('tickets', 'seat_number')) {
+            if (!$hasTicketsSeatNumber) {
                 $table->string('seat_number')->nullable()->after('tier')
                       ->comment('Seat number for assigned seating events');
             }
 
-            if (!Schema::hasColumn('tickets', 'section')) {
+            if (!$hasTicketsSection) {
                 $table->string('section')->nullable()->after('seat_number')
                       ->comment('Venue section for grouped seating');
             }
 
             // Add sync_status for offline check-in scenarios
-            if (!Schema::hasColumn('tickets', 'sync_status')) {
+            if (!$hasTicketsSyncStatus) {
                 $table->enum('sync_status', ['synced', 'pending', 'failed'])->default('synced')->after('checked_in_by')
                       ->comment('Sync status for offline check-in queue');
             }
 
             // Add index for offline sync queries
             try {
-                if (!Schema::hasIndex('tickets', 'idx_tickets_sync_status')) {
+                if (!$hasTicketsIdxTicketsSyncStatusIndex) {
                     $table->index('sync_status', 'idx_tickets_sync_status');
                 }
             } catch (\Exception $e) {
@@ -45,16 +49,18 @@ return new class extends Migration
             }
         });
 
-        Schema::table('fraud_events', function (Blueprint $table) {
+        $hasFraudEventsDeviceId = Schema::hasColumn('fraud_events', 'device_id');
+        $hasFraudEventsIdxFraudDeviceIdIndex = Schema::hasIndex('fraud_events', 'idx_fraud_device_id');
+        Schema::table('fraud_events', function (Blueprint $table) use ($hasFraudEventsDeviceId, $hasFraudEventsIdxFraudDeviceIdIndex) {
             // Add device_id for forensics
-            if (!Schema::hasColumn('fraud_events', 'device_id')) {
+            if (!$hasFraudEventsDeviceId) {
                 $table->string('device_id')->nullable()->after('second_check_in_by')
                       ->comment('Device/scanner ID that detected the fraud');
             }
 
             // Add index for device-based queries
             try {
-                if (!Schema::hasIndex('fraud_events', 'idx_fraud_device_id')) {
+                if (!$hasFraudEventsIdxFraudDeviceIdIndex) {
                     $table->index('device_id', 'idx_fraud_device_id');
                 }
             } catch (\Exception $e) {
@@ -79,7 +85,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
+        $hasTicketsSyncStatus = Schema::hasColumn('tickets', 'sync_status');
+        $hasTicketsSection = Schema::hasColumn('tickets', 'section');
+        $hasTicketsSeatNumber = Schema::hasColumn('tickets', 'seat_number');
+        Schema::table('tickets', function (Blueprint $table) use ($hasTicketsSyncStatus, $hasTicketsSection, $hasTicketsSeatNumber) {
             // Drop seat_number, section, sync_status columns
             try {
                 $table->dropIndex('idx_tickets_sync_status');
@@ -87,20 +96,21 @@ return new class extends Migration
                 // Index may not exist
             }
 
-            if (Schema::hasColumn('tickets', 'sync_status')) {
+            if ($hasTicketsSyncStatus) {
                 $table->dropColumn('sync_status');
             }
 
-            if (Schema::hasColumn('tickets', 'section')) {
+            if ($hasTicketsSection) {
                 $table->dropColumn('section');
             }
 
-            if (Schema::hasColumn('tickets', 'seat_number')) {
+            if ($hasTicketsSeatNumber) {
                 $table->dropColumn('seat_number');
             }
         });
 
-        Schema::table('fraud_events', function (Blueprint $table) {
+        $hasFraudEventsDeviceId = Schema::hasColumn('fraud_events', 'device_id');
+        Schema::table('fraud_events', function (Blueprint $table) use ($hasFraudEventsDeviceId) {
             // Drop device_id column
             try {
                 $table->dropIndex('idx_fraud_device_id');
@@ -108,7 +118,7 @@ return new class extends Migration
                 // Index may not exist
             }
 
-            if (Schema::hasColumn('fraud_events', 'device_id')) {
+            if ($hasFraudEventsDeviceId) {
                 $table->dropColumn('device_id');
             }
         });

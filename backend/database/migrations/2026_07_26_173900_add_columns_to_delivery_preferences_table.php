@@ -95,25 +95,31 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('delivery_preferences', function (Blueprint $table) {
+        $hasDeliveryPreferencesQuietHoursStart = Schema::hasColumn('delivery_preferences', 'quiet_hours_start');
+        $hasDeliveryPreferencesQuietHoursEnd = Schema::hasColumn('delivery_preferences', 'quiet_hours_end');
+        $hasDeliveryPreferencesMaxDailyNotifications = Schema::hasColumn('delivery_preferences', 'max_daily_notifications');
+        $hasDeliveryPreferencesLanguage = Schema::hasColumn('delivery_preferences', 'language');
+        $hasDeliveryPreferencesTimezone = Schema::hasColumn('delivery_preferences', 'timezone');
+        $hasDeliveryPreferencesDeletedAt = Schema::hasColumn('delivery_preferences', 'deleted_at');
+        Schema::table('delivery_preferences', function (Blueprint $table) use ($hasDeliveryPreferencesQuietHoursStart, $hasDeliveryPreferencesQuietHoursEnd, $hasDeliveryPreferencesMaxDailyNotifications, $hasDeliveryPreferencesLanguage, $hasDeliveryPreferencesTimezone, $hasDeliveryPreferencesDeletedAt) {
             $columns = [];
 
-            if (Schema::hasColumn('delivery_preferences', 'quiet_hours_start')) {
+            if ($hasDeliveryPreferencesQuietHoursStart) {
                 $columns[] = 'quiet_hours_start';
             }
-            if (Schema::hasColumn('delivery_preferences', 'quiet_hours_end')) {
+            if ($hasDeliveryPreferencesQuietHoursEnd) {
                 $columns[] = 'quiet_hours_end';
             }
-            if (Schema::hasColumn('delivery_preferences', 'max_daily_notifications')) {
+            if ($hasDeliveryPreferencesMaxDailyNotifications) {
                 $columns[] = 'max_daily_notifications';
             }
-            if (Schema::hasColumn('delivery_preferences', 'language')) {
+            if ($hasDeliveryPreferencesLanguage) {
                 $columns[] = 'language';
             }
-            if (Schema::hasColumn('delivery_preferences', 'timezone')) {
+            if ($hasDeliveryPreferencesTimezone) {
                 $columns[] = 'timezone';
             }
-            if (Schema::hasColumn('delivery_preferences', 'deleted_at')) {
+            if ($hasDeliveryPreferencesDeletedAt) {
                 $columns[] = 'deleted_at';
             }
 

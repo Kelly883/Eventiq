@@ -15,12 +15,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('email_templates', function (Blueprint $table) {
-            if (! Schema::hasColumn('email_templates', 'deleted_at')) {
+        $hasEmailTemplatesDeletedAt = Schema::hasColumn('email_templates', 'deleted_at');
+        $hasEmailTemplatesPublishedAt = Schema::hasColumn('email_templates', 'published_at');
+        Schema::table('email_templates', function (Blueprint $table) use ($hasEmailTemplatesDeletedAt, $hasEmailTemplatesPublishedAt) {
+            if (! $hasEmailTemplatesDeletedAt) {
                 $table->softDeletes()->after('updated_at');
             }
 
-            if (! Schema::hasColumn('email_templates', 'published_at')) {
+            if (! $hasEmailTemplatesPublishedAt) {
                 $table->timestamp('published_at')->nullable()->after('is_active');
             }
         });
@@ -31,13 +33,15 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('email_templates', function (Blueprint $table) {
+        $hasEmailTemplatesPublishedAt = Schema::hasColumn('email_templates', 'published_at');
+        $hasEmailTemplatesDeletedAt = Schema::hasColumn('email_templates', 'deleted_at');
+        Schema::table('email_templates', function (Blueprint $table) use ($hasEmailTemplatesPublishedAt, $hasEmailTemplatesDeletedAt) {
             $columns = [];
 
-            if (Schema::hasColumn('email_templates', 'published_at')) {
+            if ($hasEmailTemplatesPublishedAt) {
                 $columns[] = 'published_at';
             }
-            if (Schema::hasColumn('email_templates', 'deleted_at')) {
+            if ($hasEmailTemplatesDeletedAt) {
                 $columns[] = 'deleted_at';
             }
 

@@ -22,17 +22,21 @@ return new class extends Migration
             return;
         }
 
-        Schema::table('tickets', function (Blueprint $table) {
-            if (! Schema::hasColumn('tickets', 'ticket_id')) {
+        $hasTicketsTicketId = Schema::hasColumn('tickets', 'ticket_id');
+        $hasTicketsAttendeeName = Schema::hasColumn('tickets', 'attendee_name');
+        $hasTicketsAttendeeEmail = Schema::hasColumn('tickets', 'attendee_email');
+        $hasTicketsTier = Schema::hasColumn('tickets', 'tier');
+        Schema::table('tickets', function (Blueprint $table) use ($hasTicketsTicketId, $hasTicketsAttendeeName, $hasTicketsAttendeeEmail, $hasTicketsTier) {
+            if (! $hasTicketsTicketId) {
                 $table->string('ticket_id')->unique()->nullable()->after('id');
             }
-            if (! Schema::hasColumn('tickets', 'attendee_name')) {
+            if (! $hasTicketsAttendeeName) {
                 $table->string('attendee_name')->nullable()->after('ticket_id');
             }
-            if (! Schema::hasColumn('tickets', 'attendee_email')) {
+            if (! $hasTicketsAttendeeEmail) {
                 $table->string('attendee_email')->nullable()->after('attendee_name');
             }
-            if (! Schema::hasColumn('tickets', 'tier')) {
+            if (! $hasTicketsTier) {
                 $table->string('tier')->nullable()->after('attendee_email');
             }
         });
@@ -51,12 +55,17 @@ return new class extends Migration
             return;
         }
 
-        Schema::table('tickets', function (Blueprint $table) {
-            foreach (['ticket_id', 'attendee_name', 'attendee_email', 'tier'] as $column) {
-                if (Schema::hasColumn('tickets', $column)) {
-                    $table->dropColumn($column);
-                }
+        $columns = ['ticket_id', 'attendee_name', 'attendee_email', 'tier'];
+        $existing = [];
+        foreach ($columns as $column) {
+            if (Schema::hasColumn('tickets', $column)) {
+                $existing[] = $column;
             }
-        });
+        }
+        if (! empty($existing)) {
+            Schema::table('tickets', function (Blueprint $table) use ($existing) {
+                $table->dropColumn($existing);
+            });
+        }
     }
 };

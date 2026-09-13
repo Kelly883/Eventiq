@@ -9,29 +9,37 @@ return new class extends Migration
     public function up(): void
     {
         if (Schema::hasTable('payment_methods')) {
-            Schema::table('payment_methods', function (Blueprint $table) {
-                if (! Schema::hasColumn('payment_methods', 'expires_at')) {
+            $hasPaymentMethodsExpiresAt = Schema::hasColumn('payment_methods', 'expires_at');
+            $hasPaymentMethodsBillingName = Schema::hasColumn('payment_methods', 'billing_name');
+            $hasPaymentMethodsBillingEmail = Schema::hasColumn('payment_methods', 'billing_email');
+            $hasPaymentMethodsBillingPhone = Schema::hasColumn('payment_methods', 'billing_phone');
+            $hasPaymentMethodsBillingAddress = Schema::hasColumn('payment_methods', 'billing_address');
+            $hasPaymentMethodsBillingCity = Schema::hasColumn('payment_methods', 'billing_city');
+            $hasPaymentMethodsBillingCountry = Schema::hasColumn('payment_methods', 'billing_country');
+            $hasPaymentMethodsBillingZip = Schema::hasColumn('payment_methods', 'billing_zip');
+            Schema::table('payment_methods', function (Blueprint $table) use ($hasPaymentMethodsExpiresAt, $hasPaymentMethodsBillingName, $hasPaymentMethodsBillingEmail, $hasPaymentMethodsBillingPhone, $hasPaymentMethodsBillingAddress, $hasPaymentMethodsBillingCity, $hasPaymentMethodsBillingCountry, $hasPaymentMethodsBillingZip) {
+                if (! $hasPaymentMethodsExpiresAt) {
                     $table->dateTime('expires_at')->nullable()->after('exp_year');
                 }
-                if (! Schema::hasColumn('payment_methods', 'billing_name')) {
+                if (! $hasPaymentMethodsBillingName) {
                     $table->string('billing_name')->nullable()->after('account_name');
                 }
-                if (! Schema::hasColumn('payment_methods', 'billing_email')) {
+                if (! $hasPaymentMethodsBillingEmail) {
                     $table->string('billing_email')->nullable()->after('billing_name');
                 }
-                if (! Schema::hasColumn('payment_methods', 'billing_phone')) {
+                if (! $hasPaymentMethodsBillingPhone) {
                     $table->string('billing_phone')->nullable()->after('billing_email');
                 }
-                if (! Schema::hasColumn('payment_methods', 'billing_address')) {
+                if (! $hasPaymentMethodsBillingAddress) {
                     $table->string('billing_address')->nullable()->after('billing_phone');
                 }
-                if (! Schema::hasColumn('payment_methods', 'billing_city')) {
+                if (! $hasPaymentMethodsBillingCity) {
                     $table->string('billing_city')->nullable()->after('billing_address');
                 }
-                if (! Schema::hasColumn('payment_methods', 'billing_country')) {
+                if (! $hasPaymentMethodsBillingCountry) {
                     $table->string('billing_country', 2)->nullable()->after('billing_city');
                 }
-                if (! Schema::hasColumn('payment_methods', 'billing_zip')) {
+                if (! $hasPaymentMethodsBillingZip) {
                     $table->string('billing_zip')->nullable()->after('billing_country');
                 }
             });

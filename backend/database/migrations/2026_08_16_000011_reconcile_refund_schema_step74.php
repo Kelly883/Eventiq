@@ -126,54 +126,59 @@ return new class extends Migration
 
     private function fixMySql(): void
     {
-        Schema::table('refund_policies', function (Blueprint $table) {
+        $hasRefundPoliciesOrganizerId = Schema::hasColumn('refund_policies', 'organizer_id');
+        $hasRefundPoliciesRefundPercentageBeforeEvent = Schema::hasColumn('refund_policies', 'refund_percentage_before_event');
+        $hasRefundPoliciesRefundPercentageAfterEventStart = Schema::hasColumn('refund_policies', 'refund_percentage_after_event_start');
+        $hasRefundPoliciesAllowRefundsAfterEventStart = Schema::hasColumn('refund_policies', 'allow_refunds_after_event_start');
+        $hasRefundPoliciesProcessingTimeBusinessDays = Schema::hasColumn('refund_policies', 'processing_time_business_days');
+        $hasRefundPoliciesAllowedRefundMethods = Schema::hasColumn('refund_policies', 'allowed_refund_methods');
+        $hasRefundPoliciesRequiresApproval = Schema::hasColumn('refund_policies', 'requires_approval');
+        $hasRefundPoliciesAutoApproveThreshold = Schema::hasColumn('refund_policies', 'auto_approve_threshold');
+        $hasRefundPoliciesMaxRefundsPerUser = Schema::hasColumn('refund_policies', 'max_refunds_per_user');
+        $hasRefundPoliciesRefundReasons = Schema::hasColumn('refund_policies', 'refund_reasons');
+        $hasRefundPoliciesCancellationPolicy = Schema::hasColumn('refund_policies', 'cancellation_policy');
+        Schema::table('refund_policies', function (Blueprint $table) use ($hasRefundPoliciesOrganizerId, $hasRefundPoliciesRefundPercentageBeforeEvent, $hasRefundPoliciesRefundPercentageAfterEventStart, $hasRefundPoliciesAllowRefundsAfterEventStart, $hasRefundPoliciesProcessingTimeBusinessDays, $hasRefundPoliciesAllowedRefundMethods, $hasRefundPoliciesRequiresApproval, $hasRefundPoliciesAutoApproveThreshold, $hasRefundPoliciesMaxRefundsPerUser, $hasRefundPoliciesRefundReasons, $hasRefundPoliciesCancellationPolicy) {
             try {
                 $table->uuid('id')->primary()->change();
             } catch (\Throwable $e) {
                 // May already be UUID
             }
-            if (! Schema::hasColumn('refund_policies', 'organizer_id')) {
+            if (! $hasRefundPoliciesOrganizerId) {
                 $table->foreignId('organizer_id')->nullable()->after('event_id');
             }
-            if (! Schema::hasColumn('refund_policies', 'refund_percentage_before_event')) {
+            if (! $hasRefundPoliciesRefundPercentageBeforeEvent) {
                 $table->decimal('refund_percentage_before_event', 5, 2)->after('refund_window_days');
             }
-            if (! Schema::hasColumn('refund_policies', 'refund_percentage_after_event_start')) {
+            if (! $hasRefundPoliciesRefundPercentageAfterEventStart) {
                 $table->decimal('refund_percentage_after_event_start', 5, 2)->nullable()->after('refund_percentage_before_event');
             }
-            if (! Schema::hasColumn('refund_policies', 'allow_refunds_after_event_start')) {
+            if (! $hasRefundPoliciesAllowRefundsAfterEventStart) {
                 $table->boolean('allow_refunds_after_event_start')->default(false)->after('refund_percentage_after_event_start');
             }
-            if (! Schema::hasColumn('refund_policies', 'processing_time_business_days')) {
+            if (! $hasRefundPoliciesProcessingTimeBusinessDays) {
                 $table->integer('processing_time_business_days')->default(3)->after('allow_refunds_after_event_start');
             }
-            if (! Schema::hasColumn('refund_policies', 'allowed_refund_methods')) {
+            if (! $hasRefundPoliciesAllowedRefundMethods) {
                 $table->json('allowed_refund_methods')->nullable()->after('processing_time_business_days');
             }
-            if (! Schema::hasColumn('refund_policies', 'requires_approval')) {
+            if (! $hasRefundPoliciesRequiresApproval) {
                 $table->boolean('requires_approval')->default(false)->after('allowed_refund_methods');
             }
-            if (! Schema::hasColumn('refund_policies', 'auto_approve_threshold')) {
+            if (! $hasRefundPoliciesAutoApproveThreshold) {
                 $table->decimal('auto_approve_threshold', 10, 2)->nullable()->after('requires_approval');
             }
-            if (! Schema::hasColumn('refund_policies', 'max_refunds_per_user')) {
+            if (! $hasRefundPoliciesMaxRefundsPerUser) {
                 $table->integer('max_refunds_per_user')->nullable()->after('auto_approve_threshold');
             }
-            if (! Schema::hasColumn('refund_policies', 'refund_reasons')) {
+            if (! $hasRefundPoliciesRefundReasons) {
                 $table->json('refund_reasons')->nullable()->after('max_refunds_per_user');
             }
-            if (! Schema::hasColumn('refund_policies', 'cancellation_policy')) {
+            if (! $hasRefundPoliciesCancellationPolicy) {
                 $table->text('cancellation_policy')->nullable()->after('refund_reasons');
             }
         });
 
-        Schema::table('refund_requests', function (Blueprint $table) {
-            try {
-                $table->uuid('id')->primary()->change();
-            } catch (\Throwable $e) {
-                // May already be UUID
-            }
-            $columnsToAdd = [
+            $columnsToAddRefundRequests = [
                 'order_id' => 'uuid AFTER ticket_id',
                 'user_id' => 'uuid AFTER order_id',
                 'event_id' => 'uuid AFTER user_id',
@@ -192,14 +197,24 @@ return new class extends Migration
                 'appeal_count' => 'int DEFAULT 0 AFTER payment_gateway_response',
                 'last_appeal_at' => 'timestamp NULL AFTER appeal_count',
             ];
-            foreach ($columnsToAdd as $column => $definition) {
+            $missingRefundRequestsColumns = [];
+            foreach ($columnsToAddRefundRequests as $column => $definition) {
                 if (! Schema::hasColumn('refund_requests', $column)) {
+                    $missingRefundRequestsColumns[$column] = $definition;
+                }
+            }
+        Schema::table('refund_requests', function (Blueprint $table) use ($missingRefundRequestsColumns) {
+            try {
+                $table->uuid('id')->primary()->change();
+            } catch (\Throwable $e) {
+                // May already be UUID
+            }
+            foreach ($missingRefundRequestsColumns as $column => $definition) {
                     try {
                         DB::statement("ALTER TABLE refund_requests ADD COLUMN {$column} {$definition}");
                     } catch (\Throwable $e) {
                         // Column may already exist
                     }
-                }
             }
             try {
                 $table->index(['user_id', 'status']);
@@ -215,22 +230,26 @@ return new class extends Migration
             }
         });
 
-        Schema::table('refund_appeals', function (Blueprint $table) {
+        $hasRefundAppealsAppealReason = Schema::hasColumn('refund_appeals', 'appeal_reason');
+        $hasRefundAppealsReviewedBy = Schema::hasColumn('refund_appeals', 'reviewed_by');
+        $hasRefundAppealsReviewNotes = Schema::hasColumn('refund_appeals', 'review_notes');
+        $hasRefundAppealsReviewedAt = Schema::hasColumn('refund_appeals', 'reviewed_at');
+        Schema::table('refund_appeals', function (Blueprint $table) use ($hasRefundAppealsAppealReason, $hasRefundAppealsReviewedBy, $hasRefundAppealsReviewNotes, $hasRefundAppealsReviewedAt) {
             try {
                 $table->uuid('id')->primary()->change();
             } catch (\Throwable $e) {
                 // May already be UUID
             }
-            if (! Schema::hasColumn('refund_appeals', 'appeal_reason')) {
+            if (! $hasRefundAppealsAppealReason) {
                 $table->text('appeal_reason')->after('user_id');
             }
-            if (! Schema::hasColumn('refund_appeals', 'reviewed_by')) {
+            if (! $hasRefundAppealsReviewedBy) {
                 $table->uuid('reviewed_by')->nullable()->after('status');
             }
-            if (! Schema::hasColumn('refund_appeals', 'review_notes')) {
+            if (! $hasRefundAppealsReviewNotes) {
                 $table->text('review_notes')->nullable()->after('reviewed_by');
             }
-            if (! Schema::hasColumn('refund_appeals', 'reviewed_at')) {
+            if (! $hasRefundAppealsReviewedAt) {
                 $table->timestamp('reviewed_at')->nullable()->after('review_notes');
             }
             try {

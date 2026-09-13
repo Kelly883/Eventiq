@@ -8,23 +8,29 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('organizers', function (Blueprint $table) {
-            if (Schema::hasColumn('organizers', 'business_name')) {
+        $hasOrganizersBusinessName = Schema::hasColumn('organizers', 'business_name');
+        $hasOrganizersBrandingColor = Schema::hasColumn('organizers', 'branding_color');
+        $hasOrganizersLogoPath = Schema::hasColumn('organizers', 'logo_path');
+        $hasOrganizersWebsiteUrl = Schema::hasColumn('organizers', 'website_url');
+        $hasOrganizersSocialLinks = Schema::hasColumn('organizers', 'social_links');
+        $hasOrganizersPrivacySettings = Schema::hasColumn('organizers', 'privacy_settings');
+        Schema::table('organizers', function (Blueprint $table) use ($hasOrganizersBusinessName, $hasOrganizersBrandingColor, $hasOrganizersLogoPath, $hasOrganizersWebsiteUrl, $hasOrganizersSocialLinks, $hasOrganizersPrivacySettings) {
+            if ($hasOrganizersBusinessName) {
                 $table->dropColumn('business_name');
             }
-            if (Schema::hasColumn('organizers', 'branding_color')) {
+            if ($hasOrganizersBrandingColor) {
                 $table->dropColumn('branding_color');
             }
-            if (Schema::hasColumn('organizers', 'logo_path')) {
+            if ($hasOrganizersLogoPath) {
                 $table->dropColumn('logo_path');
             }
-            if (Schema::hasColumn('organizers', 'website_url')) {
+            if ($hasOrganizersWebsiteUrl) {
                 $table->dropColumn('website_url');
             }
-            if (Schema::hasColumn('organizers', 'social_links')) {
+            if ($hasOrganizersSocialLinks) {
                 $table->dropColumn('social_links');
             }
-            if (Schema::hasColumn('organizers', 'privacy_settings')) {
+            if ($hasOrganizersPrivacySettings) {
                 $table->dropColumn('privacy_settings');
             }
         });

@@ -45,7 +45,18 @@ return new class extends Migration
 
         if (DB::getDriverName() === 'pgsql') {
             $row = DB::selectOne(
-                'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
+                'SELECT c.conname FROM pg_constraint c '
+                . 'JOIN pg_class t ON c.conrelid = t.oid '
+                . 'JOIN pg_namespace n ON t.relnamespace = n.oid '
+                . 'WHERE n.nspname = current_schema() '
+                . 'AND t.relname = ? '
+                . "AND c.contype = 'f' "
+                . 'AND EXISTS ('
+                . '  SELECT 1 FROM pg_attribute a '
+                . '  WHERE a.attrelid = t.oid '
+                . '  AND a.attname = ? '
+                . '  AND a.attnum = ANY(c.conkey)'
+                . ')',
                 [$table, $column]
             );
 
@@ -53,7 +64,7 @@ return new class extends Migration
         }
 
         $row = DB::selectOne(
-            'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
+            'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
             [$table, $column]
         );
 

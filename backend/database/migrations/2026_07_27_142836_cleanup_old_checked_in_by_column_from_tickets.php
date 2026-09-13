@@ -17,8 +17,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
-            if (! Schema::hasColumn('tickets', 'checked_in_by')) {
+        $hasTicketsCheckedInBy = Schema::hasColumn('tickets', 'checked_in_by');
+        Schema::table('tickets', function (Blueprint $table) use ($hasTicketsCheckedInBy) {
+            if (! $hasTicketsCheckedInBy) {
                 return;
             }
 

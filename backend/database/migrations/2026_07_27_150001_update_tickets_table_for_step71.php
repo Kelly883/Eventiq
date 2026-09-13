@@ -19,33 +19,40 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
+        $hasTicketsTicketId = Schema::hasColumn('tickets', 'ticket_id');
+        $hasTicketsAttendeeName = Schema::hasColumn('tickets', 'attendee_name');
+        $hasTicketsAttendeeEmail = Schema::hasColumn('tickets', 'attendee_email');
+        $hasTicketsTier = Schema::hasColumn('tickets', 'tier');
+        $hasTicketsCheckedInAt = Schema::hasColumn('tickets', 'checked_in_at');
+        $hasTicketsStatus = Schema::hasColumn('tickets', 'status');
+        $hasTicketsCheckedInBy = Schema::hasColumn('tickets', 'checked_in_by');
+        Schema::table('tickets', function (Blueprint $table) use ($hasTicketsTicketId, $hasTicketsAttendeeName, $hasTicketsAttendeeEmail, $hasTicketsTier, $hasTicketsCheckedInAt, $hasTicketsStatus, $hasTicketsCheckedInBy) {
             // Add ticket_id (unique identifier)
-            if (! Schema::hasColumn('tickets', 'ticket_id')) {
+            if (! $hasTicketsTicketId) {
                 $table->string('ticket_id')->unique()->nullable()->after('id');
             }
 
             // Add attendee information
-            if (! Schema::hasColumn('tickets', 'attendee_name')) {
+            if (! $hasTicketsAttendeeName) {
                 $table->string('attendee_name')->nullable()->after('ticket_id');
             }
 
-            if (! Schema::hasColumn('tickets', 'attendee_email')) {
+            if (! $hasTicketsAttendeeEmail) {
                 $table->string('attendee_email')->nullable()->after('attendee_name');
             }
 
             // Add tier (denormalized for quick reference)
-            if (! Schema::hasColumn('tickets', 'tier')) {
+            if (! $hasTicketsTier) {
                 $table->string('tier')->nullable()->after('attendee_email');
             }
 
             // Ensure checked_in_at exists
-            if (! Schema::hasColumn('tickets', 'checked_in_at')) {
+            if (! $hasTicketsCheckedInAt) {
                 $table->timestamp('checked_in_at')->nullable()->after('status');
             }
 
             // Convert status to enum on MySQL
-            if (Schema::hasColumn('tickets', 'status')) {
+            if ($hasTicketsStatus) {
                 try {
                     DB::statement("ALTER TABLE tickets MODIFY COLUMN status ENUM('valid', 'checked_in', 'void') DEFAULT 'valid'");
                 } catch (\Exception $e) {
@@ -54,7 +61,7 @@ return new class extends Migration
             }
 
             // Ensure checked_in_by exists with proper UUID FK
-            if (! Schema::hasColumn('tickets', 'checked_in_by')) {
+            if (! $hasTicketsCheckedInBy) {
                 try {
                     $table->uuid('checked_in_by')->nullable()->after('checked_in_at');
                 } catch (\Exception $e) {
@@ -76,9 +83,10 @@ return new class extends Migration
 
         // Add indexes
         try {
-            Schema::table('tickets', function (Blueprint $table) {
+            $hasTicketsIdxTicketsEventStatusIndex = Schema::hasIndex('tickets', 'idx_tickets_event_status');
+            Schema::table('tickets', function (Blueprint $table) use ($hasTicketsIdxTicketsEventStatusIndex) {
                 // Index for filtering by event and status
-                if (! Schema::hasIndex('tickets', 'idx_tickets_event_status')) {
+                if (! $hasTicketsIdxTicketsEventStatusIndex) {
                     $table->index(['event_id', 'status'], 'idx_tickets_event_status');
                 }
             });
@@ -87,9 +95,10 @@ return new class extends Migration
         }
 
         try {
-            Schema::table('tickets', function (Blueprint $table) {
+            $hasTicketsIdxTicketsEventCheckedInIndex = Schema::hasIndex('tickets', 'idx_tickets_event_checked_in');
+            Schema::table('tickets', function (Blueprint $table) use ($hasTicketsIdxTicketsEventCheckedInIndex) {
                 // Index for time-range queries
-                if (! Schema::hasIndex('tickets', 'idx_tickets_event_checked_in')) {
+                if (! $hasTicketsIdxTicketsEventCheckedInIndex) {
                     $table->index(['event_id', 'checked_in_at'], 'idx_tickets_event_checked_in');
                 }
             });

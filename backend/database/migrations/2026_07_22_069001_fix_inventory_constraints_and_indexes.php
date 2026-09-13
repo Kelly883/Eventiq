@@ -8,27 +8,47 @@ use Illuminate\Support\Str;
 
 return new class extends Migration
 {
-    private function foreignKeyExists(string $table, string $column): bool
-    {
-        if (DB::getDriverName() === 'sqlite') {
-            $rows = DB::select("PRAGMA foreign_key_list('{$table}')");
+     private function foreignKeyExists(string $table, string $column): bool
+     {
+         if (DB::getDriverName() === 'sqlite') {
+             $rows = DB::select("PRAGMA foreign_key_list('{$table}')");
 
-            foreach ($rows as $row) {
-                if (($row->from ?? null) === $column) {
-                    return true;
-                }
-            }
+             foreach ($rows as $row) {
+                 if (($row->from ?? null) === $column) {
+                     return true;
+                 }
+             }
 
-            return false;
-        }
+             return false;
+         }
 
-        $row = DB::selectOne(
-            'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
-            [$table, $column]
-        );
+         if (DB::getDriverName() === 'pgsql') {
+             $row = DB::selectOne(
+                 'SELECT c.conname FROM pg_constraint c '
+                 . 'JOIN pg_class t ON c.conrelid = t.oid '
+                 . 'JOIN pg_namespace n ON t.relnamespace = n.oid '
+                 . 'WHERE n.nspname = current_schema() '
+                 . 'AND t.relname = ? '
+                 . "AND c.contype = 'f' "
+                 . 'AND EXISTS ('
+                 . '  SELECT 1 FROM pg_attribute a '
+                 . '  WHERE a.attrelid = t.oid '
+                 . '  AND a.attname = ? '
+                 . '  AND a.attnum = ANY(c.conkey)'
+                 . ')',
+                 [$table, $column]
+             );
 
-        return $row !== null;
-    }
+             return $row !== null;
+         }
+
+         $row = DB::selectOne(
+             'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
+             [$table, $column]
+         );
+
+         return $row !== null;
+     }
 
      /**
       * Non-destructive post-conversion fixes for ticket_inventory

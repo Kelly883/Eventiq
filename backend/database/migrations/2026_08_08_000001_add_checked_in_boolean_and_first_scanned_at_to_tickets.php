@@ -15,12 +15,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
-            if (! Schema::hasColumn('tickets', 'checked_in')) {
+        $hasTicketsCheckedIn = Schema::hasColumn('tickets', 'checked_in');
+        $hasTicketsFirstScannedAt = Schema::hasColumn('tickets', 'first_scanned_at');
+        Schema::table('tickets', function (Blueprint $table) use ($hasTicketsCheckedIn, $hasTicketsFirstScannedAt) {
+            if (! $hasTicketsCheckedIn) {
                 $table->boolean('checked_in')->default(false)->after('status');
             }
 
-            if (! Schema::hasColumn('tickets', 'first_scanned_at')) {
+            if (! $hasTicketsFirstScannedAt) {
                 $table->timestamp('first_scanned_at')->nullable()->after('last_qr_scan_at');
             }
         });
@@ -31,12 +33,14 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
-            if (Schema::hasColumn('tickets', 'checked_in')) {
+        $hasTicketsCheckedIn = Schema::hasColumn('tickets', 'checked_in');
+        $hasTicketsFirstScannedAt = Schema::hasColumn('tickets', 'first_scanned_at');
+        Schema::table('tickets', function (Blueprint $table) use ($hasTicketsCheckedIn, $hasTicketsFirstScannedAt) {
+            if ($hasTicketsCheckedIn) {
                 $table->dropColumn('checked_in');
             }
 
-            if (Schema::hasColumn('tickets', 'first_scanned_at')) {
+            if ($hasTicketsFirstScannedAt) {
                 $table->dropColumn('first_scanned_at');
             }
         });

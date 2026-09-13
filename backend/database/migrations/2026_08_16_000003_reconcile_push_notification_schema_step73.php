@@ -81,14 +81,18 @@ return new class extends Migration
 
     private function fixMySql(): void
     {
-        Schema::table('push_notification_devices', function (Blueprint $table) {
+        $hasPushNotificationDevicesFcmToken = Schema::hasColumn('push_notification_devices', 'fcm_token');
+        $hasPushNotificationDevicesProvider = Schema::hasColumn('push_notification_devices', 'provider');
+        $hasPushNotificationDevicesDeviceType = Schema::hasColumn('push_notification_devices', 'device_type');
+        $hasPushNotificationDevicesPlatform = Schema::hasColumn('push_notification_devices', 'platform');
+        Schema::table('push_notification_devices', function (Blueprint $table) use ($hasPushNotificationDevicesFcmToken, $hasPushNotificationDevicesProvider, $hasPushNotificationDevicesDeviceType, $hasPushNotificationDevicesPlatform) {
             try {
                 $table->uuid('id')->primary()->change();
             } catch (\Throwable $e) {
                 // May already be UUID
             }
 
-            if (Schema::hasColumn('push_notification_devices', 'fcm_token')) {
+            if ($hasPushNotificationDevicesFcmToken) {
                 try {
                     $table->renameColumn('fcm_token', 'token');
                 } catch (\Throwable $e) {
@@ -96,15 +100,15 @@ return new class extends Migration
                 }
             }
 
-            if (! Schema::hasColumn('push_notification_devices', 'provider')) {
+            if (! $hasPushNotificationDevicesProvider) {
                 $table->string('provider')->after('user_id');
             }
 
-            if (! Schema::hasColumn('push_notification_devices', 'device_type')) {
+            if (! $hasPushNotificationDevicesDeviceType) {
                 $table->enum('device_type', ['web', 'ios', 'android'])->after('provider');
             }
 
-            if (! Schema::hasColumn('push_notification_devices', 'platform')) {
+            if (! $hasPushNotificationDevicesPlatform) {
                 // No-op, legacy column may still exist
             }
 
@@ -121,8 +125,9 @@ return new class extends Migration
             }
         });
 
-        Schema::table('push_notification_templates', function (Blueprint $table) {
-            if (Schema::hasColumn('push_notification_templates', 'body')) {
+        $hasPushNotificationTemplatesBody = Schema::hasColumn('push_notification_templates', 'body');
+        Schema::table('push_notification_templates', function (Blueprint $table) use ($hasPushNotificationTemplatesBody) {
+            if ($hasPushNotificationTemplatesBody) {
                 try {
                     $table->string('body', 178)->change();
                 } catch (\Throwable $e) {

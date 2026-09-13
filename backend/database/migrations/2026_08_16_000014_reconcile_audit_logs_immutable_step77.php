@@ -67,7 +67,8 @@ return new class extends Migration
 
     private function fixMySql(): void
     {
-        Schema::table('audit_logs', function (Blueprint $table) {
+        $hasAuditLogsDeletedAt = Schema::hasColumn('audit_logs', 'deleted_at');
+        Schema::table('audit_logs', function (Blueprint $table) use ($hasAuditLogsDeletedAt) {
             try {
                 $table->uuid('id')->primary()->change();
             } catch (\Throwable $e) {
@@ -99,7 +100,7 @@ return new class extends Migration
                     }
                 }
             }
-            if (! Schema::hasColumn('audit_logs', 'deleted_at')) {
+            if (! $hasAuditLogsDeletedAt) {
                 $table->softDeletes();
             }
             $indexesToAdd = [

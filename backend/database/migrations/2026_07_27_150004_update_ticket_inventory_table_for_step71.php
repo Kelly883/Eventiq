@@ -16,20 +16,23 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('ticket_inventory', function (Blueprint $table) {
+        $hasTicketInventoryTotalCheckedIn = Schema::hasColumn('ticket_inventory', 'total_checked_in');
+        $hasTicketInventoryTotalVoid = Schema::hasColumn('ticket_inventory', 'total_void');
+        $hasTicketInventoryIdxTicketInventoryEventIndex = Schema::hasIndex('ticket_inventory', 'idx_ticket_inventory_event');
+        Schema::table('ticket_inventory', function (Blueprint $table) use ($hasTicketInventoryTotalCheckedIn, $hasTicketInventoryTotalVoid, $hasTicketInventoryIdxTicketInventoryEventIndex) {
             // Add total_checked_in field
-            if (!Schema::hasColumn('ticket_inventory', 'total_checked_in')) {
+            if (!$hasTicketInventoryTotalCheckedIn) {
                 $table->integer('total_checked_in')->default(0)->after('total_available');
             }
 
             // Add total_void field
-            if (!Schema::hasColumn('ticket_inventory', 'total_void')) {
+            if (!$hasTicketInventoryTotalVoid) {
                 $table->integer('total_void')->default(0)->after('total_checked_in');
             }
 
             // Ensure event_id index exists
             try {
-                if (!Schema::hasIndex('ticket_inventory', 'idx_ticket_inventory_event')) {
+                if (!$hasTicketInventoryIdxTicketInventoryEventIndex) {
                     $table->index('event_id', 'idx_ticket_inventory_event');
                 }
             } catch (\Exception $e) {
@@ -43,13 +46,15 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('ticket_inventory', function (Blueprint $table) {
+        $hasTicketInventoryTotalVoid = Schema::hasColumn('ticket_inventory', 'total_void');
+        $hasTicketInventoryTotalCheckedIn = Schema::hasColumn('ticket_inventory', 'total_checked_in');
+        Schema::table('ticket_inventory', function (Blueprint $table) use ($hasTicketInventoryTotalVoid, $hasTicketInventoryTotalCheckedIn) {
             // Drop added columns
-            if (Schema::hasColumn('ticket_inventory', 'total_void')) {
+            if ($hasTicketInventoryTotalVoid) {
                 $table->dropColumn('total_void');
             }
 
-            if (Schema::hasColumn('ticket_inventory', 'total_checked_in')) {
+            if ($hasTicketInventoryTotalCheckedIn) {
                 $table->dropColumn('total_checked_in');
             }
 

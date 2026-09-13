@@ -16,12 +16,14 @@ return new class extends Migration
         $hasIsLowStock = Schema::hasColumn('ticket_inventory', 'is_low_stock');
 
         if ($hasTotalAvailable || $hasIsLowStock) {
-            Schema::table('ticket_inventory', function (Blueprint $table) {
+            $hasTicketInventoryTotalAvailable = Schema::hasColumn('ticket_inventory', 'total_available');
+            $hasTicketInventoryIsLowStock = Schema::hasColumn('ticket_inventory', 'is_low_stock');
+            Schema::table('ticket_inventory', function (Blueprint $table) use ($hasTicketInventoryTotalAvailable, $hasTicketInventoryIsLowStock) {
                 $columns = [];
-                if (Schema::hasColumn('ticket_inventory', 'total_available')) {
+                if ($hasTicketInventoryTotalAvailable) {
                     $columns[] = 'total_available';
                 }
-                if (Schema::hasColumn('ticket_inventory', 'is_low_stock')) {
+                if ($hasTicketInventoryIsLowStock) {
                     $columns[] = 'is_low_stock';
                 }
                 if (!empty($columns)) {

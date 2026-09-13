@@ -23,44 +23,48 @@ return new class extends Migration
         $existingIndexes = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='events'");
         $existingIndexNames = array_map(fn($row) => $row->name, $existingIndexes);
         
-        Schema::table('events', function (Blueprint $table) use ($existingIndexNames) {
+        $hasEventsStatus = Schema::hasColumn('events', 'status');
+        $hasEventsStartDatetime = Schema::hasColumn('events', 'start_datetime');
+        $hasEventsCategory = Schema::hasColumn('events', 'category');
+        $hasEventsOrganizerId = Schema::hasColumn('events', 'organizer_id');
+        Schema::table('events', function (Blueprint $table) use ($existingIndexNames, $hasEventsStatus, $hasEventsStartDatetime, $hasEventsCategory, $hasEventsOrganizerId) {
             // Composite index on (status, start_datetime) for filtering published events by date range
-            if (Schema::hasColumn('events', 'status')
-                && Schema::hasColumn('events', 'start_datetime')
+            if ($hasEventsStatus
+                && $hasEventsStartDatetime
                 && !in_array('idx_events_status_date', $existingIndexNames)) {
                 $table->index(['status', 'start_datetime'], 'idx_events_status_date');
             }
             
             // Composite index on (status, category) for category filtering (category is a string column, not category_id)
-            if (Schema::hasColumn('events', 'status')
-                && Schema::hasColumn('events', 'category')
+            if ($hasEventsStatus
+                && $hasEventsCategory
                 && !in_array('idx_events_status_category', $existingIndexNames)) {
                 $table->index(['status', 'category'], 'idx_events_status_category');
             }
             
             // Composite index on (organizer_id, start_datetime) for organizer calendar queries
-            if (Schema::hasColumn('events', 'organizer_id')
-                && Schema::hasColumn('events', 'start_datetime')
+            if ($hasEventsOrganizerId
+                && $hasEventsStartDatetime
                 && !in_array('idx_events_organizer_date', $existingIndexNames)) {
                 $table->index(['organizer_id', 'start_datetime'], 'idx_events_organizer_date');
             }
             
             // Composite index on (category, status, start_datetime) for category + date filtering
-            if (Schema::hasColumn('events', 'category')
-                && Schema::hasColumn('events', 'status')
-                && Schema::hasColumn('events', 'start_datetime')
+            if ($hasEventsCategory
+                && $hasEventsStatus
+                && $hasEventsStartDatetime
                 && !in_array('idx_events_category_status_date', $existingIndexNames)) {
                 $table->index(['category', 'status', 'start_datetime'], 'idx_events_category_status_date');
             }
             
             // Index on start_datetime for date-based sorting and range queries
-            if (Schema::hasColumn('events', 'start_datetime')
+            if ($hasEventsStartDatetime
                 && !in_array('events_start_date_index', $existingIndexNames)) {
                 $table->index('start_datetime', 'events_start_date_index');
             }
             
             // Index on status for published event filtering
-            if (Schema::hasColumn('events', 'status')
+            if ($hasEventsStatus
                 && !in_array('events_status_index', $existingIndexNames)) {
                 $table->index('status', 'events_status_index');
             }

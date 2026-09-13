@@ -8,12 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('ticket_tiers', function (Blueprint $table) {
-            if (Schema::hasColumn('ticket_tiers', 'sales_start_at')) {
+        $hasTicketTiersSalesStartAt = Schema::hasColumn('ticket_tiers', 'sales_start_at');
+        $hasTicketTiersSalesEndAt = Schema::hasColumn('ticket_tiers', 'sales_end_at');
+        Schema::table('ticket_tiers', function (Blueprint $table) use ($hasTicketTiersSalesStartAt, $hasTicketTiersSalesEndAt) {
+            if ($hasTicketTiersSalesStartAt) {
                 $table->dropColumn('sales_start_at');
             }
 
-            if (Schema::hasColumn('ticket_tiers', 'sales_end_at')) {
+            if ($hasTicketTiersSalesEndAt) {
                 $table->dropColumn('sales_end_at');
             }
         });

@@ -51,16 +51,19 @@ return new class extends Migration
 
         // Add check-in metrics columns
         try {
-            Schema::table('analytics_events_metrics', function (Blueprint $table) {
-                if (! Schema::hasColumn('analytics_events_metrics', 'total_checked_in')) {
+            $hasAnalyticsEventsMetricsTotalCheckedIn = Schema::hasColumn('analytics_events_metrics', 'total_checked_in');
+            $hasAnalyticsEventsMetricsCheckInRate = Schema::hasColumn('analytics_events_metrics', 'check_in_rate');
+            $hasAnalyticsEventsMetricsLastUpdatedAt = Schema::hasColumn('analytics_events_metrics', 'last_updated_at');
+            Schema::table('analytics_events_metrics', function (Blueprint $table) use ($hasAnalyticsEventsMetricsTotalCheckedIn, $hasAnalyticsEventsMetricsCheckInRate, $hasAnalyticsEventsMetricsLastUpdatedAt) {
+                if (! $hasAnalyticsEventsMetricsTotalCheckedIn) {
                     $table->integer('total_checked_in')->default(0)->after('total_tickets_sold');
                 }
 
-                if (! Schema::hasColumn('analytics_events_metrics', 'check_in_rate')) {
+                if (! $hasAnalyticsEventsMetricsCheckInRate) {
                     $table->decimal('check_in_rate', 5, 2)->default(0)->after('total_checked_in');
                 }
 
-                if (! Schema::hasColumn('analytics_events_metrics', 'last_updated_at')) {
+                if (! $hasAnalyticsEventsMetricsLastUpdatedAt) {
                     $table->timestamp('last_updated_at')->nullable()->after('check_in_rate');
                 }
             });
@@ -70,8 +73,9 @@ return new class extends Migration
 
         // Add index on event_id
         try {
-            Schema::table('analytics_events_metrics', function (Blueprint $table) {
-                if (! Schema::hasIndex('analytics_events_metrics', 'idx_analytics_event')) {
+            $hasAnalyticsEventsMetricsIdxAnalyticsEventIndex = Schema::hasIndex('analytics_events_metrics', 'idx_analytics_event');
+            Schema::table('analytics_events_metrics', function (Blueprint $table) use ($hasAnalyticsEventsMetricsIdxAnalyticsEventIndex) {
+                if (! $hasAnalyticsEventsMetricsIdxAnalyticsEventIndex) {
                     $table->index('event_id', 'idx_analytics_event');
                 }
             });
@@ -85,7 +89,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('analytics_events_metrics', function (Blueprint $table) {
+        $hasAnalyticsEventsMetricsTotalCheckedIn = Schema::hasColumn('analytics_events_metrics', 'total_checked_in');
+        $hasAnalyticsEventsMetricsCheckInRate = Schema::hasColumn('analytics_events_metrics', 'check_in_rate');
+        $hasAnalyticsEventsMetricsLastUpdatedAt = Schema::hasColumn('analytics_events_metrics', 'last_updated_at');
+        Schema::table('analytics_events_metrics', function (Blueprint $table) use ($hasAnalyticsEventsMetricsTotalCheckedIn, $hasAnalyticsEventsMetricsCheckInRate, $hasAnalyticsEventsMetricsLastUpdatedAt) {
             // Drop index
             try {
                 $table->dropIndex('idx_analytics_event');
@@ -102,13 +109,13 @@ return new class extends Migration
 
             // Drop columns
             $columns = [];
-            if (Schema::hasColumn('analytics_events_metrics', 'total_checked_in')) {
+            if ($hasAnalyticsEventsMetricsTotalCheckedIn) {
                 $columns[] = 'total_checked_in';
             }
-            if (Schema::hasColumn('analytics_events_metrics', 'check_in_rate')) {
+            if ($hasAnalyticsEventsMetricsCheckInRate) {
                 $columns[] = 'check_in_rate';
             }
-            if (Schema::hasColumn('analytics_events_metrics', 'last_updated_at')) {
+            if ($hasAnalyticsEventsMetricsLastUpdatedAt) {
                 $columns[] = 'last_updated_at';
             }
 
