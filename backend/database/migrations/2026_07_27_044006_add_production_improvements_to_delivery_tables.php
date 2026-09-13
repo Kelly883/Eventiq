@@ -56,26 +56,26 @@ return new class extends Migration
         }
 
         // ── 2. CHECK constraints for status and channel ──────────
-        // SQLite does not enforce CHECK constraints but accepts the syntax.
-        // In MySQL/PostgreSQL these will be enforced at the database level.
+        // Use stored generated columns for PostgreSQL compatibility.
+        // SQLite does not support generated columns; guard with try/catch.
         try {
             Schema::table('delivery_events', function (Blueprint $table) {
                 $table->string('status_check', 20)
-                    ->virtualAs("CASE WHEN status IN ('pending','sent','delivered','failed','bounced','cancelled','archived') THEN status ELSE 'pending' END")
+                    ->storedAs("CASE WHEN status IN ('pending','sent','delivered','failed','bounced','cancelled','archived') THEN status ELSE 'pending' END")
                     ->nullable();
             });
-        } catch (\Exception $e) {
-            // Virtual column may not be supported (SQLite)
+        } catch (\Throwable $e) {
+            // Generated columns may not be supported on all drivers
         }
 
         try {
             Schema::table('delivery_events', function (Blueprint $table) {
                 $table->string('channel_check', 20)
-                    ->virtualAs("CASE WHEN channel IN ('email','sms','dashboard','push') THEN channel ELSE 'email' END")
+                    ->storedAs("CASE WHEN channel IN ('email','sms','dashboard','push') THEN channel ELSE 'email' END")
                     ->nullable();
             });
-        } catch (\Exception $e) {
-            // Virtual column may not be supported (SQLite)
+        } catch (\Throwable $e) {
+            // Generated columns may not be supported on all drivers
         }
     }
 

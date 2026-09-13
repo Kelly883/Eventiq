@@ -12,23 +12,31 @@ return new class extends Migration
             return;
         }
 
-        Schema::table('ticket_inventory', function (Blueprint $table) {
-            if (Schema::hasColumn('ticket_inventory', 'total_available')) {
-                $table->dropColumn('total_available');
-            }
+        $hasTotalAvailable = Schema::hasColumn('ticket_inventory', 'total_available');
+        $hasIsLowStock = Schema::hasColumn('ticket_inventory', 'is_low_stock');
 
-            if (Schema::hasColumn('ticket_inventory', 'is_low_stock')) {
-                $table->dropColumn('is_low_stock');
-            }
-        });
+        if ($hasTotalAvailable || $hasIsLowStock) {
+            Schema::table('ticket_inventory', function (Blueprint $table) {
+                $columns = [];
+                if (Schema::hasColumn('ticket_inventory', 'total_available')) {
+                    $columns[] = 'total_available';
+                }
+                if (Schema::hasColumn('ticket_inventory', 'is_low_stock')) {
+                    $columns[] = 'is_low_stock';
+                }
+                if (!empty($columns)) {
+                    $table->dropColumn($columns);
+                }
+            });
+        }
     }
 
     public function down(): void
     {
         Schema::table('ticket_inventory', function (Blueprint $table) {
-            $table->integer('total_available')->virtualAs('total_allocated - total_sold');
-            $table->boolean('is_low_stock')->virtualAs(
-                "CASE WHEN total_available > 0 AND total_available <= COALESCE(low_stock_threshold, 0) THEN TRUE ELSE FALSE END"
+            $table->integer('total_available')->storedAs('total_allocated - total_sold');
+            $table->boolean('is_low_stock')->storedAs(
+                "CASE WHEN (total_allocated - total_sold) > 0 AND (total_allocated - total_sold) <= COALESCE(low_stock_threshold, 0) THEN TRUE ELSE FALSE END"
             );
         });
     }

@@ -10,6 +10,7 @@
     "require": {
         "php": "^8.2",
         "bacon/bacon-qr-code": "^2.0",
+        "doctrine/dbal": "^3.6 || ^4.0",
         "flutterwavedev/flutterwave-v3": "^1.0",
         "kreait/firebase-php": "^7.0",
         "laravel/framework": "^11.0",
