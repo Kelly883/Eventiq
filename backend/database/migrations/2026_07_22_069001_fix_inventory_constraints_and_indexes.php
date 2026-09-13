@@ -67,9 +67,9 @@ return new class extends Migration
                 $table->uuid('id')->primary();
                 $table->foreignId('event_id')->constrained()->onDelete('cascade');
                 $table->foreignId('ticket_tier_id')->nullable()->constrained()->nullOnDelete();
-                $table->foreignUuid('pricing_window_id')->nullable()->constrained()->onDelete('set null');
+                $table->foreignUuid('pricing_window_id')->nullable()->constrained('pricing_windows')->onDelete('set null');
                 $table->uuid('organizer_id')->constrained('users')->onDelete('cascade');
-                $table->foreignUuid('ticket_inventory_id')->nullable()->constrained()->onDelete('cascade');
+                $table->foreignUuid('ticket_inventory_id')->nullable()->constrained('ticket_inventory')->onDelete('cascade');
                 $table->string('adjustment_type', 50);
                 $table->integer('quantity_before');
                 $table->integer('quantity_after');
