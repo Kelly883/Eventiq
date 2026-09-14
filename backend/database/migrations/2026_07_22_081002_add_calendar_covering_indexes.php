@@ -13,9 +13,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Get existing indexes on events table to avoid duplicates
-        $existingEvents = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='events'");
-        $existingEventsNames = array_map(fn($r) => $r->name, $existingEvents);
+        $driver = DB::getDriverName();
+
+        if ($driver === 'pgsql') {
+            $existingEvents = DB::select('SELECT indexname FROM pg_indexes WHERE schemaname = current_schema() AND tablename = \'events\'');
+            $existingEventsNames = array_column($existingEvents, 'indexname');
+        } elseif ($driver === 'mysql') {
+            $existingEvents = DB::select('SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = current_schema() AND TABLE_NAME = \'events\'');
+            $existingEventsNames = array_column($existingEvents, 'INDEX_NAME');
+        } else {
+            $existingEvents = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='events'");
+            $existingEventsNames = array_map(fn($r) => $r->name, $existingEvents);
+        }
 
         Schema::table('events', function (Blueprint $table) use ($existingEventsNames) {
             // Covering index for the events_by_date view: status + date + capacity
@@ -31,8 +40,16 @@ return new class extends Migration
 
         // ticket_inventory covering index for availability queries
         if (Schema::hasTable('ticket_inventory')) {
-            $existingInv = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='ticket_inventory'");
-            $existingInvNames = array_map(fn($r) => $r->name, $existingInv);
+            if ($driver === 'pgsql') {
+                $existingInv = DB::select('SELECT indexname FROM pg_indexes WHERE schemaname = current_schema() AND tablename = \'ticket_inventory\'');
+                $existingInvNames = array_column($existingInv, 'indexname');
+            } elseif ($driver === 'mysql') {
+                $existingInv = DB::select('SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = current_schema() AND TABLE_NAME = \'ticket_inventory\'');
+                $existingInvNames = array_column($existingInv, 'INDEX_NAME');
+            } else {
+                $existingInv = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='ticket_inventory'");
+                $existingInvNames = array_map(fn($r) => $r->name, $existingInv);
+            }
 
             Schema::table('ticket_inventory', function (Blueprint $table) use ($existingInvNames) {
                 if (!in_array('inv_event_available_sold_idx', $existingInvNames)) {
@@ -43,8 +60,16 @@ return new class extends Migration
 
         // pricing_windows covering index for price range queries in calendar
         if (Schema::hasTable('pricing_windows')) {
-            $existingPw = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='pricing_windows'");
-            $existingPwNames = array_map(fn($r) => $r->name, $existingPw);
+            if ($driver === 'pgsql') {
+                $existingPw = DB::select('SELECT indexname FROM pg_indexes WHERE schemaname = current_schema() AND tablename = \'pricing_windows\'');
+                $existingPwNames = array_column($existingPw, 'indexname');
+            } elseif ($driver === 'mysql') {
+                $existingPw = DB::select('SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = current_schema() AND TABLE_NAME = \'pricing_windows\'');
+                $existingPwNames = array_column($existingPw, 'INDEX_NAME');
+            } else {
+                $existingPw = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='pricing_windows'");
+                $existingPwNames = array_map(fn($r) => $r->name, $existingPw);
+            }
 
             Schema::table('pricing_windows', function (Blueprint $table) use ($existingPwNames) {
                 if (!in_array('idx_pw_event_active_price', $existingPwNames)) {

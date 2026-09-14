@@ -99,7 +99,8 @@ return new class extends Migration
             }
             foreach ($missingAuditLogsColumns as $column => $definition) {
                         try {
-                            DB::statement("ALTER TABLE audit_logs ADD COLUMN {$column} {$definition}");
+                            $columnDef = DB::getDriverName() === 'mysql' ? $definition : preg_replace('/\s+AFTER\s+\w+/', '', $definition);
+                            DB::statement("ALTER TABLE audit_logs ADD COLUMN {$column} {$columnDef}");
                         } catch (\Throwable $e) {
                             // Column may already exist
                         }

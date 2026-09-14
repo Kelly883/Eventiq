@@ -19,10 +19,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Check if indexes already exist before creating them
-        $existingIndexes = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='events'");
-        $existingIndexNames = array_map(fn($row) => $row->name, $existingIndexes);
-        
+        $existingIndexNames = $this->getExistingIndexNames('events');
+
         $hasEventsStatus = Schema::hasColumn('events', 'status');
         $hasEventsStartDatetime = Schema::hasColumn('events', 'start_datetime');
         $hasEventsCategory = Schema::hasColumn('events', 'category');
@@ -72,8 +70,7 @@ return new class extends Migration
         
         // Add index on ticket_inventory for availability queries (event_id, total_available)
         if (Schema::hasTable('ticket_inventory')) {
-            $existingInvIndexes = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='ticket_inventory'");
-            $existingInvNames = array_map(fn($row) => $row->name, $existingInvIndexes);
+            $existingInvNames = $this->getExistingIndexNames('ticket_inventory');
             
             Schema::table('ticket_inventory', function (Blueprint $table) use ($existingInvNames) {
                 if (!in_array('inv_event_available_idx', $existingInvNames)) {
@@ -98,6 +95,36 @@ return new class extends Migration
             GROUP BY DATE(start_datetime)
             ORDER BY event_date
         ");
+    }
+
+    private function getExistingIndexNames(string $table): array
+    {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'pgsql') {
+            $rows = DB::select(
+                'SELECT indexname FROM pg_indexes WHERE schemaname = current_schema() AND tablename = ?',
+                [$table]
+            );
+
+            return array_column($rows, 'indexname');
+        }
+
+        if ($driver === 'mysql') {
+            $rows = DB::select(
+                'SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = current_schema() AND TABLE_NAME = ?',
+                [$table]
+            );
+
+            return array_column($rows, 'INDEX_NAME');
+        }
+
+        $rows = DB::select(
+            "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name = ?",
+            [$table]
+        );
+
+        return array_map(fn ($row) => $row->name, $rows);
     }
 
     public function down(): void

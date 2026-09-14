@@ -7,16 +7,14 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         if (! Schema::hasTable('payouts')) {
             return;
         }
 
-        // Add missing columns
+        $driver = DB::getDriverName();
+
         $columnsToAdd = [
             'currency' => "varchar(3) DEFAULT 'USD' AFTER payout_method",
             'initiated_by' => 'uuid NULL AFTER approved_by',
@@ -26,52 +24,26 @@ return new class extends Migration
         foreach ($columnsToAdd as $column => $definition) {
             if (! Schema::hasColumn('payouts', $column)) {
                 try {
-                    DB::statement("ALTER TABLE payouts ADD COLUMN {$column} {$definition}");
+                    $columnDef = $driver === 'mysql' ? $definition : preg_replace('/\s+AFTER\s+\w+/', '', $definition);
+                    DB::statement("ALTER TABLE payouts ADD COLUMN {$column} {$columnDef}");
                 } catch (\Throwable $e) {
                     // Column may already exist
                 }
             }
         }
 
-        // Add composite index (status, completed_at)
-        try {
-            $indexes = DB::select('PRAGMA index_list(payouts)');
-            $hasIndex = false;
-            foreach ($indexes as $index) {
-                if ($index->name === 'idx_payouts_status_completed_at') {
-                    $hasIndex = true;
-                    break;
-                }
-            }
-            if (! $hasIndex) {
-                Schema::table('payouts', function (Blueprint $table) {
-                    $table->index(['status', 'completed_at'], 'idx_payouts_status_completed_at');
-                });
-            }
-        } catch (\Throwable $e) {
-            // Index may already exist
+        if (! $this->indexExists('payouts', 'idx_payouts_status_completed_at')) {
+            Schema::table('payouts', function (Blueprint $table) {
+                $table->index(['status', 'completed_at'], 'idx_payouts_status_completed_at');
+            });
         }
 
-        // Add index on next_retry_at
-        try {
-            $indexes = DB::select('PRAGMA index_list(payouts)');
-            $hasIndex = false;
-            foreach ($indexes as $index) {
-                if ($index->name === 'idx_payouts_next_retry_at') {
-                    $hasIndex = true;
-                    break;
-                }
-            }
-            if (! $hasIndex) {
-                Schema::table('payouts', function (Blueprint $table) {
-                    $table->index('next_retry_at', 'idx_payouts_next_retry_at');
-                });
-            }
-        } catch (\Throwable $e) {
-            // Index may already exist
+        if (! $this->indexExists('payouts', 'idx_payouts_next_retry_at')) {
+            Schema::table('payouts', function (Blueprint $table) {
+                $table->index('next_retry_at', 'idx_payouts_next_retry_at');
+            });
         }
 
-        // Add check constraint on status (MySQL only, SQLite ignores)
         try {
             DB::statement("ALTER TABLE payouts ADD CONSTRAINT chk_payouts_status CHECK (status IN ('pending', 'calculated', 'approved', 'processing', 'completed', 'failed'))");
         } catch (\Throwable $e) {
@@ -79,9 +51,6 @@ return new class extends Migration
         }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         if (! Schema::hasTable('payouts')) {
@@ -103,5 +72,43 @@ return new class extends Migration
         } catch (\Throwable $e) {
             // Index may not exist
         }
+    }
+
+    private function indexExists(string $table, string $indexName): bool
+    {
+        if (!Schema::hasTable($table)) {
+            return false;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $row = DB::selectOne(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND name = ?",
+                [$table, $indexName]
+            );
+
+            return $row !== null;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT i.relname FROM pg_index x '
+                . 'JOIN pg_class i ON x.indexrelid = i.oid '
+                . 'JOIN pg_class t ON x.indrelid = t.oid '
+                . 'JOIN pg_namespace n ON t.relnamespace = n.oid '
+                . 'WHERE n.nspname = current_schema() '
+                . 'AND t.relname = ? '
+                . 'AND i.relname = ?',
+                [$table, $indexName]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
+            [$table, $indexName]
+        );
+
+        return $row !== null;
     }
 };

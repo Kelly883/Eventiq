@@ -163,7 +163,8 @@ return new class extends Migration
             }
             foreach ($missingSettlementPoliciesColumns as $column => $definition) {
                         try {
-                            DB::statement("ALTER TABLE settlement_policies ADD COLUMN {$column} {$definition}");
+                            $columnDef = DB::getDriverName() === 'mysql' ? $definition : preg_replace('/\s+AFTER\s+\w+/', '', $definition);
+                            DB::statement("ALTER TABLE settlement_policies ADD COLUMN {$column} {$columnDef}");
                         } catch (\Throwable $e) {
                             // Column may already exist
                         }
@@ -215,7 +216,8 @@ return new class extends Migration
             }
             foreach ($missingPayoutsColumns as $column => $definition) {
                         try {
-                            DB::statement("ALTER TABLE payouts ADD COLUMN {$column} {$definition}");
+                            $columnDef = DB::getDriverName() === 'mysql' ? $definition : preg_replace('/\s+AFTER\s+\w+/', '', $definition);
+                            DB::statement("ALTER TABLE payouts ADD COLUMN {$column} {$columnDef}");
                         } catch (\Throwable $e) {
                             // Column may already exist
                         }
@@ -271,7 +273,8 @@ return new class extends Migration
             }
             foreach ($missingPayoutCalculationsColumns as $column => $definition) {
                         try {
-                            DB::statement("ALTER TABLE payout_calculations ADD COLUMN {$column} {$definition}");
+                            $columnDef = DB::getDriverName() === 'mysql' ? $definition : preg_replace('/\s+AFTER\s+\w+/', '', $definition);
+                            DB::statement("ALTER TABLE payout_calculations ADD COLUMN {$column} {$columnDef}");
                         } catch (\Throwable $e) {
                             // Column may already exist
                         }

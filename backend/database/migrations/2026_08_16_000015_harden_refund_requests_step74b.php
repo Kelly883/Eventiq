@@ -14,8 +14,10 @@ return new class extends Migration
     {
         if (DB::getDriverName() === 'sqlite') {
             $this->rebuildSqlite();
-        } else {
+        } elseif (DB::getDriverName() === 'mysql') {
             $this->fixMySql();
+        } else {
+            $this->fixPostgreSql();
         }
     }
 
@@ -167,6 +169,78 @@ return new class extends Migration
                 // Index may already exist
             }
         });
+    }
+
+    private function fixPostgreSql(): void
+    {
+        Schema::table('refund_requests', function (Blueprint $table) {
+            // Change user_id FK from CASCADE to SET NULL
+            try {
+                $table->dropForeign(['user_id']);
+            } catch (\Throwable $e) {
+                // FK may not exist
+            }
+            try {
+                $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
+            } catch (\Throwable $e) {
+                // FK may already exist
+            }
+
+            // Change event_id FK from CASCADE to SET NULL
+            try {
+                $table->dropForeign(['event_id']);
+            } catch (\Throwable $e) {
+                // FK may not exist
+            }
+            try {
+                $table->foreign('event_id')->references('id')->on('events')->nullOnDelete();
+            } catch (\Throwable $e) {
+                // FK may already exist
+            }
+
+            // Add composite index for admin dashboard
+            try {
+                $table->index(['status', 'created_at'], 'idx_refund_requests_status_created_at');
+            } catch (\Throwable $e) {
+                // Index may already exist
+            }
+
+            // Add unique index on ticket_id to enforce one refund request per ticket
+            try {
+                $table->unique('ticket_id', 'idx_refund_requests_ticket_id_unique');
+            } catch (\Throwable $e) {
+                // Index may already exist
+            }
+        });
+
+        // Change reason to VARCHAR(50) NOT NULL (PostgreSQL-compatible)
+        try {
+            DB::statement('ALTER TABLE refund_requests ALTER COLUMN reason TYPE VARCHAR(50) USING reason::varchar(50)');
+            DB::statement('ALTER TABLE refund_requests ALTER COLUMN reason SET NOT NULL');
+        } catch (\Throwable $e) {
+            // Column may already be correct type
+        }
+
+        // Add status check constraint
+        try {
+            DB::statement("ALTER TABLE refund_requests ADD CONSTRAINT chk_refund_requests_status CHECK (status IN ('pending', 'approved', 'rejected', 'processing', 'completed', 'failed'))");
+        } catch (\Throwable $e) {
+            // Constraint may already exist
+        }
+
+        // Add reason check constraint
+        try {
+            DB::statement("ALTER TABLE refund_requests ADD CONSTRAINT chk_refund_requests_reason CHECK (reason IN ('event_cancelled', 'personal_circumstances', 'duplicate_purchase', 'other'))");
+        } catch (\Throwable $e) {
+            // Constraint may already exist
+        }
+
+        // Add refund_method check constraint
+        try {
+            DB::statement("ALTER TABLE refund_requests ADD CONSTRAINT chk_refund_requests_refund_method CHECK (refund_method IN ('original_payment_method', 'store_credit', 'alternative_payment_method'))");
+        } catch (\Throwable $e) {
+            // Constraint may already exist
+        }
     }
 
     /**
