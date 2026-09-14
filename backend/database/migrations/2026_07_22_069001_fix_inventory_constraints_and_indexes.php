@@ -72,9 +72,11 @@ return new class extends Migration
              return;
          }
 
-         Schema::table('ticket_inventory', function (Blueprint $table) {
-             $table->dropForeign(['ticket_tier_id']);
-         });
+        if ($this->foreignKeyExists('ticket_inventory', 'ticket_tier_id')) {
+              Schema::table('ticket_inventory', function (Blueprint $table) {
+                  $table->dropForeign(['ticket_tier_id']);
+              });
+          }
 
          Schema::table('ticket_inventory', function (Blueprint $table) {
              $table->foreign('ticket_tier_id')

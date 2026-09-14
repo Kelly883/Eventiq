@@ -141,9 +141,6 @@ return new class extends Migration
 		return $row !== null;
 	}
 
-		return $row !== null;
-	}
-
 	private function foreignKeyExists(string $table, string $column): bool
 	{
 		if (DB::getDriverName() === 'sqlite') {
