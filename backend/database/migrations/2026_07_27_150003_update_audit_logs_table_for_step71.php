@@ -37,14 +37,9 @@ return new class extends Migration
                 $table->foreignId('ticket_id')->nullable()->after('user_id');
             }
 
-            // Change changes to details if needed
-            if ($hasAuditLogsChanges && ! $hasAuditLogsDetails) {
-                // Rename changes to details
-                try {
-                    \DB::statement('ALTER TABLE audit_logs CHANGE changes details JSON');
-                } catch (\Exception $e) {
-                    // PostgreSQL or other DB - skip
-                }
+            // Change changes to details if needed (MySQL-only)
+            if ($hasAuditLogsChanges && ! $hasAuditLogsDetails && DB::getDriverName() === 'mysql') {
+                DB::statement('ALTER TABLE audit_logs CHANGE changes details JSON');
             }
 
             // Ensure details column exists as JSON

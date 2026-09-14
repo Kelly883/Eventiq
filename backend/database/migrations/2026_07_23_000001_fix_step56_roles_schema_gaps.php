@@ -219,10 +219,14 @@ return new class extends Migration
             ) !== null;
         }
 
-        return DB::selectOne(
-            'SELECT index_name FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?',
-            [$table, $indexName]
-        ) !== null;
+        if (DB::getDriverName() === 'mysql') {
+            return DB::selectOne(
+                'SELECT index_name FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?',
+                [$table, $indexName]
+            ) !== null;
+        }
+
+        return false;
     }
 
     private function foreignKeyExists(string $table, string $column): bool

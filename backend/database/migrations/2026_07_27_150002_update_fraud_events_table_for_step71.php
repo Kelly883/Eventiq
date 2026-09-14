@@ -32,13 +32,9 @@ return new class extends Migration
             }
             
             // Alter fraud_type enum to include only check-in related values
-            // Note: This requires raw SQL, we'll try to modify if column exists
-            if ($hasFraudEventsFraudType) {
-                try {
-                    \DB::statement("ALTER TABLE fraud_events MODIFY COLUMN fraud_type ENUM('duplicate_checkin', 'invalid_qr', 'manual_override')");
-                } catch (\Exception $e) {
-                    // Column may not exist or SQLite doesn't support this
-                }
+            // Note: This requires raw SQL, MySQL-only
+            if ($hasFraudEventsFraudType && DB::getDriverName() === 'mysql') {
+                DB::statement("ALTER TABLE fraud_events MODIFY COLUMN fraud_type ENUM('duplicate_checkin', 'invalid_qr', 'manual_override')");
             }
 
             // Ensure ticket_id exists with UUID FK
@@ -94,12 +90,8 @@ return new class extends Migration
             }
 
             // Ensure risk_level exists with correct enum values
-            if ($hasFraudEventsRiskLevel) {
-                try {
-                    \DB::statement("ALTER TABLE fraud_events MODIFY COLUMN risk_level ENUM('low', 'medium', 'high') DEFAULT 'medium'");
-                } catch (\Exception $e) {
-                    // Column may already be correct or SQLite doesn't support this
-                }
+            if ($hasFraudEventsRiskLevel && DB::getDriverName() === 'mysql') {
+                DB::statement("ALTER TABLE fraud_events MODIFY COLUMN risk_level ENUM('low', 'medium', 'high') DEFAULT 'medium'");
             }
 
             // Ensure notes exists

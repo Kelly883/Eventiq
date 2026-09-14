@@ -52,12 +52,8 @@ return new class extends Migration
             }
 
             // Convert status to enum on MySQL
-            if ($hasTicketsStatus) {
-                try {
-                    DB::statement("ALTER TABLE tickets MODIFY COLUMN status ENUM('valid', 'checked_in', 'void') DEFAULT 'valid'");
-                } catch (\Exception $e) {
-                    // SQLite or already enum
-                }
+            if ($hasTicketsStatus && DB::getDriverName() === 'mysql') {
+                DB::statement("ALTER TABLE tickets MODIFY COLUMN status ENUM('valid', 'checked_in', 'void') DEFAULT 'valid'");
             }
 
             // Ensure checked_in_by exists with proper UUID FK

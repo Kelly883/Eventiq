@@ -20,19 +20,22 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('analytics_events_metrics', function (Blueprint $table) {
-            // Change id to UUID primary key if currently bigint
-            // Note: This requires raw SQL for MySQL
-            try {
-                \DB::statement('ALTER TABLE analytics_events_metrics MODIFY id CHAR(36) PRIMARY KEY');
-            } catch (\Exception $e) {
-                // Already UUID or SQLite - skip
+            // Change id to UUID primary key if currently bigint (MySQL-only)
+            if (DB::getDriverName() === 'mysql') {
+                try {
+                    DB::statement('ALTER TABLE analytics_events_metrics MODIFY id CHAR(36) PRIMARY KEY');
+                } catch (\Exception $e) {
+                    // Already UUID - skip
+                }
             }
 
-            // Ensure event_id is UUID
-            try {
-                \DB::statement('ALTER TABLE analytics_events_metrics MODIFY event_id CHAR(36)');
-            } catch (\Exception $e) {
-                // Already UUID or SQLite - skip
+            // Ensure event_id is UUID (MySQL-only)
+            if (DB::getDriverName() === 'mysql') {
+                try {
+                    DB::statement('ALTER TABLE analytics_events_metrics MODIFY event_id CHAR(36)');
+                } catch (\Exception $e) {
+                    // Already UUID - skip
+                }
             }
 
             // Drop and re-add FK for event_id if needed

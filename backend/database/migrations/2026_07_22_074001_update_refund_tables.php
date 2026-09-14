@@ -324,11 +324,15 @@ return new class extends Migration
             return $row !== null;
         }
 
-        $row = DB::selectOne(
-            'SELECT index_name FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?',
-            [$table, $indexName]
-        );
+        if (DB::getDriverName() === 'mysql') {
+            $row = DB::selectOne(
+                'SELECT index_name FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?',
+                [$table, $indexName]
+            );
 
-        return $row !== null;
+            return $row !== null;
+        }
+
+        return false;
     }
 };
