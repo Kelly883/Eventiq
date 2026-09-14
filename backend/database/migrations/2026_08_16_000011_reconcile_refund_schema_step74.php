@@ -210,12 +210,12 @@ return new class extends Migration
                 // May already be UUID
             }
             foreach ($missingRefundRequestsColumns as $column => $definition) {
-                    try {
-                        $columnDef = DB::getDriverName() === 'mysql' ? $definition : preg_replace('/\s+AFTER\s+\w+/', '', $definition);
-                        DB::statement("ALTER TABLE refund_requests ADD COLUMN {$column} {$columnDef}");
-                    } catch (\Throwable $e) {
-                        // Column may already exist
-                    }
+                try {
+                    $columnDef = DB::getDriverName() === 'mysql' ? $definition : preg_replace('/\s+AFTER\s+\w+/', '', $definition);
+                    DB::statement("ALTER TABLE refund_requests ADD COLUMN {$column} {$columnDef}");
+                } catch (\Throwable $e) {
+                    // Column may already exist
+                }
             }
             try {
                 $table->index(['user_id', 'status']);
