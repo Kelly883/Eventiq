@@ -134,13 +134,7 @@ return new class extends Migration
 
     private function fixMySql(): void
     {
-        Schema::table('settlement_policies', function (Blueprint $table) {
-            try {
-                $table->uuid('id')->primary()->change();
-            } catch (\Throwable $e) {
-                // May already be UUID
-            }
-            $columnsToAdd = [
+        $columnsToAdd = [
                 'organizer_tier' => "varchar(20) DEFAULT 'standard' AFTER name",
                 'organizer_id' => 'uuid NULL AFTER organizer_tier',
                 'platform_commission_percentage' => 'decimal(5,2) AFTER organizer_id',
@@ -155,15 +149,25 @@ return new class extends Migration
                 'tax_withholding_percentage' => 'decimal(5,2) NULL AFTER retry_backoff_multiplier',
                 'allowed_payout_methods' => 'json NULL AFTER tax_withholding_percentage',
             ];
-            foreach ($columnsToAdd as $column => $definition) {
-                if (! Schema::hasColumn('settlement_policies', $column)) {
-                    try {
-                        DB::statement("ALTER TABLE settlement_policies ADD COLUMN {$column} {$definition}");
-                    } catch (\Throwable $e) {
-                        // Column may already exist
-                    }
-                }
+        $missingSettlementPoliciesColumns = [];
+        foreach ($columnsToAdd as $column => $definition) {
+            if (! Schema::hasColumn('settlement_policies', $column)) {
+                $missingSettlementPoliciesColumns[$column] = $definition;
             }
+        }
+        Schema::table('settlement_policies', function (Blueprint $table) use ($missingSettlementPoliciesColumns) {
+            try {
+                $table->uuid('id')->primary()->change();
+            } catch (\Throwable $e) {
+                // May already be UUID
+            }
+            foreach ($missingSettlementPoliciesColumns as $column => $definition) {
+                        try {
+                            DB::statement("ALTER TABLE settlement_policies ADD COLUMN {$column} {$definition}");
+                        } catch (\Throwable $e) {
+                            // Column may already exist
+                        }
+                    }
             try {
                 DB::statement('ALTER TABLE settlement_policies ADD UNIQUE INDEX organizer_tier (organizer_tier)');
             } catch (\Throwable $e) {
@@ -171,13 +175,7 @@ return new class extends Migration
             }
         });
 
-        Schema::table('payouts', function (Blueprint $table) {
-            try {
-                $table->uuid('id')->primary()->change();
-            } catch (\Throwable $e) {
-                // May already be UUID
-            }
-            $columnsToAdd = [
+        $columnsToAdd = [
                 'organizer_id' => 'uuid AFTER id',
                 'settlement_period_start_date' => 'timestamp AFTER organizer_id',
                 'settlement_period_end_date' => 'timestamp AFTER settlement_period_start_date',
@@ -203,15 +201,25 @@ return new class extends Migration
                 'retry_count' => 'int DEFAULT 0 AFTER failure_reason',
                 'next_retry_at' => 'timestamp NULL AFTER retry_count',
             ];
-            foreach ($columnsToAdd as $column => $definition) {
-                if (! Schema::hasColumn('payouts', $column)) {
-                    try {
-                        DB::statement("ALTER TABLE payouts ADD COLUMN {$column} {$definition}");
-                    } catch (\Throwable $e) {
-                        // Column may already exist
-                    }
-                }
+        $missingPayoutsColumns = [];
+        foreach ($columnsToAdd as $column => $definition) {
+            if (! Schema::hasColumn('payouts', $column)) {
+                $missingPayoutsColumns[$column] = $definition;
             }
+        }
+        Schema::table('payouts', function (Blueprint $table) use ($missingPayoutsColumns) {
+            try {
+                $table->uuid('id')->primary()->change();
+            } catch (\Throwable $e) {
+                // May already be UUID
+            }
+            foreach ($missingPayoutsColumns as $column => $definition) {
+                        try {
+                            DB::statement("ALTER TABLE payouts ADD COLUMN {$column} {$definition}");
+                        } catch (\Throwable $e) {
+                            // Column may already exist
+                        }
+                    }
             try {
                 $table->index('organizer_id');
             } catch (\Throwable $e) {
@@ -234,13 +242,7 @@ return new class extends Migration
             }
         });
 
-        Schema::table('payout_calculations', function (Blueprint $table) {
-            try {
-                $table->uuid('id')->primary()->change();
-            } catch (\Throwable $e) {
-                // May already be UUID
-            }
-            $columnsToAdd = [
+        $columnsToAdd = [
                 'organizer_id' => 'uuid AFTER payout_id',
                 'settlement_period_start_date' => 'timestamp AFTER organizer_id',
                 'settlement_period_end_date' => 'timestamp AFTER settlement_period_start_date',
@@ -255,15 +257,25 @@ return new class extends Migration
                 'calculated_by' => 'varchar(255) AFTER calculated_at',
                 'created_at' => 'timestamp AFTER calculated_by',
             ];
-            foreach ($columnsToAdd as $column => $definition) {
-                if (! Schema::hasColumn('payout_calculations', $column)) {
-                    try {
-                        DB::statement("ALTER TABLE payout_calculations ADD COLUMN {$column} {$definition}");
-                    } catch (\Throwable $e) {
-                        // Column may already exist
-                    }
-                }
+        $missingPayoutCalculationsColumns = [];
+        foreach ($columnsToAdd as $column => $definition) {
+            if (! Schema::hasColumn('payout_calculations', $column)) {
+                $missingPayoutCalculationsColumns[$column] = $definition;
             }
+        }
+        Schema::table('payout_calculations', function (Blueprint $table) use ($missingPayoutCalculationsColumns) {
+            try {
+                $table->uuid('id')->primary()->change();
+            } catch (\Throwable $e) {
+                // May already be UUID
+            }
+            foreach ($missingPayoutCalculationsColumns as $column => $definition) {
+                        try {
+                            DB::statement("ALTER TABLE payout_calculations ADD COLUMN {$column} {$definition}");
+                        } catch (\Throwable $e) {
+                            // Column may already exist
+                        }
+                    }
             try {
                 $table->index('payout_id');
             } catch (\Throwable $e) {

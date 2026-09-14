@@ -68,13 +68,7 @@ return new class extends Migration
     private function fixMySql(): void
     {
         $hasAuditLogsDeletedAt = Schema::hasColumn('audit_logs', 'deleted_at');
-        Schema::table('audit_logs', function (Blueprint $table) use ($hasAuditLogsDeletedAt) {
-            try {
-                $table->uuid('id')->primary()->change();
-            } catch (\Throwable $e) {
-                // May already be UUID
-            }
-            $columnsToAdd = [
+        $columnsToAdd = [
                 'user_id' => 'uuid NULL AFTER id',
                 'target_type' => 'varchar(255) AFTER action',
                 'target_id' => 'uuid NULL AFTER target_type',
@@ -91,15 +85,25 @@ return new class extends Migration
                 'retention_date' => 'timestamp NULL AFTER compliance_classification',
                 'metadata' => 'json NULL AFTER retention_date',
             ];
-            foreach ($columnsToAdd as $column => $definition) {
-                if (! Schema::hasColumn('audit_logs', $column)) {
-                    try {
-                        DB::statement("ALTER TABLE audit_logs ADD COLUMN {$column} {$definition}");
-                    } catch (\Throwable $e) {
-                        // Column may already exist
-                    }
-                }
+        $missingAuditLogsColumns = [];
+        foreach ($columnsToAdd as $column => $definition) {
+            if (! Schema::hasColumn('audit_logs', $column)) {
+                $missingAuditLogsColumns[$column] = $definition;
             }
+        }
+        Schema::table('audit_logs', function (Blueprint $table) use ($hasAuditLogsDeletedAt, $missingAuditLogsColumns) {
+            try {
+                $table->uuid('id')->primary()->change();
+            } catch (\Throwable $e) {
+                // May already be UUID
+            }
+            foreach ($missingAuditLogsColumns as $column => $definition) {
+                        try {
+                            DB::statement("ALTER TABLE audit_logs ADD COLUMN {$column} {$definition}");
+                        } catch (\Throwable $e) {
+                            // Column may already exist
+                        }
+                    }
             if (! $hasAuditLogsDeletedAt) {
                 $table->softDeletes();
             }
