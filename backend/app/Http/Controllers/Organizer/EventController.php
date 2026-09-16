@@ -247,12 +247,13 @@ class EventController extends Controller
 
         $validated = $request->validated();
 
-        $maxRetries = 3;
+        $maxRetries = 5;
         $retryDelay = 0.1; // 100ms
 
         for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
             try {
                 $updatedEvent = DB::transaction(function () use ($event, $validated, $user, $request) {
+                    DB::statement('SET LOCAL lock_timeout = 5000');
                     // Lock event row for concurrent update safety
                     $lockedEvent = Event::where('id', $event->id)->lockForUpdate()->firstOrFail();
                     // Update event fields if present
@@ -265,6 +266,7 @@ class EventController extends Controller
                     if (array_key_exists('ticket_tiers', $validated)) {
                         $incomingTiers = $validated['ticket_tiers'] ?? [];
                         // Lock tiers for this event to prevent race — include soft-deleted for reactivation parity with ticketing service
+                        DB::statement('SET LOCAL lock_timeout = 5000');
                         $existingTiers = TicketTier::withTrashed()->where('event_id', $lockedEvent->id)->lockForUpdate()->get()->keyBy('id');
                         $activeCount = $existingTiers->filter(fn ($t) => !$t->trashed())->count();
                         if (empty($incomingTiers) && $activeCount > 0) {
@@ -386,6 +388,7 @@ class EventController extends Controller
 
         try {
             $deleted = DB::transaction(function () use ($event, $user, $request) {
+                DB::statement('SET LOCAL lock_timeout = 5000');
                 // Lock for concurrent delete safety
                 $locked = Event::where('id', $event->id)->lockForUpdate()->first();
                 if (!$locked) {

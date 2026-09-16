@@ -173,43 +173,29 @@ return new class extends Migration
 
     private function fixPostgreSql(): void
     {
-        Schema::table('refund_requests', function (Blueprint $table) {
+        $self = $this;
+
+        Schema::table('refund_requests', function (Blueprint $table) use ($self) {
             // Change user_id FK from CASCADE to SET NULL
-            try {
+            if ($self->foreignKeyExists('refund_requests', 'user_id')) {
                 $table->dropForeign(['user_id']);
-            } catch (\Throwable $e) {
-                // FK may not exist
             }
-            try {
-                $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
-            } catch (\Throwable $e) {
-                // FK may already exist
-            }
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
 
             // Change event_id FK from CASCADE to SET NULL
-            try {
+            if ($self->foreignKeyExists('refund_requests', 'event_id')) {
                 $table->dropForeign(['event_id']);
-            } catch (\Throwable $e) {
-                // FK may not exist
             }
-            try {
-                $table->foreign('event_id')->references('id')->on('events')->nullOnDelete();
-            } catch (\Throwable $e) {
-                // FK may already exist
-            }
+            $table->foreign('event_id')->references('id')->on('events')->nullOnDelete();
 
             // Add composite index for admin dashboard
-            try {
+            if (! $self->indexExists('refund_requests', 'idx_refund_requests_status_created_at')) {
                 $table->index(['status', 'created_at'], 'idx_refund_requests_status_created_at');
-            } catch (\Throwable $e) {
-                // Index may already exist
             }
 
             // Add unique index on ticket_id to enforce one refund request per ticket
-            try {
+            if (! $self->indexExists('refund_requests', 'idx_refund_requests_ticket_id_unique')) {
                 $table->unique('ticket_id', 'idx_refund_requests_ticket_id_unique');
-            } catch (\Throwable $e) {
-                // Index may already exist
             }
         });
 
@@ -241,6 +227,73 @@ return new class extends Migration
         } catch (\Throwable $e) {
             // Constraint may already exist
         }
+    }
+
+    private function foreignKeyExists(string $table, string $column): bool
+    {
+        if (! Schema::hasTable($table)) {
+            return false;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT 1 FROM pg_constraint c
+                 JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
+                 WHERE c.contype = \'f\'
+                   AND c.conrelid = ?::regclass
+                   AND a.attname = ?
+                   AND array_length(c.conkey, 1) = 1',
+                [$table, $column]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT constraint_name FROM information_schema.table_constraints 
+             WHERE table_schema = current_schema() 
+               AND table_name = ? 
+               AND constraint_type = \'FOREIGN KEY\'
+               AND constraint_name = ?',
+            [$table, "{$table}_{$column}_foreign"]
+        );
+
+        return $row !== null;
+    }
+
+    private function indexExists(string $table, string $indexName): bool
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            $row = DB::selectOne(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND name = ?",
+                [$table, $indexName]
+            );
+
+            return $row !== null;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT i.relname FROM pg_index x '
+                . 'JOIN pg_class i ON x.indexrelid = i.oid '
+                . 'JOIN pg_class t ON x.indrelid = t.oid '
+                . 'JOIN pg_namespace n ON t.relnamespace = n.oid '
+                . 'WHERE n.nspname = current_schema() '
+                . 'AND t.relname = ? '
+                . 'AND i.relname = ?',
+                [$table, $indexName]
+
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
+            [$table, $indexName]
+        );
+
+        return $row !== null;
     }
 
     /**
