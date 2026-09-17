@@ -8,24 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $hasTicketTiersSalesStartAt = Schema::hasColumn('ticket_tiers', 'sales_start_at');
-        $hasTicketTiersSalesEndAt = Schema::hasColumn('ticket_tiers', 'sales_end_at');
-        Schema::table('ticket_tiers', function (Blueprint $table) use ($hasTicketTiersSalesStartAt, $hasTicketTiersSalesEndAt) {
-            if ($hasTicketTiersSalesStartAt) {
-                $table->dropColumn('sales_start_at');
-            }
-
-            if ($hasTicketTiersSalesEndAt) {
-                $table->dropColumn('sales_end_at');
-            }
-        });
+        // NOTE: sales_start_date / sales_end_date are still actively used by TicketTier model,
+        // UpdateEventRequest, mapTierData(), and availability scopes. This migration was
+        // added prematurely. Keeping the columns to avoid breaking the application.
+        // If the columns are ever replaced, update this migration and all call sites first.
     }
 
     public function down(): void
     {
-        Schema::table('ticket_tiers', function (Blueprint $table) {
-            $table->dateTime('sales_start_at')->nullable()->after('sold_count');
-            $table->dateTime('sales_end_at')->nullable()->after('sales_start_at');
-        });
+        // No-op: columns were never removed.
     }
 };

@@ -15,30 +15,20 @@ return new class extends Migration
 
         if (! Schema::hasColumn('payment_methods', 'last_four')) {
             Schema::table('payment_methods', function (Blueprint $table) {
-                $table->string('last_four')->nullable()->after('type');
+                $table->string('last_four')->nullable();
             });
         }
 
         if (! Schema::hasColumn('payment_methods', 'expires_at')) {
             Schema::table('payment_methods', function (Blueprint $table) {
-                $table->timestamp('expires_at')->nullable()->after('last_four');
+                $table->timestamp('expires_at')->nullable();
             });
         }
 
-        try {
-            $indexes = DB::select('PRAGMA index_list(payment_methods)');
-            $existingIndexes = [];
-            foreach ($indexes as $index) {
-                $existingIndexes[] = $index->name;
-            }
-
-            if (! in_array('idx_payment_methods_user_id_is_default', $existingIndexes)) {
-                Schema::table('payment_methods', function (Blueprint $table) {
-                    $table->index(['user_id', 'is_default'], 'idx_payment_methods_user_id_is_default');
-                });
-            }
-        } catch (\Throwable $e) {
-            // Indexes may already exist
+        if (! $this->indexExists('payment_methods', 'idx_payment_methods_user_id_is_default')) {
+            Schema::table('payment_methods', function (Blueprint $table) {
+                $table->index(['user_id', 'is_default'], 'idx_payment_methods_user_id_is_default');
+            });
         }
     }
 
@@ -70,5 +60,37 @@ return new class extends Migration
                 $table->dropColumn($existing);
             });
         }
+    }
+
+    private function indexExists(string $table, string $index): bool
+    {
+        if (! Schema::hasTable($table)) {
+            return false;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $row = DB::selectOne(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND name = ?",
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?',
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
+            [$table, $index]
+        );
+
+        return $row !== null;
     }
 };

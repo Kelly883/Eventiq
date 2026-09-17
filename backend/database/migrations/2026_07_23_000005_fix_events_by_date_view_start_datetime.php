@@ -20,8 +20,8 @@ return new class extends Migration
                 DATE(start_datetime) AS event_date,
                 COUNT(*) AS total_events,
                 SUM(capacity) AS total_capacity,
-                SUM(CASE WHEN status = "published" THEN 1 ELSE 0 END) AS published_events,
-                SUM(CASE WHEN status = "published" THEN capacity ELSE 0 END) AS published_capacity
+                SUM(CASE WHEN status = \'published\' THEN 1 ELSE 0 END) AS published_events,
+                SUM(CASE WHEN status = \'published\' THEN capacity ELSE 0 END) AS published_capacity
             FROM events
             WHERE start_datetime IS NOT NULL
             GROUP BY DATE(start_datetime)
@@ -43,8 +43,8 @@ return new class extends Migration
                 DATE(start_date) AS event_date,
                 COUNT(*) AS total_events,
                 SUM(capacity) AS total_capacity,
-                SUM(CASE WHEN status = "published" THEN 1 ELSE 0 END) AS published_events,
-                SUM(CASE WHEN status = "published" THEN capacity ELSE 0 END) AS published_capacity
+                SUM(CASE WHEN status = \'published\' THEN 1 ELSE 0 END) AS published_events,
+                SUM(CASE WHEN status = \'published\' THEN capacity ELSE 0 END) AS published_capacity
             FROM events
             WHERE start_datetime IS NOT NULL
             GROUP BY DATE(start_datetime)

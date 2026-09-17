@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignId('organizer_id')->nullable();
             $table->uuid('order_id')->nullable();
             $table->foreignId('event_id')->nullable();
-            $table->foreignId('ticket_id')->nullable();
+            $table->uuid('ticket_id')->nullable();
             $table->string('gateway');
             $table->string('reference');
             $table->string('gateway_transaction_id')->nullable();

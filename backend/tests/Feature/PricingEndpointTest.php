@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Features\Pricing\Models\PricingWindow;
 use App\Models\Event;
 use App\Models\Organizer;
+use App\Models\Role;
 use App\Models\TicketTier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,7 +32,8 @@ class PricingEndpointTest extends TestCase
     {
         parent::setUp();
 
-        $this->organizerUser = User::factory()->create(['role' => 'organizer']);
+        $organizerRole = Role::factory()->create(['name' => 'organizer']);
+        $this->organizerUser = User::factory()->create(['role_id' => $organizerRole->id]);
         $this->organizer = Organizer::factory()->create(['user_id' => $this->organizerUser->id]);
         $this->token = $this->organizerUser->createToken('test-token')->plainTextToken;
 
@@ -48,6 +50,8 @@ class PricingEndpointTest extends TestCase
             'start_datetime' => now()->addDays(10),
             'end_datetime' => now()->addDays(10)->addHours(4),
         ]);
+
+        $this->event->load('organizer');
 
         $this->publishedEvent = Event::factory()->create([
             'organizer_id' => $this->organizer->id,
