@@ -112,8 +112,7 @@ Route::middleware('bearer')->group(function () {
             // Event pricing (organizer)
             Route::middleware('throttle:organizer-pricing')->group(function () {
                 Route::apiResource('pricing-windows', PricingWindowController::class);
-                Route::post('pricing-windows/{pricing_window}/restore', [PricingWindowController::class, 'restore'])
-                    ->middleware('can:restore,pricing_window');
+                Route::post('pricing-windows/{pricing_window}/restore', [PricingWindowController::class, 'restore']);
             });
             Route::get('pricing/preview', [PricingWindowController::class, 'preview'])->middleware('throttle:organizer-pricing');
         });

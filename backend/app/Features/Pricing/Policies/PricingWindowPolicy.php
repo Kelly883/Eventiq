@@ -7,6 +7,19 @@ use App\Models\User;
 class PricingWindowPolicy
 {
     /**
+     * Check if user has an organizer/admin role via role_id, pivot, or legacy column.
+     * Mirrors the fallback logic in PricingWindowController::authorizeEventOwner().
+     */
+    private function isOrganizerOrAdmin(User $user): bool
+    {
+        if ($user->hasRole('admin') || $user->hasRole('super-admin') || $user->hasRole('organizer')) {
+            return true;
+        }
+
+        return (string) $user->getAttribute('role') === 'organizer';
+    }
+
+    /**
      * Admins may manage any event; organizers only their own events.
      */
     private function ownsEvent(User $user, $event): bool
@@ -44,7 +57,7 @@ class PricingWindowPolicy
      */
     public function create(User $user, $event = null): bool
     {
-        if (!$user->hasRole('organizer') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+        if (!$this->isOrganizerOrAdmin($user)) {
             return false;
         }
 
@@ -56,7 +69,7 @@ class PricingWindowPolicy
      */
     public function update(User $user, $pricingWindow): bool
     {
-        if (!$user->hasRole('organizer') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+        if (!$this->isOrganizerOrAdmin($user)) {
             return false;
         }
 
@@ -68,7 +81,7 @@ class PricingWindowPolicy
      */
     public function delete(User $user, $pricingWindow): bool
     {
-        if (!$user->hasRole('organizer') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+        if (!$this->isOrganizerOrAdmin($user)) {
             return false;
         }
 
@@ -80,7 +93,7 @@ class PricingWindowPolicy
      */
     public function restore(User $user, $pricingWindow): bool
     {
-        if (!$user->hasRole('organizer') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+        if (!$this->isOrganizerOrAdmin($user)) {
             return false;
         }
 
