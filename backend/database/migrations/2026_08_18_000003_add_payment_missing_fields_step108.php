@@ -60,32 +60,22 @@ return new class extends Migration
             }
         }
 
-        try {
-            $indexes = DB::select('PRAGMA index_list(payments)');
-            $existingIndexes = [];
-            foreach ($indexes as $index) {
-                $existingIndexes[] = $index->name;
-            }
+        if (Schema::hasColumn('payments', 'organizer_id') && ! $this->indexExists('payments', 'idx_payments_organizer_id')) {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->index('organizer_id', 'idx_payments_organizer_id');
+            });
+        }
 
-            if (Schema::hasColumn('payments', 'organizer_id') && ! in_array('idx_payments_organizer_id', $existingIndexes)) {
-                Schema::table('payments', function (Blueprint $table) {
-                    $table->index('organizer_id', 'idx_payments_organizer_id');
-                });
-            }
+        if (Schema::hasColumn('payments', 'event_id') && ! $this->indexExists('payments', 'idx_payments_event_id')) {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->index('event_id', 'idx_payments_event_id');
+            });
+        }
 
-            if (Schema::hasColumn('payments', 'event_id') && ! in_array('idx_payments_event_id', $existingIndexes)) {
-                Schema::table('payments', function (Blueprint $table) {
-                    $table->index('event_id', 'idx_payments_event_id');
-                });
-            }
-
-            if (Schema::hasColumn('payments', 'webhook_idempotency_key') && ! in_array('idx_payments_webhook_idempotency_key', $existingIndexes)) {
-                Schema::table('payments', function (Blueprint $table) {
-                    $table->unique('webhook_idempotency_key', 'idx_payments_webhook_idempotency_key');
-                });
-            }
-        } catch (\Throwable $e) {
-            // Indexes may already exist
+        if (Schema::hasColumn('payments', 'webhook_idempotency_key') && ! $this->indexExists('payments', 'idx_payments_webhook_idempotency_key')) {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->unique('webhook_idempotency_key', 'idx_payments_webhook_idempotency_key');
+            });
         }
     }
 
@@ -133,5 +123,38 @@ return new class extends Migration
                 $table->dropColumn($existing);
             });
         }
+    }
+
+    private function indexExists(string $table, string $index): bool
+    {
+        if (! Schema::hasTable($table)) {
+            return false;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?',
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $rows = DB::select('PRAGMA index_list(' . $table . ')');
+            foreach ($rows as $row) {
+                if ($row->name === $index) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        $row = DB::selectOne(
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
+            [$table, $index]
+        );
+
+        return $row !== null;
     }
 };

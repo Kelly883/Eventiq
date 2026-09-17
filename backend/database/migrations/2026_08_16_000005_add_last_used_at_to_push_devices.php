@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         if (Schema::hasTable('push_notification_devices') && ! Schema::hasColumn('push_notification_devices', 'last_used_at')) {
-            DB::statement('ALTER TABLE push_notification_devices ADD COLUMN last_used_at DATETIME NULL');
+            DB::statement('ALTER TABLE push_notification_devices ADD COLUMN last_used_at TIMESTAMP NULL');
         }
     }
 

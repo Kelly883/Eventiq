@@ -13,7 +13,7 @@ return new class extends Migration
             $table->uuid('user_id');
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreignId('device_id')->nullable()->constrained('push_notification_devices')->nullOnDelete();
-            $table->foreignId('template_id')->nullable()->constrained()->nullOnDelete();
+            $table->uuid('template_id')->nullable()->constrained('push_notification_templates')->nullOnDelete();
             $table->string('title');
             $table->text('body');
             $table->json('data')->nullable();

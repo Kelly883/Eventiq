@@ -19,50 +19,54 @@ return new class extends Migration
             $hasPaymentMethodsBillingZip = Schema::hasColumn('payment_methods', 'billing_zip');
             Schema::table('payment_methods', function (Blueprint $table) use ($hasPaymentMethodsExpiresAt, $hasPaymentMethodsBillingName, $hasPaymentMethodsBillingEmail, $hasPaymentMethodsBillingPhone, $hasPaymentMethodsBillingAddress, $hasPaymentMethodsBillingCity, $hasPaymentMethodsBillingCountry, $hasPaymentMethodsBillingZip) {
                 if (! $hasPaymentMethodsExpiresAt) {
-                    $table->dateTime('expires_at')->nullable()->after('exp_year');
+                    $table->dateTime('expires_at')->nullable();
                 }
                 if (! $hasPaymentMethodsBillingName) {
-                    $table->string('billing_name')->nullable()->after('account_name');
+                    $table->string('billing_name')->nullable();
                 }
                 if (! $hasPaymentMethodsBillingEmail) {
-                    $table->string('billing_email')->nullable()->after('billing_name');
+                    $table->string('billing_email')->nullable();
                 }
                 if (! $hasPaymentMethodsBillingPhone) {
-                    $table->string('billing_phone')->nullable()->after('billing_email');
+                    $table->string('billing_phone')->nullable();
                 }
                 if (! $hasPaymentMethodsBillingAddress) {
-                    $table->string('billing_address')->nullable()->after('billing_phone');
+                    $table->string('billing_address')->nullable();
                 }
                 if (! $hasPaymentMethodsBillingCity) {
-                    $table->string('billing_city')->nullable()->after('billing_address');
+                    $table->string('billing_city')->nullable();
                 }
                 if (! $hasPaymentMethodsBillingCountry) {
-                    $table->string('billing_country', 2)->nullable()->after('billing_city');
+                    $table->string('billing_country', 2)->nullable();
                 }
                 if (! $hasPaymentMethodsBillingZip) {
-                    $table->string('billing_zip')->nullable()->after('billing_country');
+                    $table->string('billing_zip')->nullable();
                 }
             });
         }
 
         if (Schema::hasTable('payments')) {
-            Schema::table('payments', function (Blueprint $table) {
-                $table->uuid('payment_method_id')->nullable()->after('payment_intent_id');
-                try {
-                    $table->foreign('payment_method_id')->references('id')->on('payment_methods')->onDelete('set null');
-                } catch (\Throwable $e) {
-                }
-            });
+            if (! Schema::hasColumn('payments', 'payment_method_id')) {
+                Schema::table('payments', function (Blueprint $table) {
+                    $table->uuid('payment_method_id')->nullable();
+                    try {
+                        $table->foreign('payment_method_id')->references('id')->on('payment_methods')->onDelete('set null');
+                    } catch (\Throwable $e) {
+                    }
+                });
+            }
         }
 
         if (Schema::hasTable('transactions')) {
-            Schema::table('transactions', function (Blueprint $table) {
-                $table->uuid('payment_method_id')->nullable()->after('gateway_reference');
-                try {
-                    $table->foreign('payment_method_id')->references('id')->on('payment_methods')->onDelete('set null');
-                } catch (\Throwable $e) {
-                }
-            });
+            if (! Schema::hasColumn('transactions', 'payment_method_id')) {
+                Schema::table('transactions', function (Blueprint $table) {
+                    $table->uuid('payment_method_id')->nullable();
+                    try {
+                        $table->foreign('payment_method_id')->references('id')->on('payment_methods')->onDelete('set null');
+                    } catch (\Throwable $e) {
+                    }
+                });
+            }
         }
     }
 

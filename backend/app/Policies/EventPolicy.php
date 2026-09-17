@@ -22,9 +22,13 @@ class EventPolicy
         if (!$organizer) {
             return false;
         }
-        // Strict organizer ownership — no fallback via event->user_id to prevent
-        // bypass where a stale user_id on event could grant access to non-owner.
-        return (int) $event->organizer_id === (int) $organizer->id;
+        if ((int) $event->organizer_id !== (int) $organizer->id) {
+            return false;
+        }
+        if ($event->relationLoaded('organizer') && $event->organizer && $event->organizer->user_id !== null) {
+            return (int) $user->id === (int) $event->organizer->user_id;
+        }
+        return true;
     }
 
     public function create(User $user): bool

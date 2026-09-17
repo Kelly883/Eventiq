@@ -34,6 +34,14 @@ return new class extends Migration
                         break;
                     }
                 }
+            } elseif ($driver === 'pgsql') {
+                $row = DB::selectOne(
+                    'SELECT data_type FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ? AND column_name = ?',
+                    ['tickets', 'checked_in_by']
+                );
+                if ($row && !empty($row->data_type)) {
+                    $isInteger = stripos($row->data_type, 'int') !== false;
+                }
             } else {
                 $columns = DB::select('SHOW COLUMNS FROM tickets WHERE Field = ?', ['checked_in_by']);
                 if (! empty($columns)) {
@@ -60,8 +68,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
-            $table->unsignedBigInteger('checked_in_by')->nullable()->after('checked_in_at');
-        });
+        if (!Schema::hasColumn('tickets', 'checked_in_by')) {
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->unsignedBigInteger('checked_in_by')->nullable()->after('checked_in_at');
+            });
+        }
     }
 };

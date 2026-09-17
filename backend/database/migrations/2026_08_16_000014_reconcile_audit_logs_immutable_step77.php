@@ -12,8 +12,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (DB::getDriverName() === 'sqlite') {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'sqlite') {
             $this->rebuildSqlite();
+        } elseif ($driver === 'pgsql') {
+            $this->fixPostgreSql();
         } else {
             $this->fixMySql();
         }
@@ -92,19 +96,14 @@ return new class extends Migration
             }
         }
         Schema::table('audit_logs', function (Blueprint $table) use ($hasAuditLogsDeletedAt, $missingAuditLogsColumns) {
-            try {
-                $table->uuid('id')->primary()->change();
-            } catch (\Throwable $e) {
-                // May already be UUID
-            }
             foreach ($missingAuditLogsColumns as $column => $definition) {
-                        try {
-                            $columnDef = DB::getDriverName() === 'mysql' ? $definition : preg_replace('/\s+AFTER\s+\w+/', '', $definition);
-                            DB::statement("ALTER TABLE audit_logs ADD COLUMN {$column} {$columnDef}");
-                        } catch (\Throwable $e) {
-                            // Column may already exist
-                        }
-                    }
+                try {
+                    $columnDef = DB::getDriverName() === 'mysql' ? $definition : preg_replace('/\s+AFTER\s+\w+/', '', $definition);
+                    DB::statement("ALTER TABLE audit_logs ADD COLUMN {$column} {$columnDef}");
+                } catch (\Throwable $e) {
+                    // Column may already exist
+                }
+            }
             if (! $hasAuditLogsDeletedAt) {
                 $table->softDeletes();
             }
@@ -119,15 +118,7 @@ return new class extends Migration
                 'idx_audit_logs_compliance' => 'compliance_classification',
             ];
             foreach ($indexesToAdd as $name => $columns) {
-                $indexes = DB::select('PRAGMA index_list(audit_logs)');
-                $exists = false;
-                foreach ($indexes as $index) {
-                    if ($index->name === $name) {
-                        $exists = true;
-                        break;
-                    }
-                }
-                if (! $exists) {
+                if (! $this->indexExists('audit_logs', $name)) {
                     try {
                         if (is_array($columns)) {
                             $table->index($columns, $name);
@@ -140,6 +131,109 @@ return new class extends Migration
                 }
             }
         });
+    }
+
+    private function fixPostgreSql(): void
+    {
+        $hasAuditLogsDeletedAt = Schema::hasColumn('audit_logs', 'deleted_at');
+
+        Schema::table('audit_logs', function (Blueprint $table) {
+            if (! Schema::hasColumn('audit_logs', 'user_id')) {
+                $table->uuid('user_id')->nullable();
+            }
+            if (! Schema::hasColumn('audit_logs', 'target_type')) {
+                $table->string('target_type', 255);
+            }
+            if (! Schema::hasColumn('audit_logs', 'target_id')) {
+                $table->uuid('target_id')->nullable();
+            }
+            if (! Schema::hasColumn('audit_logs', 'status')) {
+                $table->string('status', 20)->default('success');
+            }
+            if (! Schema::hasColumn('audit_logs', 'ip_address')) {
+                $table->string('ip_address', 45)->nullable();
+            }
+            if (! Schema::hasColumn('audit_logs', 'user_agent')) {
+                $table->text('user_agent')->nullable();
+            }
+            if (! Schema::hasColumn('audit_logs', 'geolocation')) {
+                $table->json('geolocation')->nullable();
+            }
+            if (! Schema::hasColumn('audit_logs', 'request_data')) {
+                $table->json('request_data')->nullable();
+            }
+            if (! Schema::hasColumn('audit_logs', 'response_data')) {
+                $table->json('response_data')->nullable();
+            }
+            if (! Schema::hasColumn('audit_logs', 'changed_fields')) {
+                $table->json('changed_fields')->nullable();
+            }
+            if (! Schema::hasColumn('audit_logs', 'error_message')) {
+                $table->text('error_message')->nullable();
+            }
+            if (! Schema::hasColumn('audit_logs', 'error_code')) {
+                $table->string('error_code', 100)->nullable();
+            }
+            if (! Schema::hasColumn('audit_logs', 'compliance_classification')) {
+                $table->string('compliance_classification', 50)->default('internal');
+            }
+            if (! Schema::hasColumn('audit_logs', 'retention_date')) {
+                $table->timestamp('retention_date')->nullable();
+            }
+            if (! Schema::hasColumn('audit_logs', 'metadata')) {
+                $table->json('metadata')->nullable();
+            }
+        });
+
+        if (! $hasAuditLogsDeletedAt) {
+            Schema::table('audit_logs', function (Blueprint $table) {
+                $table->softDeletes();
+            });
+        }
+        $indexesToAdd = [
+            'idx_audit_logs_user_id' => 'user_id',
+            'idx_audit_logs_target_id' => 'target_id',
+            'idx_audit_logs_ip_address' => 'ip_address',
+            'idx_audit_logs_created_at' => 'created_at',
+            'idx_audit_logs_retention_date' => 'retention_date',
+            'idx_audit_logs_user_created' => ['user_id', 'created_at'],
+            'idx_audit_logs_action_status' => ['action', 'status'],
+            'idx_audit_logs_compliance' => 'compliance_classification',
+        ];
+        foreach ($indexesToAdd as $name => $columns) {
+            if (! $this->indexExists('audit_logs', $name)) {
+                Schema::table('audit_logs', function (Blueprint $table) use ($columns, $name) {
+                    if (is_array($columns)) {
+                        $table->index($columns, $name);
+                    } else {
+                        $table->index($columns, $name);
+                    }
+                });
+            }
+        }
+    }
+
+    private function indexExists(string $table, string $index): bool
+    {
+        if (! Schema::hasTable($table)) {
+            return false;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?',
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
+            [$table, $index]
+        );
+
+        return $row !== null;
     }
 
     /**

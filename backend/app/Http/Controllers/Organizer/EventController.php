@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Organizer;
 
+use App\Features\Ticketing\Services\TicketTierService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreEventRequest;
 use App\Http\Requests\UpdateEventRequest;
@@ -25,6 +26,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EventController extends Controller
 {
+    public function __construct(private TicketTierService $tierService) {}
     /**
      * GET /api/organizer/events — List organizer's events
      * Paginated 15 per page, filter ?status=draft|published, includes ticketTiers
@@ -253,7 +255,9 @@ class EventController extends Controller
         for ($attempt = 0; $attempt < $maxRetries; $attempt++) {
             try {
                 $updatedEvent = DB::transaction(function () use ($event, $validated, $user, $request) {
-                    DB::statement('SET LOCAL lock_timeout = 5000');
+                    if (DB::getDriverName() === 'pgsql') {
+                        DB::statement('SET LOCAL lock_timeout = 5000');
+                    }
                     // Lock event row for concurrent update safety
                     $lockedEvent = Event::where('id', $event->id)->lockForUpdate()->firstOrFail();
                     // Update event fields if present
@@ -265,74 +269,44 @@ class EventController extends Controller
                     // Handle ticket tiers if provided
                     if (array_key_exists('ticket_tiers', $validated)) {
                         $incomingTiers = $validated['ticket_tiers'] ?? [];
-                        // Lock tiers for this event to prevent race — include soft-deleted for reactivation parity with ticketing service
-                        DB::statement('SET LOCAL lock_timeout = 5000');
-                        $existingTiers = TicketTier::withTrashed()->where('event_id', $lockedEvent->id)->lockForUpdate()->get()->keyBy('id');
-                        $activeCount = $existingTiers->filter(fn ($t) => !$t->trashed())->count();
-                        if (empty($incomingTiers) && $activeCount > 0) {
-                            throw \Illuminate\Validation\ValidationException::withMessages([
-                                'ticket_tiers' => ['Cannot delete all ticket tiers. At least one tier must remain.'],
-                            ]);
-                        }
-                        $keepIds = [];
-
-                        foreach ($incomingTiers as $index => $tierData) {
-                            // Normalize alternative keys
-                            if (isset($tierData['salesStartDate']) && !isset($tierData['sales_start_date'])) {
-                                $tierData['sales_start_date'] = $tierData['salesStartDate'];
-                            }
-                            if (isset($tierData['salesEndDate']) && !isset($tierData['sales_end_date'])) {
-                                $tierData['sales_end_date'] = $tierData['salesEndDate'];
-                            }
-
-                            $tierId = $tierData['id'] ?? null;
-
-                            if ($tierId && $existingTiers->has($tierId)) {
-                                // Update existing tier — ensure it belongs to this event
-                                $tier = $existingTiers->get($tierId);
-                                if ((int) $tier->event_id !== (int) $lockedEvent->id) {
-                                    throw new \Illuminate\Validation\ValidationException(
-                                        validator([], []),
-                                        response()->json(['message' => 'Ticket tier does not belong to this event'], 422)
-                                    );
-                                }
-                                if ($tier->trashed()) {
-                                    $tier->restore();
-                                }
-                                $payload = $this->mapTierData($tierData, $lockedEvent->id, $index, true);
-                                unset($payload['event_id']); // don't change FK
-                                $tier->update($payload);
-                                $keepIds[] = $tierId;
-                            } else {
-                                // Create new tier — if id was provided but not found (scoped validation should have already failed), treat as new
-                                $payload = $this->mapTierData($tierData, $lockedEvent->id, $index);
-                                unset($payload['id']);
-                                $newTier = TicketTier::create($payload);
-                                $keepIds[] = $newTier->id;
-                            }
-                        }
-
-                        // Delete tiers not in incoming payload
-                        $toDelete = $existingTiers->keys()->diff($keepIds);
-                        if ($toDelete->isNotEmpty()) {
-                            TicketTier::whereIn('id', $toDelete->toArray())
-                                ->where('event_id', $lockedEvent->id)
-                                ->delete(); // soft delete if trait
-                        }
+                        $updatedTiers = $this->tierService->syncTiers($lockedEvent->id, $incomingTiers);
+                        $lockedEvent->setRelation('ticketTiers', $updatedTiers);
                     }
 
                     $lockedEvent->refresh();
-                    $lockedEvent->load(['ticketTiers', 'organizer']);
+                    $lockedEvent->load(['organizer']);
 
-                    AuditLogger::forEvent(
-                        action: 'event.updated',
-                        user: $user,
-                        eventId: (string) $lockedEvent->id,
-                        oldValues: $event->toArray(),
-                        newValues: $lockedEvent->toArray(),
-                        request: $request,
-                        description: "Event '{$lockedEvent->title}' updated"
-                    );
+AuditLogger::forEvent(
+                action: 'event.updated',
+                user: $user,
+                eventId: (string) $event->id,
+                oldValues: $event->toArray(),
+                newValues: $lockedEvent->toArray(),
+                request: $request,
+                description: "Event '{$lockedEvent->title}' updated"
+            );
+
+            // Audit tier changes - query fresh tiers from DB after transaction
+            $updatedTiers = TicketTier::where('event_id', $lockedEvent->id)->orderBy('id')->get();
+            $updatedTiersCount = count($updatedTiers);
+            $createdTiers = collect($updatedTiers)->filter(fn ($t) => $t->wasRecentlyCreated)->count();
+
+            // Count tiers that existed before the update
+            $preExistingCount = $lockedEvent->ticketTiers()->count();
+            $deletedTiersCount = max(0, $preExistingCount - $updatedTiersCount + count($validated['ticket_tiers'] ?? []));
+
+            AuditLogger::forEvent(
+                action: 'ticket_tier.updated',
+                user: $user,
+                eventId: (string) $event->id,
+                newValues: [
+                    'tiers_synced' => $updatedTiersCount,
+                    'created' => $createdTiers,
+                    'deleted' => $deletedTiersCount,
+                ],
+                request: $request,
+                description: "Ticket tiers synced for event '{$event->title}' - created: {$createdTiers}, deleted: {$deletedTiersCount}"
+            );
 
                     return $lockedEvent;
                 });
@@ -388,7 +362,9 @@ class EventController extends Controller
 
         try {
             $deleted = DB::transaction(function () use ($event, $user, $request) {
-                DB::statement('SET LOCAL lock_timeout = 5000');
+                if (DB::getDriverName() === 'pgsql') {
+                    DB::statement('SET LOCAL lock_timeout = 5000');
+                }
                 // Lock for concurrent delete safety
                 $locked = Event::where('id', $event->id)->lockForUpdate()->first();
                 if (!$locked) {
@@ -773,6 +749,11 @@ class EventController extends Controller
             'is_active' => $tierData['is_active'] ?? true,
             'currency' => $tierData['currency'] ?? 'NGN',
             'status' => $tierData['status'] ?? 'published',
+            'benefits_description' => $tierData['benefits_description'] ?? null,
+            'description' => $tierData['benefits_description'] ?? $tierData['description'] ?? null,
+            'benefits' => $tierData['benefits'] ?? null,
+            'tier_image_url' => $tierData['tier_image_url'] ?? null,
+            'max_per_customer' => $tierData['max_per_customer'] ?? null,
         ];
 
         // Remove nulls that shouldn't overwrite on update? Keep for create

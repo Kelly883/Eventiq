@@ -22,16 +22,12 @@ return new class extends Migration
         ];
 
         foreach ($columnsToAdd as $column => $definition) {
-            $columns = DB::select('PRAGMA table_info(payouts)');
-            $found = false;
-            foreach ($columns as $col) {
-                if ($col->name === $column) {
-                    $found = true;
-                    break;
+            if (! Schema::hasColumn('payouts', $column)) {
+                try {
+                    DB::statement('ALTER TABLE payouts ADD COLUMN ' . $column . ' ' . $definition);
+                } catch (\Throwable $e) {
+                    // Column may already exist
                 }
-            }
-            if (! $found) {
-                DB::statement('ALTER TABLE payouts ADD COLUMN ' . $column . ' ' . $definition);
             }
         }
     }
@@ -46,15 +42,7 @@ return new class extends Migration
         }
 
         foreach (['payout_method_details', 'initiated_by', 'currency'] as $column) {
-            $columns = DB::select('PRAGMA table_info(payouts)');
-            $found = false;
-            foreach ($columns as $col) {
-                if ($col->name === $column) {
-                    $found = true;
-                    break;
-                }
-            }
-            if ($found) {
+            if (Schema::hasColumn('payouts', $column)) {
                 try {
                     DB::statement('ALTER TABLE payouts DROP COLUMN ' . $column);
                 } catch (\Throwable $e) {

@@ -12,8 +12,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (DB::getDriverName() === 'sqlite') {
+        $driver = DB::getDriverName();
+
+        if ($driver === 'sqlite') {
             $this->rebuildSqlite();
+        } elseif ($driver === 'pgsql') {
+            $this->fixPostgreSql();
         } else {
             $this->fixMySql();
         }
@@ -156,11 +160,6 @@ return new class extends Migration
             }
         }
         Schema::table('settlement_policies', function (Blueprint $table) use ($missingSettlementPoliciesColumns) {
-            try {
-                $table->uuid('id')->primary()->change();
-            } catch (\Throwable $e) {
-                // May already be UUID
-            }
             foreach ($missingSettlementPoliciesColumns as $column => $definition) {
                         try {
                             $columnDef = DB::getDriverName() === 'mysql' ? $definition : preg_replace('/\s+AFTER\s+\w+/', '', $definition);
@@ -209,11 +208,6 @@ return new class extends Migration
             }
         }
         Schema::table('payouts', function (Blueprint $table) use ($missingPayoutsColumns) {
-            try {
-                $table->uuid('id')->primary()->change();
-            } catch (\Throwable $e) {
-                // May already be UUID
-            }
             foreach ($missingPayoutsColumns as $column => $definition) {
                         try {
                             $columnDef = DB::getDriverName() === 'mysql' ? $definition : preg_replace('/\s+AFTER\s+\w+/', '', $definition);
@@ -266,11 +260,6 @@ return new class extends Migration
             }
         }
         Schema::table('payout_calculations', function (Blueprint $table) use ($missingPayoutCalculationsColumns) {
-            try {
-                $table->uuid('id')->primary()->change();
-            } catch (\Throwable $e) {
-                // May already be UUID
-            }
             foreach ($missingPayoutCalculationsColumns as $column => $definition) {
                         try {
                             $columnDef = DB::getDriverName() === 'mysql' ? $definition : preg_replace('/\s+AFTER\s+\w+/', '', $definition);
@@ -288,6 +277,181 @@ return new class extends Migration
             } catch (\Throwable $e) {
             }
         });
+    }
+
+    private function fixPostgreSql(): void
+    {
+        $columnsToAdd = [
+                'organizer_tier' => "varchar(20) DEFAULT 'standard'",
+                'organizer_id' => 'uuid NULL',
+                'platform_commission_percentage' => 'decimal(5,2)',
+                'processing_fee_percentage' => 'decimal(5,2)',
+                'payout_frequency' => "varchar(20)",
+                'minimum_payout_threshold' => 'decimal(10,2)',
+                'payout_hold_days' => 'int',
+                'requires_approval' => 'boolean DEFAULT false',
+                'auto_approve_threshold' => 'decimal(10,2) NULL',
+                'max_retries' => 'int DEFAULT 3',
+                'retry_backoff_multiplier' => 'decimal(3,2) DEFAULT 2.0',
+                'tax_withholding_percentage' => 'decimal(5,2) NULL',
+                'allowed_payout_methods' => 'json NULL',
+            ];
+        $missingSettlementPoliciesColumns = [];
+        foreach ($columnsToAdd as $column => $definition) {
+            if (! Schema::hasColumn('settlement_policies', $column)) {
+                $missingSettlementPoliciesColumns[$column] = $definition;
+            }
+        }
+        if (! empty($missingSettlementPoliciesColumns)) {
+            foreach ($missingSettlementPoliciesColumns as $column => $definition) {
+                DB::statement("ALTER TABLE settlement_policies ADD COLUMN {$column} {$definition}");
+            }
+        }
+
+        if (! $this->indexExists('settlement_policies', 'settlement_policies_organizer_tier_unique')) {
+            Schema::table('settlement_policies', function (Blueprint $table) {
+                $table->unique('organizer_tier', 'settlement_policies_organizer_tier_unique');
+            });
+        }
+
+        $columnsToAdd = [
+                'organizer_id' => 'uuid',
+                'settlement_period_start_date' => 'timestamp',
+                'settlement_period_end_date' => 'timestamp',
+                'gross_revenue' => 'decimal(12,2)',
+                'refunds_deducted' => 'decimal(12,2)',
+                'net_revenue' => 'decimal(12,2)',
+                'platform_commission_percentage' => 'decimal(5,2)',
+                'platform_commission_amount' => 'decimal(12,2)',
+                'processing_fee_percentage' => 'decimal(5,2)',
+                'processing_fee_amount' => 'decimal(12,2)',
+                'tax_withholding_percentage' => 'decimal(5,2) NULL',
+                'tax_withholding_amount' => 'decimal(5,2) NULL',
+                'payout_amount' => 'decimal(12,2)',
+                'payout_method' => 'varchar(255)',
+                'payment_gateway_payout_id' => 'varchar(255) NULL',
+                'payment_gateway_response' => 'json NULL',
+                'calculated_at' => 'timestamp NULL',
+                'approved_by' => 'uuid NULL',
+                'approved_at' => 'timestamp NULL',
+                'processing_started_at' => 'timestamp NULL',
+                'completed_at' => 'timestamp NULL',
+                'failure_reason' => 'text NULL',
+                'retry_count' => 'int DEFAULT 0',
+                'next_retry_at' => 'timestamp NULL',
+            ];
+        $missingPayoutsColumns = [];
+        foreach ($columnsToAdd as $column => $definition) {
+            if (! Schema::hasColumn('payouts', $column)) {
+                $missingPayoutsColumns[$column] = $definition;
+            }
+        }
+        if (! empty($missingPayoutsColumns)) {
+            foreach ($missingPayoutsColumns as $column => $definition) {
+                DB::statement("ALTER TABLE payouts ADD COLUMN {$column} {$definition}");
+            }
+        }
+
+        if (! $this->indexExists('payouts', 'payouts_organizer_id_index')) {
+            Schema::table('payouts', function (Blueprint $table) {
+                $table->index('organizer_id', 'payouts_organizer_id_index');
+            });
+        }
+
+        if (! $this->indexExists('payouts', 'payouts_status_index')) {
+            Schema::table('payouts', function (Blueprint $table) {
+                $table->index('status', 'payouts_status_index');
+            });
+        }
+
+        if (! $this->indexExists('payouts', 'payouts_settlement_period_start_date_index')) {
+            Schema::table('payouts', function (Blueprint $table) {
+                $table->index('settlement_period_start_date', 'payouts_settlement_period_start_date_index');
+            });
+        }
+
+        if (! $this->indexExists('payouts', 'payouts_settlement_period_end_date_index')) {
+            Schema::table('payouts', function (Blueprint $table) {
+                $table->index('settlement_period_end_date', 'payouts_settlement_period_end_date_index');
+            });
+        }
+
+        if (! $this->indexExists('payouts', 'payouts_organizer_id_status_index')) {
+            Schema::table('payouts', function (Blueprint $table) {
+                $table->index(['organizer_id', 'status'], 'payouts_organizer_id_status_index');
+            });
+        }
+
+        $columnsToAdd = [
+                'organizer_id' => 'uuid',
+                'settlement_period_start_date' => 'timestamp',
+                'settlement_period_end_date' => 'timestamp',
+                'event_ids' => 'json NULL',
+                'order_ids' => 'json NULL',
+                'refund_request_ids' => 'json NULL',
+                'total_order_count' => 'int DEFAULT 0',
+                'total_tickets_sold' => 'int DEFAULT 0',
+                'total_refunds_processed' => 'int DEFAULT 0',
+                'calculation_details' => 'json NULL',
+                'calculated_at' => 'timestamp',
+                'calculated_by' => 'varchar(255)',
+                'created_at' => 'timestamp',
+            ];
+        $missingPayoutCalculationsColumns = [];
+        foreach ($columnsToAdd as $column => $definition) {
+            if (! Schema::hasColumn('payout_calculations', $column)) {
+                $missingPayoutCalculationsColumns[$column] = $definition;
+            }
+        }
+        if (! empty($missingPayoutCalculationsColumns)) {
+            foreach ($missingPayoutCalculationsColumns as $column => $definition) {
+                DB::statement("ALTER TABLE payout_calculations ADD COLUMN {$column} {$definition}");
+            }
+        }
+
+        if (! $this->indexExists('payout_calculations', 'payout_calculations_payout_id_index')) {
+            Schema::table('payout_calculations', function (Blueprint $table) {
+                $table->index('payout_id', 'payout_calculations_payout_id_index');
+            });
+        }
+
+        if (! $this->indexExists('payout_calculations', 'payout_calculations_organizer_id_index')) {
+            Schema::table('payout_calculations', function (Blueprint $table) {
+                $table->index('organizer_id', 'payout_calculations_organizer_id_index');
+            });
+        }
+    }
+
+    private function indexExists(string $table, string $index): bool
+    {
+        if (! Schema::hasTable($table)) {
+            return false;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $row = DB::selectOne(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND name = ?",
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?',
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
+            [$table, $index]
+        );
+
+        return $row !== null;
     }
 
     /**

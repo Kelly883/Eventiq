@@ -65,7 +65,7 @@ return new class extends Migration
 
         if (DB::getDriverName() === 'mysql') {
             $row = DB::selectOne(
-                'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
+                'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
                 [$table, $column]
             );
 

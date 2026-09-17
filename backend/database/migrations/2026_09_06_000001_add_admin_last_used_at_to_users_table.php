@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->timestamp('admin_last_used_at')->nullable()->after('emailVerified');
+            $table->timestamp('admin_last_used_at')->nullable();
         });
     }
 

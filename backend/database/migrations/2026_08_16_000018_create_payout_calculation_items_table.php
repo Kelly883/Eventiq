@@ -16,7 +16,7 @@ return new class extends Migration
             $table->uuid('payout_calculation_id');
             $table->foreignId('event_id')->nullable();
             $table->uuid('order_id')->nullable();
-            $table->uuid('refund_request_id')->nullable();
+            $table->unsignedBigInteger('refund_request_id')->nullable();
             $table->decimal('gross_amount', 12, 2)->default(0);
             $table->decimal('commission_amount', 12, 2)->default(0);
             $table->decimal('processing_fee_amount', 12, 2)->default(0);

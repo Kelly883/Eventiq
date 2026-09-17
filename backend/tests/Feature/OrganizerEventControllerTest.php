@@ -221,6 +221,41 @@ class OrganizerEventControllerTest extends TestCase
         $this->assertDatabaseHas('ticket_tiers', ['id' => $existingTier->id, 'name' => 'Updated Tier', 'price' => 500]);
     }
 
+    public function test_update_event_mixes_create_update_and_delete_tiers(): void
+    {
+        $event = Event::factory()->create(['organizer_id' => $this->organizer->id]);
+        $tier1 = TicketTier::factory()->create(['event_id' => $event->id, 'name' => 'Keep Me', 'price' => 1000]);
+        $tier2 = TicketTier::factory()->create(['event_id' => $event->id, 'name' => 'Delete Me', 'price' => 500]);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->patchJson("/api/organizer/events/{$event->id}", [
+                'ticket_tiers' => [
+                    ['id' => $tier1->id, 'name' => 'Keep Me Updated', 'price' => 1200, 'quantity' => 50],
+                    ['name' => 'Brand New Tier', 'price' => 300, 'quantity' => 75],
+                ],
+            ]);
+
+        $response->assertStatus(200)->assertJsonCount(2, 'data.ticket_tiers');
+        $this->assertDatabaseHas('ticket_tiers', ['id' => $tier1->id, 'name' => 'Keep Me Updated', 'price' => 1200]);
+        $this->assertSoftDeleted('ticket_tiers', ['id' => $tier2->id]);
+        $this->assertDatabaseHas('ticket_tiers', ['event_id' => $event->id, 'name' => 'Brand New Tier']);
+    }
+
+    public function test_update_event_cannot_delete_all_tiers(): void
+    {
+        $event = Event::factory()->create(['organizer_id' => $this->organizer->id]);
+        TicketTier::factory()->create(['event_id' => $event->id, 'name' => 'Only Tier', 'price' => 100]);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->patchJson("/api/organizer/events/{$event->id}", [
+                'ticket_tiers' => [],
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('message', 'Cannot delete all ticket tiers. At least one tier must remain.');
+        $this->assertDatabaseCount('ticket_tiers', 1);
+    }
+
     public function test_update_event_returns_422_for_invalid_data(): void
     {
         $event = Event::factory()->create(['organizer_id' => $this->organizer->id]);

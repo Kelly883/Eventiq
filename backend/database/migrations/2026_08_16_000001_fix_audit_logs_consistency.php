@@ -23,39 +23,24 @@ return new class extends Migration
             return;
         }
 
-        DB::statement('PRAGMA foreign_keys = OFF');
+        $driver = DB::getDriverName();
 
-        try {
-            DB::transaction(function () {
-                // ── Drop orphaned `changes` column if it exists ───────
-                if (Schema::hasColumn('audit_logs', 'changes')) {
-                    try {
-                        Schema::table('audit_logs', function (Blueprint $table) {
-                            $table->dropColumn('changes');
-                        });
-                    } catch (\Throwable $e) {
-                        $driver = DB::getDriverName();
-                        if ($driver === 'sqlite' || $driver === 'mysql') {
-                            DB::statement('ALTER TABLE audit_logs DROP COLUMN changes');
-                        }
-                    }
-                }
+        if ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = OFF');
 
-                // ── Unify ticket_id FK to SET NULL ───────────────────
-                $driver = DB::getDriverName();
-
-                if ($driver === 'sqlite') {
-                    $this->fixSqliteTicketIdFk();
-                } else {
-                    $this->fixMySqlTicketIdFk();
-                }
-            });
-        } finally {
-            DB::statement('PRAGMA foreign_keys = ON');
+            try {
+                $this->fixSqlite();
+            } finally {
+                DB::statement('PRAGMA foreign_keys = ON');
+            }
+        } elseif ($driver === 'mysql') {
+            $this->fixMySql();
+        } elseif ($driver === 'pgsql') {
+            $this->fixPostgreSql();
         }
     }
 
-    private function fixSqliteTicketIdFk(): void
+    private function fixSqlite(): void
     {
         $fks = DB::select('PRAGMA foreign_key_list(audit_logs)');
         $hasSetNull = false;
@@ -161,7 +146,7 @@ return new class extends Migration
         }
     }
 
-    private function fixMySqlTicketIdFk(): void
+    private function fixMySql(): void
     {
         try {
             DB::statement('ALTER TABLE audit_logs DROP FOREIGN KEY audit_logs_ticket_id_foreign');
@@ -174,6 +159,59 @@ return new class extends Migration
         } catch (\Throwable $e) {
             // FK may already exist
         }
+    }
+
+    private function fixPostgreSql(): void
+    {
+        if (Schema::hasColumn('audit_logs', 'changes')) {
+            Schema::table('audit_logs', function (Blueprint $table) {
+                $table->dropColumn('changes');
+            });
+        }
+
+        $fk = $this->getForeignKeyOnColumn('audit_logs', 'ticket_id');
+
+        if ($fk && str_contains(strtoupper($fk['delete_rule']), 'CASCADE')) {
+            $constraintName = $fk['constraint_name'];
+
+            DB::statement(
+                "ALTER TABLE \"audit_logs\" DROP CONSTRAINT \"{$constraintName}\""
+            );
+
+            Schema::table('audit_logs', function (Blueprint $table) {
+                $table->foreign('ticket_id')->references('id')->on('tickets')->onDelete('set null');
+            });
+        }
+    }
+
+    private function getForeignKeyOnColumn(string $table, string $column): ?array
+    {
+        if (! Schema::hasTable($table)) {
+            return null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT c.conname AS constraint_name, rc.delete_rule '
+            . 'FROM pg_constraint c '
+            . 'JOIN pg_class t ON c.conrelid = t.oid '
+            . 'JOIN pg_namespace n ON t.relnamespace = n.oid '
+            . 'JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(c.conkey) '
+            . 'LEFT JOIN information_schema.referential_constraints rc ON rc.constraint_name = c.conname AND rc.constraint_schema = n.nspname '
+            . "WHERE n.nspname = current_schema() "
+            . "AND t.relname = ? "
+            . "AND c.contype = 'f' "
+            . "AND a.attname = ?",
+            [$table, $column]
+        );
+
+        if ($row === null) {
+            return null;
+        }
+
+        return [
+            'constraint_name' => $row->constraint_name,
+            'delete_rule' => $row->delete_rule ?? 'NO ACTION',
+        ];
     }
 
     /**

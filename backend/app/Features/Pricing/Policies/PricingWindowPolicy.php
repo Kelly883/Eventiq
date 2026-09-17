@@ -80,7 +80,11 @@ class PricingWindowPolicy
      */
     public function restore(User $user, $pricingWindow): bool
     {
-        return $user->hasRole('admin') || $user->hasRole('super-admin');
+        if (!$user->hasRole('organizer') && !$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            return false;
+        }
+
+        return $this->ownsEvent($user, $pricingWindow->event);
     }
 
     /**

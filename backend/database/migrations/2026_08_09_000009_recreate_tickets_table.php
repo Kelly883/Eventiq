@@ -2,56 +2,116 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::dropIfExists('tickets');
+        if (! Schema::hasTable('tickets')) {
+            return;
+        }
 
-        Schema::create('tickets', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('order_id');
-            $table->uuid('user_id');
-            $table->unsignedBigInteger('event_id');
-            $table->unsignedBigInteger('ticket_tier_id');
+        if (! Schema::hasColumn('tickets', 'refund_status')) {
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->string('refund_status')->nullable()->after('status');
+            });
+        }
 
-            $table->text('qr_code_data')->nullable();
-            $table->string('qr_code_secret')->nullable();
-            $table->timestamp('qr_code_generated_at')->nullable();
-            $table->timestamp('qr_code_expires_at')->nullable();
-            $table->enum('status', ['valid', 'checked_in', 'void', 'purged'])->default('valid');
-            $table->timestamp('checked_in_at')->nullable();
-            $table->uuid('checked_in_by')->nullable();
-            $table->integer('qr_code_scanned_count')->default(0);
-            $table->timestamp('last_qr_scan_at')->nullable();
-            $table->timestamps();
+        if (! $this->indexExists('tickets', 'tickets_user_id_index')) {
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->index('user_id', 'tickets_user_id_index');
+            });
+        }
 
-            $table->string('ticket_id')->nullable();
-            $table->string('attendee_name')->nullable();
-            $table->string('attendee_email')->nullable();
-            $table->string('tier')->nullable();
-            $table->boolean('checked_in')->default(false);
-            $table->timestamp('first_scanned_at')->nullable();
+        if (! $this->indexExists('tickets', 'tickets_event_id_index')) {
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->index('event_id', 'tickets_event_id_index');
+            });
+        }
 
-            $table->foreign('order_id')->references('id')->on('orders')->cascadeOnDelete();
-            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
-            $table->foreign('event_id')->references('id')->on('events')->cascadeOnDelete();
-            $table->foreign('ticket_tier_id')->references('id')->on('ticket_tiers')->cascadeOnDelete();
-            $table->foreign('checked_in_by')->references('id')->on('users')->nullOnDelete();
-
-            $table->index('user_id', 'tickets_user_id_index');
-            $table->index('event_id', 'tickets_event_id_index');
-            $table->index(['event_id', 'status'], 'idx_tickets_event_status');
-            $table->index(['event_id', 'checked_in_at'], 'idx_tickets_event_checkin');
-            $table->index(['event_id', 'created_at'], 'idx_tickets_event_created_at');
-            $table->index('ticket_id', 'idx_tickets_ticket_id_unique');
-        });
+        if (! $this->indexExists('tickets', 'idx_tickets_event_created_at')) {
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->index(['event_id', 'created_at'], 'idx_tickets_event_created_at');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('tickets');
+        if (! Schema::hasTable('tickets')) {
+            return;
+        }
+
+        try {
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->dropIndex('tickets_user_id_index');
+            });
+        } catch (\Throwable $e) {
+            // Index may not exist
+        }
+
+        try {
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->dropIndex('tickets_event_id_index');
+            });
+        } catch (\Throwable $e) {
+            // Index may not exist
+        }
+
+        try {
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->dropIndex('idx_tickets_event_created_at');
+            });
+        } catch (\Throwable $e) {
+            // Index may not exist
+        }
+
+        if (Schema::hasColumn('tickets', 'refund_status')) {
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->dropColumn('refund_status');
+            });
+        }
+    }
+
+    private function indexExists(string $table, string $indexName): bool
+    {
+        if (!Schema::hasTable($table)) {
+            return false;
+        }
+
+        $driver = DB::getDriverName();
+
+        if ($driver === 'sqlite') {
+            $row = DB::selectOne(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND name = ?",
+                [$table, $indexName]
+            );
+
+            return $row !== null;
+        }
+
+        if ($driver === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT i.relname FROM pg_index x '
+                . 'JOIN pg_class i ON x.indexrelid = i.oid '
+                . 'JOIN pg_class t ON x.indrelid = t.oid '
+                . 'JOIN pg_namespace n ON t.relnamespace = n.oid '
+                . 'WHERE n.nspname = current_schema() '
+                . 'AND t.relname = ? '
+                . 'AND i.relname = ?',
+                [$table, $indexName]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = current_schema() AND TABLE_NAME = ? AND INDEX_NAME = ?',
+            [$table, $indexName]
+        );
+
+        return $row !== null;
     }
 };

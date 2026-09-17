@@ -164,21 +164,20 @@ class UpdateTicketTiersRequest extends FormRequest
                                 'Tier image URL must be a valid URL.'
                             );
                         } else {
-                            $allowedHosts = array_filter([
-                                parse_url(config('app.url'), PHP_URL_HOST),
-                                parse_url(config('filesystems.disks.s3.url') ?? '', PHP_URL_HOST),
-                                parse_url(config('filesystems.disks.s3.endpoint') ?? '', PHP_URL_HOST),
-                                parse_url(env('AWS_URL', ''), PHP_URL_HOST),
-                                'localhost',
-                                '127.0.0.1',
-                            ]);
+                            $allowedHosts = array_filter(array_map('trim', explode(',', config('ticketing.tier_image_allowed_hosts', ''))));
+                            if (empty($allowedHosts)) {
+                                $allowedHosts = array_filter([
+                                    parse_url(config('app.url'), PHP_URL_HOST),
+                                    parse_url(config('filesystems.disks.s3.url') ?? '', PHP_URL_HOST),
+                                    parse_url(config('filesystems.disks.s3.endpoint') ?? '', PHP_URL_HOST),
+                                    parse_url(env('AWS_URL', ''), PHP_URL_HOST),
+                                    'localhost',
+                                    '127.0.0.1',
+                                ]);
+                            }
                             $host = parse_url($tierImageUrl, PHP_URL_HOST);
-                            // In test env, allow empty allowedHosts to still check external? For spec, external should be rejected.
-                            // If allowedHosts empty, treat as not allowed for external http.
                             $isAllowed = $host && in_array($host, $allowedHosts, true);
-                            // Also allow storage URLs that contain our app host or s3 host
                             if (!$isAllowed) {
-                                // For test, evil.com should be rejected. So if not in allowed list, reject.
                                 $validator->errors()->add(
                                     "ticketTiers.{$index}.tier_image_url",
                                     'Tier image URL must be from our storage.'

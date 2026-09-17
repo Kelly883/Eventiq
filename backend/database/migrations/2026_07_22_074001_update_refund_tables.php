@@ -79,13 +79,7 @@ return new class extends Migration
             }
         });
 
-        if (!$isSqlite && Schema::hasColumn('refund_requests', 'id')) {
-            Schema::table('refund_requests', function (Blueprint $table) {
-                $table->uuid('id')->primary()->change();
-            });
-        }
-
-        if (!$this->indexExists('refund_requests', 'idx_refund_user_status')) {
+        if ($this->indexExists('refund_requests', 'idx_refund_user_status')) {
             Schema::table('refund_requests', function (Blueprint $table) {
                 $table->index(['user_id', 'status'], 'idx_refund_user_status');
             });
@@ -151,12 +145,6 @@ return new class extends Migration
             }
         });
 
-        if (!$isSqlite && Schema::hasColumn('refund_policies', 'id')) {
-            Schema::table('refund_policies', function (Blueprint $table) {
-                $table->uuid('id')->primary()->change();
-            });
-        }
-
         // Update refund_appeals table
         $hasRefundAppealsReviewNotes = Schema::hasColumn('refund_appeals', 'review_notes');
         $hasRefundAppealsReviewedBy = Schema::hasColumn('refund_appeals', 'reviewed_by');
@@ -172,12 +160,6 @@ return new class extends Migration
                 $table->timestamp('reviewed_at')->nullable()->after('reviewed_by');
             }
         });
-
-        if (!$isSqlite && Schema::hasColumn('refund_appeals', 'id')) {
-            Schema::table('refund_appeals', function (Blueprint $table) {
-                $table->uuid('id')->primary()->change();
-            });
-        }
     }
 
     public function down(): void
@@ -326,7 +308,7 @@ return new class extends Migration
 
         if (DB::getDriverName() === 'mysql') {
             $row = DB::selectOne(
-                'SELECT index_name FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?',
+                'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
                 [$table, $indexName]
             );
 

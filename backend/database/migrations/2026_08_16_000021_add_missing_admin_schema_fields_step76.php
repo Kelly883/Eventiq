@@ -12,40 +12,24 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('users') && ! $this->hasColumn('users', 'status')) {
+        if (Schema::hasTable('users') && ! Schema::hasColumn('users', 'status')) {
             Schema::table('users', function (Blueprint $table) {
-                $table->string('status')->default('active')->after('role');
+                $table->string('status')->default('active');
             });
         }
 
         if (Schema::hasTable('payments')) {
-            if (! $this->hasColumn('payments', 'payment_method')) {
+            if (! Schema::hasColumn('payments', 'payment_method')) {
                 Schema::table('payments', function (Blueprint $table) {
-                    $table->string('payment_method')->nullable()->after('gateway');
+                    $table->string('payment_method')->nullable();
                 });
             }
-            if (! $this->hasColumn('payments', 'gateway_response_code')) {
+            if (! Schema::hasColumn('payments', 'gateway_response_code')) {
                 Schema::table('payments', function (Blueprint $table) {
-                    $table->string('gateway_response_code')->nullable()->after('gateway_response');
+                    $table->string('gateway_response_code')->nullable();
                 });
             }
         }
-
-        // Note: ticket_inventory.is_low_stock already exists as a SQLite
-        // generated column computed from total_available and low_stock_threshold.
-        // No migration needed.
-    }
-
-    private function hasColumn(string $table, string $column): bool
-    {
-        $columns = DB::select('PRAGMA table_info(' . $table . ')');
-        foreach ($columns as $col) {
-            if ($col->name === $column) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -53,7 +37,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (Schema::hasTable('users') && $this->hasColumn('users', 'status')) {
+        if (Schema::hasTable('users') && Schema::hasColumn('users', 'status')) {
             Schema::table('users', function (Blueprint $table) {
                 $table->dropIndex('idx_users_role_status_created_at');
             });
@@ -63,12 +47,12 @@ return new class extends Migration
         }
 
         if (Schema::hasTable('payments')) {
-            if ($this->hasColumn('payments', 'payment_method')) {
+            if (Schema::hasColumn('payments', 'payment_method')) {
                 Schema::table('payments', function (Blueprint $table) {
                     $table->dropColumn('payment_method');
                 });
             }
-            if ($this->hasColumn('payments', 'gateway_response_code')) {
+            if (Schema::hasColumn('payments', 'gateway_response_code')) {
                 Schema::table('payments', function (Blueprint $table) {
                     $table->dropColumn('gateway_response_code');
                 });

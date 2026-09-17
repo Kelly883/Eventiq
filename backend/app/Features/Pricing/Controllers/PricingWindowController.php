@@ -2,13 +2,11 @@
 
 namespace App\Features\Pricing\Controllers;
 
-use App\Features\Compliance\Enums\AuditLogAction;
 use App\Features\Pricing\Models\PricingWindow;
 use App\Features\Pricing\Requests\StorePricingWindowRequest;
 use App\Features\Pricing\Requests\UpdatePricingWindowRequest;
 use App\Features\Pricing\Resources\PricingWindowResource;
 use App\Http\Controllers\Controller;
-use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -143,21 +141,11 @@ class PricingWindowController extends Controller
                 return response()->json([
                     'message' => 'An active pricing window already exists for this ticket category with overlapping dates.',
                     'errors' => ['start_date_time' => ['An active pricing window already exists for this ticket category with overlapping dates.']],
-                ], 422);
+                ], 409);
             }
         }
 
         $window = PricingWindow::create($data);
-
-        AuditLogger::log(
-            action: AuditLogAction::PRICING_WINDOW_CREATED,
-            user: $user,
-            resourceType: 'pricing_window',
-            resourceId: (string) $window->id,
-            newValues: $window->toArray(),
-            request: $request,
-            description: "Pricing window '{$window->window_name}' created for event {$eventId}"
-        );
 
         return response()->json([
             'message' => 'Pricing window created successfully.',
@@ -219,10 +207,17 @@ class PricingWindowController extends Controller
             || $request->has('end_date_time')
             || $request->has('ticket_category_id');
 
-        if ($hasDateOrCategoryChange) {
+        // Also check when window is being activated (is_active false->true)
+        $hasActivationChange = $request->has('is_active')
+            && $request->boolean('is_active')
+            && !$pricingWindow->is_active;
+
+        if ($hasDateOrCategoryChange || $hasActivationChange) {
             $startDate = $validated['start_date_time'] ?? $pricingWindow->start_date_time;
             $endDate = $validated['end_date_time'] ?? $pricingWindow->end_date_time;
             $catId = $validated['ticket_category_id'] ?? $pricingWindow->ticket_category_id;
+
+            // Only check overlap if the window will be active after update
             $willBeActive = $request->has('is_active') ? $request->boolean('is_active') : $pricingWindow->is_active;
 
             if ($willBeActive && $startDate && $endDate) {
@@ -245,24 +240,13 @@ class PricingWindowController extends Controller
                     return response()->json([
                         'message' => 'An active pricing window already exists for this ticket category with overlapping dates.',
                         'errors' => ['start_date_time' => ['An active pricing window already exists for this ticket category with overlapping dates.']],
-                    ], 422);
+                    ], 409);
                 }
             }
         }
 
         $oldValues = $pricingWindow->toArray();
         $pricingWindow->update($validated);
-
-        AuditLogger::log(
-            action: AuditLogAction::PRICING_WINDOW_UPDATED,
-            user: $user,
-            resourceType: 'pricing_window',
-            resourceId: (string) $pricingWindow->id,
-            oldValues: $oldValues,
-            newValues: $pricingWindow->fresh()->toArray(),
-            request: $request,
-            description: "Pricing window '{$pricingWindow->window_name}' updated for event {$eventId}"
-        );
 
         return response()->json([
             'message' => 'Pricing window updated successfully.',
@@ -281,17 +265,14 @@ class PricingWindowController extends Controller
         $user = request()->user();
         $oldValues = $pricingWindow->toArray();
 
-        $pricingWindow->delete();
+        if ($pricingWindow->quantity_sold > 0) {
+            return response()->json([
+                'message' => 'Cannot delete a pricing window that has sold tickets. Restore it instead.',
+                'errors' => ['window' => ['This window has sold tickets and cannot be deleted.']],
+            ], 409);
+        }
 
-        AuditLogger::log(
-            action: AuditLogAction::PRICING_WINDOW_DELETED,
-            user: $user,
-            resourceType: 'pricing_window',
-            resourceId: (string) $pricingWindow->id,
-            oldValues: $oldValues,
-            request: request(),
-            description: "Pricing window '{$pricingWindow->window_name}' soft deleted from event {$eventId}"
-        );
+        $pricingWindow->delete();
 
         return response()->json([
             'message' => 'Pricing window deleted successfully.',
@@ -305,6 +286,32 @@ class PricingWindowController extends Controller
     {
         $window = PricingWindow::withTrashed()->findOrFail($id);
         $this->authorize('restore', $window);
+        abort_unless((string) $window->event_id === (string) $eventId, 404);
+
+        // Overlap check on restore: if the window will be active, ensure no other active window overlaps
+        if ($window->is_active) {
+            $overlap = PricingWindow::where('event_id', $eventId)
+                ->where('ticket_category_id', $window->ticket_category_id)
+                ->where('is_active', true)
+                ->whereNull('deleted_at')
+                ->where('id', '!=', $window->id)
+                ->where(function ($q) use ($window) {
+                    $q->whereBetween('start_date_time', [$window->start_date_time, $window->end_date_time])
+                      ->orWhereBetween('end_date_time', [$window->start_date_time, $window->end_date_time])
+                      ->orWhere(function ($q) use ($window) {
+                          $q->where('start_date_time', '<=', $window->start_date_time)
+                            ->where('end_date_time', '>=', $window->end_date_time);
+                      });
+                })
+                ->exists();
+
+            if ($overlap) {
+                return response()->json([
+                    'message' => 'An active pricing window already exists for this ticket category with overlapping dates.',
+                    'errors' => ['start_date_time' => ['Cannot restore: overlaps with an active pricing window.']],
+                ], 409);
+            }
+        }
 
         $window->restore();
 

@@ -6,6 +6,8 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
+use App\Features\Pricing\Models\PricingWindow;
+use App\Features\Pricing\Observers\PricingWindowObserver;
 use App\Models\Event;
 use App\Models\Organizer;
 use App\Features\Checkout\Models\Ticket;
@@ -111,6 +113,16 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Ticketing — stricter per-user limit to prevent abuse during bulk tier edits
+        RateLimiter::for('organizer-ticketing', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+
+        // Pricing — per-user limit for pricing window CRUD
+        RateLimiter::for('organizer-pricing', function ($request) {
+            return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+        });
+
         // Ticket inventory — per spec (Step 142): summary 20/min, inventory 20/min, adjust 5/min, export 10/min, audit-log 20/min (all per user)
         RateLimiter::for('inventory-summary', function ($request) {
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
@@ -130,6 +142,7 @@ class AppServiceProvider extends ServiceProvider
 
         Event::observe(EventObserver::class);
         Ticket::observe(TicketObserver::class);
+        PricingWindow::observe(PricingWindowObserver::class);
 
         // Startup health check: verify critical tables exist to catch missing
         // migrations early instead of failing with 500s on first request.

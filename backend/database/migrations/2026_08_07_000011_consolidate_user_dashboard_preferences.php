@@ -25,6 +25,7 @@ return new class extends Migration
                 $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             });
         } else {
+            $driver = Schema::getConnection()->getDriverName();
             $hasUserFk = false;
             $hasDefaultFilter = false;
             $hasDateRange = false;
@@ -32,15 +33,51 @@ return new class extends Migration
             $hasActivityFeed = false;
             $hasAutoRefresh = false;
 
-            $columns = DB::select('PRAGMA table_info(user_dashboard_preferences)');
-            foreach ($columns as $col) {
-                switch ($col->name) {
-                    case 'user_id': $hasUserFk = true; break;
-                    case 'default_ticket_filter': $hasDefaultFilter = true; break;
-                    case 'default_date_range': $hasDateRange = true; break;
-                    case 'show_recommendations': $hasRecommendations = true; break;
-                    case 'show_activity_feed': $hasActivityFeed = true; break;
-                    case 'auto_refresh_enabled': $hasAutoRefresh = true; break;
+            if ($driver === 'sqlite') {
+                $columns = DB::select('PRAGMA table_info(user_dashboard_preferences)');
+                foreach ($columns as $col) {
+                    switch ($col->name) {
+                        case 'user_id': $hasUserFk = true; break;
+                        case 'default_ticket_filter': $hasDefaultFilter = true; break;
+                        case 'default_date_range': $hasDateRange = true; break;
+                        case 'show_recommendations': $hasRecommendations = true; break;
+                        case 'show_activity_feed': $hasActivityFeed = true; break;
+                        case 'auto_refresh_enabled': $hasAutoRefresh = true; break;
+                    }
+                }
+            } elseif ($driver === 'pgsql') {
+                $columns = DB::select(
+                    'SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ?',
+                    ['user_dashboard_preferences']
+                );
+                foreach ($columns as $col) {
+                    switch ($col->column_name) {
+                        case 'user_id': $hasUserFk = true; break;
+                        case 'default_ticket_filter': $hasDefaultFilter = true; break;
+                        case 'default_date_range': $hasDateRange = true; break;
+                        case 'show_recommendations': $hasRecommendations = true; break;
+                        case 'show_activity_feed': $hasActivityFeed = true; break;
+                        case 'auto_refresh_enabled': $hasAutoRefresh = true; break;
+                    }
+                }
+            } else {
+                $columns = DB::select(
+                    'SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ?',
+                    ['user_dashboard_preferences']
+                );
+                foreach ($columns as $col) {
+                    $name = $col->column_name ?? $col->Field ?? null;
+                    if ($name === null) {
+                        continue;
+                    }
+                    switch ($name) {
+                        case 'user_id': $hasUserFk = true; break;
+                        case 'default_ticket_filter': $hasDefaultFilter = true; break;
+                        case 'default_date_range': $hasDateRange = true; break;
+                        case 'show_recommendations': $hasRecommendations = true; break;
+                        case 'show_activity_feed': $hasActivityFeed = true; break;
+                        case 'auto_refresh_enabled': $hasAutoRefresh = true; break;
+                    }
                 }
             }
 
@@ -65,15 +102,48 @@ return new class extends Migration
                 }
             });
 
-            $indexes = DB::select('PRAGMA index_list(user_dashboard_preferences)');
             $hasUniqueUser = false;
             $hasIndexUser = false;
-            foreach ($indexes as $idx) {
-                if ($idx->name === 'user_dashboard_preferences_user_id_unique') {
-                    $hasUniqueUser = true;
+
+            if ($driver === 'sqlite') {
+                $indexes = DB::select('PRAGMA index_list(user_dashboard_preferences)');
+                foreach ($indexes as $idx) {
+                    if ($idx->name === 'user_dashboard_preferences_user_id_unique') {
+                        $hasUniqueUser = true;
+                    }
+                    if ($idx->name === 'user_dashboard_preferences_user_id_index') {
+                        $hasIndexUser = true;
+                    }
                 }
-                if ($idx->name === 'user_dashboard_preferences_user_id_index') {
-                    $hasIndexUser = true;
+            } elseif ($driver === 'pgsql') {
+                $indexRows = DB::select(
+                    'SELECT indexname FROM pg_indexes WHERE tablename = ?',
+                    ['user_dashboard_preferences']
+                );
+                foreach ($indexRows as $idx) {
+                    if ($idx->indexname === 'user_dashboard_preferences_user_id_unique') {
+                        $hasUniqueUser = true;
+                    }
+                    if ($idx->indexname === 'user_dashboard_preferences_user_id_index') {
+                        $hasIndexUser = true;
+                    }
+                }
+            } else {
+                $indexRows = DB::select(
+                    'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ?',
+                    ['user_dashboard_preferences']
+                );
+                foreach ($indexRows as $idx) {
+                    $name = $idx->index_name ?? $idx->Key_name ?? null;
+                    if ($name === null) {
+                        continue;
+                    }
+                    if ($name === 'user_dashboard_preferences_user_id_unique') {
+                        $hasUniqueUser = true;
+                    }
+                    if ($name === 'user_dashboard_preferences_user_id_index') {
+                        $hasIndexUser = true;
+                    }
                 }
             }
 
@@ -89,12 +159,39 @@ return new class extends Migration
                 });
             }
 
-            $fks = DB::select('PRAGMA foreign_key_list(user_dashboard_preferences)');
             $hasUserFkConstraint = false;
-            foreach ($fks as $fk) {
-                if ($fk->from === 'user_id' && $fk->table === 'users') {
-                    $hasUserFkConstraint = true;
-                    break;
+
+            if ($driver === 'sqlite') {
+                $fks = DB::select('PRAGMA foreign_key_list(user_dashboard_preferences)');
+                foreach ($fks as $fk) {
+                    if ($fk->from === 'user_id' && $fk->table === 'users') {
+                        $hasUserFkConstraint = true;
+                        break;
+                    }
+                }
+            } elseif ($driver === 'pgsql') {
+                $fkRow = DB::selectOne(
+                    'SELECT c.conname FROM pg_constraint c '
+                    . 'JOIN pg_class t ON c.conrelid = t.oid '
+                    . 'JOIN pg_namespace n ON t.relnamespace = n.oid '
+                    . 'JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(c.conkey) '
+                    . "WHERE n.nspname = current_schema() "
+                    . "AND t.relname = 'user_dashboard_preferences' "
+                    . "AND c.contype = 'f' "
+                    . "AND a.attname = 'user_id'"
+                );
+
+                $hasUserFkConstraint = $fkRow !== null;
+            } else {
+                $fkRows = DB::select(
+                    'SELECT referenced_table_name, column_name FROM information_schema.key_column_usage WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
+                    ['user_dashboard_preferences', 'user_id']
+                );
+                foreach ($fkRows as $fk) {
+                    if ($fk->referenced_table_name === 'users') {
+                        $hasUserFkConstraint = true;
+                        break;
+                    }
                 }
             }
 
@@ -112,11 +209,106 @@ return new class extends Migration
     {
         $this->dropUpdatedAtTrigger();
 
-        Schema::table('user_dashboard_preferences', function (Blueprint $table) {
-            $table->dropForeign(['user_id']);
-            $table->dropIndex('user_dashboard_preferences_user_id_index');
-            $table->dropUnique('user_dashboard_preferences_user_id_unique');
-        });
+        if (Schema::hasTable('user_dashboard_preferences')) {
+            $driver = Schema::getConnection()->getDriverName();
+            $hasUserFkConstraint = false;
+
+            if ($driver === 'sqlite') {
+                $fks = DB::select('PRAGMA foreign_key_list(user_dashboard_preferences)');
+                foreach ($fks as $fk) {
+                    if ($fk->from === 'user_id' && $fk->table === 'users') {
+                        $hasUserFkConstraint = true;
+                        break;
+                    }
+                }
+            } elseif ($driver === 'pgsql') {
+                $fkRow = DB::selectOne(
+                    'SELECT c.conname FROM pg_constraint c '
+                    . 'JOIN pg_class t ON c.conrelid = t.oid '
+                    . 'JOIN pg_namespace n ON t.relnamespace = n.oid '
+                    . 'JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(c.conkey) '
+                    . "WHERE n.nspname = current_schema() "
+                    . "AND t.relname = 'user_dashboard_preferences' "
+                    . "AND c.contype = 'f' "
+                    . "AND a.attname = 'user_id'"
+                );
+                $hasUserFkConstraint = $fkRow !== null;
+            } else {
+                $fkRows = DB::select(
+                    'SELECT referenced_table_name FROM information_schema.key_column_usage WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
+                    ['user_dashboard_preferences', 'user_id']
+                );
+                foreach ($fkRows as $fk) {
+                    if ($fk->referenced_table_name === 'users') {
+                        $hasUserFkConstraint = true;
+                        break;
+                    }
+                }
+            }
+
+            if ($hasUserFkConstraint) {
+                Schema::table('user_dashboard_preferences', function (Blueprint $table) {
+                    $table->dropForeign(['user_id']);
+                });
+            }
+
+            $hasIndexUser = false;
+            $hasUniqueUser = false;
+
+            if ($driver === 'sqlite') {
+                $indexes = DB::select('PRAGMA index_list(user_dashboard_preferences)');
+                foreach ($indexes as $idx) {
+                    if ($idx->name === 'user_dashboard_preferences_user_id_unique') {
+                        $hasUniqueUser = true;
+                    }
+                    if ($idx->name === 'user_dashboard_preferences_user_id_index') {
+                        $hasIndexUser = true;
+                    }
+                }
+            } elseif ($driver === 'pgsql') {
+                $indexRows = DB::select(
+                    'SELECT indexname FROM pg_indexes WHERE tablename = ?',
+                    ['user_dashboard_preferences']
+                );
+                foreach ($indexRows as $idx) {
+                    if ($idx->indexname === 'user_dashboard_preferences_user_id_unique') {
+                        $hasUniqueUser = true;
+                    }
+                    if ($idx->indexname === 'user_dashboard_preferences_user_id_index') {
+                        $hasIndexUser = true;
+                    }
+                }
+            } else {
+                $indexRows = DB::select(
+                    'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ?',
+                    ['user_dashboard_preferences']
+                );
+                foreach ($indexRows as $idx) {
+                    $name = $idx->index_name ?? $idx->Key_name ?? null;
+                    if ($name === null) {
+                        continue;
+                    }
+                    if ($name === 'user_dashboard_preferences_user_id_unique') {
+                        $hasUniqueUser = true;
+                    }
+                    if ($name === 'user_dashboard_preferences_user_id_index') {
+                        $hasIndexUser = true;
+                    }
+                }
+            }
+
+            if ($hasIndexUser) {
+                Schema::table('user_dashboard_preferences', function (Blueprint $table) {
+                    $table->dropIndex('user_dashboard_preferences_user_id_index');
+                });
+            }
+
+            if ($hasUniqueUser) {
+                Schema::table('user_dashboard_preferences', function (Blueprint $table) {
+                    $table->dropUnique('user_dashboard_preferences_user_id_unique');
+                });
+            }
+        }
 
         Schema::dropIfExists('user_dashboard_preferences');
     }

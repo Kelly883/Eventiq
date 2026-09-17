@@ -14,31 +14,31 @@ return new class extends Migration
 
         if (! Schema::hasColumn('users', 'paystack_customer_code')) {
             Schema::table('users', function (Blueprint $table) {
-                $table->string('paystack_customer_code')->nullable()->after('lastLoginAt');
+                $table->string('paystack_customer_code')->nullable();
             });
         }
 
         if (! Schema::hasColumn('users', 'flutterwave_customer_id')) {
             Schema::table('users', function (Blueprint $table) {
-                $table->string('flutterwave_customer_id')->nullable()->after('paystack_customer_code');
+                $table->string('flutterwave_customer_id')->nullable();
             });
         }
 
         if (! Schema::hasColumn('users', 'default_payment_gateway')) {
             Schema::table('users', function (Blueprint $table) {
-                $table->string('default_payment_gateway')->nullable()->after('flutterwave_customer_id');
+                $table->string('default_payment_gateway')->nullable();
             });
         }
 
         if (! Schema::hasColumn('users', 'default_payment_method_id')) {
             Schema::table('users', function (Blueprint $table) {
-                $table->string('default_payment_method_id')->nullable()->after('default_payment_gateway');
+                $table->string('default_payment_method_id')->nullable();
             });
         }
 
         if (! Schema::hasColumn('users', 'trial_ends_at')) {
             Schema::table('users', function (Blueprint $table) {
-                $table->timestamp('trial_ends_at')->nullable()->after('default_payment_method_id');
+                $table->timestamp('trial_ends_at')->nullable();
             });
         }
     }

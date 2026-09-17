@@ -756,9 +756,11 @@ class EventTicketingPatchTest extends TestCase
         $benefits = 'VIP lounge access, complimentary drinks, meet and greet';
         $response = $this->patchWithAuthToken("/api/organizer/events/{$this->event->id}/ticketing", [
             'ticketTiers' => [
-                ['name' => 'VIP', 'price' => 5000, 'quantity' => 10, 'benefits_description' => $benefits],
+                ['name' => 'VIP Benefits', 'price' => 5000, 'quantity' => 10, 'benefits_description' => $benefits],
             ],
         ]);
+
+        $response->assertStatus(200);
 
         $tier = $response->json('ticketTiers.0');
         $this->assertEquals($benefits, $tier['benefits_description']);
@@ -788,5 +790,30 @@ class EventTicketingPatchTest extends TestCase
         $response->assertStatus(200);
         $tier = $response->json('ticketTiers.0');
         $this->assertEquals($dataUri, $tier['tier_image_url']);
+    }
+
+    public function test_idempotency_key_returns_cached_response_on_duplicate(): void
+    {
+        $payload = [
+            'ticketTiers' => [
+                ['name' => 'Idempotent Tier', 'price' => 1500, 'quantity' => 60],
+            ],
+        ];
+
+        $first = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->withHeader('Idempotency-Key', 'test-key-123')
+            ->patchJson("/api/organizer/events/{$this->event->id}/ticketing", $payload);
+        $first->assertStatus(200)
+            ->assertJsonPath('ticketTiers.0.name', 'Idempotent Tier')
+            ->assertJsonPath('ticketTiers.0.price', 1500);
+
+        $second = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->withHeader('Idempotency-Key', 'test-key-123')
+            ->patchJson("/api/organizer/events/{$this->event->id}/ticketing", $payload);
+        $second->assertStatus(200)
+            ->assertJsonPath('ticketTiers.0.name', 'Idempotent Tier')
+            ->assertJsonPath('ticketTiers.0.price', 1500);
+
+        $this->assertDatabaseCount('ticket_tiers', 3);
     }
 }

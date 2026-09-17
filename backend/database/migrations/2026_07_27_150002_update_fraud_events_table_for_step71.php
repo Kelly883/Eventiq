@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -38,15 +39,11 @@ return new class extends Migration
             }
 
             // Ensure ticket_id exists with UUID FK
-            if ($hasFraudEventsTicketId) {
-                try {
-                    $table->foreign('ticket_id')
-                        ->references('id')
-                        ->on('tickets')
-                        ->onDelete('set null');
-                } catch (\Exception $e) {
-                    // FK may already exist
-                }
+            if ($hasFraudEventsTicketId && ! $this->foreignKeyExists('fraud_events', 'ticket_id')) {
+                $table->foreign('ticket_id')
+                    ->references('id')
+                    ->on('tickets')
+                    ->onDelete('set null');
             }
 
             // Ensure all check-in specific fields exist
@@ -67,26 +64,18 @@ return new class extends Migration
             }
 
             // Ensure FKs for check-in users exist
-            if ($hasFraudEventsFirstCheckInBy) {
-                try {
-                    $table->foreign('first_check_in_by')
-                        ->references('id')
-                        ->on('users')
-                        ->onDelete('set null');
-                } catch (\Exception $e) {
-                    // FK may already exist
-                }
+            if ($hasFraudEventsFirstCheckInBy && ! $this->foreignKeyExists('fraud_events', 'first_check_in_by')) {
+                $table->foreign('first_check_in_by')
+                    ->references('id')
+                    ->on('users')
+                    ->onDelete('set null');
             }
             
-            if ($hasFraudEventsSecondCheckInBy) {
-                try {
-                    $table->foreign('second_check_in_by')
-                        ->references('id')
-                        ->on('users')
-                        ->onDelete('set null');
-                } catch (\Exception $e) {
-                    // FK may already exist
-                }
+            if ($hasFraudEventsSecondCheckInBy && ! $this->foreignKeyExists('fraud_events', 'second_check_in_by')) {
+                $table->foreign('second_check_in_by')
+                    ->references('id')
+                    ->on('users')
+                    ->onDelete('set null');
             }
 
             // Ensure risk_level exists with correct enum values
@@ -162,5 +151,50 @@ return new class extends Migration
                 // FK may not exist
             }
         });
+    }
+    private function foreignKeyExists(string $table, string $column): bool
+    {
+        if (!Schema::hasTable($table)) {
+            return false;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $rows = DB::select("PRAGMA foreign_key_list('{$table}')");
+
+            foreach ($rows as $row) {
+                if (($row->from ?? null) === $column) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT c.conname FROM pg_constraint c '
+                . 'JOIN pg_class t ON c.conrelid = t.oid '
+                . 'JOIN pg_namespace n ON t.relnamespace = n.oid '
+                . "WHERE n.nspname = current_schema() "
+                . "AND t.relname = ? "
+                . "AND c.contype = 'f' "
+                . 'AND EXISTS ('
+                . '  SELECT 1 FROM pg_attribute a '
+                . '  WHERE a.attrelid = t.oid '
+                . '  AND a.attname = ? '
+                . '  AND a.attnum = ANY(c.conkey)'
+                . ')',
+                [$table, $column]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
+            [$table, $column]
+        );
+
+        return $row !== null;
     }
 };

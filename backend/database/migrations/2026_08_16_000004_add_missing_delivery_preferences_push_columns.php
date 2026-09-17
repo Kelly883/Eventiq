@@ -22,6 +22,8 @@ return new class extends Migration
             return;
         }
 
+        $driver = DB::getDriverName();
+
         $columns = [
             'push_notifications_enabled' => 'BOOLEAN DEFAULT 0',
             'push_order_confirmation' => 'BOOLEAN DEFAULT 0',
@@ -31,16 +33,25 @@ return new class extends Migration
         ];
 
         foreach ($columns as $column => $definition) {
-            $exists = DB::select('PRAGMA table_info(delivery_preferences)');
-            $found = false;
-            foreach ($exists as $col) {
-                if ($col->name === $column) {
-                    $found = true;
-                    break;
+            $exists = false;
+
+            if ($driver === 'sqlite') {
+                $rows = DB::select('PRAGMA table_info(delivery_preferences)');
+                foreach ($rows as $col) {
+                    if ($col->name === $column) {
+                        $exists = true;
+                        break;
+                    }
                 }
+            } else {
+                $row = DB::selectOne(
+                    'SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ? AND column_name = ?',
+                    ['delivery_preferences', $column]
+                );
+                $exists = $row !== null;
             }
 
-            if (! $found) {
+            if (! $exists) {
                 DB::statement('ALTER TABLE delivery_preferences ADD COLUMN ' . $column . ' ' . $definition);
             }
         }
@@ -55,6 +66,8 @@ return new class extends Migration
             return;
         }
 
+        $driver = DB::getDriverName();
+
         foreach ([
             'push_promotional_offers',
             'push_checkin_alert',
@@ -62,16 +75,25 @@ return new class extends Migration
             'push_order_confirmation',
             'push_notifications_enabled',
         ] as $column) {
-            $exists = DB::select('PRAGMA table_info(delivery_preferences)');
-            $found = false;
-            foreach ($exists as $col) {
-                if ($col->name === $column) {
-                    $found = true;
-                    break;
+            $exists = false;
+
+            if ($driver === 'sqlite') {
+                $rows = DB::select('PRAGMA table_info(delivery_preferences)');
+                foreach ($rows as $col) {
+                    if ($col->name === $column) {
+                        $exists = true;
+                        break;
+                    }
                 }
+            } else {
+                $row = DB::selectOne(
+                    'SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ? AND column_name = ?',
+                    ['delivery_preferences', $column]
+                );
+                $exists = $row !== null;
             }
 
-            if ($found) {
+            if ($exists) {
                 DB::statement('ALTER TABLE delivery_preferences DROP COLUMN ' . $column);
             }
         }

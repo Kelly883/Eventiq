@@ -15,72 +15,62 @@ return new class extends Migration
 
         if (! Schema::hasColumn('payment_methods', 'paystack_customer_code')) {
             Schema::table('payment_methods', function (Blueprint $table) {
-                $table->string('paystack_customer_code')->nullable()->after('gateway_payment_method_id');
+                $table->string('paystack_customer_code')->nullable();
             });
         }
 
         if (! Schema::hasColumn('payment_methods', 'flutterwave_customer_id')) {
             Schema::table('payment_methods', function (Blueprint $table) {
-                $table->string('flutterwave_customer_id')->nullable()->after('paystack_customer_code');
+                $table->string('flutterwave_customer_id')->nullable();
             });
         }
 
         if (! Schema::hasColumn('payment_methods', 'brand')) {
             Schema::table('payment_methods', function (Blueprint $table) {
-                $table->string('brand')->nullable()->after('type');
+                $table->string('brand')->nullable();
             });
         }
 
         if (! Schema::hasColumn('payment_methods', 'last_four')) {
             Schema::table('payment_methods', function (Blueprint $table) {
-                $table->string('last_four')->nullable()->after('brand');
+                $table->string('last_four')->nullable();
             });
         }
 
         if (! Schema::hasColumn('payment_methods', 'exp_month')) {
             Schema::table('payment_methods', function (Blueprint $table) {
-                $table->integer('exp_month')->nullable()->after('last_four');
+                $table->integer('exp_month')->nullable();
             });
         }
 
         if (! Schema::hasColumn('payment_methods', 'exp_year')) {
             Schema::table('payment_methods', function (Blueprint $table) {
-                $table->integer('exp_year')->nullable()->after('exp_month');
+                $table->integer('exp_year')->nullable();
             });
         }
 
         if (! Schema::hasColumn('payment_methods', 'bank_name')) {
             Schema::table('payment_methods', function (Blueprint $table) {
-                $table->string('bank_name')->nullable()->after('exp_year');
+                $table->string('bank_name')->nullable();
             });
         }
 
         if (! Schema::hasColumn('payment_methods', 'account_name')) {
             Schema::table('payment_methods', function (Blueprint $table) {
-                $table->string('account_name')->nullable()->after('bank_name');
+                $table->string('account_name')->nullable();
             });
         }
 
         if (! Schema::hasColumn('payment_methods', 'account_number_last4')) {
             Schema::table('payment_methods', function (Blueprint $table) {
-                $table->string('account_number_last4')->nullable()->after('account_name');
+                $table->string('account_number_last4')->nullable();
             });
         }
 
-        try {
-            $indexes = DB::select('PRAGMA index_list(payment_methods)');
-            $existingIndexes = [];
-            foreach ($indexes as $index) {
-                $existingIndexes[] = $index->name;
-            }
-
-            if (! in_array('idx_payment_methods_user_id_gateway', $existingIndexes)) {
-                Schema::table('payment_methods', function (Blueprint $table) {
-                    $table->index(['user_id', 'gateway'], 'idx_payment_methods_user_id_gateway');
-                });
-            }
-        } catch (\Throwable $e) {
-            // Indexes may already exist
+        if (! $this->indexExists('payment_methods', 'idx_payment_methods_user_id_gateway')) {
+            Schema::table('payment_methods', function (Blueprint $table) {
+                $table->index(['user_id', 'gateway'], 'idx_payment_methods_user_id_gateway');
+            });
         }
     }
 
@@ -122,5 +112,37 @@ return new class extends Migration
                 $table->dropColumn($existing);
             });
         }
+    }
+
+    private function indexExists(string $table, string $index): bool
+    {
+        if (! Schema::hasTable($table)) {
+            return false;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $row = DB::selectOne(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND name = ?",
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?',
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
+            [$table, $index]
+        );
+
+        return $row !== null;
     }
 };

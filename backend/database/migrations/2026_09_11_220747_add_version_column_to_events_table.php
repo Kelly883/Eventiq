@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('events', function (Blueprint $table) {
-            $table->unsignedInteger('version')->default(1)->after('updated_at');
+            $table->unsignedInteger('version')->default(1);
         });
     }
 

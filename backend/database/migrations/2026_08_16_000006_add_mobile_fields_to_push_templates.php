@@ -17,7 +17,7 @@ return new class extends Migration
         }
 
         if (! Schema::hasColumn('push_notification_templates', 'priority')) {
-            DB::statement('ALTER TABLE push_notification_templates ADD COLUMN priority VARCHAR(20) DEFAULT "normal"');
+            DB::statement("ALTER TABLE push_notification_templates ADD COLUMN priority VARCHAR(20) DEFAULT 'normal'");
         }
 
         if (! Schema::hasColumn('push_notification_templates', 'badge')) {
@@ -25,7 +25,7 @@ return new class extends Migration
         }
 
         if (! Schema::hasColumn('push_notification_templates', 'sound')) {
-            DB::statement('ALTER TABLE push_notification_templates ADD COLUMN sound VARCHAR(100) DEFAULT "default"');
+            DB::statement("ALTER TABLE push_notification_templates ADD COLUMN sound VARCHAR(100) DEFAULT 'default'");
         }
     }
 

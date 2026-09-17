@@ -24,15 +24,26 @@ return new class extends Migration
         }
 
         // New unique that allows same name if one is soft deleted (deleted_at differs)
-        // For PostgreSQL this would be a partial index WHERE deleted_at IS NULL, but for SQLite
-        // we include deleted_at in the unique so (event_id, name, deleted_at) are unique.
+        // For SQLite we include deleted_at in the unique so (event_id, name, deleted_at) are unique.
         // Active rows have deleted_at = NULL, soft deleted have timestamp, so they don't conflict.
-        try {
-            Schema::table('ticket_tiers', function (Blueprint $table) {
-                $table->unique(['event_id', 'name', 'deleted_at'], 'ticket_tiers_event_name_deleted_at_unique');
-            });
-        } catch (\Throwable $e) {
-            // If already exists or fails, ignore
+        // For PostgreSQL we use a partial unique index WHERE deleted_at IS NULL.
+        if (DB::getDriverName() === 'pgsql') {
+            try {
+                DB::statement('DROP INDEX IF EXISTS ticket_tiers_event_name_deleted_at_unique');
+            } catch (\Throwable $e) {}
+            try {
+                DB::statement('CREATE UNIQUE INDEX ticket_tiers_event_name_deleted_at_unique ON ticket_tiers (event_id, name) WHERE deleted_at IS NULL');
+            } catch (\Throwable $e) {
+                // Index may already exist
+            }
+        } else {
+            try {
+                Schema::table('ticket_tiers', function (Blueprint $table) {
+                    $table->unique(['event_id', 'name', 'deleted_at'], 'ticket_tiers_event_name_deleted_at_unique');
+                });
+            } catch (\Throwable $e) {
+                // If already exists or fails, ignore
+            }
         }
     }
 

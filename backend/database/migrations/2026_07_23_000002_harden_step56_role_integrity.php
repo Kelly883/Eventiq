@@ -28,7 +28,7 @@ return new class extends Migration
 
         if (Schema::hasTable('users') && !Schema::hasColumn('users', 'roles_id')) {
             Schema::table('users', function (Blueprint $table) {
-                $table->uuid('roles_id')->nullable()->after('role_id');
+                $table->unsignedBigInteger('roles_id')->nullable()->after('role_id');
             });
 
             if (Schema::hasColumn('users', 'role_id')) {
@@ -171,7 +171,7 @@ return new class extends Migration
 
         if (DB::getDriverName() === 'mysql') {
             return DB::selectOne(
-                'SELECT index_name FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?',
+                'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
                 [$table, $indexName]
             ) !== null;
         }

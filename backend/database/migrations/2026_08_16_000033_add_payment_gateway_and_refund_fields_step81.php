@@ -15,60 +15,50 @@ return new class extends Migration
 
         if (! Schema::hasColumn('payments', 'gateway_reference')) {
             Schema::table('payments', function (Blueprint $table) {
-                $table->string('gateway_reference')->nullable()->after('gateway_response_code');
+                $table->string('gateway_reference')->nullable();
             });
         }
 
         if (! Schema::hasColumn('payments', 'refunded_amount')) {
             Schema::table('payments', function (Blueprint $table) {
-                $table->decimal('refunded_amount', 10, 2)->default(0)->after('gateway_reference');
+                $table->decimal('refunded_amount', 10, 2)->default(0);
             });
         }
 
         if (! Schema::hasColumn('payments', 'is_fully_refunded')) {
             Schema::table('payments', function (Blueprint $table) {
-                $table->boolean('is_fully_refunded')->default(false)->after('refunded_amount');
+                $table->boolean('is_fully_refunded')->default(false);
             });
         }
 
         if (! Schema::hasColumn('payments', 'user_id')) {
             Schema::table('payments', function (Blueprint $table) {
-                $table->uuid('user_id')->nullable()->after('order_id');
+                $table->uuid('user_id')->nullable();
             });
         }
 
-        try {
-            $indexes = DB::select('PRAGMA index_list(payments)');
-            $existingIndexes = [];
-            foreach ($indexes as $index) {
-                $existingIndexes[] = $index->name;
-            }
+        if (! $this->indexExists('payments', 'idx_payments_gateway')) {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->index('gateway', 'idx_payments_gateway');
+            });
+        }
 
-            if (! in_array('idx_payments_gateway', $existingIndexes)) {
-                Schema::table('payments', function (Blueprint $table) {
-                    $table->index('gateway', 'idx_payments_gateway');
-                });
-            }
+        if (! $this->indexExists('payments', 'idx_payments_gateway_transaction_id')) {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->index('gateway_transaction_id', 'idx_payments_gateway_transaction_id');
+            });
+        }
 
-            if (! in_array('idx_payments_gateway_transaction_id', $existingIndexes)) {
-                Schema::table('payments', function (Blueprint $table) {
-                    $table->index('gateway_transaction_id', 'idx_payments_gateway_transaction_id');
-                });
-            }
+        if (! $this->indexExists('payments', 'idx_payments_gateway_reference')) {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->index('gateway_reference', 'idx_payments_gateway_reference');
+            });
+        }
 
-            if (! in_array('idx_payments_gateway_reference', $existingIndexes)) {
-                Schema::table('payments', function (Blueprint $table) {
-                    $table->index('gateway_reference', 'idx_payments_gateway_reference');
-                });
-            }
-
-            if (! in_array('idx_payments_user_id', $existingIndexes)) {
-                Schema::table('payments', function (Blueprint $table) {
-                    $table->index('user_id', 'idx_payments_user_id');
-                });
-            }
-        } catch (\Throwable $e) {
-            // Indexes may already exist
+        if (! $this->indexExists('payments', 'idx_payments_user_id')) {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->index('user_id', 'idx_payments_user_id');
+            });
         }
     }
 
@@ -103,5 +93,37 @@ return new class extends Migration
                 $table->dropColumn($existing);
             });
         }
+    }
+
+    private function indexExists(string $table, string $index): bool
+    {
+        if (! Schema::hasTable($table)) {
+            return false;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $row = DB::selectOne(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND name = ?",
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?',
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
+            [$table, $index]
+        );
+
+        return $row !== null;
     }
 };

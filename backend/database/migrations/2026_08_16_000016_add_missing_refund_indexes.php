@@ -17,16 +17,7 @@ return new class extends Migration
             return;
         }
 
-        $indexes = DB::select('PRAGMA index_list(refund_policies)');
-        $hasOrganizerUnique = false;
-        foreach ($indexes as $index) {
-            if ($index->name === 'refund_policies_organizer_id_unique') {
-                $hasOrganizerUnique = true;
-                break;
-            }
-        }
-
-        if (! $hasOrganizerUnique) {
+        if (! $this->indexExists('refund_policies', 'refund_policies_organizer_id_unique')) {
             try {
                 Schema::table('refund_policies', function (Blueprint $table) {
                     $table->unique('organizer_id', 'refund_policies_organizer_id_unique');
@@ -42,16 +33,7 @@ return new class extends Migration
             return;
         }
 
-        $indexes = DB::select('PRAGMA index_list(refund_appeals)');
-        $hasAppealUnique = false;
-        foreach ($indexes as $index) {
-            if ($index->name === 'refund_appeals_refund_request_id_unique') {
-                $hasAppealUnique = true;
-                break;
-            }
-        }
-
-        if (! $hasAppealUnique) {
+        if (! $this->indexExists('refund_appeals', 'refund_appeals_refund_request_id_unique')) {
             try {
                 Schema::table('refund_appeals', function (Blueprint $table) {
                     $table->unique('refund_request_id', 'refund_appeals_refund_request_id_unique');
@@ -60,6 +42,36 @@ return new class extends Migration
                 // Index may already exist on other platforms
             }
         }
+    }
+
+    private function indexExists(string $table, string $index): bool
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            $indexes = DB::select("PRAGMA index_list({$table})");
+            foreach ($indexes as $row) {
+                if ($row->name === $index) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?',
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
+            [$table, $index]
+        );
+
+        return $row !== null;
     }
 
     /**

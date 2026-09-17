@@ -14,25 +14,25 @@ return new class extends Migration
 
         if (! Schema::hasColumn('webhooks', 'description')) {
             Schema::table('webhooks', function (Blueprint $table) {
-                $table->text('description')->nullable()->after('url');
+                $table->text('description')->nullable();
             });
         }
 
         if (! Schema::hasColumn('webhooks', 'timeout_seconds')) {
             Schema::table('webhooks', function (Blueprint $table) {
-                $table->integer('timeout_seconds')->default(30)->after('description');
+                $table->integer('timeout_seconds')->default(30);
             });
         }
 
         if (! Schema::hasColumn('webhooks', 'retry_policy')) {
             Schema::table('webhooks', function (Blueprint $table) {
-                $table->json('retry_policy')->nullable()->after('timeout_seconds');
+                $table->json('retry_policy')->nullable();
             });
         }
 
         if (! Schema::hasColumn('webhooks', 'last_success_at')) {
             Schema::table('webhooks', function (Blueprint $table) {
-                $table->timestamp('last_success_at')->nullable()->after('last_failure_at');
+                $table->timestamp('last_success_at')->nullable();
             });
         }
     }

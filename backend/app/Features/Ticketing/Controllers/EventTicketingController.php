@@ -7,7 +7,9 @@ use App\Features\Ticketing\Resources\TicketTierResource;
 use App\Features\Ticketing\Services\TicketTierService;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -56,6 +58,15 @@ class EventTicketingController extends Controller
         $validated = $request->validated();
         $tiers = $validated['ticketTiers'] ?? $validated['tiers'] ?? [];
 
+        $idempotencyKey = $request->header('Idempotency-Key');
+        $idempotencyCacheKey = null;
+        if ($idempotencyKey) {
+            $idempotencyCacheKey = 'event:ticketing:update:' . $user->id . ':' . $event->id . ':' . sha1($idempotencyKey);
+            if ($cached = Cache::get($idempotencyCacheKey)) {
+                return response()->json($cached, 200);
+            }
+        }
+
         try {
             $updatedTiers = DB::transaction(function () use ($event, $tiers) {
                 // Use service to sync
@@ -66,7 +77,23 @@ class EventTicketingController extends Controller
             // Also load via service result to ensure fresh
             $event->setRelation('ticketTiers', $updatedTiers);
 
-            return response()->json([
+            $createdTiers = collect($updatedTiers)->filter(fn ($t) => $t->wasRecentlyCreated)->count();
+            $deletedTiers = collect($tiers)->filter(fn ($t) => empty($t['id']))->count();
+
+            AuditLogger::forEvent(
+                action: 'ticket_tier.updated',
+                user: $user,
+                eventId: (string) $event->id,
+                newValues: [
+                    'tiers_synced' => count($updatedTiers),
+                    'created' => $createdTiers,
+                    'deleted' => $deletedTiers,
+                ],
+                request: $request,
+                description: "Ticket tiers synced for event '{$event->title}'"
+            );
+
+            $response = response()->json([
                 'message' => 'Event and ticket tiers updated successfully',
                 'data' => [
                     'event' => [
@@ -79,6 +106,14 @@ class EventTicketingController extends Controller
                 'ticketTiers' => TicketTierResource::collection($updatedTiers),
                 'tiers' => TicketTierResource::collection($updatedTiers),
             ], 200);
+
+            if ($idempotencyCacheKey) {
+                try {
+                    Cache::put($idempotencyCacheKey, $response->getData(true), 86400);
+                } catch (\Throwable $e) {}
+            }
+
+            return $response;
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;
         } catch (\Throwable $e) {

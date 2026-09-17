@@ -9,28 +9,43 @@ return new class extends Migration
 {
     private function indexExists(string $table, string $indexName): bool
     {
-        $driver = DB::getDriverName();
-        $name = strtolower($indexName);
-        try {
-            if ($driver === 'sqlite') {
-                $rows = DB::select("PRAGMA index_list(`{$table}`)");
-                foreach ($rows as $r) {
-                    if (strtolower($r->name) === $name) {
-                        return true;
-                    }
-                }
-            } else {
-                $rows = DB::select("SHOW INDEX FROM `{$table}`");
-                foreach ($rows as $r) {
-                    if (strtolower($r->Key_name) === $name) {
-                        return true;
-                    }
-                }
-            }
-        } catch (\Throwable) {
+        if (! Schema::hasTable($table)) {
             return false;
         }
-        return false;
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT i.relname FROM pg_index x '
+                    . 'JOIN pg_class i ON x.indexrelid = i.oid '
+                    . 'JOIN pg_class t ON x.indrelid = t.oid '
+                    . 'JOIN pg_namespace n ON t.relnamespace = n.oid '
+                    . 'WHERE n.nspname = current_schema() '
+                    . 'AND t.relname = ? '
+                    . 'AND i.relname = ?',
+                [$table, $indexName]
+            );
+
+            return $row !== null;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $rows = DB::select('PRAGMA index_list(' . $table . ')');
+
+            foreach ($rows as $idx) {
+                if ($idx->name === $indexName) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        $row = DB::selectOne(
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
+            [$table, $indexName]
+        );
+
+        return $row !== null;
     }
 
     public function up(): void

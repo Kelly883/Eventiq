@@ -141,24 +141,24 @@ return new class extends Migration
 		return $row !== null;
 	}
 
-	private function foreignKeyExists(string $table, string $column): bool
-	{
-		if (DB::getDriverName() === 'sqlite') {
-			$rows = DB::select("PRAGMA foreign_key_list('{$table}')");
-			foreach ($rows as $row) {
-				if (($row->from ?? null) === $column) {
-					return true;
-				}
-			}
+    private function foreignKeyExists(string $table, string $column): bool
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            $rows = DB::select("PRAGMA foreign_key_list('{$table}')");
+            foreach ($rows as $row) {
+                if (($row->from ?? null) === $column) {
+                    return true;
+                }
+            }
 
-			return false;
-		}
+            return false;
+        }
 
-		$row = DB::selectOne(
-			'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
-			[$table, $column]
-		);
+        $row = DB::selectOne(
+            'SELECT kcu.column_name FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name WHERE tc.table_schema = current_schema() AND tc.table_name = ? AND kcu.column_name = ? AND tc.constraint_type = ?',
+            [$table, $column, 'FOREIGN KEY']
+        );
 
-		return $row !== null;
-	}
+        return $row !== null;
+    }
 };

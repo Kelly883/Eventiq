@@ -14,7 +14,7 @@ return new class extends Migration
 
         if (!Schema::hasColumn('events', 'is_public')) {
             Schema::table('events', function (Blueprint $table) {
-                $table->boolean('is_public')->default(true)->after('status');
+                $table->boolean('is_public')->default(true);
             });
         }
     }

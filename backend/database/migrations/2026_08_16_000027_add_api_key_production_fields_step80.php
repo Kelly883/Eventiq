@@ -14,25 +14,25 @@ return new class extends Migration
 
         if (! Schema::hasColumn('api_keys', 'description')) {
             Schema::table('api_keys', function (Blueprint $table) {
-                $table->text('description')->nullable()->after('name');
+                $table->text('description')->nullable();
             });
         }
 
         if (! Schema::hasColumn('api_keys', 'last_used_ip')) {
             Schema::table('api_keys', function (Blueprint $table) {
-                $table->string('last_used_ip')->nullable()->after('last_used_at');
+                $table->string('last_used_ip')->nullable();
             });
         }
 
         if (! Schema::hasColumn('api_keys', 'rate_limit')) {
             Schema::table('api_keys', function (Blueprint $table) {
-                $table->integer('rate_limit')->nullable()->after('last_used_ip');
+                $table->integer('rate_limit')->nullable();
             });
         }
 
         if (! Schema::hasColumn('api_keys', 'rate_limit_period')) {
             Schema::table('api_keys', function (Blueprint $table) {
-                $table->string('rate_limit_period')->nullable()->after('rate_limit');
+                $table->string('rate_limit_period')->nullable();
             });
         }
     }

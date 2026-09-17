@@ -18,18 +18,31 @@ class TicketTierService
      * @param array $tiers
      * @return \Illuminate\Database\Eloquent\Collection
      */
+    /**
+     * Guard: prevent deleting all tiers via empty array when tiers exist.
+     * Returns void or throws ValidationException.
+     */
+    private function assertCanDeleteAllTiers($eventId, array $tiers, string $errorKey = 'ticketTiers'): void
+    {
+        if (config('ticketing.allow_empty_ticket_tiers', false)) {
+            return;
+        }
+
+        $hasActive = TicketTier::withTrashed()->where('event_id', $eventId)->get()->filter(fn($t) => !$t->trashed())->isNotEmpty();
+        if (empty($tiers) && $hasActive) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                $errorKey => ['Cannot delete all ticket tiers. At least one tier must remain.']
+            ]);
+        }
+    }
+
     public function syncTiers($eventId, array $tiers)
     {
         return DB::transaction(function () use ($eventId, $tiers) {
+            $this->assertCanDeleteAllTiers($eventId, $tiers, 'ticketTiers');
+
             // Include soft-deleted for reactivation
             $existing = TicketTier::withTrashed()->where('event_id', $eventId)->lockForUpdate()->get()->keyBy('id');
-            // Guard: prevent deleting all tiers via empty array when tiers exist (Fix #3)
-            $hasActive = $existing->filter(fn($t) => !$t->trashed())->isNotEmpty();
-            if (empty($tiers) && $hasActive) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'ticketTiers' => ['Cannot delete all ticket tiers. At least one tier must remain.']
-                ]);
-            }
             $keepIds = [];
 
             foreach ($tiers as $index => $tierData) {

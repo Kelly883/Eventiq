@@ -14,25 +14,25 @@ return new class extends Migration
 
         if (! Schema::hasColumn('organizers', 'paystack_subaccount_code')) {
             Schema::table('organizers', function (Blueprint $table) {
-                $table->string('paystack_subaccount_code')->nullable()->after('privacy_settings');
+                $table->string('paystack_subaccount_code')->nullable();
             });
         }
 
         if (! Schema::hasColumn('organizers', 'flutterwave_subaccount_id')) {
             Schema::table('organizers', function (Blueprint $table) {
-                $table->string('flutterwave_subaccount_id')->nullable()->after('paystack_subaccount_code');
+                $table->string('flutterwave_subaccount_id')->nullable();
             });
         }
 
         if (! Schema::hasColumn('organizers', 'paystack_connect_status')) {
             Schema::table('organizers', function (Blueprint $table) {
-                $table->string('paystack_connect_status')->nullable()->after('flutterwave_subaccount_id');
+                $table->string('paystack_connect_status')->nullable();
             });
         }
 
         if (! Schema::hasColumn('organizers', 'flutterwave_connect_status')) {
             Schema::table('organizers', function (Blueprint $table) {
-                $table->string('flutterwave_connect_status')->nullable()->after('paystack_connect_status');
+                $table->string('flutterwave_connect_status')->nullable();
             });
         }
     }

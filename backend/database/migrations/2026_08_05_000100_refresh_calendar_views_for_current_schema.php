@@ -51,12 +51,12 @@ return new class extends Migration
             : (Schema::hasColumn('pricing_windows', 'end_date') ? 'end_date' : null);
         $pricingDeletedPredicate = Schema::hasColumn('pricing_windows', 'deleted_at') ? 'AND pw.deleted_at IS NULL' : '';
         $pricingDatePredicate = ($pricingStartColumn && $pricingEndColumn)
-            ? "AND DATE('now') BETWEEN DATE(pw.{$pricingStartColumn}) AND DATE(pw.{$pricingEndColumn})"
+            ? "AND CURRENT_DATE BETWEEN DATE(pw.{$pricingStartColumn}) AND DATE(pw.{$pricingEndColumn})"
             : '';
         $pricingJoin = $hasPricingWindowsPrice
             ? "LEFT JOIN pricing_windows pw
                    ON pw.event_id = e.id
-                  AND pw.is_active = 1
+                  AND pw.is_active = TRUE
                   {$pricingDeletedPredicate}
                   {$pricingDatePredicate}"
             : '';

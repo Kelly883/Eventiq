@@ -12,7 +12,7 @@ return new class extends Migration
         $hasOrganizersAvatarversion = Schema::hasColumn('organizers', 'avatarVersion');
         Schema::table('organizers', function (Blueprint $table) use ($hasOrganizersAvatarversion) {
             if (!$hasOrganizersAvatarversion) {
-                $table->unsignedInteger('avatarVersion')->default(0)->after('avatarUrl');
+                $table->unsignedInteger('avatarVersion')->default(0);
                 $table->index('avatarVersion');
             }
         });

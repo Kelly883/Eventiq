@@ -9,7 +9,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('push_notification_devices', function (Blueprint $table) {
-            $table->uuid('id')->primary()->change();
             $table->string('token')->unique()->after('id');
             $table->string('provider')->after('user_id');
             $table->enum('device_type', ['web', 'ios', 'android'])->after('provider');
@@ -21,7 +20,6 @@ return new class extends Migration
     {
         Schema::table('push_notification_devices', function (Blueprint $table) {
             $table->dropIndex(['user_id']);
-            $table->id()->change();
             $table->dropColumn(['token', 'provider', 'device_type']);
         });
     }

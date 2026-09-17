@@ -184,7 +184,7 @@ return new class extends Migration
         // Backward-compatibility alias for specs expecting roles_id while existing schema uses role_id.
         if (!Schema::hasColumn('users', 'roles_id')) {
             Schema::table('users', function (Blueprint $table) {
-                $table->uuid('roles_id')->nullable()->after('role_id');
+                $table->unsignedBigInteger('roles_id')->nullable()->after('role_id');
             });
 
             if (Schema::hasColumn('users', 'role_id')) {
@@ -221,7 +221,7 @@ return new class extends Migration
 
         if (DB::getDriverName() === 'mysql') {
             return DB::selectOne(
-                'SELECT index_name FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?',
+                'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
                 [$table, $indexName]
             ) !== null;
         }
@@ -246,9 +246,11 @@ return new class extends Migration
             return false;
         }
 
-        return DB::selectOne(
-            'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
-            [$table, $column]
-        ) !== null;
+        $row = DB::selectOne(
+            'SELECT kcu.column_name FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name WHERE tc.table_schema = current_schema() AND tc.table_name = ? AND kcu.column_name = ? AND tc.constraint_type = ?',
+            [$table, $column, 'FOREIGN KEY']
+        );
+
+        return $row !== null;
     }
 };

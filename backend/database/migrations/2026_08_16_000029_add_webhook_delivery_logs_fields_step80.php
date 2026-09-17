@@ -15,33 +15,20 @@ return new class extends Migration
 
         if (! Schema::hasColumn('webhook_delivery_logs', 'attempt_number')) {
             Schema::table('webhook_delivery_logs', function (Blueprint $table) {
-                $table->integer('attempt_number')->default(1)->after('event');
+                $table->integer('attempt_number')->default(1);
             });
         }
 
         if (! Schema::hasColumn('webhook_delivery_logs', 'error_message')) {
             Schema::table('webhook_delivery_logs', function (Blueprint $table) {
-                $table->text('error_message')->nullable()->after('response_body');
+                $table->text('error_message')->nullable();
             });
         }
 
-        try {
-            $indexes = DB::select('PRAGMA index_list(webhook_delivery_logs)');
-            $hasIndex = false;
-            foreach ($indexes as $index) {
-                if ($index->name === 'idx_webhook_delivery_logs_webhook_id_created_at') {
-                    $hasIndex = true;
-                    break;
-                }
-            }
-
-            if (! $hasIndex) {
-                Schema::table('webhook_delivery_logs', function (Blueprint $table) {
-                    $table->index(['webhook_id', 'created_at'], 'idx_webhook_delivery_logs_webhook_id_created_at');
-                });
-            }
-        } catch (\Throwable $e) {
-            // Index may already exist
+        if (! $this->indexExists('webhook_delivery_logs', 'idx_webhook_delivery_logs_webhook_id_created_at')) {
+            Schema::table('webhook_delivery_logs', function (Blueprint $table) {
+                $table->index(['webhook_id', 'created_at'], 'idx_webhook_delivery_logs_webhook_id_created_at');
+            });
         }
     }
 
@@ -73,5 +60,37 @@ return new class extends Migration
                 $table->dropColumn($existing);
             });
         }
+    }
+
+    private function indexExists(string $table, string $index): bool
+    {
+        if (! Schema::hasTable($table)) {
+            return false;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $row = DB::selectOne(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND name = ?",
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?',
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
+            [$table, $index]
+        );
+
+        return $row !== null;
     }
 };

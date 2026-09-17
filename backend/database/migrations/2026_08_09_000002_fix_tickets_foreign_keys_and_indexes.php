@@ -119,44 +119,42 @@ return new class extends Migration
     private function fixMySql(): void
     {
         Schema::table('tickets', function (Blueprint $table) {
-            try {
+            if (! $this->foreignKeyExists('tickets', 'order_id')) {
                 $table->foreign('order_id', 'tickets_order_id_foreign')->references('id')->on('orders')->onDelete('cascade');
-            } catch (\Exception $e) {
             }
-            try {
+
+            if (! $this->foreignKeyExists('tickets', 'user_id')) {
                 $table->foreign('user_id', 'tickets_user_id_foreign')->references('id')->on('users')->onDelete('cascade');
-            } catch (\Exception $e) {
             }
-            try {
+
+            if (! $this->foreignKeyExists('tickets', 'event_id')) {
                 $table->foreign('event_id', 'tickets_event_id_foreign')->references('id')->on('events')->onDelete('cascade');
-            } catch (\Exception $e) {
             }
-            try {
+
+            if (! $this->foreignKeyExists('tickets', 'ticket_tier_id')) {
                 $table->foreign('ticket_tier_id', 'tickets_ticket_tier_id_foreign')->references('id')->on('ticket_tiers')->onDelete('cascade');
-            } catch (\Exception $e) {
             }
-            try {
+
+            if (! $this->foreignKeyExists('tickets', 'checked_in_by')) {
                 $table->foreign('checked_in_by')->references('id')->on('users')->onDelete('set null');
-            } catch (\Exception $e) {
             }
         });
 
         Schema::table('tickets', function (Blueprint $table) {
-            try {
+            if (! $this->indexExists('tickets', 'idx_tickets_event_status')) {
                 $table->index(['event_id', 'status'], 'idx_tickets_event_status');
-            } catch (\Exception $e) {
             }
-            try {
+
+            if (! $this->indexExists('tickets', 'idx_tickets_event_checkin')) {
                 $table->index(['event_id', 'checked_in_at'], 'idx_tickets_event_checkin');
-            } catch (\Exception $e) {
             }
-            try {
+
+            if (! $this->indexExists('tickets', 'idx_tickets_event_created_at')) {
                 $table->index(['event_id', 'created_at'], 'idx_tickets_event_created_at');
-            } catch (\Exception $e) {
             }
-            try {
+
+            if (! $this->indexExists('tickets', 'idx_tickets_ticket_id_unique')) {
                 $table->index('ticket_id', 'idx_tickets_ticket_id_unique');
-            } catch (\Exception $e) {
             }
         });
     }
@@ -171,7 +169,9 @@ return new class extends Migration
                 'idx_tickets_ticket_id_unique',
             ];
             foreach ($indexes as $idx) {
-                try { $table->dropIndex($idx); } catch (\Exception $e) {}
+                if ($this->indexExists('tickets', $idx)) {
+                    $table->dropIndex($idx);
+                }
             }
 
             $fks = [
@@ -181,8 +181,91 @@ return new class extends Migration
                 'tickets_ticket_tier_id_foreign',
             ];
             foreach ($fks as $fk) {
-                try { $table->dropForeign($fk); } catch (\Exception $e) {}
+                if ($this->foreignKeyExists('tickets', $fk)) {
+                    $table->dropForeign($fk);
+                }
             }
         });
+    }
+
+    private function foreignKeyExists(string $table, string $column): bool
+    {
+        if (!Schema::hasTable($table)) {
+            return false;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $rows = DB::select("PRAGMA foreign_key_list('{$table}')");
+
+            foreach ($rows as $row) {
+                if (($row->from ?? null) === $column) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT c.conname FROM pg_constraint c '
+                . 'JOIN pg_class t ON c.conrelid = t.oid '
+                . 'JOIN pg_namespace n ON t.relnamespace = n.oid '
+                . "WHERE n.nspname = current_schema() "
+                . "AND t.relname = ? "
+                . "AND c.contype = 'f' "
+                . 'AND EXISTS ('
+                . '  SELECT 1 FROM pg_attribute a '
+                . '  WHERE a.attrelid = t.oid '
+                . '  AND a.attname = ? '
+                . '  AND a.attnum = ANY(c.conkey)'
+                . ')',
+                [$table, $column]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
+            [$table, $column]
+        );
+
+        return $row !== null;
+    }
+
+    private function indexExists(string $table, string $index): bool
+    {
+        if (!Schema::hasTable($table)) {
+            return false;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $rows = DB::select("PRAGMA index_list('{$table}')");
+
+            foreach ($rows as $row) {
+                if (($row->name ?? null) === $index) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?',
+                [$table, $index]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT index_name FROM information_schema.statistics WHERE table_schema = current_schema() AND table_name = ? AND index_name = ?',
+            [$table, $index]
+        );
+
+        return $row !== null;
     }
 };

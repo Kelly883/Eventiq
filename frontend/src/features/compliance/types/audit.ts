@@ -27,7 +27,10 @@ export type AuditLogAction =
   | 'pricing_window.created'
   | 'pricing_window.updated'
   | 'pricing_window.deleted'
-  | 'pricing_window.restored';
+  | 'pricing_window.restored'
+  | 'ticket_tier.created'
+  | 'ticket_tier.updated'
+  | 'ticket_tier.deleted';
 
 export type AuditLogTargetType = 'user' | 'event' | 'order' | 'payout' | 'refund' | 'payment' | 'setting' | 'ticket' | 'pricing_window';
 
@@ -133,6 +136,9 @@ export function isAuditLogAction(value: string): value is AuditLogAction {
     'pricing_window.updated',
     'pricing_window.deleted',
     'pricing_window.restored',
+    'ticket_tier.created',
+    'ticket_tier.updated',
+    'ticket_tier.deleted',
   ].includes(value);
 }
 

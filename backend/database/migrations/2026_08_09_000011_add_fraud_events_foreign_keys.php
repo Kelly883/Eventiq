@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -16,6 +17,8 @@ return new class extends Migration
 
         if ($driver === 'sqlite') {
             $this->fixSqlite();
+        } elseif ($driver === 'pgsql') {
+            $this->fixPostgreSql();
         } else {
             $this->fixMySql();
         }
@@ -124,7 +127,75 @@ return new class extends Migration
         });
     }
 
+    private function fixPostgreSql(): void
+    {
+        Schema::table('fraud_events', function (Blueprint $table) {
+            $fks = [
+                'order_id' => ['table' => 'orders', 'column' => 'id', 'on_delete' => 'cascade'],
+                'user_id' => ['table' => 'users', 'column' => 'id', 'on_delete' => 'cascade'],
+                'ticket_id' => ['table' => 'tickets', 'column' => 'id', 'on_delete' => 'set null'],
+                'event_id' => ['table' => 'events', 'column' => 'id', 'on_delete' => 'set null'],
+                'first_check_in_by' => ['table' => 'users', 'column' => 'id', 'on_delete' => 'set null'],
+                'second_check_in_by' => ['table' => 'users', 'column' => 'id', 'on_delete' => 'set null'],
+                'reviewed_by' => ['table' => 'users', 'column' => 'id', 'on_delete' => 'set null'],
+                'escalated_to' => ['table' => 'users', 'column' => 'id', 'on_delete' => 'set null'],
+            ];
+
+            foreach ($fks as $column => $ref) {
+                if (! $this->foreignKeyExists('fraud_events', $column)) {
+                    $table->foreign($column)->references('id')->on($ref['table'])->onDelete($ref['on_delete']);
+                }
+            }
+        });
+    }
+
     public function down(): void
     {
+    }
+
+    private function foreignKeyExists(string $table, string $column): bool
+    {
+        if (!Schema::hasTable($table)) {
+            return false;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            $rows = DB::select("PRAGMA foreign_key_list('{$table}')");
+
+            foreach ($rows as $row) {
+                if (($row->from ?? null) === $column) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (DB::getDriverName() === 'pgsql') {
+            $row = DB::selectOne(
+                'SELECT c.conname FROM pg_constraint c '
+                . 'JOIN pg_class t ON c.conrelid = t.oid '
+                . 'JOIN pg_namespace n ON t.relnamespace = n.oid '
+                . "WHERE n.nspname = current_schema() "
+                . "AND t.relname = ? "
+                . "AND c.contype = 'f' "
+                . 'AND EXISTS ('
+                . '  SELECT 1 FROM pg_attribute a '
+                . '  WHERE a.attrelid = t.oid '
+                . '  AND a.attname = ? '
+                . '  AND a.attnum = ANY(c.conkey)'
+                . ')',
+                [$table, $column]
+            );
+
+            return $row !== null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT column_name FROM information_schema.key_column_usage WHERE table_schema = current_schema() AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL',
+            [$table, $column]
+        );
+
+        return $row !== null;
     }
 };
