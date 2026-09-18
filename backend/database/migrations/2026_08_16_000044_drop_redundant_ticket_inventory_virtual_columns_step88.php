@@ -249,7 +249,7 @@ return new class extends Migration
             LEFT JOIN (
                 SELECT
                     event_id,
-                    SUM(total_available) AS total_remaining,
+                    SUM(total_allocated - total_sold) AS total_remaining,
                     SUM(total_allocated) AS total_allocated
                 FROM ticket_inventory
                 GROUP BY event_id
