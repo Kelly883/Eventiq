@@ -44,20 +44,7 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions required by Eventiq
-# - pdo_pgsql: PostgreSQL database
-# - mbstring:  multibyte string handling (Laravel requirement)
-# - xml:       XML processing (Laravel requirement)
-# - curl:      HTTP client (Laravel requirement)
-# - zip:       ZIP handling
-# - gd:        image processing (QR codes via bacon/bacon-qr-code + simplesoftwareio/simple-qrcode)
-# - bcmath:    arbitrary precision math (Paystack/Flutterwave monetary calculations)
-# - iconv:     character encoding (Laravel requirement)
-# - opcache:   bytecode caching (production performance)
-# - intl:      internationalization
-# - redis:     phpredis — required by CACHE_STORE=redis and QUEUE_CONNECTION=redis in production (render.yaml)
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-configure redis \
     && docker-php-ext-install -j$(nproc) \
     pdo_pgsql \
     pgsql \
@@ -70,7 +57,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     iconv \
     intl \
     opcache \
-    redis
+    && pecl install redis \
+    && docker-php-ext-enable redis
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

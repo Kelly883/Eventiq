@@ -33,9 +33,10 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-configure redis \
     && docker-php-ext-install -j$(nproc) \
-    pdo_pgsql pgsql mbstring xml curl zip gd bcmath iconv intl opcache redis
+    pdo_pgsql pgsql mbstring xml curl zip gd bcmath iconv intl opcache \
+    && pecl install redis \
+    && docker-php-ext-enable redis
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
