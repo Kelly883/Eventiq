@@ -109,7 +109,7 @@ export async function refreshCsrf(): Promise<boolean> {
 /* -------------------------------------------------------------------------- */
 
 api.interceptors.request.use(async (config) => {
-  if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined') {
     // Await the IDB→localStorage recovery BEFORE minting a token: the request
     // header must carry the persisted device identity, not a fresh one, when
     // localStorage was evicted but IndexedDB still holds the token.
@@ -118,6 +118,16 @@ api.interceptors.request.use(async (config) => {
     if (deviceToken) {
       config.headers = config.headers ?? {};
       config.headers['X-Device-Token'] = deviceToken;
+    }
+
+    // Attach the Bearer token issued by POST /api/auth/login. The token is
+    // stored in sessionStorage (not localStorage) so it is scoped to the
+    // browsing session and cleared when the tab closes. The backend
+    // BearerTokenAuth middleware expects "Authorization: Bearer <token>".
+    const authToken = sessionStorage.getItem('auth_token');
+    if (authToken) {
+      config.headers = config.headers ?? {};
+      config.headers['Authorization'] = `Bearer ${authToken}`;
     }
   }
   return config;
@@ -146,6 +156,10 @@ api.interceptors.response.use(
     // therefore confirms expiration and must notify the router.
     if (error.response?.status === 401 && originalConfig._retry) {
       if (typeof window !== 'undefined') {
+        // Clear the stored Bearer token — it is no longer valid. Without this,
+        // the next login attempt would still send the old (revoked/expired)
+        // token because sessionStorage is not cleared on session-expired.
+        sessionStorage.removeItem('auth_token');
         window.dispatchEvent(new CustomEvent('session-expired', {
           detail: { reason: 'authenticated-request-rejected' }
         }));

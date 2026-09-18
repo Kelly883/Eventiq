@@ -272,13 +272,22 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem(REMEMBER_ME_KEY, rememberMe ? 'true' : '');
 
     const user = response.data?.user;
-    if (user) {
+    const token = response.data?.token;
+    if (user && token) {
+      // Store the Bearer token so api.ts can attach it to protected requests.
+      // The token is a 64-char random string issued by POST /api/auth/login.
+      // It is NOT a Sanctum PAT — it maps to a row in the `sessions` table
+      // validated by BearerTokenAuth middleware. We keep it in memory only
+      // (not localStorage) so it is cleared when the tab closes.
+      sessionStorage.setItem('auth_token', token);
       setUser(user);
       setSessionExpired(false);
       broadcastAuthEvent('session-established');
-      return { user, remember_me: response.data?.remember_me ?? false };
+      return { user, remember_me: response.data?.remember_me ?? false, token };
     }
 
+    // Fallback: token missing (should not happen with current backend contract)
+    // — fall back to /auth/me which may still work if backend sets a session cookie.
     const res = await api.get('/auth/me');
     setUser(res.data);
     setSessionExpired(false);
@@ -323,6 +332,7 @@ export const AuthProvider = ({ children }) => {
 
     await api.post('/auth/logout');
     localStorage.removeItem(REMEMBER_ME_KEY);
+    sessionStorage.removeItem('auth_token');
     setUser(null);
     setSessionExpired(false);
     setOrganizerId(null);
