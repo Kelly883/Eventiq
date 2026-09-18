@@ -17,6 +17,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            // SQLite does not support adding CHECK constraints via ALTER TABLE;
+            // non-negativity remains enforced at the application layer.
+            return;
+        }
+
         $hasTicketsSeatNumber = Schema::hasColumn('tickets', 'seat_number');
         $hasTicketsSection = Schema::hasColumn('tickets', 'section');
         $hasTicketsSyncStatus = Schema::hasColumn('tickets', 'sync_status');
@@ -68,16 +74,35 @@ return new class extends Migration
             }
         });
 
-        Schema::table('ticket_inventory', function (Blueprint $table) {
-            // Add check constraint for data integrity (MySQL/PostgreSQL only)
-            // SQLite doesn't support CHECK constraints in the same way
-            try {
-                \DB::statement('ALTER TABLE ticket_inventory ADD CONSTRAINT chk_inventory_limits CHECK (total_checked_in <= total_available)');
-                \DB::statement('ALTER TABLE ticket_inventory ADD CONSTRAINT chk_void_limits CHECK (total_void <= total_available)');
-            } catch (\Exception $e) {
-                // Constraints may already exist or database doesn't support them
-            }
-        });
+        $hasTotalAvailable = Schema::hasColumn('ticket_inventory', 'total_available');
+        $hasTotalCheckedIn = Schema::hasColumn('ticket_inventory', 'total_checked_in');
+        $hasTotalVoid = Schema::hasColumn('ticket_inventory', 'total_void');
+
+        if ($hasTotalAvailable && $hasTotalCheckedIn) {
+            Schema::table('ticket_inventory', function (Blueprint $table) use ($hasTotalAvailable, $hasTotalCheckedIn) {
+                if ($hasTotalCheckedIn) {
+                    $table->integer('total_checked_in');
+                }
+            });
+        }
+
+        if ($hasTotalAvailable && $hasTotalVoid) {
+            Schema::table('ticket_inventory', function (Blueprint $table) use ($hasTotalAvailable, $hasTotalVoid) {
+                if ($hasTotalVoid) {
+                    $table->integer('total_void');
+                }
+            });
+        }
+
+        // Add check constraint for data integrity (MySQL/PostgreSQL only)
+        // SQLite does not support CHECK constraints in the same way
+        if ($hasTotalAvailable && $hasTotalCheckedIn) {
+            DB::statement('ALTER TABLE ticket_inventory ADD CONSTRAINT chk_inventory_limits CHECK (total_checked_in <= total_available)');
+        }
+
+        if ($hasTotalAvailable && $hasTotalVoid) {
+            DB::statement('ALTER TABLE ticket_inventory ADD CONSTRAINT chk_void_limits CHECK (total_void <= total_available)');
+        }
     }
 
     /**
@@ -85,6 +110,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         $hasTicketsSyncStatus = Schema::hasColumn('tickets', 'sync_status');
         $hasTicketsSection = Schema::hasColumn('tickets', 'section');
         $hasTicketsSeatNumber = Schema::hasColumn('tickets', 'seat_number');
@@ -123,19 +152,80 @@ return new class extends Migration
             }
         });
 
-        Schema::table('ticket_inventory', function (Blueprint $table) {
-            // Drop check constraints
-            try {
-                \DB::statement('ALTER TABLE ticket_inventory DROP CONSTRAINT chk_inventory_limits');
-            } catch (\Exception $e) {
-                // Constraint may not exist
+        // Drop check constraints using IF EXISTS for idempotency
+        if (DB::getDriverName() === 'pgsql') {
+            // Catalog-guarded: check existence via pg_constraint before dropping
+            $row = DB::selectOne(
+                "SELECT 1 FROM pg_constraint c
+                 JOIN pg_class t ON c.conrelid = t.oid
+                 JOIN pg_namespace n ON t.relnamespace = n.oid
+                 WHERE n.nspname = current_schema()
+                   AND t.relname = 'ticket_inventory'
+                   AND c.conname = 'chk_inventory_limits'
+                   AND c.contype = 'c'"
+            );
+
+            if ($row !== null) {
+                DB::statement('ALTER TABLE ticket_inventory DROP CONSTRAINT IF EXISTS chk_inventory_limits');
             }
 
-            try {
-                \DB::statement('ALTER TABLE ticket_inventory DROP CONSTRAINT chk_void_limits');
-            } catch (\Exception $e) {
-                // Constraint may not exist
+            $row = DB::selectOne(
+                "SELECT 1 FROM pg_constraint c
+                 JOIN pg_class t ON c.conrelid = t.oid
+                 JOIN pg_namespace n ON t.relnamespace = n.oid
+                 WHERE n.nspname = current_schema()
+                   AND t.relname = 'ticket_inventory'
+                   AND c.conname = 'chk_void_limits'
+                   AND c.contype = 'c'"
+            );
+
+            if ($row !== null) {
+                DB::statement('ALTER TABLE ticket_inventory DROP CONSTRAINT IF EXISTS chk_void_limits');
             }
-        });
+
+            return;
+        }
+
+        if (DB::getDriverName() === 'mysql') {
+            // MySQL: use information_schema to check constraint existence
+            $row = DB::selectOne(
+                'SELECT constraint_name FROM information_schema.table_constraints
+                 WHERE table_schema = DATABASE()
+                   AND table_name = \'ticket_inventory\'
+                   AND constraint_type = \'CHECK\'
+                   AND constraint_name = \'chk_inventory_limits\''
+            );
+
+            if ($row !== null) {
+                DB::statement("ALTER TABLE ticket_inventory DROP CONSTRAINT chk_inventory_limits");
+            }
+
+            $row = DB::selectOne(
+                'SELECT constraint_name FROM information_schema.table_constraints
+                 WHERE table_schema = DATABASE()
+                   AND table_name = \'ticket_inventory\'
+                   AND constraint_type = \'CHECK\'
+                   AND constraint_name = \'chk_void_limits\''
+            );
+
+            if ($row !== null) {
+                DB::statement("ALTER TABLE ticket_inventory DROP CONSTRAINT chk_void_limits");
+            }
+
+            return;
+        }
+
+        // Fallback for other drivers: use IF EXISTS for idempotency
+        try {
+            DB::statement('ALTER TABLE ticket_inventory DROP CONSTRAINT IF EXISTS chk_inventory_limits');
+        } catch (\Exception $e) {
+            // Constraint may not exist
+        }
+
+        try {
+            DB::statement('ALTER TABLE ticket_inventory DROP CONSTRAINT IF EXISTS chk_void_limits');
+        } catch (\Exception $e) {
+            // Constraint may not exist
+        }
     }
 };
