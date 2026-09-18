@@ -14,7 +14,7 @@ class UpdatePricingWindowRequest extends FormRequest
 
     public function rules(): array
     {
-        $eventId = $this->route('event_id') ?? $this->route('event');
+        $eventId = $this->route('eventId') ?? $this->route('event_id') ?? $this->route('event');
 
         return [
             'window_name' => 'sometimes|required|string|max:100',

@@ -27,11 +27,20 @@ class DeveloperController extends Controller
     }
 
     /**
+     * Resolve the authenticated user's Organizer record, or null.
+     * FIX: Use $request->user() instead of Auth::user() for bearer auth compatibility.
+     */
+    private function organizer(Request $request)
+    {
+        return $request->user()?->organizer;
+    }
+
+    /**
      * GET /api/developer/api-keys
      */
-    public function listApiKeys(): JsonResponse
+    public function listApiKeys(Request $request): JsonResponse
     {
-        $organizer = $this->organizer();
+        $organizer = $this->organizer($request);
 
         if (! $organizer) {
             return response()->json(['message' => 'Not an organizer account.'], 403);
@@ -49,14 +58,10 @@ class DeveloperController extends Controller
 
     /**
      * POST /api/developer/api-keys
-     *
-     * The full key is returned exactly once (its hash is stored via
-     * ApiKeyService). The frontend must show it immediately so the user
-     * can copy it — it is never retrievable again.
      */
-    public function createApiKey(StoreApiKeyRequest $request): JsonResponse
+    public function createApiKey(Request $request, StoreApiKeyRequest $req): JsonResponse
     {
-        $organizer = $this->organizer();
+        $organizer = $this->organizer($request);
 
         if (! $organizer) {
             return response()->json(['message' => 'Not an organizer account.'], 403);
@@ -64,9 +69,9 @@ class DeveloperController extends Controller
 
         $result = $this->apiKeyService->generate(
             $organizer,
-            $request->validated('name'),
-            $request->validated('scopes', []),
-            $request->validated('expires_at')
+            $req->validated('name'),
+            $req->validated('scopes', []),
+            $req->validated('expires_at')
         );
 
         return response()->json([
@@ -81,7 +86,7 @@ class DeveloperController extends Controller
      */
     public function deleteApiKey(Request $request, string $keyId): JsonResponse
     {
-        $organizer = $this->organizer();
+        $organizer = $this->organizer($request);
 
         if (! $organizer) {
             return response()->json(['message' => 'Not an organizer account.'], 403);
@@ -99,19 +104,15 @@ class DeveloperController extends Controller
     }
 
     /**
-     * Resolve the authenticated user's Organizer record, or null.
-     */
-    private function organizer()
-    {
-        return Auth::user()?->organizer;
-    }
-
-    /**
      * GET /api/developer/webhooks
      */
-    public function listWebhooks(): JsonResponse
+    public function listWebhooks(Request $request): JsonResponse
     {
-        $webhooks = Webhook::where('organizer_id', Auth::id())
+        $userId = $request->user()?->id;
+        if (!$userId) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        $webhooks = Webhook::where('organizer_id', $userId)
             ->latest()
             ->select([
                 'id', 'organizer_id', 'url', 'description', 'subscribed_events',
@@ -131,6 +132,10 @@ class DeveloperController extends Controller
      */
     public function createWebhook(Request $request): JsonResponse
     {
+        $userId = $request->user()?->id;
+        if (!$userId) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
         $validated = $request->validate([
             'url' => ['required', 'url', 'max:2048'],
             'description' => ['nullable', 'string', 'max:500'],
@@ -139,7 +144,7 @@ class DeveloperController extends Controller
         ]);
 
         $webhook = Webhook::create([
-            'organizer_id' => Auth::id(),
+            'organizer_id' => $userId,
             'url' => $validated['url'],
             'description' => $validated['description'] ?? null,
             'secret' => Webhook::generateSecret(),
@@ -151,7 +156,7 @@ class DeveloperController extends Controller
         ]);
 
         AuditLog::create([
-            'user_id' => Auth::id(),
+            'user_id' => $userId,
             'action' => 'webhook_created',
             'target_type' => Webhook::class,
             'target_id' => $webhook->id,
@@ -172,7 +177,11 @@ class DeveloperController extends Controller
      */
     public function deleteWebhook(Request $request, string $id): JsonResponse
     {
-        $webhook = Webhook::where('organizer_id', Auth::id())->find($id);
+        $userId = $request->user()?->id;
+        if (!$userId) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        $webhook = Webhook::where('organizer_id', $userId)->find($id);
 
         if (! $webhook) {
             return response()->json(['message' => 'Webhook not found'], 404);
@@ -188,7 +197,11 @@ class DeveloperController extends Controller
      */
     public function listApiLogs(Request $request): JsonResponse
     {
-        $logs = AuditLog::where('user_id', Auth::id())
+        $userId = $request->user()?->id;
+        if (!$userId) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+        $logs = AuditLog::where('user_id', $userId)
             ->latest()
             ->limit(50)
             ->get();

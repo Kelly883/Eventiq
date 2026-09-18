@@ -99,13 +99,14 @@ Route::middleware('bearer')->group(function () {
 
         // Organizer events — throttled per organizer (60/min) with stricter create (30/min) and banner (10/min)
         Route::middleware('throttle:organizer-events')->group(function () {
-            Route::apiResource('events', EventController::class)->except(['store']);
+            Route::apiResource('events', EventController::class)->except(['store'])->parameters(['events' => 'id']);
         });
         Route::post('events', [EventController::class, 'store'])->middleware('throttle:organizer-events-create');
-        Route::post('events/{event}/upload-banner', [EventController::class, 'uploadBanner'])->middleware('throttle:organizer-banner');
+        Route::post('events/{eventId}/upload-banner', [EventController::class, 'uploadBanner'])->middleware('throttle:organizer-banner');
+        Route::post('events/{eventId}/restore', [EventController::class, 'restore'])->middleware('throttle:organizer-events');
 
         // Event ticketing — supports both PUT and PATCH per spec (ticketTiers sync)
-        Route::prefix('events/{event}')->group(function () {
+        Route::prefix('events/{eventId}')->group(function () {
             Route::match(['put', 'patch'], '/ticketing', [EventTicketingController::class, 'update'])
                 ->middleware('throttle:organizer-ticketing');
 
@@ -138,7 +139,7 @@ Route::middleware('throttle:discovery')->group(function () {
 
 // Public organizer profile is handled in OrganizerProfile Routes (with isPublic + rate limit)
 // Ticket Delivery Endpoints
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('bearer')->group(function () {
     // User delivery routes
     Route::prefix('delivery')->group(function () {
         //
@@ -151,13 +152,13 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Admin routes
-Route::middleware(['auth:sanctum', 'role:admin', 'throttle:admin'])->prefix('admin')->group(function () {
+Route::middleware(['bearer', 'role:admin', 'throttle:admin'])->prefix('admin')->group(function () {
     Route::apiResource('roles', RoleController::class);
     Route::post('roles/{role}/assign', [RoleController::class, 'assignRole']);
     Route::post('roles/{role}/remove', [RoleController::class, 'removeRole']);
     
     Route::get('permissions', [PermissionController::class, 'index']);
-    Route::put('roles/{role}/permissions', [PermissionController::class, 'updateRolePermissions']);
+    Route::put('roles/{roleId}/permissions', [PermissionController::class, 'updateRolePermissions']);
     Route::get('audit-log', [PermissionController::class, 'auditLog']);
     Route::get('permission-requests', [PermissionController::class, 'getPermissionRequests']);
     Route::post('permission-requests/{request}/approve', [PermissionController::class, 'approvePermissionRequest']);
@@ -165,7 +166,7 @@ Route::middleware(['auth:sanctum', 'role:admin', 'throttle:admin'])->prefix('adm
 });
 
 // Offline sync routes
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('bearer')->group(function () {
     Route::middleware('throttle:30,1')->patch('/notifications/device-tokens/{token}/offline-status', [App\Features\PushNotifications\Controllers\DeviceTokenController::class, 'updateOfflineStatus']);
     Route::middleware('throttle:60,1')->get('/me/tickets/for-offline-sync', [App\Features\OfflineSync\Controllers\OfflineSyncController::class, 'getTicketsForOfflineSync']);
     Route::post('/me/device-token/rotate', [App\Features\PushNotifications\Controllers\DeviceTokenController::class, 'rotate'])->middleware('throttle:5,1');

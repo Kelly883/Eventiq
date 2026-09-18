@@ -94,8 +94,7 @@ class OfflineSyncController
         $lastSyncAt = $request->query('last_sync_at');
         $syncVersion = (int) $request->query('sync_version', 0);
 
-        $eventsQuery = \App\Models\Event::where('organizer_id', $user->id)
-            ->orWhere('user_id', $user->id);
+        $eventsQuery = \App\Models\Event::whereHas('organizer', fn ($q) => $q->where('user_id', $user->id));
 
         $eventIds = $eventsQuery->pluck('id')->all();
 
@@ -143,8 +142,7 @@ class OfflineSyncController
                 ->update(['last_used_at' => now()]);
         }
 
-        $eventsQuery = \App\Models\Event::where('organizer_id', $user->id)
-            ->orWhere('user_id', $user->id);
+        $eventsQuery = \App\Models\Event::whereHas('organizer', fn ($q) => $q->where('user_id', $user->id));
 
         $eventIds = $eventsQuery->pluck('id')->all();
 

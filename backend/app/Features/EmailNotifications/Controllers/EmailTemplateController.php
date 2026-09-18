@@ -16,42 +16,59 @@ class EmailTemplateController extends Controller
     {
     }
 
-    public function index()
+    /**
+     * Ensure the authenticated user is an admin.
+     * FIX: Use request-based auth check instead of $this->authorize()
+     * BearerTokenAuth only sets request user resolver, not guard user
+     */
+    private function requireAdmin(Request $request): void
     {
-        $this->authorize('viewAny', EmailTemplate::class);
+        $user = $request->user();
+        if (!$user || (!$user->hasRole('admin') && !$user->hasRole('super-admin'))) {
+            abort(403, 'Only admins can manage email templates.');
+        }
+    }
+
+    public function index(Request $request)
+    {
+        $this->requireAdmin($request);
 
         return EmailTemplateResource::collection(EmailTemplate::latest()->get());
     }
 
     public function store(StoreEmailTemplateRequest $request)
     {
-        $this->authorize('create', EmailTemplate::class);
+        $this->requireAdmin($request);
 
         $template = $this->templateService->save($request->validated());
 
         return new EmailTemplateResource($template);
     }
 
-    public function show(EmailTemplate $emailTemplate)
+    public function show(Request $request, $emailTemplate)
     {
-        $this->authorize('view', $emailTemplate);
-
-        return new EmailTemplateResource($emailTemplate);
-    }
-
-    public function update(UpdateEmailTemplateRequest $request, EmailTemplate $emailTemplate)
-    {
-        $this->authorize('update', $emailTemplate);
-
-        $template = $this->templateService->save($request->validated(), $emailTemplate);
+        $template = EmailTemplate::withTrashed()->findOrFail($emailTemplate);
+        $this->requireAdmin($request);
 
         return new EmailTemplateResource($template);
     }
 
-    public function destroy(EmailTemplate $emailTemplate)
+    public function update(UpdateEmailTemplateRequest $request, $emailTemplate)
     {
-        $this->authorize('delete', $emailTemplate);
-        $emailTemplate->delete();
+        $template = EmailTemplate::withTrashed()->findOrFail($emailTemplate);
+        $this->requireAdmin($request);
+
+        $template = $this->templateService->save($request->validated(), $template);
+
+        return new EmailTemplateResource($template);
+    }
+
+    public function destroy(Request $request, $emailTemplate)
+    {
+        $template = EmailTemplate::withTrashed()->findOrFail($emailTemplate);
+        $this->requireAdmin($request);
+
+        $template->delete();
 
         return response()->noContent();
     }
@@ -60,13 +77,14 @@ class EmailTemplateController extends Controller
      * POST /api/email-templates/{emailTemplate}/send-test - sends
      * synchronously (not queued) so the admin gets immediate feedback.
      */
-    public function sendTest(Request $request, EmailTemplate $emailTemplate)
+    public function sendTest(Request $request, $emailTemplate)
     {
-        $this->authorize('view', $emailTemplate);
+        $template = EmailTemplate::withTrashed()->findOrFail($emailTemplate);
+        $this->requireAdmin($request);
 
         $validated = $request->validate(['email' => ['required', 'email']]);
 
-        $sent = $this->templateService->sendTest($emailTemplate, $validated['email']);
+        $sent = $this->templateService->sendTest($template, $validated['email']);
 
         return response()->json(['sent' => $sent], $sent ? 200 : 422);
     }
@@ -74,12 +92,12 @@ class EmailTemplateController extends Controller
     /**
      * POST /api/email-templates/seed - creates default email templates
      */
-    public function seed()
+    public function seed(Request $request)
     {
-        $this->authorize('create', EmailTemplate::class);
-        
+        $this->requireAdmin($request);
+
         $created = $this->templateService->seed();
-        
+
         return EmailTemplateResource::collection($created);
     }
 }

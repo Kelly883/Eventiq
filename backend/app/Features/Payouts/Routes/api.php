@@ -5,7 +5,7 @@ use App\Features\Payouts\Controllers\OrganizerPayoutController;
 use App\Features\Payouts\Controllers\AdminSettlementController;
 
 // Organizer routes
-Route::middleware('auth:sanctum')->prefix('organizer')->group(function () {
+Route::middleware('bearer')->prefix('organizer')->group(function () {
     Route::get('/payouts', [OrganizerPayoutController::class, 'index']);
     Route::get('/payouts/summary', [OrganizerPayoutController::class, 'summary']);
     Route::get('/payouts/{payout}', [OrganizerPayoutController::class, 'show']);
@@ -13,7 +13,7 @@ Route::middleware('auth:sanctum')->prefix('organizer')->group(function () {
 });
 
 // Admin routes
-Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
+Route::middleware(['bearer', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('/settlements', [AdminSettlementController::class, 'index']);
     Route::get('/settlements/summary', [AdminSettlementController::class, 'summary']);
     Route::get('/settlements/export', [AdminSettlementController::class, 'export']);

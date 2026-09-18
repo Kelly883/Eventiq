@@ -205,9 +205,13 @@ class OrganizerProfileController extends Controller
     /**
      * Legacy PUT /organizer/profile for backward compat — delegates to update
      */
-    public function edit()
+    public function edit(Request $request)
     {
-        $organizer = Organizer::where('user_id', auth()->id())->orWhere('userId', auth()->id())->firstOrFail();
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+        $organizer = Organizer::where('user_id', $user->id)->orWhere('userId', $user->id)->firstOrFail();
         return response()->json([
             'data' => new OrganizerPrivateResource($organizer),
         ]);
@@ -427,7 +431,7 @@ class OrganizerProfileController extends Controller
         }
 
         // Check organizer role
-        $isOrganizer = $user->hasRole('organizer') || $user->hasRole('Organizer') || true;
+        $isOrganizer = $user->hasRole('organizer') || $user->hasRole('Organizer') || Organizer::where('user_id', $user->id)->orWhere('userId', $user->id)->exists();
         if (!$isOrganizer) {
             $hasOrganizerRole = $user->roles()->whereIn('name', ['organizer', 'Organizer'])->exists();
             if (!$hasOrganizerRole && !Organizer::where('user_id', $user->id)->exists()) {

@@ -102,8 +102,10 @@ class TicketInventory extends Model
 
     public function updateFromPricingWindows(): void
     {
+        // FIX: Only sum non-deleted pricing windows to avoid inflating inventory totals
         $pricingWindows = $this->event->pricingWindows()
             ->where('ticket_category_id', $this->ticket_tier_id)
+            ->whereNull('deleted_at')
             ->get();
 
         $totalAllocated = $pricingWindows->sum('quantity_limit');

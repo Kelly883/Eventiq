@@ -23,10 +23,11 @@ use Symfony\Component\HttpFoundation\Response;
  *     because the guard keeps answering with the cached user instead of
  *     reading the revoked Session row.
  *
- * Clearing the guard cache per-request restores request isolation while
- * keeping Auth::user() available to controllers for the CURRENT request
- * (DeveloperController, OrganizerPayoutController rely on it for the
- * bearer-authenticated user).
+ * Clearing the guard cache per-request restores request isolation.
+ *
+ * Note: under BearerTokenAuth, Auth::user() will return null because
+ * BearerTokenAuth sets only the request user resolver, not the guard user.
+ * Controllers under bearer middleware must use $request->user() instead.
  *
  * Registered with $middleware->api(prepend: ...) so it runs before Sanctum's
  * EnsureFrontendRequestsAreStateful / StartSession middleware.

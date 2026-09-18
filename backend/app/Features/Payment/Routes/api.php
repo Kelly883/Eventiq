@@ -26,14 +26,14 @@ Route::post('/payments/flutterwave/initialize', [FlutterwaveInitializeController
 Route::post('/payments/flutterwave/verify', [FlutterwaveVerifyController::class, '__invoke']);
 
 // Organizer payout methods (auth + organizer role enforced)
-Route::middleware(['auth:sanctum', 'role:organizer'])->prefix('organizer/payout-methods')->group(function () {
+Route::middleware(['bearer', 'role:organizer'])->prefix('organizer/payout-methods')->group(function () {
     Route::get('/', [OrganizerPayoutMethodController::class, 'index']);
     Route::post('/', [OrganizerPayoutMethodController::class, 'store']);
     Route::delete('/{id}', [OrganizerPayoutMethodController::class, 'destroy']);
 });
 
 // User payment methods
-Route::middleware('auth:sanctum')->prefix('user/payment-methods')->group(function () {
+Route::middleware('bearer')->prefix('user/payment-methods')->group(function () {
     Route::get('/', [PaymentMethodController::class, 'index']);
     Route::post('/', [PaymentMethodController::class, 'store']);
     Route::get('/{id}', [PaymentMethodController::class, 'show']);
@@ -45,12 +45,12 @@ Route::middleware('auth:sanctum')->prefix('user/payment-methods')->group(functio
 // Organizer payment settings (auth + organizer role enforced).
 // Read-only: gateway subaccount/recipient config + connect status are managed
 // through onboarding, not by the organizer. No writable endpoint is exposed.
-Route::middleware(['auth:sanctum', 'role:organizer'])->prefix('organizer/payment-settings')->group(function () {
+Route::middleware(['bearer', 'role:organizer'])->prefix('organizer/payment-settings')->group(function () {
     Route::get('/', [OrganizerPaymentSettingsController::class, 'index']);
 });
 
 // User transaction history
-Route::middleware('auth:sanctum')->prefix('user/transactions')->group(function () {
+Route::middleware('bearer')->prefix('user/transactions')->group(function () {
     Route::get('/', [TransactionController::class, 'history']);
     Route::get('/{id}', [TransactionController::class, 'show']);
 });

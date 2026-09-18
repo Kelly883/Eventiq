@@ -16,8 +16,6 @@ class AuditLogIndexRequest extends FormRequest
     {
         return [
             'action' => ['nullable', 'string'],
-            'entity' => ['nullable', 'string'],
-            'entity_id' => ['nullable', 'integer'],
             'user_id' => ['nullable', 'integer'],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],

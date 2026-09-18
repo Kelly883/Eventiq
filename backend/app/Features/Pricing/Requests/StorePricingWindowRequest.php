@@ -14,7 +14,7 @@ class StorePricingWindowRequest extends FormRequest
 
     public function rules(): array
     {
-        $eventId = $this->route('event_id') ?? $this->route('event');
+        $eventId = $this->route('eventId') ?? $this->route('event_id') ?? $this->route('event');
 
         $rules = [
             'window_name' => 'required|string|max:100',

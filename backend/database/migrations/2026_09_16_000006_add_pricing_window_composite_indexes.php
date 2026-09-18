@@ -9,8 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('pricing_windows', function (Blueprint $table) {
-            $table->index(['event_id', 'ticket_category_id', 'is_active', 'deleted_at'], 'idx_pricing_windows_event_tier_active');
-            $table->index(['event_id', 'priority', 'start_date_time'], 'idx_pricing_windows_prioritized');
+            if (!Schema::hasIndex('pricing_windows', 'idx_pricing_windows_event_tier_active')) {
+                $table->index(['event_id', 'ticket_category_id', 'is_active', 'deleted_at'], 'idx_pricing_windows_event_tier_active');
+            }
+            if (!Schema::hasIndex('pricing_windows', 'idx_pricing_windows_prioritized')) {
+                $table->index(['event_id', 'priority', 'start_date_time'], 'idx_pricing_windows_prioritized');
+            }
         });
     }
 

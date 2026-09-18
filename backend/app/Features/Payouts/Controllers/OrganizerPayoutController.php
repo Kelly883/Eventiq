@@ -14,10 +14,31 @@ class OrganizerPayoutController extends Controller
 {
     public function index(Request $request)
     {
-        $this->authorize('viewAny', Payout::class);
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
-        $query = Payout::where('organizer_id', Auth::user()->organizer_id)
-            ->with(['calculation', 'event', 'settlementPolicy']);
+        // FIX: Use request-based auth check instead of $this->authorize()
+        // BearerTokenAuth only sets request user resolver, not guard user
+        $organizer = $user->organizer;
+        if (!$organizer && !$user->hasRole('admin')) {
+            return response()->json(['message' => 'Forbidden — organizer profile required'], 403);
+        }
+
+        // FIX: Use request user instead of Auth::user()
+        $organizerId = $organizer?->id;
+
+        // Admins can see all payouts; organizers only their own
+        $query = Payout::query();
+        if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if (!$organizerId) {
+                return response()->json(['message' => 'Forbidden — organizer profile required'], 403);
+            }
+            $query->where('organizer_id', $organizerId);
+        }
+
+        $query->with(['calculation', 'event', 'settlementPolicy']);
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -41,9 +62,20 @@ class OrganizerPayoutController extends Controller
         return PayoutResource::collection($payouts);
     }
 
-    public function show(Payout $payout)
+    public function show(Request $request, Payout $payout)
     {
-        $this->authorize('view', $payout);
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Admins can view any payout; organizers only their own
+        if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            $organizerId = $user->organizer?->id;
+            if (!$organizerId || (string) $payout->organizer_id !== (string) $organizerId) {
+                return response()->json(['message' => 'Forbidden — you do not own this payout'], 403);
+            }
+        }
 
         $payout->load(['calculation', 'event', 'settlementPolicy']);
 
@@ -52,27 +84,47 @@ class OrganizerPayoutController extends Controller
 
     public function summary(Request $request)
     {
-        $this->authorize('viewAny', Payout::class);
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
-        $organizerId = Auth::user()->organizer_id;
+        // Admins see global summary; organizers see their own
+        $query = Payout::query();
+        if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            $organizerId = $user->organizer?->id;
+            if (!$organizerId) {
+                return response()->json(['message' => 'Forbidden — organizer profile required'], 403);
+            }
+            $query->where('organizer_id', $organizerId);
+        }
 
-        $totalPending = Payout::where('organizer_id', $organizerId)
+        $organizerFilter = (!$user->hasRole('admin') && !$user->hasRole('super-admin'))
+            ? $user->organizer?->id
+            : null;
+
+        $totalPending = (clone $query)
+            ->when($organizerFilter, fn($q) => $q->where('organizer_id', $organizerFilter))
             ->where('status', Payout::STATUS_PENDING)
             ->sum('amount');
 
-        $totalProcessing = Payout::where('organizer_id', $organizerId)
+        $totalProcessing = (clone $query)
+            ->when($organizerFilter, fn($q) => $q->where('organizer_id', $organizerFilter))
             ->where('status', Payout::STATUS_PROCESSING)
             ->sum('amount');
 
-        $totalProcessed = Payout::where('organizer_id', $organizerId)
+        $totalProcessed = (clone $query)
+            ->when($organizerFilter, fn($q) => $q->where('organizer_id', $organizerFilter))
             ->where('status', Payout::STATUS_COMPLETED)
             ->sum('amount');
 
-        $totalEarned = Payout::where('organizer_id', $organizerId)
+        $totalEarned = (clone $query)
+            ->when($organizerFilter, fn($q) => $q->where('organizer_id', $organizerFilter))
             ->whereIn('status', [Payout::STATUS_COMPLETED, Payout::STATUS_PENDING, Payout::STATUS_PROCESSING])
             ->sum('amount');
 
-        $nextPayout = Payout::where('organizer_id', $organizerId)
+        $nextPayout = (clone $query)
+            ->when($organizerFilter, fn($q) => $q->where('organizer_id', $organizerFilter))
             ->where('status', Payout::STATUS_PENDING)
             ->orderBy('created_at', 'asc')
             ->first();
@@ -87,9 +139,20 @@ class OrganizerPayoutController extends Controller
         ]);
     }
 
-    public function calculation(Payout $payout)
+    public function calculation(Request $request, Payout $payout)
     {
-        $this->authorize('view', $payout);
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Admins can view any calculation; organizers only their own
+        if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            $organizerId = $user->organizer?->id;
+            if (!$organizerId || (string) $payout->organizer_id !== (string) $organizerId) {
+                return response()->json(['message' => 'Forbidden — you do not own this payout'], 403);
+            }
+        }
 
         if (!$payout->calculation) {
             throw ValidationException::withMessages([

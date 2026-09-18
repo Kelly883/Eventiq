@@ -37,8 +37,8 @@ const AuditLogsTable = ({ loading, logs, selectedIds, setSelectedIds }) => {
                 />
               </td>
               <td className="py-2 px-2 font-medium text-gray-900">{l.action ?? '—'}</td>
-              <td className="py-2 px-2 text-gray-600">{l.entity ?? '—'}</td>
-              <td className="py-2 px-2 text-gray-500">{l.created_at ?? '—'}</td>
+               <td className="py-2 px-2 text-gray-600">{l.targetType ?? '—'}</td>
+               <td className="py-2 px-2 text-gray-500">{l.createdAt ?? '—'}</td>
             </tr>
           ))
         )}

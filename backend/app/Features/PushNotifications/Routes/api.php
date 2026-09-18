@@ -6,7 +6,7 @@ use App\Features\PushNotifications\Controllers\AdminPushTemplateController;
 use App\Features\PushNotifications\Controllers\PushNotificationController;
 
 // Device token routes
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('bearer')->group(function () {
     Route::post('/device-tokens', [DeviceTokenController::class, 'store']);
     Route::delete('/device-tokens/{token}', [DeviceTokenController::class, 'destroy']);
     Route::get('/push-notifications/preferences', [PushNotificationController::class, 'preferences']);
@@ -16,6 +16,6 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Admin push template routes
-Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
+Route::middleware(['bearer', 'role:admin'])->prefix('admin')->group(function () {
     Route::apiResource('push-templates', AdminPushTemplateController::class);
 });

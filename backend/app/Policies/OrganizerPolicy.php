@@ -15,6 +15,6 @@ class OrganizerPolicy
 
     public function update(User $user, Organizer $organizer)
     {
-        return $user->id === $organizer->user_id;
+        return $user->id === ($organizer->user_id ?? $organizer->userId);
     }
 }

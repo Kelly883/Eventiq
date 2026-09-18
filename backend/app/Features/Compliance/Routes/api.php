@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Features\Compliance\Controllers\AuditLogController;
 use App\Features\Compliance\Controllers\ComplianceReportController;
 
-Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin/compliance')->group(function () {
+Route::middleware(['bearer', 'role:admin'])->prefix('admin/compliance')->group(function () {
     Route::get('/audit-logs', [AuditLogController::class, 'index']);
     Route::get('/audit-logs/export', [AuditLogController::class, 'export']);
     Route::get('/audit-logs/{logId}', [AuditLogController::class, 'show']);

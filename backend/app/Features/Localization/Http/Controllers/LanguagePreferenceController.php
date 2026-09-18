@@ -6,7 +6,6 @@ use App\Models\LanguagePreference;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 
 class LanguagePreferenceController extends Controller
@@ -14,10 +13,14 @@ class LanguagePreferenceController extends Controller
     /**
      * Display the user's language and locale preferences.
      */
-    public function show(): JsonResponse
+    public function show(Request $request): JsonResponse
     {
+        $userId = $request->user()?->id;
+        if (!$userId) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
         $pref = LanguagePreference::firstOrCreate(
-            ['user_id' => Auth::id()],
+            ['user_id' => $userId],
             [
                 'language' => 'en',
                 'region' => 'US',
@@ -40,7 +43,11 @@ class LanguagePreferenceController extends Controller
      */
     public function update(Request $request): JsonResponse
     {
-        $key = 'language-update:' . Auth::id();
+        $userId = $request->user()?->id;
+        if (!$userId) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+        $key = 'language-update:' . $userId;
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return response()->json(['message' => 'Too many attempts. Please try again later.'], 429);
         }
@@ -57,7 +64,7 @@ class LanguagePreferenceController extends Controller
         ]);
 
         $pref = LanguagePreference::firstOrCreate(
-            ['user_id' => Auth::id()],
+            ['user_id' => $userId],
             [
                 'language' => 'en',
                 'region' => 'US',

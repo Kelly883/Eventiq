@@ -191,20 +191,6 @@ export function normalizeAuditLog(raw: Partial<AuditLog> & { id: string }): Audi
   };
 }
 
-export interface AuditLogListResponse {
-  readonly data: AuditLog[];
-  readonly metrics: AuditLogMetrics;
-}
-
-export interface AuditLogPaginatedListResponse {
-  readonly data: AuditLog[];
-  readonly metrics: AuditLogMetrics;
-  readonly total: number;
-  readonly perPage: number;
-  readonly currentPage: number;
-  readonly lastPage: number;
-}
-
 export interface AuditLogDetailsResponse {
   readonly data: AuditLog;
 }

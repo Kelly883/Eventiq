@@ -91,11 +91,11 @@ class EventController extends Controller
         $validated = $request->validated();
 
         // Idempotency: if Idempotency-Key header provided, return cached response for duplicate
-        $idempotencyKey = $request->header('Idempotency-Key');
-        $idempotencyCacheKey = null;
-        if ($idempotencyKey) {
-            $idempotencyCacheKey = 'event:store:' . $user->id . ':' . sha1($idempotencyKey);
-            if ($cached = \Illuminate\Support\Facades\Cache::get($idempotencyCacheKey)) {
+        $event->idempotencyKey = $request->header('Idempotency-Key');
+        $event->idempotencyCacheKey = null;
+        if ($event->idempotencyKey) {
+            $event->idempotencyCacheKey = 'event:store:' . $user->id . ':' . sha1($event->idempotencyKey);
+            if ($cached = \Illuminate\Support\Facades\Cache::get($event->idempotencyCacheKey)) {
                 return response()->json($cached, 201);
             }
         }
@@ -147,9 +147,9 @@ class EventController extends Controller
 
             $response = (new EventResource($event))->response()->setStatusCode(201);
             // Store idempotency cache for 24h
-            if ($idempotencyCacheKey) {
+            if ($event->idempotencyCacheKey) {
                 try {
-                    \Illuminate\Support\Facades\Cache::put($idempotencyCacheKey, $response->getData(true), 86400);
+                    \Illuminate\Support\Facades\Cache::put($event->idempotencyCacheKey, $response->getData(true), 86400);
                 } catch (\Throwable $e) {}
             }
             return $response;
@@ -173,27 +173,27 @@ class EventController extends Controller
     /**
      * GET /api/organizer/events/:eventId — Get single event with tiers
      */
-    public function show(Request $request, $id)
+    public function show(Request $request, $eventId)
     {
         $user = $request->user();
         if (!$user) {
             AuditLogger::forEvent(
                 action: 'event.show_attempt',
                 user: $user,
-                eventId: (string) $id,
+                eventId: (string) $eventId,
                 request: $request,
                 description: 'Unauthenticated attempt to view event'
             );
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $event = Event::without('analyticsEventsMetric')->with(['ticketTiers', 'organizer'])->find($id);
+        $event = Event::without('analyticsEventsMetric')->with(['ticketTiers', 'organizer'])->find($event->id);
 
         if (!$event) {
             AuditLogger::forEvent(
                 action: 'event.show_not_found',
                 user: $user,
-                eventId: (string) $id,
+                eventId: (string) $event->id,
                 request: $request,
                 description: 'Attempted to view non-existent event'
             );
@@ -228,14 +228,14 @@ class EventController extends Controller
      * PATCH /api/organizer/events/:eventId — Update event and tiers
      * Handles create / update / delete of tiers in one transaction
      */
-    public function update(UpdateEventRequest $request, $id)
+    public function update(UpdateEventRequest $request, $eventId)
     {
         $user = $request->user();
         if (!$user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $event = Event::without('analyticsEventsMetric')->with('ticketTiers')->find($id);
+        $event = Event::without('analyticsEventsMetric')->with('ticketTiers')->find($eventId);
 
         if (!$event) {
             return response()->json(['message' => 'Event not found'], 404);
@@ -341,14 +341,14 @@ AuditLogger::forEvent(
     /**
      * DELETE /api/organizer/events/:eventId — Soft delete
      */
-    public function destroy(Request $request, $id)
+    public function destroy(Request $request, $eventId)
     {
         $user = $request->user();
         if (!$user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $event = Event::without('analyticsEventsMetric')->find($id);
+        $event = Event::without('analyticsEventsMetric')->find($eventId);
 
         if (!$event) {
             return response()->json(['message' => 'Event not found'], 404);
@@ -399,7 +399,7 @@ AuditLogger::forEvent(
 
             return response()->json(null, 204);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Event delete failed', ['event_id' => $id, 'error' => $e->getMessage()]);
+            \Illuminate\Support\Facades\Log::error('Event delete failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
             AuditLogger::forEvent(
                 action: 'event.delete_failed',
                 user: $user,
@@ -412,22 +412,61 @@ AuditLogger::forEvent(
     }
 
     /**
-     * POST /api/organizer/events/:eventId/upload-banner — Upload banner image
+     * POST /api/organizer/events/:eventId/restore — Restore a soft-deleted event
      */
-    public function uploadBanner(Request $request, $id)
+    public function restore(Request $request, $event->id)
     {
         $user = $request->user();
         if (!$user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $event = Event::without('analyticsEventsMetric')->find($id);
+        $event = Event::withTrashed()->find($event->id);
+
+        if (!$event || !$event->trashed()) {
+            return response()->json(['message' => 'Event not found or not deleted'], 404);
+        }
+
+        try {
+            Gate::forUser($user)->authorize('update', $event);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['message' => 'Forbidden — you do not own this event'], 403);
+        }
+
+        $event->restore();
+
+        AuditLogger::forEvent(
+            action: 'event.restored',
+            user: $user,
+            eventId: (string) $event->id,
+            oldValues: ['deleted_at' => $event->getRawOriginal('deleted_at')],
+            request: $request,
+            description: "Event '{$event->title}' restored"
+        );
+
+        return response()->json([
+            'message' => 'Event restored successfully.',
+            'data' => new EventResource($event->load('ticketTiers')),
+        ]);
+    }
+
+    /**
+     * POST /api/organizer/events/:eventId/upload-banner — Upload banner image
+     */
+    public function uploadBanner(Request $request, $eventId)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $event = Event::without('analyticsEventsMetric')->find($eventId);
 
         if (!$event) {
             AuditLogger::forEvent(
                 action: 'event.banner_upload_not_found',
                 user: $user,
-                eventId: (string) $id,
+                eventId: (string) $eventId,
                 request: $request,
                 description: 'Banner upload attempted for non-existent event'
             );
@@ -494,7 +533,7 @@ AuditLogger::forEvent(
             // silently accepting untrusted files when ClamAV/VirusTotal is down.
             if ($scanResult->scannerEngine === 'unavailable') {
                 \Illuminate\Support\Facades\Log::warning('Virus scan unavailable, rejecting upload', [
-                    'event_id' => $id,
+                    'event_id' => $event->id,
                     'user_id' => $user->id,
                     'reason' => $scanResult->rawOutput,
                 ]);
@@ -507,7 +546,7 @@ AuditLogger::forEvent(
 
             if (!$scanResult->isClean) {
                 \Illuminate\Support\Facades\Log::warning('Virus scan detected threat', [
-                    'event_id' => $id,
+                    'event_id' => $event->id,
                     'user_id' => $user->id,
                     'threat' => $scanResult->threatName,
                     'scanner' => $scanResult->scannerEngine,
@@ -520,13 +559,13 @@ AuditLogger::forEvent(
             }
 
             \Illuminate\Support\Facades\Log::info('Virus scan passed', [
-                'event_id' => $id,
+                'event_id' => $event->id,
                 'user_id' => $user->id,
                 'scanner' => $scanResult->scannerEngine,
             ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Virus scan failed, rejecting upload', [
-                'event_id' => $id,
+                'event_id' => $event->id,
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
             ]);
@@ -605,7 +644,7 @@ AuditLogger::forEvent(
                 \Illuminate\Support\Facades\Log::warning('Banner URL host not in allowlist, rejecting upload', [
                     'url' => $url,
                     'allowed' => $allowedHosts,
-                    'event_id' => $id,
+                    'event_id' => $event->id,
                     'user_id' => $user->id,
                 ]);
                 return response()->json([
@@ -640,7 +679,7 @@ AuditLogger::forEvent(
 
             return new EventResource($event);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Banner upload failed', ['event_id' => $id, 'error' => $e->getMessage()]);
+            \Illuminate\Support\Facades\Log::error('Banner upload failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
             $debug = app()->hasDebugModeEnabled();
             return response()->json([
                 'message' => 'Failed to upload banner',
@@ -725,7 +764,7 @@ AuditLogger::forEvent(
     /**
      * Map tier data to model attributes
      */
-    private function mapTierData(array $tierData, $eventId, int $index = 0, bool $isUpdate = false): array
+    private function mapTierData(array $tierData, $event->id, int $index = 0, bool $isUpdate = false): array
     {
         // Handle camelCase inside tier
         $name = $tierData['name'] ?? null;
@@ -737,7 +776,7 @@ AuditLogger::forEvent(
         $earlyBirdEndDate = $tierData['early_bird_end_date'] ?? $tierData['earlyBirdEndDate'] ?? null;
 
         $payload = [
-            'event_id' => $eventId,
+            'event_id' => $event->id,
             'name' => $name,
             'price' => $price !== null ? (float) $price : 0,
             'quantity' => $quantity !== null && $quantity !== '' ? (int) $quantity : null,

@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Fraud event model - audit trail with soft deletes.
@@ -61,7 +60,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class FraudEvent extends Model
 {
-    use HasUuids, SoftDeletes;
+    use HasUuids;
 
     protected $table = 'fraud_events';
 
@@ -149,7 +148,6 @@ class FraudEvent extends Model
         'updated_at' => 'datetime',
         'escalated_at' => 'datetime',
         'archived_at' => 'datetime',
-        'deleted_at' => 'datetime',
         'is_archived' => 'boolean',
         'shipping_billing_match' => 'boolean',
         'proxy_vpn_detected' => 'boolean',

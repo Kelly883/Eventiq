@@ -10,17 +10,26 @@ use Carbon\Carbon;
 
 class AnalyticsController extends Controller
 {
+    private function authorizeEventAccess(Request $request, $eventId): void
+    {
+        $user = $request->user();
+        if (!$user) {
+            abort(401, 'Unauthenticated');
+        }
+
+        $ownsEvent = \App\Models\Event::where('id', $eventId)
+            ->when(!$user->hasRole('admin'), fn ($q) => $q->whereHas('organizer', fn ($o) => $o->where('user_id', $user->id)))
+            ->exists();
+
+        abort_unless($ownsEvent, 403, 'You are not authorized to view this event\'s analytics.');
+    }
+
     /**
      * Get pre-aggregated sales velocity data (daily or hourly).
      */
     public function getSalesVelocity(Request $request, $eventId)
     {
-        // Sales analytics are organizer-private: only the owning organizer (or admin) may read them.
-        $user = $request->user();
-        $ownsEvent = \App\Models\Event::where('id', $eventId)
-            ->when(!$user->hasRole('admin'), fn ($q) => $q->whereHas('organizer', fn ($o) => $o->where('user_id', $user->id)))
-            ->exists();
-        abort_unless($ownsEvent, 403, 'You are not authorized to view this event\'s analytics.');
+        $this->authorizeEventAccess($request, $eventId);
 
         $interval = $request->query('interval', 'daily'); // 'daily' or 'hourly'
         
@@ -107,6 +116,8 @@ class AnalyticsController extends Controller
      */
     public function getSummary(Request $request, $eventId)
     {
+        $this->authorizeEventAccess($request, $eventId);
+
         return response()->json([
             'success' => true,
             'eventId' => $eventId,
@@ -114,7 +125,7 @@ class AnalyticsController extends Controller
                 'totalRevenue' => 14520.00,
                 'ticketsSold' => 324,
                 'ticketCapacity' => 500,
-                'conversionRate' => 18.4, // percentage
+                'conversionRate' => 18.4,
                 'pageViews' => 1760,
                 'refundedTickets' => 4,
             ]
@@ -126,6 +137,8 @@ class AnalyticsController extends Controller
      */
     public function getDetailed(Request $request, $eventId)
     {
+        $this->authorizeEventAccess($request, $eventId);
+
         return response()->json([
             'success' => true,
             'eventId' => $eventId,

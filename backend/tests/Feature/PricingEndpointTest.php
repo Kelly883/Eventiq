@@ -225,7 +225,7 @@ class PricingEndpointTest extends TestCase
             ->assertJsonValidationErrors(['end_date_time']);
     }
 
-    public function test_create_pricing_window_returns_403_for_other_users_event(): void
+    public function test_create_pricing_window_returns_422_when_tier_does_not_belong_to_event(): void
     {
         $otherEvent = Event::factory()->create(['organizer_id' => $this->otherOrganizer->id]);
 
@@ -241,7 +241,6 @@ class PricingEndpointTest extends TestCase
         $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
             ->postJson("/api/organizer/events/{$otherEvent->id}/pricing-windows", $payload);
 
-        // Validation rejects tier not belonging to event before ownership check runs.
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['ticket_category_id']);
     }
@@ -642,6 +641,36 @@ class PricingEndpointTest extends TestCase
             'end_date_time' => now()->addDays(6),
         ]);
         $windowToRestore->delete();
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->postJson("/api/organizer/events/{$this->event->id}/pricing-windows/{$windowToRestore->id}/restore");
+
+        // Restoring an inactive window should succeed even if dates overlap,
+        // because an inactive window cannot create a functional overlap.
+        $response->assertStatus(200)
+            ->assertJsonPath('message', 'Pricing window restored successfully.');
+    }
+
+    public function test_restoring_active_soft_deleted_window_blocks_overlap(): void
+    {
+        $activeWindow = PricingWindow::factory()->create([
+            'event_id' => $this->event->id,
+            'ticket_category_id' => $this->tier1->id,
+            'is_active' => true,
+            'start_date_time' => now()->addDays(1),
+            'end_date_time' => now()->addDays(5),
+        ]);
+        // Create as inactive to bypass SQLite trigger, then soft-delete,
+        // then force is_active=true to simulate an active window being restored.
+        $windowToRestore = PricingWindow::factory()->create([
+            'event_id' => $this->event->id,
+            'ticket_category_id' => $this->tier1->id,
+            'is_active' => false,
+            'start_date_time' => now()->addDays(2),
+            'end_date_time' => now()->addDays(6),
+        ]);
+        $windowToRestore->delete();
+        $windowToRestore->update(['is_active' => true]);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
             ->postJson("/api/organizer/events/{$this->event->id}/pricing-windows/{$windowToRestore->id}/restore");

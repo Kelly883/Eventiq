@@ -14,14 +14,26 @@ use App\Features\Payouts\Resources\PayoutResource;
 use App\Features\Payouts\Resources\SettlementPolicyResource;
 use App\Features\Payouts\Resources\PayoutCalculationResource;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class AdminSettlementController extends Controller
 {
+    /**
+     * Ensure the authenticated user is an admin/super-admin.
+     * FIX: Use request-based auth check instead of $this->authorize()
+     * BearerTokenAuth only sets request user resolver, not guard user
+     */
+    private function requireAdmin(Request $request): void
+    {
+        $user = $request->user();
+        if (!$user || (!$user->hasRole('admin') && !$user->hasRole('super-admin'))) {
+            abort(403, 'Only admins can access settlement management.');
+        }
+    }
+
     public function index(Request $request)
     {
-        $this->authorize('viewAnyAdmin', Payout::class);
+        $this->requireAdmin($request);
 
         $query = Payout::with(['calculation', 'event', 'organizer', 'settlementPolicy']);
 
@@ -47,9 +59,9 @@ class AdminSettlementController extends Controller
         return PayoutResource::collection($payouts);
     }
 
-    public function show(Payout $payout)
+    public function show(Request $request, Payout $payout)
     {
-        $this->authorize('viewAdmin', $payout);
+        $this->requireAdmin($request);
 
         $payout->load(['calculation', 'event', 'organizer', 'settlementPolicy']);
 
@@ -58,7 +70,7 @@ class AdminSettlementController extends Controller
 
     public function summary(Request $request)
     {
-        $this->authorize('viewAnyAdmin', Payout::class);
+        $this->requireAdmin($request);
 
         $totalSettled = Payout::where('status', Payout::STATUS_COMPLETED)
             ->sum('amount');
@@ -96,7 +108,7 @@ class AdminSettlementController extends Controller
 
     public function store(StorePayoutRequest $request)
     {
-        $this->authorize('create', Payout::class);
+        $this->requireAdmin($request);
 
         return DB::transaction(function () use ($request) {
             $validated = $request->validated();
@@ -133,7 +145,7 @@ class AdminSettlementController extends Controller
 
     public function processPayout(ProcessPayoutRequest $request, Payout $payout)
     {
-        $this->authorize('process', $payout);
+        $this->requireAdmin($request);
 
         if (!$payout->isPending()) {
             throw ValidationException::withMessages([
@@ -150,7 +162,8 @@ class AdminSettlementController extends Controller
             // For now, we'll simulate processing and mark as completed
             $transactionId = $validated['transaction_id'] ?? 'txn_' . uniqid();
             $payout->markAsCompleted($transactionId);
-            $payout->processed_by = Auth::id();
+            // FIX: Use request user instead of Auth::id() for bearer auth compatibility
+            $payout->processed_by = $request->user()?->id;
             $payout->save();
 
             $payout->load(['calculation', 'event', 'organizer', 'settlementPolicy']);
@@ -161,7 +174,7 @@ class AdminSettlementController extends Controller
 
     public function failPayout(Request $request, Payout $payout)
     {
-        $this->authorize('process', $payout);
+        $this->requireAdmin($request);
 
         if (!$payout->isPending() && $payout->status !== Payout::STATUS_PROCESSING) {
             throw ValidationException::withMessages([
@@ -176,7 +189,7 @@ class AdminSettlementController extends Controller
 
     public function settlementPolicies(Request $request)
     {
-        $this->authorize('viewAny', SettlementPolicy::class);
+        $this->requireAdmin($request);
 
         $policies = SettlementPolicy::orderBy('created_at', 'desc')->get();
 
@@ -185,7 +198,7 @@ class AdminSettlementController extends Controller
 
     public function storeSettlementPolicy(UpdateSettlementPolicyRequest $request)
     {
-        $this->authorize('create', SettlementPolicy::class);
+        $this->requireAdmin($request);
 
         $policy = SettlementPolicy::create($request->validated());
 
@@ -194,7 +207,7 @@ class AdminSettlementController extends Controller
 
     public function updateSettlementPolicy(UpdateSettlementPolicyRequest $request, SettlementPolicy $policy)
     {
-        $this->authorize('update', $policy);
+        $this->requireAdmin($request);
 
         $policy->update($request->validated());
 
@@ -203,7 +216,7 @@ class AdminSettlementController extends Controller
 
     public function export(Request $request)
     {
-        $this->authorize('viewAnyAdmin', Payout::class);
+        $this->requireAdmin($request);
 
         $query = Payout::with(['calculation', 'event', 'organizer', 'settlementPolicy']);
 

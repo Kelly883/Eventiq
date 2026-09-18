@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Route;
 // controller is what actually protects it.
 Route::post('/webhooks/payment-provider', [WebhookController::class, 'handle']);
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('bearer')->group(function () {
     Route::post('/cart/verify', [CartController::class, 'verify']);
     Route::post('/checkout/create-payment-intent', [CheckoutController::class, 'createPaymentIntent']);
         Route::get('/orders/{orderId}', [OrderController::class, 'show']);

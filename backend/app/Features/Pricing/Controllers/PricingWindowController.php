@@ -23,7 +23,7 @@ class PricingWindowController extends Controller
     /**
      * Only the owning organizer (or an admin) may mutate an event's windows.
      */
-    private function authorizeEventOwner(Request $request, $eventId): void
+    private function authorizeEventOwner(Request $request, $event): void
     {
         $user = $request->user();
 
@@ -40,7 +40,7 @@ class PricingWindowController extends Controller
 
         abort_unless($isOrganizer, 403, 'Only organizers can manage pricing windows.');
 
-        $ownsEvent = \App\Models\Event::where('id', $eventId)
+        $ownsEvent = \App\Models\Event::where('id', $event)
             ->whereHas('organizer', fn ($q) => $q->where('user_id', $user->id))
             ->exists();
 
@@ -51,7 +51,7 @@ class PricingWindowController extends Controller
      * Authorize that the authenticated user can access the event's pricing.
      * Admins/super-admins bypass ownership check. Organizers must own the event.
      */
-    private function authorizeEventAccess(Request $request, $eventId): void
+    private function authorizeEventAccess(Request $request, $event): void
     {
         $user = $request->user();
 
@@ -69,7 +69,7 @@ class PricingWindowController extends Controller
 
         abort_unless($isOrganizer, 403, 'Only organizers can manage pricing windows.');
 
-        $ownsEvent = \App\Models\Event::where('id', $eventId)
+        $ownsEvent = \App\Models\Event::where('id', $event)
             ->whereHas('organizer', fn ($q) => $q->where('user_id', $user->id))
             ->exists();
 
@@ -79,11 +79,11 @@ class PricingWindowController extends Controller
     /**
      * List pricing windows for an event.
      */
-    public function index(Request $request, $eventId): AnonymousResourceCollection
+    public function index(Request $request, $event): AnonymousResourceCollection
     {
-        $this->authorizeEventAccess($request, $eventId);
+        $this->authorizeEventAccess($request, $event);
 
-        $query = PricingWindow::forEvent($eventId)->with(['event', 'ticketTier']);
+        $query = PricingWindow::forEvent($event)->with(['event', 'ticketTier']);
 
         // Optional filters
         if ($request->boolean('active_only')) {
@@ -104,12 +104,12 @@ class PricingWindowController extends Controller
      * Note: quantity_sold is forced to 0 on creation — it is only incremented
      * via incrementSold() during checkout to maintain atomicity.
      */
-    public function store(StorePricingWindowRequest $request, $eventId): JsonResponse
+    public function store(StorePricingWindowRequest $request, $event): JsonResponse
     {
-        $this->authorizeEventOwner($request, $eventId);
+        $this->authorizeEventOwner($request, $event);
 
         $data = $request->validated();
-        $data['event_id'] = $eventId;
+        $data['event_id'] = $event;
         $data['quantity_sold'] = 0; // Always start at 0, managed atomically via incrementSold()
 
         $user = $request->user();
@@ -123,7 +123,7 @@ class PricingWindowController extends Controller
             $endDate = $data['end_date_time'];
             $catId = $data['ticket_category_id'];
 
-            $overlap = PricingWindow::where('event_id', $eventId)
+            $overlap = PricingWindow::where('event_id', $event)
                 ->where('ticket_category_id', $catId)
                 ->where('is_active', true)
                 ->whereNull('deleted_at')
@@ -156,76 +156,72 @@ class PricingWindowController extends Controller
     /**
      * Show a single pricing window.
      */
-    public function show($eventId, PricingWindow $pricingWindow): PricingWindowResource
+    public function show($event, $pricingWindow): PricingWindowResource
     {
+        $window = PricingWindow::withTrashed()->findOrFail($pricingWindow);
         $user = request()->user();
         if (!$user) {
             abort(401, 'Unauthenticated');
         }
 
         if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
-            $ownsEvent = \App\Models\Event::where('id', $eventId)
+            $ownsEvent = \App\Models\Event::where('id', $event)
                 ->whereHas('organizer', fn ($q) => $q->where('user_id', $user->id))
                 ->exists();
             abort_unless($ownsEvent, 403, 'You do not own this event.');
         }
 
-        return new PricingWindowResource($pricingWindow->load(['event', 'ticketTier']));
+        return new PricingWindowResource($window->load(['event', 'ticketTier']));
     }
 
     /**
      * Update a pricing window.
      */
-    public function update(UpdatePricingWindowRequest $request, $eventId, PricingWindow $pricingWindow): JsonResponse
+    public function update(UpdatePricingWindowRequest $request, $event, $pricingWindow): JsonResponse
     {
-        $this->authorizeEventOwner($request, $eventId);
-        abort_unless((string) $pricingWindow->event_id === (string) $eventId, 404);
+        $window = PricingWindow::withTrashed()->findOrFail($pricingWindow);
+        $this->authorizeEventOwner($request, $event);
+        abort_unless((string) $window->event_id === (string) $event, 404);
 
         $validated = $request->validated();
         $user = $request->user();
 
-        // Prevent quantity_limit from being set below tickets already sold.
-        if (array_key_exists('quantity_limit', $validated) && $validated['quantity_limit'] < $pricingWindow->quantity_sold) {
+        if (array_key_exists('quantity_limit', $validated) && $validated['quantity_limit'] < $window->quantity_sold) {
             return response()->json([
                 'message' => 'Quantity limit cannot be less than tickets already sold.',
                 'errors' => ['quantity_limit' => ['Quantity limit cannot be less than tickets already sold.']],
             ], 422);
         }
 
-        // Prevent date changes on windows that have already sold tickets.
         $hasDateChange = $request->has('start_date_time') || $request->has('end_date_time');
-        if ($hasDateChange && $pricingWindow->quantity_sold > 0) {
+        if ($hasDateChange && $window->quantity_sold > 0) {
             return response()->json([
                 'message' => 'Cannot change dates on a pricing window that has sold tickets.',
                 'errors' => ['start_date_time' => ['Cannot change dates on a pricing window that has sold tickets.']],
             ], 422);
         }
 
-        // Overlap detection on update: only when dates or category are changing
-        // and the window is currently active or will become active.
         $hasDateOrCategoryChange = $request->has('start_date_time')
             || $request->has('end_date_time')
             || $request->has('ticket_category_id');
 
-        // Also check when window is being activated (is_active false->true)
         $hasActivationChange = $request->has('is_active')
             && $request->boolean('is_active')
-            && !$pricingWindow->is_active;
+            && !$window->is_active;
 
         if ($hasDateOrCategoryChange || $hasActivationChange) {
-            $startDate = $validated['start_date_time'] ?? $pricingWindow->start_date_time;
-            $endDate = $validated['end_date_time'] ?? $pricingWindow->end_date_time;
-            $catId = $validated['ticket_category_id'] ?? $pricingWindow->ticket_category_id;
+            $startDate = $validated['start_date_time'] ?? $window->start_date_time;
+            $endDate = $validated['end_date_time'] ?? $window->end_date_time;
+            $catId = $validated['ticket_category_id'] ?? $window->ticket_category_id;
 
-            // Only check overlap if the window will be active after update
-            $willBeActive = $request->has('is_active') ? $request->boolean('is_active') : $pricingWindow->is_active;
+            $willBeActive = $request->has('is_active') ? $request->boolean('is_active') : $window->is_active;
 
             if ($willBeActive && $startDate && $endDate) {
-                $overlap = PricingWindow::where('event_id', $eventId)
+                $overlap = PricingWindow::where('event_id', $event)
                     ->where('ticket_category_id', $catId)
                     ->where('is_active', true)
                     ->whereNull('deleted_at')
-                    ->where('id', '!=', $pricingWindow->id)
+                    ->where('id', '!=', $window->id)
                     ->where(function ($q) use ($startDate, $endDate) {
                         $q->whereBetween('start_date_time', [$startDate, $endDate])
                           ->orWhereBetween('end_date_time', [$startDate, $endDate])
@@ -245,34 +241,35 @@ class PricingWindowController extends Controller
             }
         }
 
-        $oldValues = $pricingWindow->toArray();
-        $pricingWindow->update($validated);
+        $oldValues = $window->toArray();
+        $window->update($validated);
 
         return response()->json([
             'message' => 'Pricing window updated successfully.',
-            'data' => new PricingWindowResource($pricingWindow->fresh()->load(['event', 'ticketTier'])),
+            'data' => new PricingWindowResource($window->fresh()->load(['event', 'ticketTier'])),
         ]);
     }
 
     /**
      * Soft-delete a pricing window.
      */
-    public function destroy($eventId, PricingWindow $pricingWindow): JsonResponse
+    public function destroy($event, $pricingWindow): JsonResponse
     {
-        $this->authorizeEventOwner(request(), $eventId);
-        abort_unless((string) $pricingWindow->event_id === (string) $eventId, 404);
+        $window = PricingWindow::withTrashed()->findOrFail($pricingWindow);
+        $this->authorizeEventOwner(request(), $event);
+        abort_unless((string) $window->event_id === (string) $event, 404);
 
         $user = request()->user();
-        $oldValues = $pricingWindow->toArray();
+        $oldValues = $window->toArray();
 
-        if ($pricingWindow->quantity_sold > 0) {
+        if ($window->quantity_sold > 0) {
             return response()->json([
                 'message' => 'Cannot delete a pricing window that has sold tickets. Restore it instead.',
                 'errors' => ['window' => ['This window has sold tickets and cannot be deleted.']],
             ], 409);
         }
 
-        $pricingWindow->delete();
+        $window->delete();
 
         return response()->json([
             'message' => 'Pricing window deleted successfully.',
@@ -282,33 +279,37 @@ class PricingWindowController extends Controller
     /**
      * Restore a soft-deleted pricing window.
      */
-    public function restore($eventId, $id): JsonResponse
+    public function restore($event, $pricingWindow): JsonResponse
     {
-        $window = PricingWindow::withTrashed()->findOrFail($id);
-        $this->authorizeEventOwner(request(), $eventId);
-        abort_unless((string) $window->event_id === (string) $eventId, 404);
+        $window = PricingWindow::withTrashed()->findOrFail($pricingWindow);
+        $this->authorizeEventOwner(request(), $event);
+        abort_unless((string) $window->event_id === (string) $event, 404);
 
-        // Overlap check on restore: ensure no other active window overlaps
-        $overlap = PricingWindow::where('event_id', $eventId)
-            ->where('ticket_category_id', $window->ticket_category_id)
-            ->where('is_active', true)
-            ->whereNull('deleted_at')
-            ->where('id', '!=', $window->id)
-            ->where(function ($q) use ($window) {
-                $q->whereBetween('start_date_time', [$window->start_date_time, $window->end_date_time])
-                  ->orWhereBetween('end_date_time', [$window->start_date_time, $window->end_date_time])
-                  ->orWhere(function ($q) use ($window) {
-                      $q->where('start_date_time', '<=', $window->start_date_time)
-                        ->where('end_date_time', '>=', $window->end_date_time);
-                  });
-            })
-            ->exists();
+        // Overlap check on restore: only enforce for active windows.
+        // An inactive window cannot create a functional overlap, so restoring
+        // an inactive window should succeed even if its date range overlaps.
+        if ($window->is_active) {
+            $overlap = PricingWindow::where('event_id', $event)
+                ->where('ticket_category_id', $window->ticket_category_id)
+                ->where('is_active', true)
+                ->whereNull('deleted_at')
+                ->where('id', '!=', $window->id)
+                ->where(function ($q) use ($window) {
+                    $q->whereBetween('start_date_time', [$window->start_date_time, $window->end_date_time])
+                      ->orWhereBetween('end_date_time', [$window->start_date_time, $window->end_date_time])
+                      ->orWhere(function ($q) use ($window) {
+                          $q->where('start_date_time', '<=', $window->start_date_time)
+                            ->where('end_date_time', '>=', $window->end_date_time);
+                      });
+                })
+                ->exists();
 
-        if ($overlap) {
-            return response()->json([
-                'message' => 'An active pricing window already exists for this ticket category with overlapping dates.',
-                'errors' => ['start_date_time' => ['Cannot restore: overlaps with an active pricing window.']],
-            ], 409);
+            if ($overlap) {
+                return response()->json([
+                    'message' => 'An active pricing window already exists for this ticket category with overlapping dates.',
+                    'errors' => ['start_date_time' => ['Cannot restore: overlaps with an active pricing window.']],
+                ], 409);
+            }
         }
 
         $window->restore();
@@ -325,11 +326,11 @@ class PricingWindowController extends Controller
      * By default, soft-deleted windows are excluded. Pass ?include_deleted=1
      * to include them (admin/super-admin only).
      */
-    public function preview(Request $request, $eventId): JsonResponse
+    public function preview(Request $request, $event): JsonResponse
     {
-        $this->authorizeEventAccess($request, $eventId);
+        $this->authorizeEventAccess($request, $event);
 
-        $query = PricingWindow::forEvent($eventId)
+        $query = PricingWindow::forEvent($event)
             ->with(['ticketTier'])
             ->prioritized();
 
@@ -352,7 +353,7 @@ class PricingWindowController extends Controller
         })->values();
 
         return response()->json([
-            'event_id' => (string) $eventId,
+            'event_id' => (string) $event,
             'total_windows' => $windows->count(),
             'categories' => $grouped,
         ]);

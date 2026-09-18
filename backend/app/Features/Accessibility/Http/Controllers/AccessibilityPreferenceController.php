@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\AccessibilityPreference;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
 
 class AccessibilityPreferenceController extends Controller
 {
@@ -30,9 +29,9 @@ class AccessibilityPreferenceController extends Controller
     /**
      * Display the user's accessibility preferences.
      */
-    public function show(): JsonResponse
+    public function show(Request $request): JsonResponse
     {
-        $userId = Auth::id();
+        $userId = $request->user()?->id;
         if (! $userId) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
@@ -57,7 +56,7 @@ class AccessibilityPreferenceController extends Controller
      */
     public function update(Request $request): JsonResponse
     {
-        $userId = Auth::id();
+        $userId = $request->user()?->id;
         if (! $userId) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
