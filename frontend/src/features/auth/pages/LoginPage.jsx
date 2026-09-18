@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
-import { showToast } from '../../../lib/api';
+import { showToast, clearToasts } from '../../../lib/api';
 import BrandLogo from '../../common/components/BrandLogo';
 import { safeRedirectPath, defaultRedirect, normalizeFromPath } from '../utils';
 import './LoginPage.css';
@@ -17,7 +17,26 @@ const LoginPage = () => {
   const [captchaToken, setCaptchaToken] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuthContext();
+  const { login, sessionExpired, setSessionExpired } = useAuthContext();
+
+  // Clear stale authentication UI state when entering the login page.
+  // This prevents session-expired toasts/modals from protected routes from
+  // persisting on the login page, while preserving login-form-specific errors.
+  useEffect(() => {
+    // Clear all visible toasts (e.g., "Session Expired" toast from ProtectedRoute)
+    clearToasts();
+
+    // Reset sessionExpired state - the login page should start clean.
+    // A failed login attempt will set its own error via the form's error state.
+    if (sessionExpired) {
+      setSessionExpired(false);
+    }
+
+    // Clear any stored session-expired-return flag
+    try {
+      sessionStorage.removeItem('session-expired-return');
+    } catch { /* ignore */ }
+  }, [sessionExpired, setSessionExpired]);
 
   const sessionExpiredReturn = (() => {
     try {

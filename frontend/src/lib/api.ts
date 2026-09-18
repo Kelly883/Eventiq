@@ -30,6 +30,16 @@ export function showToast(title: string, description: string, type: string = 'in
   }
 }
 
+/**
+ * Clear all visible toasts. Useful when navigating to auth pages to prevent
+ * stale toasts (e.g., "Session Expired" from a protected route) from persisting.
+ */
+export function clearToasts() {
+  if (_toastListeners.size > 0) {
+    _toastListeners.forEach((fn) => fn({ id: -1, title: '', description: '', type: 'clear' }));
+  }
+}
+
 type Env = {
   VITE_API_BASE_URL?: string;
 };

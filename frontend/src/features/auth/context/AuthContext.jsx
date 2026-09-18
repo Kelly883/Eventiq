@@ -324,6 +324,7 @@ export const AuthProvider = ({ children }) => {
     await api.post('/auth/logout');
     localStorage.removeItem(REMEMBER_ME_KEY);
     setUser(null);
+    setSessionExpired(false);
     setOrganizerId(null);
     broadcastAuthEvent('session-ended');
   }, []);
@@ -351,7 +352,7 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: Boolean(user) && !sessionExpired, loading, checkAdminAccess, login, register, logout, forgotPassword, resetPassword, refreshAuth, sessionExpired, organizerId }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: Boolean(user) && !sessionExpired, loading, checkAdminAccess, login, register, logout, forgotPassword, resetPassword, refreshAuth, sessionExpired, setSessionExpired, organizerId }}>
       {children}
     </AuthContext.Provider>
   );

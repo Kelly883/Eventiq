@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
-import { showToast } from '../../../lib/api';
+import { showToast, clearToasts } from '../../../lib/api';
 import BrandLogo from '../../common/components/BrandLogo';
 import './RegisterPage.css';
 
@@ -16,6 +16,11 @@ const RegisterPage = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { register } = useAuthContext();
+
+  // Clear stale toasts when entering the registration page
+  useEffect(() => {
+    clearToasts();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
