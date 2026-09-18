@@ -55,7 +55,9 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
 # - iconv:     character encoding (Laravel requirement)
 # - opcache:   bytecode caching (production performance)
 # - intl:      internationalization
+# - redis:     phpredis — required by CACHE_STORE=redis and QUEUE_CONNECTION=redis in production (render.yaml)
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-configure redis \
     && docker-php-ext-install -j$(nproc) \
     pdo_pgsql \
     pgsql \
@@ -67,7 +69,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     bcmath \
     iconv \
     intl \
-    opcache
+    opcache \
+    redis
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
