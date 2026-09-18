@@ -215,7 +215,7 @@ return new class extends Migration
     {
         if (DB::getDriverName() === 'pgsql') {
             $row = DB::selectOne(
-                'SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = current_schema() AND p.proname = ? AND p.proargcount = 0',
+                'SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = current_schema() AND p.proname = ? AND p.pronargs = 0',
                 [$function]
             );
 
