@@ -258,16 +258,18 @@ return new class extends Migration
                 // No-op, legacy column may still exist
             }
 
-            try {
+            if (!Schema::hasIndex(
+                'push_notification_devices',
+                'push_notification_devices_user_id_index'
+            )) {
                 $table->index('user_id');
-            } catch (\Throwable $e) {
-                // Index may already exist
             }
 
-            try {
+            if (!Schema::hasIndex(
+                'push_notification_devices',
+                'push_notification_devices_token_index'
+            )) {
                 $table->index('token');
-            } catch (\Throwable $e) {
-                // Index may already exist
             }
         });
 
