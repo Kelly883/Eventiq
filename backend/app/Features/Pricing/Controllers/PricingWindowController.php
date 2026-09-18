@@ -285,32 +285,30 @@ class PricingWindowController extends Controller
     public function restore($eventId, $id): JsonResponse
     {
         $window = PricingWindow::withTrashed()->findOrFail($id);
-        $this->authorize('restore', $window);
+        $this->authorizeEventOwner(request(), $eventId);
         abort_unless((string) $window->event_id === (string) $eventId, 404);
 
-        // Overlap check on restore: if the window will be active, ensure no other active window overlaps
-        if ($window->is_active) {
-            $overlap = PricingWindow::where('event_id', $eventId)
-                ->where('ticket_category_id', $window->ticket_category_id)
-                ->where('is_active', true)
-                ->whereNull('deleted_at')
-                ->where('id', '!=', $window->id)
-                ->where(function ($q) use ($window) {
-                    $q->whereBetween('start_date_time', [$window->start_date_time, $window->end_date_time])
-                      ->orWhereBetween('end_date_time', [$window->start_date_time, $window->end_date_time])
-                      ->orWhere(function ($q) use ($window) {
-                          $q->where('start_date_time', '<=', $window->start_date_time)
-                            ->where('end_date_time', '>=', $window->end_date_time);
-                      });
-                })
-                ->exists();
+        // Overlap check on restore: ensure no other active window overlaps
+        $overlap = PricingWindow::where('event_id', $eventId)
+            ->where('ticket_category_id', $window->ticket_category_id)
+            ->where('is_active', true)
+            ->whereNull('deleted_at')
+            ->where('id', '!=', $window->id)
+            ->where(function ($q) use ($window) {
+                $q->whereBetween('start_date_time', [$window->start_date_time, $window->end_date_time])
+                  ->orWhereBetween('end_date_time', [$window->start_date_time, $window->end_date_time])
+                  ->orWhere(function ($q) use ($window) {
+                      $q->where('start_date_time', '<=', $window->start_date_time)
+                        ->where('end_date_time', '>=', $window->end_date_time);
+                  });
+            })
+            ->exists();
 
-            if ($overlap) {
-                return response()->json([
-                    'message' => 'An active pricing window already exists for this ticket category with overlapping dates.',
-                    'errors' => ['start_date_time' => ['Cannot restore: overlaps with an active pricing window.']],
-                ], 409);
-            }
+        if ($overlap) {
+            return response()->json([
+                'message' => 'An active pricing window already exists for this ticket category with overlapping dates.',
+                'errors' => ['start_date_time' => ['Cannot restore: overlaps with an active pricing window.']],
+            ], 409);
         }
 
         $window->restore();
