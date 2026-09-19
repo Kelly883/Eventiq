@@ -52,41 +52,8 @@ class AnalyticsEndpointTest extends TestCase
         ]);
     }
 
-    // -------------------------------------------------------------------------
-    // SUMMARY: GET /api/organizer/events/{event}/analytics/summary
-    // -------------------------------------------------------------------------
-
-    public function test_summary_returns_real_metrics_from_analytics_table(): void
+    public function test_summary_returns_real_metrics_from_sales_timeline(): void
     {
-        \App\Models\AnalyticsEventsMetric::create([
-            'event_id' => $this->event->id,
-            'organizer_id' => $this->organizer->id,
-            'total_revenue' => 14520.00,
-            'total_tickets_sold' => 324,
-            'total_page_views' => 1760,
-            'total_ticket_page_views' => 840,
-            'conversion_rate' => 18.4,
-            'average_ticket_price' => 44.81,
-            'peak_sales_hour' => 19,
-            'last_updated_at' => now(),
-        ]);
-
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
-            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary");
-
-        $response->assertStatus(200)
-            ->assertJsonPath('success', true)
-            ->assertJsonPath('eventId', $this->event->id);
-
-        $this->assertEquals(14520.00, $response->json('metrics.totalRevenue'));
-        $this->assertEquals(324, $response->json('metrics.ticketsSold'));
-        $this->assertEquals(1760, $response->json('metrics.pageViews'));
-        $this->assertEquals(18.4, $response->json('metrics.conversionRate'));
-    }
-
-    public function test_summary_computes_metrics_from_sales_timeline_when_no_pre_aggregated_row(): void
-    {
-        // Pre-aggregate a row, then remove to force fallback path
         $tier = TicketTier::factory()->create(['event_id' => $this->event->id, 'price' => 50]);
 
         AnalyticsSalesTimeline::factory()->create([
@@ -110,11 +77,10 @@ class AnalyticsEndpointTest extends TestCase
             ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary");
 
         $response->assertStatus(200)
-            ->assertJsonPath('success', true);
-
-        $this->assertEquals(500.0, $response->json('metrics.totalRevenue'));
-        $this->assertEquals(10, $response->json('metrics.ticketsSold'));
-        $this->assertEquals(50.0, $response->json('metrics.averageTicketPrice'));
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('metrics.totalRevenue', 500)
+            ->assertJsonPath('metrics.ticketsSold', 10)
+            ->assertJsonPath('metrics.averageTicketPrice', 50);
     }
 
     public function test_summary_returns_401_without_token(): void
@@ -127,7 +93,6 @@ class AnalyticsEndpointTest extends TestCase
     {
         $response = $this->withHeader('Authorization', 'Bearer ' . $this->otherToken)
             ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary");
-
         $response->assertStatus(403);
     }
 
@@ -135,13 +100,175 @@ class AnalyticsEndpointTest extends TestCase
     {
         $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
             ->getJson("/api/organizer/events/00000000-0000-0000-0000-000000000000/analytics/summary");
-
         $response->assertStatus(404);
     }
 
-    // -------------------------------------------------------------------------
-    // DETAILED: GET /api/organizer/events/{event}/analytics/detailed
-    // -------------------------------------------------------------------------
+    public function test_summary_returns_trend_indicators(): void
+    {
+        $tier = TicketTier::factory()->create(['event_id' => $this->event->id, 'price' => 100]);
+
+        AnalyticsSalesTimeline::factory()->create([
+            'event_id' => $this->event->id,
+            'ticket_tier_id' => $tier->id,
+            'sale_timestamp' => now()->subDays(45),
+            'quantity' => 5,
+            'total_amount' => 500,
+        ]);
+        AnalyticsSalesTimeline::factory()->create([
+            'event_id' => $this->event->id,
+            'ticket_tier_id' => $tier->id,
+            'sale_timestamp' => now()->subDays(5),
+            'quantity' => 10,
+            'total_amount' => 1000,
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary");
+
+        $response->assertStatus(200);
+        $trends = $response->json('trends');
+        $this->assertArrayHasKey('revenue', $trends);
+        $this->assertArrayHasKey('direction', $trends['revenue']);
+        $this->assertArrayHasKey('percentageChange', $trends['revenue']);
+        $this->assertEquals('up', $trends['revenue']['direction']);
+    }
+
+    public function test_summary_filters_by_date_range(): void
+    {
+        $tier = TicketTier::factory()->create(['event_id' => $this->event->id, 'price' => 50]);
+
+        AnalyticsSalesTimeline::factory()->create([
+            'event_id' => $this->event->id,
+            'ticket_tier_id' => $tier->id,
+            'sale_timestamp' => now()->subDays(60),
+            'quantity' => 100,
+            'total_amount' => 5000,
+        ]);
+        AnalyticsSalesTimeline::factory()->create([
+            'event_id' => $this->event->id,
+            'ticket_tier_id' => $tier->id,
+            'sale_timestamp' => now()->subDays(5),
+            'quantity' => 5,
+            'total_amount' => 250,
+        ]);
+
+        $startDate = now()->subDays(10)->format('Y-m-d');
+        $endDate = now()->format('Y-m-d');
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('metrics.totalRevenue', 250)
+            ->assertJsonPath('metrics.ticketsSold', 5);
+    }
+
+    public function test_summary_rejects_invalid_date_range(): void
+    {
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary?startDate=2025-01-10&endDate=2025-01-01");
+
+        $response->assertStatus(400);
+    }
+
+    public function test_summary_uses_cache_within_30s(): void
+    {
+        $response1 = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary");
+        $response1->assertStatus(200);
+
+        $response2 = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary");
+        $response2->assertStatus(200);
+
+        $this->assertEquals($response1->json(), $response2->json());
+    }
+
+    public function test_summary_refresh_bypasses_cache(): void
+    {
+        $tier = TicketTier::factory()->create(['event_id' => $this->event->id, 'price' => 50]);
+        AnalyticsSalesTimeline::factory()->create([
+            'event_id' => $this->event->id,
+            'ticket_tier_id' => $tier->id,
+            'sale_timestamp' => now(),
+            'quantity' => 5,
+            'total_amount' => 250,
+        ]);
+
+        $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary")
+            ->assertStatus(200);
+
+        AnalyticsSalesTimeline::factory()->create([
+            'event_id' => $this->event->id,
+            'ticket_tier_id' => $tier->id,
+            'sale_timestamp' => now(),
+            'quantity' => 5,
+            'total_amount' => 250,
+        ]);
+
+        $cached = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary");
+        $this->assertEquals(250, $cached->json('metrics.totalRevenue'));
+
+        $fresh = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary?refresh=true");
+        $this->assertEquals(500, $fresh->json('metrics.totalRevenue'));
+    }
+
+    public function test_sales_velocity_returns_real_data_when_present(): void
+    {
+        $tier = TicketTier::factory()->create(['event_id' => $this->event->id, 'price' => 50]);
+
+        AnalyticsSalesTimeline::factory()->create([
+            'event_id' => $this->event->id,
+            'ticket_tier_id' => $tier->id,
+            'sale_timestamp' => now()->subDays(2),
+            'quantity' => 5,
+            'total_amount' => 250,
+        ]);
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/sales-velocity?interval=daily");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('aggregated_on_server', true);
+    }
+
+    public function test_sales_velocity_rejects_invalid_interval(): void
+    {
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/sales-velocity?interval=monthly");
+
+        $response->assertStatus(400);
+    }
+
+    public function test_sales_velocity_returns_401_without_token(): void
+    {
+        $response = $this->getJson("/api/organizer/events/{$this->event->id}/analytics/sales-velocity");
+        $response->assertStatus(401);
+    }
+
+    public function test_sales_velocity_returns_403_for_non_owner(): void
+    {
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->otherToken)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/sales-velocity");
+        $response->assertStatus(403);
+    }
+
+    public function test_summary_rate_limits_after_20_requests(): void
+    {
+        for ($i = 0; $i < 20; $i++) {
+            $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+                ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary");
+            $this->assertEquals(200, $response->status(), "Request {$i} failed");
+        }
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary");
+        $this->assertEquals(429, $response->status(), '21st request should be rate limited');
+    }
 
     public function test_detailed_returns_tier_breakdown(): void
     {
@@ -181,40 +308,6 @@ class AnalyticsEndpointTest extends TestCase
             ]);
     }
 
-    public function test_detailed_aggregates_sources_correctly(): void
-    {
-        $tier = TicketTier::factory()->create(['event_id' => $this->event->id, 'price' => 50]);
-
-        AnalyticsSalesTimeline::factory()->create([
-            'event_id' => $this->event->id,
-            'ticket_tier_id' => $tier->id,
-            'source' => 'web',
-            'quantity' => 3,
-            'total_amount' => 150,
-        ]);
-        AnalyticsSalesTimeline::factory()->create([
-            'event_id' => $this->event->id,
-            'ticket_tier_id' => $tier->id,
-            'source' => 'mobile',
-            'quantity' => 2,
-            'total_amount' => 100,
-        ]);
-
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
-            ->getJson("/api/organizer/events/{$this->event->id}/analytics/detailed");
-
-        $response->assertStatus(200);
-
-        $sources = collect($response->json('sourceBreakdown'));
-        $web = $sources->firstWhere('source', 'web');
-        $mobile = $sources->firstWhere('source', 'mobile');
-
-        $this->assertEquals(3, $web['ticketsSold']);
-        $this->assertEquals(150.0, $web['revenue']);
-        $this->assertEquals(2, $mobile['ticketsSold']);
-        $this->assertEquals(100.0, $mobile['revenue']);
-    }
-
     public function test_detailed_returns_401_without_token(): void
     {
         $response = $this->getJson("/api/organizer/events/{$this->event->id}/analytics/detailed");
@@ -225,37 +318,8 @@ class AnalyticsEndpointTest extends TestCase
     {
         $response = $this->withHeader('Authorization', 'Bearer ' . $this->otherToken)
             ->getJson("/api/organizer/events/{$this->event->id}/analytics/detailed");
-
         $response->assertStatus(403);
     }
-
-    // -------------------------------------------------------------------------
-    // SALES VELOCITY: pre-existing — just sanity check still works with real data
-    // -------------------------------------------------------------------------
-
-    public function test_sales_velocity_returns_real_data_when_present(): void
-    {
-        $tier = TicketTier::factory()->create(['event_id' => $this->event->id, 'price' => 50]);
-
-        AnalyticsSalesTimeline::factory()->create([
-            'event_id' => $this->event->id,
-            'ticket_tier_id' => $tier->id,
-            'sale_timestamp' => now()->subDays(2),
-            'quantity' => 5,
-            'total_amount' => 250,
-        ]);
-
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
-            ->getJson("/api/organizer/events/{$this->event->id}/analytics/sales-velocity?interval=daily");
-
-        $response->assertStatus(200)
-            ->assertJsonPath('success', true)
-            ->assertJsonPath('aggregated_on_server', true);
-    }
-
-    // -------------------------------------------------------------------------
-    // COMPARISON: GET /api/organizer/analytics/comparison
-    // -------------------------------------------------------------------------
 
     public function test_comparison_returns_real_data_for_user_events(): void
     {

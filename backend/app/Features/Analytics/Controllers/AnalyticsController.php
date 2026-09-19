@@ -9,10 +9,13 @@ use App\Models\AnalyticsSalesTimeline;
 use App\Models\Event;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class AnalyticsController extends Controller
 {
+    private const SUMMARY_CACHE_TTL = 30; // seconds
+
     private function authorizeEventAccess(Request $request, $eventId): void
     {
         $user = $request->user();
@@ -33,19 +36,113 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Get pre-aggregated sales velocity data (daily or hourly).
+     * GET /api/organizer/events/{event}/analytics/summary
+     * Returns totalRevenue, ticketsSold, conversionRate, averageTicketPrice,
+     * totalPageViews, capacity, plus trend indicators vs previous period.
+     *
+     * Optional query:
+     *   - startDate, endDate (ISO 8601) — custom date range
+     *   - refresh=true — bypass cache
+     */
+    public function getSummary(Request $request, $eventId)
+    {
+        $this->authorizeEventAccess($request, $eventId);
+
+        $user = $request->user();
+        $refresh = $request->query('refresh', false);
+
+        // Parse date range
+        $endDate = $request->query('endDate')
+            ? Carbon::parse($this->normalizeDateInput($request->query('endDate')))
+            : Carbon::now();
+        $startDate = $request->query('startDate')
+            ? Carbon::parse($this->normalizeDateInput($request->query('startDate')))
+            : (clone $endDate)->subDays(30);
+
+        // Validate range
+        if ($startDate->gte($endDate)) {
+            return response()->json(['message' => 'startDate must be before endDate'], 400);
+        }
+
+        // Cache key includes event, user, and date range so different ranges aren't mixed
+        $cacheKey = "analytics:summary:{$eventId}:{$user->id}:" . $startDate->format('Ymd') . ':' . $endDate->format('Ymd');
+
+        if (!$refresh) {
+            $cached = Cache::get($cacheKey);
+            if ($cached) {
+                return response()->json($cached);
+            }
+        }
+
+        // Current period metrics
+        $current = $this->computeMetrics($eventId, $startDate, $endDate);
+
+        // Previous period of equal length for trend comparison
+        $periodLength = $startDate->diffInSeconds($endDate);
+        $prevStart = (clone $startDate)->subSeconds($periodLength);
+        $prevEnd = (clone $endDate)->subSeconds($periodLength);
+        $previous = $this->computeMetrics($eventId, $prevStart, $prevEnd);
+
+        $response = [
+            'success' => true,
+            'eventId' => (int) $eventId,
+            'dateRange' => [
+                'startDate' => $startDate->toIso8601String(),
+                'endDate' => $endDate->toIso8601String(),
+            ],
+            'metrics' => [
+                'totalRevenue' => $current['revenue'],
+                'ticketsSold' => $current['ticketsSold'],
+                'ticketCapacity' => $current['capacity'],
+                'conversionRate' => $current['conversionRate'],
+                'averageTicketPrice' => $current['averageTicketPrice'],
+                'pageViews' => $current['pageViews'],
+                'refundedTickets' => $current['refundedTickets'],
+            ],
+            'trends' => [
+                'revenue' => $this->calculateTrend($current['revenue'], $previous['revenue']),
+                'ticketsSold' => $this->calculateTrend($current['ticketsSold'], $previous['ticketsSold']),
+                'conversionRate' => $this->calculateTrend($current['conversionRate'], $previous['conversionRate']),
+                'pageViews' => $this->calculateTrend($current['pageViews'], $previous['pageViews']),
+            ],
+        ];
+
+        Cache::put($cacheKey, $response, self::SUMMARY_CACHE_TTL);
+
+        return response()->json($response);
+    }
+
+    /**
+     * Normalize date input to a format Carbon can parse consistently.
+     * Handles ISO 8601 with timezone offset that some browsers/clients send.
+     */
+    private function normalizeDateInput(string $date): string
+    {
+        // If it looks like a full ISO 8601 with timezone (e.g. 2025-01-10T00:00:00+00:00)
+        // strip the timezone to avoid "Double time" errors
+        if (preg_match('/^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})/', $date, $matches)) {
+            return $matches[1];
+        }
+        return $date;
+    }
+
+    /**
+     * GET /api/organizer/events/{event}/analytics/sales-velocity
+     * Time-series sales data grouped by interval (hourly, daily, weekly).
      */
     public function getSalesVelocity(Request $request, $eventId)
     {
         $this->authorizeEventAccess($request, $eventId);
 
-        $interval = $request->query('interval', 'daily'); // 'daily' or 'hourly'
+        $interval = $request->query('interval', 'daily'); // 'hourly', 'daily', 'weekly'
 
-        // Check if there is actual database data
+        if (!in_array($interval, ['hourly', 'daily', 'weekly'], true)) {
+            return response()->json(['message' => 'Invalid interval. Use hourly, daily, or weekly.'], 400);
+        }
+
         $hasData = AnalyticsSalesTimeline::where('event_id', $eventId)->exists();
 
         if (!$hasData) {
-            // Fallback: Generate clean, pre-aggregated mock sales velocity data
             return response()->json([
                 'success' => true,
                 'interval' => $interval,
@@ -54,50 +151,54 @@ class AnalyticsController extends Controller
             ]);
         }
 
-        // Database level pre-aggregation
         $driver = DB::connection()->getDriverName();
         $query = AnalyticsSalesTimeline::where('event_id', $eventId);
 
-        if ($interval === 'hourly') {
-            if ($driver === 'sqlite') {
-                $query->select(
-                    DB::raw("strftime('%Y-%m-%d %H:00:00', sale_timestamp) as time_bucket"),
-                    DB::raw("SUM(quantity) as ticketsSold"),
-                    DB::raw("SUM(total_amount) as revenue")
-                );
-            } elseif ($driver === 'mysql') {
-                $query->select(
-                    DB::raw("DATE_FORMAT(sale_timestamp, '%Y-%m-%d %H:00:00') as time_bucket"),
-                    DB::raw("SUM(quantity) as ticketsSold"),
-                    DB::raw("SUM(total_amount) as revenue")
-                );
-            } else { // postgresql
-                $query->select(
-                    DB::raw("date_trunc('hour', sale_timestamp) as time_bucket"),
-                    DB::raw("SUM(quantity) as ticketsSold"),
-                    DB::raw("SUM(total_amount) as revenue")
-                );
-            }
-        } else { // default to 'daily'
-            if ($driver === 'sqlite') {
-                $query->select(
-                    DB::raw("strftime('%Y-%m-%d', sale_timestamp) as time_bucket"),
-                    DB::raw("SUM(quantity) as ticketsSold"),
-                    DB::raw("SUM(total_amount) as revenue")
-                );
-            } elseif ($driver === 'mysql') {
-                $query->select(
-                    DB::raw("DATE_FORMAT(sale_timestamp, '%Y-%m-%d') as time_bucket"),
-                    DB::raw("SUM(quantity) as ticketsSold"),
-                    DB::raw("SUM(total_amount) as revenue")
-                );
-            } else { // postgresql
-                $query->select(
-                    DB::raw("date_trunc('day', sale_timestamp) as time_bucket"),
-                    DB::raw("SUM(quantity) as ticketsSold"),
-                    DB::raw("SUM(total_amount) as revenue")
-                );
-            }
+        $format = match ($interval) {
+            'hourly' => match ($driver) {
+                'sqlite' => "%Y-%m-%d %H:00:00",
+                'mysql' => "%Y-%m-%d %H:00:00",
+                'pgsql' => null,
+                default => "%Y-%m-%d %H:00:00",
+            },
+            'daily' => match ($driver) {
+                'sqlite' => "%Y-%m-%d",
+                'mysql' => "%Y-%m-%d",
+                'pgsql' => null,
+                default => "%Y-%m-%d",
+            },
+            'weekly' => match ($driver) {
+                'sqlite' => "%Y-%W",
+                'mysql' => "%Y-%u",
+                'pgsql' => null,
+                default => "%Y-%W",
+            },
+        };
+
+        if ($driver === 'pgsql') {
+            $truncUnit = match ($interval) {
+                'hourly' => 'hour',
+                'daily' => 'day',
+                'weekly' => 'week',
+            };
+            $query->select(
+                DB::raw("date_trunc('{$truncUnit}', sale_timestamp) as time_bucket"),
+                DB::raw("SUM(quantity) as ticketsSold"),
+                DB::raw("SUM(total_amount) as revenue")
+            );
+        } elseif ($driver === 'sqlite') {
+            $query->select(
+                DB::raw("strftime('{$format}', sale_timestamp) as time_bucket"),
+                DB::raw("SUM(quantity) as ticketsSold"),
+                DB::raw("SUM(total_amount) as revenue")
+            );
+        } else {
+            // mysql and others
+            $query->select(
+                DB::raw("DATE_FORMAT(sale_timestamp, '{$format}') as time_bucket"),
+                DB::raw("SUM(quantity) as ticketsSold"),
+                DB::raw("SUM(total_amount) as revenue")
+            );
         }
 
         $aggregatedData = $query->groupBy('time_bucket')
@@ -120,74 +221,13 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Get event summary metrics.
-     */
-    public function getSummary(Request $request, $eventId)
-    {
-        $this->authorizeEventAccess($request, $eventId);
-
-        // Try to get pre-aggregated metrics first
-        // The EventObserver auto-creates a record with zero values, so we need to find one with actual data
-        $metric = AnalyticsEventsMetric::where('event_id', (int) $eventId)
-            ->where(function ($query) {
-                $query->where('total_revenue', '>', 0)
-                    ->orWhere('total_tickets_sold', '>', 0)
-                    ->orWhere('total_page_views', '>', 0);
-            })
-            ->first();
-
-        if ($metric) {
-            return response()->json([
-                'success' => true,
-                'eventId' => (int) $eventId,
-                'metrics' => [
-                    'totalRevenue' => (float) $metric->total_revenue,
-                    'ticketsSold' => (int) $metric->total_tickets_sold,
-                    'ticketCapacity' => $this->getEventCapacity($eventId),
-                    'conversionRate' => (float) $metric->conversion_rate,
-                    'pageViews' => (int) $metric->total_page_views,
-                    'refundedTickets' => $this->getRefundedTicketsCount($eventId),
-                ]
-            ]);
-        }
-
-        // Fallback: compute from sales timeline
-        $aggregates = DB::table('analytics_sales_timeline')
-            ->where('event_id', $eventId)
-            ->selectRaw('COALESCE(SUM(total_amount), 0) as total_revenue')
-            ->selectRaw('COALESCE(SUM(quantity), 0) as tickets_sold')
-            ->first();
-
-        $totalRevenue = (float) ($aggregates->total_revenue ?? 0);
-        $ticketsSold = (int) ($aggregates->tickets_sold ?? 0);
-        $averageTicketPrice = $ticketsSold > 0 ? round($totalRevenue / $ticketsSold, 2) : 0;
-        $pageViews = $this->getPageViews($eventId);
-        $ticketPageViews = $this->getTicketPageViews($eventId);
-        $conversionRate = $pageViews > 0 ? round(($ticketsSold / $pageViews) * 100, 2) : 0;
-
-        return response()->json([
-            'success' => true,
-            'eventId' => (int) $eventId,
-            'metrics' => [
-                'totalRevenue' => $totalRevenue,
-                'ticketsSold' => $ticketsSold,
-                'ticketCapacity' => $this->getEventCapacity($eventId),
-                'conversionRate' => $conversionRate,
-                'pageViews' => $pageViews,
-                'averageTicketPrice' => $averageTicketPrice,
-                'refundedTickets' => $this->getRefundedTicketsCount($eventId),
-            ]
-        ]);
-    }
-
-    /**
-     * Get detailed breakdown of analytics.
+     * GET /api/organizer/events/{event}/analytics/detailed
+     * Tier breakdown + source breakdown.
      */
     public function getDetailed(Request $request, $eventId)
     {
         $this->authorizeEventAccess($request, $eventId);
 
-        // Get tier breakdown from sales timeline
         $tierBreakdown = AnalyticsSalesTimeline::where('analytics_sales_timeline.event_id', $eventId)
             ->join('ticket_tiers', 'analytics_sales_timeline.ticket_tier_id', '=', 'ticket_tiers.id')
             ->selectRaw('ticket_tiers.id as tier_id')
@@ -209,7 +249,6 @@ class AnalyticsController extends Controller
             ];
         })->values();
 
-        // Get source breakdown
         $sourceBreakdown = AnalyticsSalesTimeline::where('event_id', $eventId)
             ->selectRaw('COALESCE(source, \'unknown\') as source')
             ->selectRaw('COALESCE(SUM(quantity), 0) as tickets_sold')
@@ -233,7 +272,8 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Get comparison between user's events.
+     * GET /api/organizer/analytics/comparison
+     * Cross-event comparison for the authenticated organizer.
      */
     public function getComparison(Request $request)
     {
@@ -242,22 +282,17 @@ class AnalyticsController extends Controller
             abort(401, 'Unauthenticated');
         }
 
-        // Determine which events to include
         $query = Event::query();
 
         if (!$user->hasRole('admin')) {
-            // Organizers only see their own events
             $organizer = $user->organizer;
+            if (!$organizer) {
+                $organizer = \App\Models\Organizer::where('user_id', $user->id)->first();
+            }
             if ($organizer) {
                 $query->where('organizer_id', $organizer->id);
             } else {
-                // Try to find organizer by user ID
-                $organizer = \App\Models\Organizer::where('user_id', $user->id)->first();
-                if ($organizer) {
-                    $query->where('organizer_id', $organizer->id);
-                } else {
-                    $query->whereRaw('1 = 0'); // No events
-                }
+                $query->whereRaw('1 = 0');
             }
         }
 
@@ -280,62 +315,84 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Get capacity for an event.
+     * Compute metrics for a given date range from the sales timeline.
      */
-    private function getEventCapacity($eventId): int
+    private function computeMetrics(int $eventId, Carbon $startDate, Carbon $endDate): array
     {
-        $event = Event::find($eventId);
-        return $event && $event->capacity !== null ? (int) $event->capacity : 0;
-    }
+        $aggregates = DB::table('analytics_sales_timeline')
+            ->where('event_id', $eventId)
+            ->whereBetween('sale_timestamp', [$startDate, $endDate])
+            ->selectRaw('COALESCE(SUM(total_amount), 0) as total_revenue')
+            ->selectRaw('COALESCE(SUM(quantity), 0) as tickets_sold')
+            ->first();
 
-    /**
-     * Get refunded tickets count.
-     */
-    private function getRefundedTicketsCount($eventId): int
-    {
-        return \App\Features\Checkout\Models\Ticket::where('event_id', $eventId)
+        $revenue = (float) ($aggregates->total_revenue ?? 0);
+        $ticketsSold = (int) ($aggregates->tickets_sold ?? 0);
+        $averageTicketPrice = $ticketsSold > 0 ? round($revenue / $ticketsSold, 2) : 0;
+
+        $metric = AnalyticsEventsMetric::where('event_id', $eventId)->first();
+        $pageViews = $metric && $metric->total_page_views !== null ? (int) $metric->total_page_views : 0;
+        $conversionRate = $pageViews > 0 ? round(($ticketsSold / $pageViews) * 100, 2) : 0;
+
+        $refundedTickets = \App\Features\Checkout\Models\Ticket::where('event_id', $eventId)
             ->where('refund_status', 'refunded')
             ->count();
+
+        $event = Event::find($eventId);
+        $capacity = $event && $event->capacity !== null ? (int) $event->capacity : 0;
+
+        return [
+            'revenue' => $revenue,
+            'ticketsSold' => $ticketsSold,
+            'capacity' => $capacity,
+            'conversionRate' => $conversionRate,
+            'averageTicketPrice' => $averageTicketPrice,
+            'pageViews' => $pageViews,
+            'refundedTickets' => $refundedTickets,
+        ];
     }
 
     /**
-     * Get page views (stored in analytics_events_metrics or computed).
+     * Calculate trend between current and previous period.
+     * Returns array with direction, percentage change, and absolute delta.
      */
-    private function getPageViews($eventId): int
+    private function calculateTrend(float $current, float $previous): array
     {
-        $metric = AnalyticsEventsMetric::where('event_id', $eventId)->first();
-        return $metric && $metric->total_page_views !== null ? (int) $metric->total_page_views : 0;
+        $delta = $current - $previous;
+        $percentageChange = $previous > 0
+            ? round(($delta / $previous) * 100, 2)
+            : ($current > 0 ? 100.0 : 0.0);
+
+        $direction = match (true) {
+            $percentageChange > 0.01 => 'up',
+            $percentageChange < -0.01 => 'down',
+            default => 'flat',
+        };
+
+        return [
+            'direction' => $direction,
+            'percentageChange' => $percentageChange,
+            'delta' => round($delta, 2),
+        ];
     }
 
     /**
-     * Get ticket page views.
+     * Generate mock sales velocity for demonstration when no real data exists.
      */
-    private function getTicketPageViews($eventId): int
-    {
-        $metric = AnalyticsEventsMetric::where('event_id', $eventId)->first();
-        return $metric && $metric->total_ticket_page_views !== null ? (int) $metric->total_ticket_page_views : 0;
-    }
-
-    /**
-     * Generates a clean, pre-aggregated realistic time series for demonstration.
-     */
-    private function generateMockSalesVelocity($eventId, $interval)
+    private function generateMockSalesVelocity(string $eventId, string $interval): array
     {
         $data = [];
         $now = Carbon::now();
 
         if ($interval === 'hourly') {
-            // Last 24 hours
             for ($i = 23; $i >= 0; $i--) {
                 $time = (clone $now)->subHours($i);
-                // Ensure a nice trend: higher sales count in evening hours
-                $hour = (int)$time->format('H');
-                $base = 2;
-                if ($hour >= 17 && $hour <= 22) {
-                    $base = 15;
-                } elseif ($hour >= 8 && $hour <= 16) {
-                    $base = 7;
-                }
+                $hour = (int) $time->format('H');
+                $base = match (true) {
+                    $hour >= 17 && $hour <= 22 => 15,
+                    $hour >= 8 && $hour <= 16 => 7,
+                    default => 2,
+                };
                 $ticketsSold = rand($base - 2 >= 0 ? $base - 2 : 0, $base + 3);
                 $data[] = [
                     'date' => $time->format('Y-m-d H:00:00'),
@@ -343,13 +400,23 @@ class AnalyticsController extends Controller
                     'revenue' => $ticketsSold * 45.0,
                 ];
             }
+        } elseif ($interval === 'weekly') {
+            for ($i = 11; $i >= 0; $i--) {
+                $time = (clone $now)->subWeeks($i);
+                $multiplier = (12 - $i) * 2;
+                $ticketsSold = rand(10, 30) + (int) round($multiplier);
+                $data[] = [
+                    'date' => $time->format('Y-W'),
+                    'ticketsSold' => $ticketsSold,
+                    'revenue' => $ticketsSold * 45.0,
+                ];
+            }
         } else {
-            // Last 14 days
+            // daily, last 14 days
             for ($i = 13; $i >= 0; $i--) {
                 $time = (clone $now)->subDays($i);
-                // Creating an upward curve trend
                 $multiplier = (14 - $i) * 1.5;
-                $ticketsSold = rand(5, 12) + (int)round($multiplier);
+                $ticketsSold = rand(5, 12) + (int) round($multiplier);
                 $data[] = [
                     'date' => $time->format('Y-m-d'),
                     'ticketsSold' => $ticketsSold,

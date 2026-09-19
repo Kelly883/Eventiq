@@ -154,6 +154,20 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Analytics — 20/min per user for all analytics endpoints
+        RateLimiter::for('analytics-summary', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('analytics-sales-velocity', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('analytics-detailed', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('analytics-comparison', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+
         Event::observe(EventObserver::class);
         Ticket::observe(TicketObserver::class);
         PricingWindow::observe(PricingWindowObserver::class);
