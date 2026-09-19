@@ -415,7 +415,6 @@ body {
   position: sticky;
   top: 0;
   height: 100vh;
-  overflow-y: auto;
 }
 
 @media (min-width: 768px) {
@@ -442,6 +441,8 @@ body {
   flex-direction: column;
   gap: 2px;
   flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .dashboard-sidebar-item {
