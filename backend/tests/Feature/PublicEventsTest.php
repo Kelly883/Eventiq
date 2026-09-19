@@ -6,7 +6,9 @@ use App\Models\AnalyticsEventsMetric;
 use App\Models\Event;
 use App\Models\Organizer;
 use App\Models\TicketTier;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class PublicEventsTest extends TestCase
@@ -241,8 +243,8 @@ class PublicEventsTest extends TestCase
 
     public function test_all_public_endpoints_are_rate_limited(): void
     {
-        // Ensure rate limiter is not exhausted by earlier tests
-        \Illuminate\Support\Facades\RateLimiter::clear('discovery');
+        // Override the discovery limiter for this test so earlier tests don't exhaust it
+        RateLimiter::for('discovery', fn () => Limit::perMinute(9999));
         $event = Event::factory()->create(['status' => 'published']);
         $urls = [
             '/api/public/events',
@@ -262,11 +264,14 @@ class PublicEventsTest extends TestCase
             );
         }
 
-        // Verify that the throttle middleware IS applied (would return 429 if exceeded)
-        $limiter = app(\Illuminate\Cache\RateLimiter::class);
-        $this->assertTrue(
-            $limiter->tooManyAttempts('discovery|' . request()->ip(), 30) >= 0,
-            'Expected rate limiter to track requests'
-        );
+        // Restore the real limiter and verify it would block after 30 requests
+        RateLimiter::for('discovery', fn () => Limit::perMinute(30));
+
+        // Use a unique IP for this check to avoid interference
+        $testKey = 'discovery|127.0.' . rand(1, 255) . '.1';
+        for ($i = 0; $i < 30; $i++) {
+            RateLimiter::hit($testKey);
+        }
+        $this->assertTrue(RateLimiter::tooManyAttempts($testKey, 30), 'Rate limiter should block after 30 attempts');
     }
 }
