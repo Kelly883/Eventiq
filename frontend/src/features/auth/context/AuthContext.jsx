@@ -59,7 +59,11 @@ export const AuthProvider = ({ children }) => {
   const [organizerId, setOrganizerId] = useState(null);
 
   const refreshAuth = useCallback(async () => {
-    setLoading(true);
+    // NOTE: this is a background poll. It must NOT touch `loading` —
+    // `loading` gates ProtectedRoute. Setting it true here would hide the
+    // dashboard behind a spinner every 60s, and a transient failure would
+    // setUser(null) → redirect to login.
+    const hadTokenAtDispatch = Boolean(sessionStorage.getItem('auth_token'));
     try {
       const res = await api.get('/auth/me');
       setUser(res.data);
@@ -76,10 +80,19 @@ export const AuthProvider = ({ children }) => {
         }
       }
     } catch (e) {
-      setUser(null);
-      setSessionExpired(true);
-    } finally {
-      setLoading(false);
+      const status = e?.response?.status;
+      const hasTokenNow = Boolean(sessionStorage.getItem('auth_token'));
+      if (status === 401 && (!hasTokenNow || hadTokenAtDispatch)) {
+        // Only a confirmed 401 means the session is truly expired/invalid.
+        // Guard against a stale race: a /auth/me dispatched BEFORE login
+        // (no token) that resolves AFTER login stored the token is not a
+        // session expiry — ignore it.
+        setUser(null);
+        setSessionExpired(true);
+      }
+      // Any other error (network, timeout, 5xx) is transient — keep the
+      // user logged in. The next poll or the next focus/visibility check
+      // will re-evaluate.
     }
   }, []);
 
@@ -89,6 +102,7 @@ export const AuthProvider = ({ children }) => {
   }, [refreshAuth]);
 
   const fetchCurrentUser = useCallback(async () => {
+    const hasToken = Boolean(sessionStorage.getItem('auth_token'));
     try {
       const res = await api.get('/auth/me');
       const fetchedUser = res.data;
@@ -106,16 +120,19 @@ export const AuthProvider = ({ children }) => {
         return fetchedUser;
       });
     } catch (err) {
-      // If /auth/me fails with 401, session is expired — clear locally and sync
       const status = err?.response?.status;
-      if (status === 401) {
+      const hasTokenNow = Boolean(sessionStorage.getItem('auth_token'));
+      if (status === 401 && (!hasTokenNow || hasToken)) {
+        // Confirmed expired/invalid — clear locally and sync across tabs.
+        // Stale race guard: a /auth/me dispatched before login stored the
+        // token must not clear the fresh session.
         setUser(null);
         broadcastAuthEvent('session-ended');
         throw err;
-      } else {
-        setUser(null);
-        throw err;
       }
+      // Non-401 (network failure, timeout, 5xx): do NOT destroy auth state.
+      // The user stays logged in; the next poll/focus check re-evaluates.
+      throw err;
     }
   }, []);
 
