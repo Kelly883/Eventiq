@@ -1,19 +1,14 @@
-import React from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../../auth/context/AuthContext';
-
-const dashboardSidebarItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: '👤', exact: true },
-  { to: '/my-tickets', label: 'My Tickets', icon: '🎫' },
-  { to: '/my-tickets/status', label: 'Check Ticket', icon: '🔍' },
-  { to: '/events', label: 'Browse Events', icon: '📋' },
-  { to: '/settings', label: 'Settings', icon: '⚙️' },
-];
+import Icon from './dashboard/Icon';
+import MobileNav from './dashboard/MobileNav';
+import '../dashboard.css';
 
 const DashboardLayout = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user } = useAuthContext();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const roles = user?.roles?.map((r) => r.name) || [];
   const isOrganizer = roles.includes('organizer');
@@ -26,13 +21,13 @@ const DashboardLayout = () => {
     dashboardNavItems.push({
       to: '/dashboard/organizer',
       label: 'Organizer',
-      icon: '💼',
+      icon: 'dashboard',
       description: 'Events and analytics',
     });
     dashboardNavItems.push({
       to: '/organizer/payouts',
       label: 'Payouts',
-      icon: '💰',
+      icon: 'browse',
       description: 'Your earnings and payout history for your events only.',
     });
   }
@@ -41,13 +36,13 @@ const DashboardLayout = () => {
     dashboardNavItems.push({
       to: '/admin',
       label: 'Admin',
-      icon: '🛡️',
+      icon: 'settings',
       description: 'Platform management',
     });
     dashboardNavItems.push({
       to: '/admin/settlements/dashboard',
       label: 'Settlements',
-      icon: '📊',
+      icon: 'dashboard',
       description: 'Platform-wide refund and settlement management. Different from organizer payouts.',
     });
   }
@@ -55,11 +50,9 @@ const DashboardLayout = () => {
   dashboardNavItems.push({
     to: '/dashboard',
     label: 'My Dashboard',
-    icon: '👤',
+    icon: 'dashboard',
     description: 'Personal overview',
   });
-
-  const activeItem = dashboardNavItems.find((item) => item.to === location.pathname);
 
   const getPageTitle = () => {
     if (location.pathname === '/dashboard/organizer') return 'Organizer Dashboard';
@@ -67,16 +60,41 @@ const DashboardLayout = () => {
     return 'Dashboard';
   };
 
+  const mobileNavItems = dashboardNavItems.map(({ to, label, icon }) => ({ to, label, icon }));
+
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      {/* Persistent Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex-shrink-0 hidden md:block">
-        <div className="p-4 border-b border-slate-100">
-          <h2 className="text-lg font-bold text-slate-900">Eventiq</h2>
-          <p className="text-xs text-slate-500">Your dashboard</p>
+    <div className="dashboard-layout">
+      {/* Mobile Header */}
+      <header className="dashboard-mobile-header">
+        <span className="dashboard-brand-name">EventIQ</span>
+        <div className="dashboard-header-actions">
+          <button
+            type="button"
+            className="dashboard-icon-btn"
+            aria-label="Open navigation"
+            onClick={() => setMobileNavOpen(true)}
+          >
+            <Icon name="menu" size={24} />
+          </button>
         </div>
-        <nav className="p-3 space-y-1">
-          {dashboardSidebarItems.map((item) => {
+      </header>
+
+      {/* Mobile Navigation Drawer */}
+      <MobileNav
+        user={user}
+        items={mobileNavItems}
+        isOpen={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+      />
+
+      {/* Persistent Sidebar (desktop) */}
+      <aside className="dashboard-sidebar">
+        <div className="dashboard-sidebar-header">
+          <h2 className="dashboard-sidebar-title">EventIQ</h2>
+          <p className="dashboard-sidebar-subtitle">Your dashboard</p>
+        </div>
+        <nav className="dashboard-sidebar-nav" aria-label="Dashboard">
+          {dashboardNavItems.map((item) => {
             const isActive = item.exact
               ? location.pathname === item.to
               : location.pathname.startsWith(item.to);
@@ -85,50 +103,42 @@ const DashboardLayout = () => {
                 key={item.to}
                 to={item.to}
                 className={({ isActive: active }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    active || isActive
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`
+                  `dashboard-sidebar-item ${active || isActive ? 'active' : ''}`
                 }
               >
-                <span className="text-lg">{item.icon}</span>
-                <span>{item.label}</span>
+                <span className="dashboard-sidebar-item-icon">
+                  <Icon name={item.icon} size={20} />
+                </span>
+                <span className="dashboard-sidebar-item-label">{item.label}</span>
               </NavLink>
             );
           })}
           {(isVenueStaff || isOrganizer || isAdmin) && (
             <>
-              <div className="pt-4 pb-2">
-                <span className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Staff
-                </span>
+              <div className="dashboard-sidebar-section">
+                <span className="dashboard-sidebar-section-title">Staff</span>
               </div>
               <NavLink
                 to="/venue/dashboard"
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`
+                  `dashboard-sidebar-item ${isActive ? 'active' : ''}`
                 }
               >
-                <span className="text-lg">🎯</span>
-                <span>Venue Dashboard</span>
+                <span className="dashboard-sidebar-item-icon">
+                  <Icon name="browse" size={20} />
+                </span>
+                <span className="dashboard-sidebar-item-label">Venue Dashboard</span>
               </NavLink>
               <NavLink
                 to="/venue/events"
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`
+                  `dashboard-sidebar-item ${isActive ? 'active' : ''}`
                 }
               >
-                <span className="text-lg">📋</span>
-                <span>Check-In Events</span>
+                <span className="dashboard-sidebar-item-icon">
+                  <Icon name="calendar" size={20} />
+                </span>
+                <span className="dashboard-sidebar-item-label">Check-In Events</span>
               </NavLink>
             </>
           )}
@@ -136,13 +146,13 @@ const DashboardLayout = () => {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+      <div className="dashboard-main">
+        <div className="dashboard-container">
+          <div className="dashboard-header">
+            <h1 className="dashboard-title">
               {getPageTitle()}
             </h1>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="dashboard-subtitle">
               {isOrganizer && 'Manage your events, track sales, and view analytics.'}
               {isAdmin && !isOrganizer && 'Access platform management tools.'}
               {!isOrganizer && !isAdmin && 'View your tickets and account activity.'}
@@ -150,26 +160,22 @@ const DashboardLayout = () => {
           </div>
 
           {dashboardNavItems.length > 1 && (
-            <div className="mb-6">
-              <nav className="flex flex-wrap gap-2">
-                {dashboardNavItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    className={({ isActive }) =>
-                      `inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-                      }`
-                    }
-                  >
-                    <span>{item.icon}</span>
-                    <span>{item.label}</span>
-                  </NavLink>
-                ))}
-              </nav>
-            </div>
+            <nav className="dashboard-tabs" aria-label="Dashboard sections">
+              {dashboardNavItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `dashboard-tab ${isActive ? 'active' : ''}`
+                  }
+                >
+                  <span className="dashboard-tab-icon">
+                    <Icon name={item.icon} size={16} />
+                  </span>
+                  <span className="dashboard-tab-label">{item.label}</span>
+                </NavLink>
+              ))}
+            </nav>
           )}
 
           <Outlet />

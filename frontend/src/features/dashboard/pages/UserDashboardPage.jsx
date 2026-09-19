@@ -4,12 +4,22 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthContext } from '../../auth/context/AuthContext';
 import { ticketKeys } from '../../../lib/queryKeys';
 import { api } from '../../../lib/api';
+import DashboardHeader from '../components/dashboard/DashboardHeader';
+import DashboardStats from '../components/dashboard/DashboardStats';
+import QuickActions from '../components/dashboard/QuickActions';
+import UpcomingEvents from '../components/dashboard/UpcomingEvents';
+import RecentTickets from '../components/dashboard/RecentTickets';
+import GettingStarted from '../components/dashboard/GettingStarted';
+import MobileNav from '../components/dashboard/MobileNav';
+import Icon from '../components/dashboard/Icon';
+import '../dashboard.css';
 
 const UserDashboardPage = () => {
   const { user } = useAuthContext();
   const [showWelcome, setShowWelcome] = useState(true);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  const { data: ticketsData } = useQuery({
+  const { data: ticketsData, isLoading: ticketsLoading } = useQuery({
     queryKey: ticketKeys.lists(),
     queryFn: async () => {
       const response = await api.get('/tickets');
@@ -25,141 +35,187 @@ const UserDashboardPage = () => {
   const quickActions = [
     {
       to: '/events',
-      icon: '📋',
+      icon: 'browse',
       title: 'Browse Events',
       description: 'Discover upcoming events and book tickets',
     },
     {
       to: '/my-tickets',
-      icon: '🎫',
+      icon: 'ticket',
       title: 'My Tickets',
       description: 'View and manage your purchased tickets',
-      visible: () => hasTickets,
     },
     {
       to: '/my-tickets/status',
-      icon: '🔍',
+      icon: 'search',
       title: 'Check Ticket',
       description: 'Look up ticket status by reference code',
     },
     {
+      to: '/events/calendar',
+      icon: 'calendar',
+      title: 'Calendar',
+      description: 'View events by date',
+    },
+    {
       to: '/settings',
-      icon: '⚙️',
+      icon: 'settings',
       title: 'Settings',
       description: 'Manage your account and preferences',
     },
   ];
 
+  const gettingStartedSteps = [
+    {
+      title: 'Browse Events',
+      description: 'Find events that interest you',
+      completed: false,
+    },
+    {
+      title: 'Purchase Your First Ticket',
+      description: 'Book your spot at an event',
+      completed: hasTickets,
+    },
+    {
+      title: 'View Your Tickets',
+      description: 'Access your tickets anytime',
+      completed: hasTickets,
+    },
+  ];
+
+  const mobileNavItems = [
+    { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
+    { to: '/my-tickets', label: 'My Tickets', icon: 'ticket' },
+    { to: '/events', label: 'Browse Events', icon: 'browse' },
+    { to: '/events/calendar', label: 'Calendar', icon: 'calendar' },
+    { to: '/settings', label: 'Settings', icon: 'settings' },
+  ];
+
   return (
-    <div>
-      {/* Welcome Banner for New Users */}
-      {showWelcome && (
-        <div className="bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-xl p-6 shadow-sm mb-6 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full"></div>
-          <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-16 h-16 bg-white/10 rounded-full"></div>
-          <div className="relative">
-            <h2 className="text-2xl font-bold mb-2">
-              Welcome to Eventiq{user?.name ? `, ${user.name}` : ''}! 🎉
-            </h2>
-            <p className="text-indigo-100 mb-4 max-w-lg">
-              Your personal dashboard is here to help you manage tickets, discover events, and stay organized.
-              Let's get you started!
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                to="/events"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-indigo-700 text-sm font-semibold hover:bg-indigo-50 transition-colors"
-              >
-                📋 Explore Events
-              </Link>
-              {hasTickets && (
-                <Link
-                  to="/my-tickets"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-indigo-700 text-sm font-semibold hover:bg-indigo-50 transition-colors"
-                >
-                  🎫 My Tickets ({tickets.length})
-                </Link>
-              )}
-              <Link
-                to="/my-tickets"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-700/50 text-white text-sm font-medium hover:bg-indigo-700/70 transition-colors border border-indigo-500/50"
-              >
-                🎫 View My Tickets
-              </Link>
-              <button
-                onClick={() => setShowWelcome(false)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-700/30 text-white/80 text-sm font-medium hover:bg-indigo-700/50 transition-colors"
-              >
-                Maybe Later
-              </button>
-            </div>
-          </div>
+    <div className="dashboard-page">
+      {/* Mobile Header */}
+      <header className="dashboard-mobile-header">
+        <Link to="/" className="dashboard-brand" aria-label="Eventiq home">
+          <span className="dashboard-brand-name">EventIQ</span>
+        </Link>
+        <div className="dashboard-header-actions">
           <button
-            onClick={() => setShowWelcome(false)}
-            className="absolute top-3 right-3 text-white/70 hover:text-white transition-colors"
-            aria-label="Dismiss welcome banner"
+            type="button"
+            className="dashboard-icon-btn"
+            aria-label="Notifications"
           >
-            ✕
+            <Icon name="bell" size={22} />
+          </button>
+          <button
+            type="button"
+            className="dashboard-icon-btn"
+            aria-label="Open navigation"
+            onClick={() => setMobileNavOpen(true)}
+          >
+            <Icon name="menu" size={24} />
           </button>
         </div>
-      )}
+      </header>
 
-      {/* Quick Actions */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {quickActions.map((action) => {
-            if (action.visible && !action.visible()) return null;
-            return (
-              <Link
-                key={action.to}
-                to={action.to}
-                className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all group"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-50 text-2xl group-hover:bg-indigo-100 transition-colors">
-                    {action.icon}
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900 group-hover:text-indigo-700 transition-colors">
-                      {action.title}
-                    </h4>
-                    <p className="text-sm text-slate-500 mt-1">{action.description}</p>
-                  </div>
+      {/* Mobile Navigation Drawer */}
+      <MobileNav
+        user={user}
+        items={mobileNavItems}
+        isOpen={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+      />
+
+      <main className="dashboard-main">
+        <div className="dashboard-container">
+          <DashboardHeader user={user} />
+
+          {/* Welcome Banner */}
+          {showWelcome && (
+            <div className="welcome-banner">
+              <div className="welcome-banner-content">
+                <h2 className="welcome-title">
+                  Welcome to EventIQ{user?.name ? `, ${user.name.split(' ')[0]}` : ''}!
+                </h2>
+                <p className="welcome-text">
+                  Your personal dashboard is here to help you manage tickets, discover events, and stay organized.
+                </p>
+                <div className="welcome-actions">
+                  <Link to="/events" className="btn-primary">
+                    <Icon name="browse" size={18} />
+                    Explore Events
+                  </Link>
+                  {hasTickets && (
+                    <Link to="/my-tickets" className="btn-secondary">
+                      <Icon name="ticket" size={18} />
+                      My Tickets ({tickets.length})
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => setShowWelcome(false)}
+                  >
+                    Maybe Later
+                  </button>
                 </div>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+              </div>
+              <button
+                type="button"
+                className="welcome-dismiss"
+                onClick={() => setShowWelcome(false)}
+                aria-label="Dismiss welcome banner"
+              >
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+          )}
 
-      {/* Getting Started */}
-      <div className="bg-gradient-to-br from-indigo-50 to-slate-50 rounded-xl border border-indigo-100 p-6">
-        <h3 className="text-lg font-semibold text-slate-800 mb-3">Getting Started</h3>
-        <ul className="space-y-3">
-          <li className="flex items-start gap-3">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">1</span>
-            <div>
-              <p className="text-sm font-medium text-slate-800">Browse Events</p>
-              <p className="text-xs text-slate-500">Find events that interest you and purchase tickets</p>
-            </div>
-          </li>
-          <li className="flex items-start gap-3">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">2</span>
-            <div>
-              <p className="text-sm font-medium text-slate-800">Manage Tickets</p>
-              <p className="text-xs text-slate-500">View your tickets, check status, and track delivery</p>
-            </div>
-          </li>
-          <li className="flex items-start gap-3">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">3</span>
-            <div>
-              <p className="text-sm font-medium text-slate-800">Stay Organized</p>
-              <p className="text-xs text-slate-500">Use your dashboard to keep track of all your events</p>
-            </div>
-          </li>
-        </ul>
-      </div>
+          <DashboardStats
+            stats={[
+              { label: 'Upcoming Events', value: '0', icon: 'calendar' },
+              { label: 'Tickets', value: String(tickets.length), icon: 'ticket' },
+              { label: 'Orders', value: '0', icon: 'browse' },
+            ]}
+            loading={ticketsLoading}
+          />
+
+          <QuickActions
+            actions={quickActions}
+            onActionClick={(action) => {
+              if (action.to) {
+                window.location.href = action.to;
+              }
+            }}
+          />
+
+          <UpcomingEvents
+            events={[]}
+            loading={false}
+            onBrowseEvents={() => {
+              window.location.href = '/events';
+            }}
+          />
+
+          <RecentTickets
+            tickets={tickets.slice(0, 5).map((t) => ({
+              id: t.id,
+              eventTitle: t.event?.title || t.eventTitle || 'Event',
+              eventDate: t.event?.start_datetime || t.eventDate || t.createdAt,
+              status: t.status || 'confirmed',
+              reference: t.reference || t.id,
+            }))}
+            loading={ticketsLoading}
+            onViewAll={() => {
+              window.location.href = '/my-tickets';
+            }}
+          />
+
+          <GettingStarted
+            steps={gettingStartedSteps}
+            onDismiss={() => {}}
+          />
+        </div>
+      </main>
     </div>
   );
 };
