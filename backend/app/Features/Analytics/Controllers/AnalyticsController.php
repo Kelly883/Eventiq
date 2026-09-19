@@ -4,8 +4,11 @@ namespace App\Features\Analytics\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Models\AnalyticsEventsMetric;
 use App\Models\AnalyticsSalesTimeline;
+use App\Models\Event;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Carbon\Carbon;
 
 class AnalyticsController extends Controller
@@ -17,11 +20,16 @@ class AnalyticsController extends Controller
             abort(401, 'Unauthenticated');
         }
 
-        $ownsEvent = \App\Models\Event::where('id', $eventId)
-            ->when(!$user->hasRole('admin'), fn ($q) => $q->whereHas('organizer', fn ($o) => $o->where('user_id', $user->id)))
-            ->exists();
+        $event = Event::find($eventId);
+        if (!$event) {
+            abort(404, 'Event not found');
+        }
 
-        abort_unless($ownsEvent, 403, 'You are not authorized to view this event\'s analytics.');
+        try {
+            Gate::forUser($user)->authorize('view', $event);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            abort(403, 'You are not authorized to view this event\'s analytics.');
+        }
     }
 
     /**
@@ -32,10 +40,10 @@ class AnalyticsController extends Controller
         $this->authorizeEventAccess($request, $eventId);
 
         $interval = $request->query('interval', 'daily'); // 'daily' or 'hourly'
-        
+
         // Check if there is actual database data
         $hasData = AnalyticsSalesTimeline::where('event_id', $eventId)->exists();
-        
+
         if (!$hasData) {
             // Fallback: Generate clean, pre-aggregated mock sales velocity data
             return response()->json([
@@ -45,11 +53,11 @@ class AnalyticsController extends Controller
                 'aggregated_on_server' => true,
             ]);
         }
-        
+
         // Database level pre-aggregation
         $driver = DB::connection()->getDriverName();
         $query = AnalyticsSalesTimeline::where('event_id', $eventId);
-        
+
         if ($interval === 'hourly') {
             if ($driver === 'sqlite') {
                 $query->select(
@@ -91,7 +99,7 @@ class AnalyticsController extends Controller
                 );
             }
         }
-        
+
         $aggregatedData = $query->groupBy('time_bucket')
             ->orderBy('time_bucket', 'asc')
             ->get()
@@ -102,7 +110,7 @@ class AnalyticsController extends Controller
                     'revenue' => (float) $row->revenue,
                 ];
             });
-            
+
         return response()->json([
             'success' => true,
             'interval' => $interval,
@@ -118,16 +126,56 @@ class AnalyticsController extends Controller
     {
         $this->authorizeEventAccess($request, $eventId);
 
+        // Try to get pre-aggregated metrics first
+        // The EventObserver auto-creates a record with zero values, so we need to find one with actual data
+        $metric = AnalyticsEventsMetric::where('event_id', (int) $eventId)
+            ->where(function ($query) {
+                $query->where('total_revenue', '>', 0)
+                    ->orWhere('total_tickets_sold', '>', 0)
+                    ->orWhere('total_page_views', '>', 0);
+            })
+            ->first();
+
+        if ($metric) {
+            return response()->json([
+                'success' => true,
+                'eventId' => (int) $eventId,
+                'metrics' => [
+                    'totalRevenue' => (float) $metric->total_revenue,
+                    'ticketsSold' => (int) $metric->total_tickets_sold,
+                    'ticketCapacity' => $this->getEventCapacity($eventId),
+                    'conversionRate' => (float) $metric->conversion_rate,
+                    'pageViews' => (int) $metric->total_page_views,
+                    'refundedTickets' => $this->getRefundedTicketsCount($eventId),
+                ]
+            ]);
+        }
+
+        // Fallback: compute from sales timeline
+        $aggregates = DB::table('analytics_sales_timeline')
+            ->where('event_id', $eventId)
+            ->selectRaw('COALESCE(SUM(total_amount), 0) as total_revenue')
+            ->selectRaw('COALESCE(SUM(quantity), 0) as tickets_sold')
+            ->first();
+
+        $totalRevenue = (float) ($aggregates->total_revenue ?? 0);
+        $ticketsSold = (int) ($aggregates->tickets_sold ?? 0);
+        $averageTicketPrice = $ticketsSold > 0 ? round($totalRevenue / $ticketsSold, 2) : 0;
+        $pageViews = $this->getPageViews($eventId);
+        $ticketPageViews = $this->getTicketPageViews($eventId);
+        $conversionRate = $pageViews > 0 ? round(($ticketsSold / $pageViews) * 100, 2) : 0;
+
         return response()->json([
             'success' => true,
-            'eventId' => $eventId,
+            'eventId' => (int) $eventId,
             'metrics' => [
-                'totalRevenue' => 14520.00,
-                'ticketsSold' => 324,
-                'ticketCapacity' => 500,
-                'conversionRate' => 18.4,
-                'pageViews' => 1760,
-                'refundedTickets' => 4,
+                'totalRevenue' => $totalRevenue,
+                'ticketsSold' => $ticketsSold,
+                'ticketCapacity' => $this->getEventCapacity($eventId),
+                'conversionRate' => $conversionRate,
+                'pageViews' => $pageViews,
+                'averageTicketPrice' => $averageTicketPrice,
+                'refundedTickets' => $this->getRefundedTicketsCount($eventId),
             ]
         ]);
     }
@@ -139,37 +187,133 @@ class AnalyticsController extends Controller
     {
         $this->authorizeEventAccess($request, $eventId);
 
+        // Get tier breakdown from sales timeline
+        $tierBreakdown = AnalyticsSalesTimeline::where('analytics_sales_timeline.event_id', $eventId)
+            ->join('ticket_tiers', 'analytics_sales_timeline.ticket_tier_id', '=', 'ticket_tiers.id')
+            ->selectRaw('ticket_tiers.id as tier_id')
+            ->selectRaw('ticket_tiers.name as tier_name')
+            ->selectRaw('COALESCE(SUM(analytics_sales_timeline.quantity), 0) as tickets_sold')
+            ->selectRaw('COALESCE(SUM(analytics_sales_timeline.total_amount), 0) as revenue')
+            ->groupBy('ticket_tiers.id', 'ticket_tiers.name')
+            ->get();
+
+        $totalTicketsSold = $tierBreakdown->sum('tickets_sold');
+
+        $tierBreakdown = $tierBreakdown->map(function ($tier) use ($totalTicketsSold) {
+            return [
+                'tierId' => (string) $tier->tier_id,
+                'tierName' => $tier->tier_name,
+                'ticketsSold' => (int) $tier->tickets_sold,
+                'revenue' => (float) $tier->revenue,
+                'percentageOfTotal' => $totalTicketsSold > 0 ? round(($tier->tickets_sold / $totalTicketsSold) * 100, 2) : 0,
+            ];
+        })->values();
+
+        // Get source breakdown
+        $sourceBreakdown = AnalyticsSalesTimeline::where('event_id', $eventId)
+            ->selectRaw('COALESCE(source, \'unknown\') as source')
+            ->selectRaw('COALESCE(SUM(quantity), 0) as tickets_sold')
+            ->selectRaw('COALESCE(SUM(total_amount), 0) as revenue')
+            ->groupBy('source')
+            ->get()
+            ->map(function ($source) {
+                return [
+                    'source' => $source->source,
+                    'ticketsSold' => (int) $source->tickets_sold,
+                    'revenue' => (float) $source->revenue,
+                ];
+            })->values();
+
         return response()->json([
             'success' => true,
-            'eventId' => $eventId,
-            'funnel' => [
-                ['stage' => 'Page Views', 'count' => 1760],
-                ['stage' => 'Ticket Selection', 'count' => 840],
-                ['stage' => 'Checkout Form', 'count' => 420],
-                ['stage' => 'Completed Orders', 'count' => 324],
-            ],
-            'channels' => [
-                ['name' => 'Direct', 'value' => 45],
-                ['name' => 'Social Media', 'value' => 30],
-                ['name' => 'Email Marketing', 'value' => 15],
-                ['name' => 'Referrals', 'value' => 10],
-            ]
+            'eventId' => (int) $eventId,
+            'tierBreakdown' => $tierBreakdown,
+            'sourceBreakdown' => $sourceBreakdown,
         ]);
     }
 
     /**
-     * Get comparison between multiple events.
+     * Get comparison between user's events.
      */
     public function getComparison(Request $request)
     {
+        $user = $request->user();
+        if (!$user) {
+            abort(401, 'Unauthenticated');
+        }
+
+        // Determine which events to include
+        $query = Event::query();
+
+        if (!$user->hasRole('admin')) {
+            // Organizers only see their own events
+            $organizer = $user->organizer;
+            if ($organizer) {
+                $query->where('organizer_id', $organizer->id);
+            } else {
+                // Try to find organizer by user ID
+                $organizer = \App\Models\Organizer::where('user_id', $user->id)->first();
+                if ($organizer) {
+                    $query->where('organizer_id', $organizer->id);
+                } else {
+                    $query->whereRaw('1 = 0'); // No events
+                }
+            }
+        }
+
+        $events = $query->with('analyticsEventsMetric')->get();
+
+        $comparison = $events->map(function ($event) {
+            $metric = $event->analyticsEventsMetric;
+            return [
+                'eventId' => (string) $event->id,
+                'eventName' => $event->title,
+                'ticketsSold' => $metric ? (int) $metric->total_tickets_sold : 0,
+                'revenue' => $metric ? (float) $metric->total_revenue : 0,
+            ];
+        })->values();
+
         return response()->json([
             'success' => true,
-            'comparison' => [
-                ['name' => 'Summer Festival', 'ticketsSold' => 324, 'revenue' => 14520.00],
-                ['name' => 'Winter Gala', 'ticketsSold' => 150, 'revenue' => 7500.00],
-                ['name' => 'Spring Concert', 'ticketsSold' => 410, 'revenue' => 16400.00],
-            ]
+            'comparison' => $comparison,
         ]);
+    }
+
+    /**
+     * Get capacity for an event.
+     */
+    private function getEventCapacity($eventId): int
+    {
+        $event = Event::find($eventId);
+        return $event && $event->capacity !== null ? (int) $event->capacity : 0;
+    }
+
+    /**
+     * Get refunded tickets count.
+     */
+    private function getRefundedTicketsCount($eventId): int
+    {
+        return \App\Features\Checkout\Models\Ticket::where('event_id', $eventId)
+            ->where('refund_status', 'refunded')
+            ->count();
+    }
+
+    /**
+     * Get page views (stored in analytics_events_metrics or computed).
+     */
+    private function getPageViews($eventId): int
+    {
+        $metric = AnalyticsEventsMetric::where('event_id', $eventId)->first();
+        return $metric && $metric->total_page_views !== null ? (int) $metric->total_page_views : 0;
+    }
+
+    /**
+     * Get ticket page views.
+     */
+    private function getTicketPageViews($eventId): int
+    {
+        $metric = AnalyticsEventsMetric::where('event_id', $eventId)->first();
+        return $metric && $metric->total_ticket_page_views !== null ? (int) $metric->total_ticket_page_views : 0;
     }
 
     /**
@@ -217,4 +361,3 @@ class AnalyticsController extends Controller
         return $data;
     }
 }
-

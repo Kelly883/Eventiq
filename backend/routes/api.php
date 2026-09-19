@@ -16,6 +16,9 @@ use App\Features\Delivery\Controllers\DeliveryController;
 // Include Push Notifications routes
 require base_path('app/Features/PushNotifications/Routes/api.php');
 
+// Include Public Event API routes
+require base_path('app/Features/Public/Routes/api.php');
+
 // Include QR Code Ticketing routes
 require base_path('app/Features/QRCodeTicketing/Routes/api.php');
 
@@ -42,6 +45,9 @@ require base_path('app/Features/Payouts/Routes/api.php');
 
 // Include Analytics routes
 require base_path('app/Features/Analytics/Routes/api.php');
+
+// Include Dashboard routes
+require base_path('app/Features/Dashboard/Routes/api.php');
 
 // Include Events Calendar routes
 require base_path('app/Features/EventsCalendar/Routes/api.php');

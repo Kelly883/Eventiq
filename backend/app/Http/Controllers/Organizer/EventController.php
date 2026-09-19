@@ -91,11 +91,11 @@ class EventController extends Controller
         $validated = $request->validated();
 
         // Idempotency: if Idempotency-Key header provided, return cached response for duplicate
-        $event->idempotencyKey = $request->header('Idempotency-Key');
-        $event->idempotencyCacheKey = null;
-        if ($event->idempotencyKey) {
-            $event->idempotencyCacheKey = 'event:store:' . $user->id . ':' . sha1($event->idempotencyKey);
-            if ($cached = \Illuminate\Support\Facades\Cache::get($event->idempotencyCacheKey)) {
+        $idempotencyKey = $request->header('Idempotency-Key');
+        $idempotencyCacheKey = null;
+        if ($idempotencyKey) {
+            $idempotencyCacheKey = 'event:store:' . $user->id . ':' . sha1($idempotencyKey);
+            if ($cached = \Illuminate\Support\Facades\Cache::get($idempotencyCacheKey)) {
                 return response()->json($cached, 201);
             }
         }
@@ -147,9 +147,9 @@ class EventController extends Controller
 
             $response = (new EventResource($event))->response()->setStatusCode(201);
             // Store idempotency cache for 24h
-            if ($event->idempotencyCacheKey) {
+            if ($idempotencyCacheKey) {
                 try {
-                    \Illuminate\Support\Facades\Cache::put($event->idempotencyCacheKey, $response->getData(true), 86400);
+                    \Illuminate\Support\Facades\Cache::put($idempotencyCacheKey, $response->getData(true), 86400);
                 } catch (\Throwable $e) {}
             }
             return $response;
@@ -187,13 +187,13 @@ class EventController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $event = Event::without('analyticsEventsMetric')->with(['ticketTiers', 'organizer'])->find($event->id);
+        $event = Event::without('analyticsEventsMetric')->with(['ticketTiers', 'organizer'])->find($eventId);
 
         if (!$event) {
             AuditLogger::forEvent(
                 action: 'event.show_not_found',
                 user: $user,
-                eventId: (string) $event->id,
+                eventId: (string) $eventId,
                 request: $request,
                 description: 'Attempted to view non-existent event'
             );
@@ -414,14 +414,14 @@ AuditLogger::forEvent(
     /**
      * POST /api/organizer/events/:eventId/restore — Restore a soft-deleted event
      */
-    public function restore(Request $request, $event->id)
+    public function restore(Request $request, $eventId)
     {
         $user = $request->user();
         if (!$user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $event = Event::withTrashed()->find($event->id);
+        $event = Event::withTrashed()->find($eventId);
 
         if (!$event || !$event->trashed()) {
             return response()->json(['message' => 'Event not found or not deleted'], 404);
@@ -764,7 +764,7 @@ AuditLogger::forEvent(
     /**
      * Map tier data to model attributes
      */
-    private function mapTierData(array $tierData, $event->id, int $index = 0, bool $isUpdate = false): array
+    private function mapTierData(array $tierData, $eventId, int $index = 0, bool $isUpdate = false): array
     {
         // Handle camelCase inside tier
         $name = $tierData['name'] ?? null;
@@ -776,7 +776,7 @@ AuditLogger::forEvent(
         $earlyBirdEndDate = $tierData['early_bird_end_date'] ?? $tierData['earlyBirdEndDate'] ?? null;
 
         $payload = [
-            'event_id' => $event->id,
+            'event_id' => $eventId,
             'name' => $name,
             'price' => $price !== null ? (float) $price : 0,
             'quantity' => $quantity !== null && $quantity !== '' ? (int) $quantity : null,

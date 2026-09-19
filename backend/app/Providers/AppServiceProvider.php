@@ -140,6 +140,17 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Dashboard — per spec (Step 144): metrics 20/min, preferences 20/min, activity-feed 20/min (all per user)
+        RateLimiter::for('dashboard-metrics', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('dashboard-preferences', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('dashboard-activity', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+
         Event::observe(EventObserver::class);
         Ticket::observe(TicketObserver::class);
         PricingWindow::observe(PricingWindowObserver::class);
