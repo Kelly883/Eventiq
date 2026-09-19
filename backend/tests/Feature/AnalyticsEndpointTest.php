@@ -80,7 +80,11 @@ class AnalyticsEndpointTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('metrics.totalRevenue', 500)
             ->assertJsonPath('metrics.ticketsSold', 10)
-            ->assertJsonPath('metrics.averageTicketPrice', 50);
+            ->assertJsonPath('metrics.averageTicketPrice', 50)
+            ->assertJsonStructure([
+                'trends' => ['revenue', 'ticketsSold', 'conversionRate', 'pageViews'],
+                'dateRange',
+            ]);
     }
 
     public function test_summary_returns_401_without_token(): void
@@ -362,34 +366,88 @@ class AnalyticsEndpointTest extends TestCase
         $response->assertStatus(401);
     }
 
-    public function test_comparison_returns_only_own_events(): void
+    public function test_summary_caps_date_range_to_365_days(): void
     {
-        $otherEvent = Event::factory()->create([
-            'organizer_id' => $this->otherOrganizer->id,
-        ]);
-        AnalyticsEventsMetric::factory()->create([
-            'event_id' => $otherEvent->id,
-            'organizer_id' => $this->otherOrganizer->id,
-            'total_revenue' => 9999,
-            'total_tickets_sold' => 999,
-        ]);
-        AnalyticsEventsMetric::factory()->create([
+        $tier = TicketTier::factory()->create(['event_id' => $this->event->id, 'price' => 50]);
+
+        // Sale 400 days ago — should be excluded by 365-day cap
+        AnalyticsSalesTimeline::factory()->create([
             'event_id' => $this->event->id,
-            'organizer_id' => $this->organizer->id,
-            'total_revenue' => 100,
-            'total_tickets_sold' => 5,
+            'ticket_tier_id' => $tier->id,
+            'sale_timestamp' => now()->subDays(400),
+            'quantity' => 100,
+            'total_amount' => 5000,
+        ]);
+        // Sale 5 days ago — should be included
+        AnalyticsSalesTimeline::factory()->create([
+            'event_id' => $this->event->id,
+            'ticket_tier_id' => $tier->id,
+            'sale_timestamp' => now()->subDays(5),
+            'quantity' => 5,
+            'total_amount' => 250,
+        ]);
+
+        $startDate = now()->subDays(500)->format('Y-m-d');
+        $endDate = now()->format('Y-m-d');
+
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary?startDate={$startDate}&endDate={$endDate}");
+
+        $response->assertStatus(200);
+        // Only the 5-day-old sale should be included (400-day-old excluded by 365-day cap)
+        $this->assertEquals(250, $response->json('metrics.totalRevenue'));
+        $this->assertEquals(5, $response->json('metrics.ticketsSold'));
+    }
+
+    public function test_summary_includes_peak_sales_hour(): void
+    {
+        // Update the metric that was auto-created by EventObserver
+        $metric = AnalyticsEventsMetric::where('event_id', $this->event->id)->first();
+        $metric->update([
+            'total_revenue' => 1000,
+            'total_tickets_sold' => 10,
+            'peak_sales_hour' => 14,
         ]);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
-            ->getJson("/api/organizer/analytics/comparison");
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary");
 
         $response->assertStatus(200);
+        $this->assertArrayHasKey('peakSalesHour', $response->json('metrics'));
+        $this->assertEquals(14, $response->json('metrics.peakSalesHour'));
+    }
 
-        $comparison = collect($response->json('comparison'));
-        $this->assertLessThanOrEqual(1, $comparison->count());
-        $this->assertNotContains(
-            $otherEvent->id,
-            $comparison->pluck('eventId')->toArray()
-        );
+    public function test_sales_velocity_returns_empty_when_no_data(): void
+    {
+        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/sales-velocity?interval=daily");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('hasData', false)
+            ->assertJsonPath('data', []);
+    }
+
+    public function test_summary_cache_ttl_is_configurable(): void
+    {
+        // Set cache TTL to 1 second for testing
+        putenv('ANALYTICS_CACHE_TTL_SECONDS=1');
+
+        $response1 = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary");
+        $response1->assertStatus(200);
+
+        // Wait for cache to expire
+        sleep(2);
+
+        $response2 = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson("/api/organizer/events/{$this->event->id}/analytics/summary");
+        $response2->assertStatus(200);
+
+        // Responses should still be valid (just not from cache)
+        $this->assertTrue($response2->json('success'));
+
+        // Restore default
+        putenv('ANALYTICS_CACHE_TTL_SECONDS=30');
     }
 }

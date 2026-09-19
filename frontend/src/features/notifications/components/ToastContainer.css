@@ -1,0 +1,200 @@
+/* =========================================================================
+   EventIQ Toast / Notification Component
+   Uses design tokens from dashboard.css (:root block)
+   ========================================================================= */
+
+#global-toast-container {
+  position: fixed;
+  bottom: var(--space-lg);
+  right: var(--space-md);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  max-width: 360px;
+  pointer-events: none;
+}
+
+@media (max-width: 639px) {
+  #global-toast-container {
+    bottom: 88px; /* clears the fixed mobile bottom nav */
+    right: var(--space-sm);
+    left: var(--space-sm);
+    max-width: none;
+  }
+}
+
+.toast-item {
+  pointer-events: auto;
+  display: flex;
+  width: 100%;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: var(--space-md);
+  box-shadow: var(--shadow-xl);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  animation: toastSlideIn 0.25s ease forwards;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-item.toast-exiting {
+  animation: toastSlideOut 0.2s ease forwards;
+}
+
+@keyframes toastSlideOut {
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Toast type variants use existing design system colors */
+.toast-item--info {
+  border-color: var(--color-border);
+}
+
+.toast-item--success {
+  border-color: var(--color-success);
+  background: #F0FCFB;
+}
+
+.toast-item--warning {
+  border-color: var(--color-warning);
+  background: #FFFDF5;
+}
+
+.toast-item--error {
+  border-color: var(--color-error);
+  background: #FEF2F2;
+}
+
+/* Toast layout: icon + content + close */
+.toast-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  width: 100%;
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+}
+
+.toast-item--info .toast-icon {
+  color: var(--color-primary);
+}
+
+.toast-item--success .toast-icon {
+  color: var(--color-success);
+}
+
+.toast-item--warning .toast-icon {
+  color: #B8860B;
+}
+
+.toast-item--error .toast-icon {
+  color: var(--color-error);
+}
+
+.toast-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.toast-item--success .toast-title {
+  color: #0F766E;
+}
+
+.toast-item--warning .toast-title {
+  color: #92400E;
+}
+
+.toast-item--error .toast-title {
+  color: #991B1B;
+}
+
+.toast-description {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-secondary);
+  margin: var(--space-xs) 0 0;
+}
+
+.toast-item--success .toast-description {
+  color: #115E59;
+}
+
+.toast-item--warning .toast-description {
+  color: #78350F;
+}
+
+.toast-item--error .toast-description {
+  color: #7F1D1D;
+}
+
+/* Close button uses existing .dashboard-icon-btn styling pattern */
+.toast-close {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  padding: var(--space-xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  width: 28px;
+  height: 28px;
+  margin-top: -2px;
+  margin-right: -4px;
+}
+
+.toast-close:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.toast-close:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.toast-close-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* Responsive adjustments */
+@media (min-width: 640px) {
+  #global-toast-container {
+    max-width: 380px;
+    right: var(--space-lg);
+  }
+}

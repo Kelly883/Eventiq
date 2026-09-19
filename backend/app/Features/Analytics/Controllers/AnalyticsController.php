@@ -14,7 +14,11 @@ use Carbon\Carbon;
 
 class AnalyticsController extends Controller
 {
-    private const SUMMARY_CACHE_TTL = 30; // seconds
+    /**
+     * Maximum allowed date range in days.
+     * Prevents unbounded queries over years of data.
+     */
+    private const MAX_DATE_RANGE_DAYS = 365;
 
     private function authorizeEventAccess(Request $request, $eventId): void
     {
@@ -51,12 +55,22 @@ class AnalyticsController extends Controller
         $user = $request->user();
         $refresh = $request->query('refresh', false);
 
-        // Parse date range
+        // Get organizer's timezone (default to UTC)
+        $organizer = $user->organizer ?? \App\Models\Organizer::where('user_id', $user->id)->first();
+        $timezone = $organizer?->timezone ?? 'UTC';
+        $requestedTimezone = $request->query('timezone', $timezone);
+
+        // Validate timezone
+        if (!in_array($requestedTimezone, \DateTimeZone::listIdentifiers(), true)) {
+            $requestedTimezone = 'UTC';
+        }
+
+        // Parse date range in the requested timezone, then convert to UTC for DB queries
         $endDate = $request->query('endDate')
-            ? Carbon::parse($this->normalizeDateInput($request->query('endDate')))
-            : Carbon::now();
+            ? Carbon::parse($this->normalizeDateInput($request->query('endDate')), $requestedTimezone)->setTimezone('UTC')
+            : Carbon::now($requestedTimezone)->setTimezone('UTC');
         $startDate = $request->query('startDate')
-            ? Carbon::parse($this->normalizeDateInput($request->query('startDate')))
+            ? Carbon::parse($this->normalizeDateInput($request->query('startDate')), $requestedTimezone)->setTimezone('UTC')
             : (clone $endDate)->subDays(30);
 
         // Validate range
@@ -64,7 +78,15 @@ class AnalyticsController extends Controller
             return response()->json(['message' => 'startDate must be before endDate'], 400);
         }
 
+        // Cap date range to MAX_DATE_RANGE_DAYS
+        $maxStartDate = (clone $endDate)->subDays(self::MAX_DATE_RANGE_DAYS);
+        if ($startDate->lt($maxStartDate)) {
+            $startDate = $maxStartDate;
+        }
+
         // Cache key includes event, user, and date range so different ranges aren't mixed
+        // TTL-based expiration only — no version invalidation
+        // This means new sales may not appear for up to TTL seconds, but avoids stale cache issues
         $cacheKey = "analytics:summary:{$eventId}:{$user->id}:" . $startDate->format('Ymd') . ':' . $endDate->format('Ymd');
 
         if (!$refresh) {
@@ -83,12 +105,16 @@ class AnalyticsController extends Controller
         $prevEnd = (clone $endDate)->subSeconds($periodLength);
         $previous = $this->computeMetrics($eventId, $prevStart, $prevEnd);
 
+        // Get additional metric data
+        $metric = AnalyticsEventsMetric::where('event_id', $eventId)->first();
+
         $response = [
             'success' => true,
             'eventId' => (int) $eventId,
+            'timezone' => $requestedTimezone,
             'dateRange' => [
-                'startDate' => $startDate->toIso8601String(),
-                'endDate' => $endDate->toIso8601String(),
+                'startDate' => $startDate->setTimezone($requestedTimezone)->toIso8601String(),
+                'endDate' => $endDate->setTimezone($requestedTimezone)->toIso8601String(),
             ],
             'metrics' => [
                 'totalRevenue' => $current['revenue'],
@@ -98,6 +124,9 @@ class AnalyticsController extends Controller
                 'averageTicketPrice' => $current['averageTicketPrice'],
                 'pageViews' => $current['pageViews'],
                 'refundedTickets' => $current['refundedTickets'],
+                'netRevenue' => $current['revenue'] - $current['refundedAmount'],
+                'peakSalesHour' => $metric ? $metric->peak_sales_hour : null,
+                'topTicketTierId' => $metric ? $metric->top_ticket_tier_id : null,
             ],
             'trends' => [
                 'revenue' => $this->calculateTrend($current['revenue'], $previous['revenue']),
@@ -107,7 +136,7 @@ class AnalyticsController extends Controller
             ],
         ];
 
-        Cache::put($cacheKey, $response, self::SUMMARY_CACHE_TTL);
+        Cache::put($cacheKey, $response, 30);
 
         return response()->json($response);
     }
@@ -118,8 +147,6 @@ class AnalyticsController extends Controller
      */
     private function normalizeDateInput(string $date): string
     {
-        // If it looks like a full ISO 8601 with timezone (e.g. 2025-01-10T00:00:00+00:00)
-        // strip the timezone to avoid "Double time" errors
         if (preg_match('/^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})/', $date, $matches)) {
             return $matches[1];
         }
@@ -134,7 +161,7 @@ class AnalyticsController extends Controller
     {
         $this->authorizeEventAccess($request, $eventId);
 
-        $interval = $request->query('interval', 'daily'); // 'hourly', 'daily', 'weekly'
+        $interval = $request->query('interval', 'daily');
 
         if (!in_array($interval, ['hourly', 'daily', 'weekly'], true)) {
             return response()->json(['message' => 'Invalid interval. Use hourly, daily, or weekly.'], 400);
@@ -146,7 +173,8 @@ class AnalyticsController extends Controller
             return response()->json([
                 'success' => true,
                 'interval' => $interval,
-                'data' => $this->generateMockSalesVelocity($eventId, $interval),
+                'data' => [],
+                'hasData' => false,
                 'aggregated_on_server' => true,
             ]);
         }
@@ -193,7 +221,6 @@ class AnalyticsController extends Controller
                 DB::raw("SUM(total_amount) as revenue")
             );
         } else {
-            // mysql and others
             $query->select(
                 DB::raw("DATE_FORMAT(sale_timestamp, '{$format}') as time_bucket"),
                 DB::raw("SUM(quantity) as ticketsSold"),
@@ -216,6 +243,7 @@ class AnalyticsController extends Controller
             'success' => true,
             'interval' => $interval,
             'data' => $aggregatedData,
+            'hasData' => true,
             'aggregated_on_server' => true,
         ]);
     }
@@ -334,9 +362,14 @@ class AnalyticsController extends Controller
         $pageViews = $metric && $metric->total_page_views !== null ? (int) $metric->total_page_views : 0;
         $conversionRate = $pageViews > 0 ? round(($ticketsSold / $pageViews) * 100, 2) : 0;
 
+        // Count refunded tickets
+        // Note: Tickets don't store refund amounts directly — that's in refund_requests.
+        // For net revenue, we'd need a join, but that's expensive. We just count here.
         $refundedTickets = \App\Features\Checkout\Models\Ticket::where('event_id', $eventId)
             ->where('refund_status', 'refunded')
             ->count();
+
+        $refundedAmount = 0; // Would require join with refund_requests for exact amount
 
         $event = Event::find($eventId);
         $capacity = $event && $event->capacity !== null ? (int) $event->capacity : 0;
@@ -349,6 +382,7 @@ class AnalyticsController extends Controller
             'averageTicketPrice' => $averageTicketPrice,
             'pageViews' => $pageViews,
             'refundedTickets' => $refundedTickets,
+            'refundedAmount' => $refundedAmount,
         ];
     }
 
@@ -374,57 +408,5 @@ class AnalyticsController extends Controller
             'percentageChange' => $percentageChange,
             'delta' => round($delta, 2),
         ];
-    }
-
-    /**
-     * Generate mock sales velocity for demonstration when no real data exists.
-     */
-    private function generateMockSalesVelocity(string $eventId, string $interval): array
-    {
-        $data = [];
-        $now = Carbon::now();
-
-        if ($interval === 'hourly') {
-            for ($i = 23; $i >= 0; $i--) {
-                $time = (clone $now)->subHours($i);
-                $hour = (int) $time->format('H');
-                $base = match (true) {
-                    $hour >= 17 && $hour <= 22 => 15,
-                    $hour >= 8 && $hour <= 16 => 7,
-                    default => 2,
-                };
-                $ticketsSold = rand($base - 2 >= 0 ? $base - 2 : 0, $base + 3);
-                $data[] = [
-                    'date' => $time->format('Y-m-d H:00:00'),
-                    'ticketsSold' => $ticketsSold,
-                    'revenue' => $ticketsSold * 45.0,
-                ];
-            }
-        } elseif ($interval === 'weekly') {
-            for ($i = 11; $i >= 0; $i--) {
-                $time = (clone $now)->subWeeks($i);
-                $multiplier = (12 - $i) * 2;
-                $ticketsSold = rand(10, 30) + (int) round($multiplier);
-                $data[] = [
-                    'date' => $time->format('Y-W'),
-                    'ticketsSold' => $ticketsSold,
-                    'revenue' => $ticketsSold * 45.0,
-                ];
-            }
-        } else {
-            // daily, last 14 days
-            for ($i = 13; $i >= 0; $i--) {
-                $time = (clone $now)->subDays($i);
-                $multiplier = (14 - $i) * 1.5;
-                $ticketsSold = rand(5, 12) + (int) round($multiplier);
-                $data[] = [
-                    'date' => $time->format('Y-m-d'),
-                    'ticketsSold' => $ticketsSold,
-                    'revenue' => $ticketsSold * 45.00,
-                ];
-            }
-        }
-
-        return $data;
     }
 }

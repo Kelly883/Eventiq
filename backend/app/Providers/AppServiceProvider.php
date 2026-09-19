@@ -171,6 +171,7 @@ class AppServiceProvider extends ServiceProvider
         Event::observe(EventObserver::class);
         Ticket::observe(TicketObserver::class);
         PricingWindow::observe(PricingWindowObserver::class);
+        \App\Models\AnalyticsSalesTimeline::observe(\App\Observers\AnalyticsSalesTimelineObserver::class);
 
         // Startup health check: verify critical tables exist to catch missing
         // migrations early instead of failing with 500s on first request.

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Features\Dashboard\Models\OrganizerDashboardPreferences;
 use App\Models\Event;
 use App\Models\Organizer;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -37,50 +38,55 @@ class DashboardController extends Controller
     /**
      * GET /api/organizer/dashboard/metrics
      * High-level metrics for the organizer dashboard.
+     * Results cached for 3 minutes since organizers don't need real-time data.
      */
     public function getMetrics(Request $request)
     {
         $this->authorizeDashboardAccess($request);
 
-        $user = $request->user();
-        $eventId = $request->query('eventId');
+        $key = 'dashboard.metrics.' . $request->user()->id . '.' . $request->query('eventId', 'null');
 
-        $query = Event::query();
+        return Cache::remember($key, minutes: 3, function () use ($request) {
+            $user = $request->user();
+            $eventId = $request->query('eventId');
 
-        if (!$user->hasRole('admin')) {
-            $organizer = $this->getOrganizerForUser($user);
-            if ($organizer) {
-                $query->where('organizer_id', $organizer->id);
-            } else {
-                $query->whereRaw('1 = 0');
+            $query = Event::query();
+
+            if (!$user->hasRole('admin')) {
+                $organizer = $this->getOrganizerForUser($user);
+                if ($organizer) {
+                    $query->where('organizer_id', $organizer->id);
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
             }
-        }
 
-        if ($eventId) {
-            $query->where('id', $eventId);
-        }
+            if ($eventId) {
+                $query->where('id', $eventId);
+            }
 
-        $totalEvents = $query->count();
-        $eventsPublished = (clone $query)->where('status', 'published')->count();
+            $totalEvents = $query->count();
+            $eventsPublished = (clone $query)->where('status', 'published')->count();
 
-        // Get tickets sold and revenue from analytics metrics
-        $eventIds = $query->pluck('id')->toArray();
+            // Get tickets sold and revenue from analytics metrics
+            $eventIds = $query->pluck('id')->toArray();
 
-        $ticketsSold = \App\Models\AnalyticsEventsMetric::whereIn('event_id', $eventIds)
-            ->sum('total_tickets_sold');
+            $ticketsSold = \App\Models\AnalyticsEventsMetric::whereIn('event_id', $eventIds)
+                ->sum('total_tickets_sold');
 
-        $revenue = \App\Models\AnalyticsEventsMetric::whereIn('event_id', $eventIds)
-            ->sum('total_revenue');
+            $revenue = \App\Models\AnalyticsEventsMetric::whereIn('event_id', $eventIds)
+                ->sum('total_revenue');
 
-        return response()->json([
-            'success' => true,
-            'metrics' => [
-                'totalEvents' => $totalEvents,
-                'totalTicketsSold' => (int) $ticketsSold,
-                'totalRevenue' => (float) $revenue,
-                'eventsPublished' => $eventsPublished,
-            ],
-        ]);
+            return response()->json([
+                'success' => true,
+                'metrics' => [
+                    'totalEvents' => $totalEvents,
+                    'totalTicketsSold' => (int) $ticketsSold,
+                    'totalRevenue' => (float) $revenue,
+                    'eventsPublished' => $eventsPublished,
+                ],
+            ]);
+        });
     }
 
     /**
