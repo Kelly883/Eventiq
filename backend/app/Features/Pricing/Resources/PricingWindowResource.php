@@ -20,6 +20,8 @@ class PricingWindowResource extends JsonResource
             'quantity_limit' => $this->quantity_limit,
             'quantity_sold' => $this->quantity_sold,
             'is_active' => $this->is_active,
+            // NEW: computed field that combines is_active + date range check
+            'is_currently_active' => $this->isActive(),
             'priority' => $this->priority,
             'available_quantity' => $this->available_quantity,
             'has_availability' => $this->quantity_limit === null || $this->quantity_sold < $this->quantity_limit,
@@ -29,4 +31,3 @@ class PricingWindowResource extends JsonResource
         ];
     }
 }
-

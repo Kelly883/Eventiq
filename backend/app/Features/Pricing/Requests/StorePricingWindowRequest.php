@@ -26,7 +26,7 @@ class StorePricingWindowRequest extends FormRequest
                     $q->where('event_id', $eventId);
                 }),
             ],
-            'start_date_time' => ['required', 'date'],
+            'start_date_time' => ['required', 'date', 'after_or_equal:now'],
             'end_date_time' => ['required', 'date', 'after:start_date_time'],
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'quantity_limit' => ['nullable', 'integer', 'min:0'],

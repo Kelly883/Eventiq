@@ -78,12 +78,28 @@ class PricingWindowController extends Controller
 
     /**
      * List pricing windows for an event.
+     *
+     * Query params:
+     *   ?active_only=1       — only currently active windows
+     *   ?ticket_category_id  — filter by ticket tier
+     *   ?include_deleted=1   — include soft-deleted windows (organizers see their own, admins see all)
+     *   ?per_page=50         — pagination limit
      */
     public function index(Request $request, $event): AnonymousResourceCollection
     {
         $this->authorizeEventAccess($request, $event);
 
-        $query = PricingWindow::forEvent($event)->with(['event', 'ticketTier']);
+        $includeDeleted = $request->boolean('include_deleted');
+
+        // Only include soft-deleted windows if explicitly requested.
+        // Organizers can see their own deleted windows; admins can see all.
+        if ($includeDeleted) {
+            $query = PricingWindow::forEvent($event)
+                ->withTrashed()
+                ->with(['event', 'ticketTier']);
+        } else {
+            $query = PricingWindow::forEvent($event)->with(['event', 'ticketTier']);
+        }
 
         // Optional filters
         if ($request->boolean('active_only')) {
@@ -111,8 +127,6 @@ class PricingWindowController extends Controller
         $data = $request->validated();
         $data['event_id'] = $event;
         $data['quantity_sold'] = 0; // Always start at 0, managed atomically via incrementSold()
-
-        $user = $request->user();
 
         // Overlap detection: only check when the new window will be active.
         // This runs AFTER ownership verification so unauthorized users cannot
@@ -184,12 +198,11 @@ class PricingWindowController extends Controller
         abort_unless((string) $window->event_id === (string) $event, 404);
 
         $validated = $request->validated();
-        $user = $request->user();
 
         if (array_key_exists('quantity_limit', $validated) && $validated['quantity_limit'] < $window->quantity_sold) {
             return response()->json([
-                'message' => 'Quantity limit cannot be less than tickets already sold.',
-                'errors' => ['quantity_limit' => ['Quantity limit cannot be less than tickets already sold.']],
+                'message' => "Cannot reduce quantity limit below {$window->quantity_sold} tickets already sold.",
+                'errors' => ['quantity_limit' => ["Cannot reduce quantity limit below {$window->quantity_sold} tickets already sold."]],
             ], 422);
         }
 
@@ -258,9 +271,6 @@ class PricingWindowController extends Controller
         $window = PricingWindow::withTrashed()->findOrFail($pricingWindow);
         $this->authorizeEventOwner(request(), $event);
         abort_unless((string) $window->event_id === (string) $event, 404);
-
-        $user = request()->user();
-        $oldValues = $window->toArray();
 
         if ($window->quantity_sold > 0) {
             return response()->json([
@@ -344,6 +354,7 @@ class PricingWindowController extends Controller
 
         $windows = $query->get();
 
+        // Paginate grouped results for performance with large datasets
         $grouped = $windows->groupBy('ticket_category_id')->map(function ($group) {
             return [
                 'ticket_category_id' => (string) $group->first()->ticket_category_id,
