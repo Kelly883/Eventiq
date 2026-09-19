@@ -36,6 +36,9 @@ return [
     */
 
          'expiration' => env('SANCTUM_TOKEN_EXPIRATION', 10080), // Fix #6: 7 days default token expiration (was null = never expires)
+    // Idle timeout: minutes of inactivity before a session is invalidated.
+    // Works alongside the absolute expiration. Default 30 minutes.
+    'idle_timeout' => env('SESSION_IDLE_TIMEOUT_MINUTES', 30),
 
     /*
     |--------------------------------------------------------------------------

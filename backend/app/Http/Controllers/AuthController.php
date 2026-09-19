@@ -94,6 +94,7 @@ class AuthController extends Controller
             'userId' => $user->id,
             'token' => hash('sha256', $plainToken),
             'expiresAt' => now()->addDays(7),
+            'lastActivityAt' => now(),
         ]);
 
         $user->update(['lastLoginAt' => now()]);
@@ -289,10 +290,10 @@ class AuthController extends Controller
                 $plainToken = substr($header, 7);
                 if ($plainToken !== '' && strlen($plainToken) >= 32) {
                     $session = Session::where('token', hash('sha256', $plainToken))
-                        ->where('expiresAt', '>', now())
+                        ->whereNull('revokedAt')
                         ->first();
                     if ($session) {
-                        $session->update(['revokedAt' => now()]);
+                        $session->revoke();
                     }
                 }
             }

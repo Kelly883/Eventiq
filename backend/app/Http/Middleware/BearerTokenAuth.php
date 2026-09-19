@@ -17,6 +17,9 @@ use Symfony\Component\HttpFoundation\Response;
  * Custom Bearer tokens are hashed with SHA-256 and looked up in the
  * `sessions` table. A matching, unexpired, non-revoked session authenticates
  * the request and attaches the associated user.
+ *
+ * IDLE TIMEOUT: Sessions are invalidated after SESSION_IDLE_TIMEOUT_MINUTES
+ * (default 30) of inactivity. Each authenticated request updates lastActivityAt.
  */
 class BearerTokenAuth
 {
@@ -27,6 +30,32 @@ class BearerTokenAuth
             $sanctumUser = Auth::guard('sanctum')->user();
 
             if ($sanctumUser) {
+                // CRITICAL: Even if Sanctum authenticated, check for idle timeout
+                // on the custom session. This prevents Sanctum from bypassing
+                // the idle timeout when both auth mechanisms are active.
+                $header = $request->header('Authorization', '');
+                if (str_starts_with($header, 'Bearer ')) {
+                    $plainToken = substr($header, 7);
+                    $session = Session::where('token', hash('sha256', $plainToken))
+                        ->whereNull('revokedAt')
+                        ->first();
+
+                    if ($session) {
+                        // Check idle timeout — Sanctum must NOT bypass this
+                        if ($session->isIdleExpired()) {
+                            $session->revoke();
+                            return response()->json(['message' => 'Session expired due to inactivity'], 401);
+                        }
+                        // Check absolute expiration
+                        if (!$session->expiresAt->isFuture()) {
+                            $session->revoke();
+                            return response()->json(['message' => 'Session expired'], 401);
+                        }
+                        // Record activity and continue
+                        $session->recordActivity();
+                    }
+                }
+
                 $request->setUserResolver(fn () => $sanctumUser);
                 return $next($request);
             }
@@ -53,10 +82,21 @@ class BearerTokenAuth
 
             $session = Session::where('token', hash('sha256', $plainToken))
                 ->whereNull('revokedAt')
-                ->where('expiresAt', '>', now())
                 ->first();
 
             if ($session) {
+                // Check absolute expiration
+                if (!$session->expiresAt->isFuture()) {
+                    $session->revoke();
+                    return response()->json(['message' => 'Session expired'], 401);
+                }
+
+                // Check idle timeout
+                if ($session->isIdleExpired()) {
+                    $session->revoke();
+                    return response()->json(['message' => 'Session expired due to inactivity'], 401);
+                }
+
                 $user = $session->user;
                 // Concurrent session invalidation defense: if password was changed
                 // after this session was created, reject even if not yet revoked
@@ -66,6 +106,10 @@ class BearerTokenAuth
                         return response()->json(['message' => 'Unauthorized'], 401);
                     }
                 }
+
+                // Record activity on successful auth (sliding expiration)
+                $session->recordActivity();
+
                 $request->setUserResolver(fn () => $user);
                 $request->attributes->set('auth_session', $session);
 

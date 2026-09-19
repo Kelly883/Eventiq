@@ -12,7 +12,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class InventoryController extends Controller
 {
@@ -49,7 +48,8 @@ class InventoryController extends Controller
 
             $totalCapacity = (int) ($aggregates->total_capacity ?? 0);
             $totalSold = (int) ($aggregates->total_sold ?? 0);
-            $totalAvailable = (int) ($aggregates->total_available ?? 0);
+            // Compute available in PHP to avoid SQLite arithmetic quirks with raw columns
+            $totalAvailable = max(0, $totalCapacity - $totalSold);
             $utilizationPercentage = $totalCapacity > 0 ? round(($totalSold / $totalCapacity) * 100, 2) : 0;
 
             // Low stock count via DB query to avoid loading all rows
@@ -127,8 +127,8 @@ class InventoryController extends Controller
 
         // Validate tierFilter exists if provided - return 400 for invalid tier in this event
         if ($tierFilter) {
-            if (!Str::isUuid($tierFilter)) {
-                return response()->json(['message' => 'Invalid tierFilter: must be a valid UUID'], 400);
+            if (!is_string($tierFilter) || trim($tierFilter) === '') {
+                return response()->json(['message' => 'Invalid tierFilter: must be a non-empty string'], 400);
             }
             $exists = TicketTier::where('id', $tierFilter)->where('event_id', $eventId)->exists()
                 || TicketInventory::where('ticket_tier_id', $tierFilter)->where('event_id', $eventId)->exists();

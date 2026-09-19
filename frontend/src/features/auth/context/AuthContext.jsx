@@ -156,6 +156,28 @@ export const AuthProvider = ({ children }) => {
       }, 300000);
     };
 
+    // IDLE TIMEOUT: Check if user has been inactive for too long.
+    // This is a UX convenience — the backend enforces the actual timeout.
+    // We clear local state so the user doesn't see stale data.
+    let idleLogoutTimer;
+    const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes - matches backend SESSION_IDLE_TIMEOUT_MINUTES
+
+    const resetIdleTimer = () => {
+      if (!user) return;
+      clearTimeout(idleLogoutTimer);
+      idleLogoutTimer = setTimeout(() => {
+        if (!document.hidden) {
+          showToast('Session expired', 'You were logged out due to inactivity.', 'warning');
+          logout();
+        }
+      }, IDLE_TIMEOUT_MS);
+    };
+
+    // Track user activity to reset idle timer
+    const handleUserActivity = () => {
+      resetIdleTimer();
+    };
+
     // Immediate session check when tab gains focus — catches expired sessions
     // from logout in another tab or server-side session expiry.
     // Guard: only fire the toast if we actually HAD a session. Otherwise a
@@ -181,14 +203,27 @@ export const AuthProvider = ({ children }) => {
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('focus', handleFocus);
     window.addEventListener('mousemove', scheduleRefresh);
+    // Idle timeout: track user activity to reset the idle timer
+    window.addEventListener('mousemove', handleUserActivity);
+    window.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('click', handleUserActivity);
+    window.addEventListener('scroll', handleUserActivity, true);
+    window.addEventListener('touchstart', handleUserActivity);
 
     scheduleRefresh();
+    resetIdleTimer();
 
     return () => {
       clearTimeout(idleTimer);
+      clearTimeout(idleLogoutTimer);
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('mousemove', scheduleRefresh);
+      window.removeEventListener('mousemove', handleUserActivity);
+      window.removeEventListener('keydown', handleUserActivity);
+      window.removeEventListener('click', handleUserActivity);
+      window.removeEventListener('scroll', handleUserActivity, true);
+      window.removeEventListener('touchstart', handleUserActivity);
     };
   }, [fetchCurrentUser]);
 
