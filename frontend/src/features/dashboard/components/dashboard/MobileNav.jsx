@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon';
 
-const MobileNav = ({ user, items = [], isOpen, onClose }) => {
+const MobileNav = ({ user, items = [], isOpen, onClose, onLogout }) => {
   if (!isOpen) return null;
 
   return (
@@ -47,6 +47,20 @@ const MobileNav = ({ user, items = [], isOpen, onClose }) => {
                 <span className="mobile-nav-user-email">{user.email}</span>
               </div>
             </Link>
+            <button
+              type="button"
+              className="mobile-nav-logout"
+              onClick={() => {
+                onLogout?.();
+                onClose();
+              }}
+              aria-label="Sign out"
+            >
+              <span className="mobile-nav-logout-icon">
+                <Icon name="logout" size={20} />
+              </span>
+              Sign Out
+            </button>
           </div>
         )}
       </nav>

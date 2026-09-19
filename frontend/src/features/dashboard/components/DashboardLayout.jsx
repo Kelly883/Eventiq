@@ -139,6 +139,10 @@ const DashboardLayout = () => {
         items={mobileNavItems}
         isOpen={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}
+        onLogout={() => {
+          logout();
+          window.location.href = '/login';
+        }}
       />
 
       {/* ── Desktop Top Header (>= 768px) ── */}
