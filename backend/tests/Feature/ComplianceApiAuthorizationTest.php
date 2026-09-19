@@ -79,8 +79,19 @@ class ComplianceApiAuthorizationTest extends TestCase
     {
         $admin = $this->makeAdmin();
 
+        // Create an actual audit log entry to retrieve
+        $log = \App\Features\Compliance\Models\AuditLog::create([
+            'user_id' => $admin->id,
+            'action' => 'user_login',
+            'target_type' => 'user',
+            'target_id' => (string) $admin->id,
+            'description' => 'Test audit log entry',
+            'status' => 'success',
+            'compliance_classification' => 'internal',
+        ]);
+
         $response = $this->actingAs($admin, 'sanctum')
-            ->getJson('/api/admin/compliance/audit-logs/00000000-0000-0000-0000-000000000000');
+            ->getJson('/api/admin/compliance/audit-logs/' . $log->id);
 
         $response->assertOk()
             ->assertJsonStructure(['data']);

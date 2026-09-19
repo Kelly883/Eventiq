@@ -139,6 +139,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('inventory-audit', function ($request) {
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
+        RateLimiter::for('ticket-tier-update', function ($request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
 
         // Dashboard — per spec (Step 144): metrics 20/min, preferences 20/min, activity-feed 20/min (all per user)
         RateLimiter::for('dashboard-metrics', function ($request) {

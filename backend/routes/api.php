@@ -114,7 +114,7 @@ Route::middleware('bearer')->group(function () {
         // Event ticketing — supports both PUT and PATCH per spec (ticketTiers sync)
         Route::prefix('events/{eventId}')->group(function () {
             Route::match(['put', 'patch'], '/ticketing', [EventTicketingController::class, 'update'])
-                ->middleware('throttle:organizer-ticketing');
+                ->middleware('throttle:ticket-tier-update');
 
             // Event pricing (organizer)
             Route::middleware('throttle:organizer-pricing')->group(function () {

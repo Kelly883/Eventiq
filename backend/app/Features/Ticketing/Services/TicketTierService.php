@@ -36,9 +36,9 @@ class TicketTierService
         }
     }
 
-    public function syncTiers($eventId, array $tiers)
+    public function syncTiers($eventId, array $tiers, ?\App\Models\User $user = null, ?\Illuminate\Http\Request $request = null)
     {
-        return DB::transaction(function () use ($eventId, $tiers) {
+        return DB::transaction(function () use ($eventId, $tiers, $user, $request) {
             $this->assertCanDeleteAllTiers($eventId, $tiers, 'ticketTiers');
 
             // Include soft-deleted for reactivation
@@ -60,12 +60,19 @@ class TicketTierService
                             response()->json(['message' => 'Ticket tier does not belong to this event'], 422)
                         );
                     }
+
+                    $oldValues = $tier->toArray();
                     $payload = $this->mapTierDataForUpdate($tierData, $eventId, $index, $tier);
                     if ($tier->trashed()) {
                         $tier->restore();
                     }
                     $tier->update($payload);
                     $keepIds[] = $tierId;
+
+                    // Per-tier audit log
+                    if ($user) {
+                        $this->logTierAudit('ticket_tier.updated', $user, $eventId, $tier, $oldValues, $tier->toArray(), $request);
+                    }
                 } else {
                     // Create new tier
                     $payload = $this->mapTierData($tierData, $eventId, $index);
@@ -73,12 +80,23 @@ class TicketTierService
                     unset($payload['id']);
                     $newTier = TicketTier::create($payload);
                     $keepIds[] = $newTier->id;
+
+                    // Per-tier audit log
+                    if ($user) {
+                        $this->logTierAudit('ticket_tier.created', $user, $eventId, $newTier, null, $newTier->toArray(), $request);
+                    }
                 }
             }
 
             // Delete tiers not in request
             $toDelete = $existing->keys()->diff($keepIds);
             if ($toDelete->isNotEmpty()) {
+                foreach ($toDelete as $deleteId) {
+                    $tier = $existing->get($deleteId);
+                    if ($user) {
+                        $this->logTierAudit('ticket_tier.deleted', $user, $eventId, $tier, $tier->toArray(), null, $request);
+                    }
+                }
                 TicketTier::whereIn('id', $toDelete->toArray())
                     ->where('event_id', $eventId)
                     ->delete();
@@ -87,6 +105,24 @@ class TicketTierService
             // Return fresh tiers ordered by id (preserves request order as ids are sequential)
             return TicketTier::where('event_id', $eventId)->orderBy('id')->get();
         });
+    }
+
+    private function logTierAudit(string $action, \App\Models\User $user, $eventId, TicketTier $tier, ?array $oldValues, ?array $newValues, ?\Illuminate\Http\Request $request): void
+    {
+        try {
+            \App\Services\Audit\AuditLogger::log(
+                action: $action,
+                user: $user,
+                resourceType: 'ticket',
+                resourceId: (string) $tier->id,
+                description: str_replace(['ticket_tier.', 'ticket_tier_'], ['Tier ', 'Tier '], $action) . " '{$tier->name}' for event #{$eventId}",
+                oldValues: $oldValues,
+                newValues: $newValues,
+                request: $request,
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to write tier audit log', ['error' => $e->getMessage()]);
+        }
     }
 
     private function normalizeTierData(array $data): array

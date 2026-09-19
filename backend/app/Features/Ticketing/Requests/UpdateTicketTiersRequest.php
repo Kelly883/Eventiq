@@ -156,32 +156,40 @@ class UpdateTicketTiersRequest extends FormRequest
                     if (str_starts_with($tierImageUrl, 'data:') || str_starts_with($tierImageUrl, 'blob:')) {
                         // ok, skip further checks
                     } else {
-                        // Check if it's a valid URL format (http/https)
-                        $isValidUrl = filter_var($tierImageUrl, FILTER_VALIDATE_URL) !== false;
-                        if (!$isValidUrl) {
+                        // Reject URLs with userinfo (e.g., http://evil.com@allowedhost.com)
+                        if (str_contains($tierImageUrl, '@')) {
                             $validator->errors()->add(
                                 "ticketTiers.{$index}.tier_image_url",
-                                'Tier image URL must be a valid URL.'
+                                'Tier image URL must not contain userinfo.'
                             );
                         } else {
-                            $allowedHosts = array_filter(array_map('trim', explode(',', config('ticketing.tier_image_allowed_hosts', ''))));
-                            if (empty($allowedHosts)) {
-                                $allowedHosts = array_filter([
-                                    parse_url(config('app.url'), PHP_URL_HOST),
-                                    parse_url(config('filesystems.disks.s3.url') ?? '', PHP_URL_HOST),
-                                    parse_url(config('filesystems.disks.s3.endpoint') ?? '', PHP_URL_HOST),
-                                    parse_url(env('AWS_URL', ''), PHP_URL_HOST),
-                                    'localhost',
-                                    '127.0.0.1',
-                                ]);
-                            }
-                            $host = parse_url($tierImageUrl, PHP_URL_HOST);
-                            $isAllowed = $host && in_array($host, $allowedHosts, true);
-                            if (!$isAllowed) {
+                            // Check if it's a valid URL format (http/https)
+                            $isValidUrl = filter_var($tierImageUrl, FILTER_VALIDATE_URL) !== false;
+                            if (!$isValidUrl) {
                                 $validator->errors()->add(
                                     "ticketTiers.{$index}.tier_image_url",
-                                    'Tier image URL must be from our storage.'
+                                    'Tier image URL must be a valid URL.'
                                 );
+                            } else {
+                                $allowedHosts = array_filter(array_map('trim', explode(',', config('ticketing.tier_image_allowed_hosts', ''))));
+                                if (empty($allowedHosts)) {
+                                    $allowedHosts = array_filter([
+                                        parse_url(config('app.url'), PHP_URL_HOST),
+                                        parse_url(config('filesystems.disks.s3.url') ?? '', PHP_URL_HOST),
+                                        parse_url(config('filesystems.disks.s3.endpoint') ?? '', PHP_URL_HOST),
+                                        parse_url(env('AWS_URL', ''), PHP_URL_HOST),
+                                        'localhost',
+                                        '127.0.0.1',
+                                    ]);
+                                }
+                                $host = parse_url($tierImageUrl, PHP_URL_HOST);
+                                $isAllowed = $host && in_array($host, $allowedHosts, true);
+                                if (!$isAllowed) {
+                                    $validator->errors()->add(
+                                        "ticketTiers.{$index}.tier_image_url",
+                                        'Tier image URL must be from our storage.'
+                                    );
+                                }
                             }
                         }
                     }

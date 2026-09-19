@@ -68,9 +68,9 @@ class EventTicketingController extends Controller
         }
 
         try {
-            $updatedTiers = DB::transaction(function () use ($event, $tiers) {
-                // Use service to sync
-                return $this->tierService->syncTiers($event->id, $tiers);
+            $updatedTiers = DB::transaction(function () use ($event, $tiers, $user, $request) {
+                // Use service to sync (passes user/request for per-tier audit logging)
+                return $this->tierService->syncTiers($event->id, $tiers, $user, $request);
             });
 
             $event->load(['ticketTiers', 'organizer']);
