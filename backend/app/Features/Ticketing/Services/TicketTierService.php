@@ -209,33 +209,4 @@ class TicketTierService
         return $payload;
     }
 
-    /**
-     * For testing: create/update/delete without transaction wrapper (caller handles)
-     */
-    public function syncTiersWithoutTransaction($eventId, array $tiers)
-    {
-        $existing = TicketTier::withTrashed()->where('event_id', $eventId)->get()->keyBy('id');
-        $keepIds = [];
-        foreach ($tiers as $index => $tierData) {
-            $tierData = $this->normalizeTierData($tierData);
-            $tierId = $tierData['id'] ?? null;
-            if ($tierId && $existing->has($tierId)) {
-                $tier = $existing->get($tierId);
-                $payload = $this->mapTierDataForUpdate($tierData, $eventId, $index, $tier);
-                if ($tier->trashed()) { $tier->restore(); }
-                $tier->update($payload);
-                $keepIds[] = $tierId;
-            } else {
-                $payload = $this->mapTierData($tierData, $eventId, $index);
-                unset($payload['id']);
-                $newTier = TicketTier::create($payload);
-                $keepIds[] = $newTier->id;
-            }
-        }
-        $toDelete = $existing->keys()->diff($keepIds);
-        if ($toDelete->isNotEmpty()) {
-            TicketTier::whereIn('id', $toDelete->toArray())->where('event_id', $eventId)->delete();
-        }
-        return TicketTier::where('event_id', $eventId)->orderBy('id')->get();
-    }
 }

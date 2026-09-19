@@ -312,7 +312,7 @@ class EventTicketingPatchTest extends TestCase
             ->assertJsonPath('message', 'Event and ticket tiers updated successfully')
             ->assertJsonPath('data.event.id', $this->event->id)
             ->assertJsonPath('data.event.title', 'Jazz Night')
-            ->assertJsonCount($initialCount - 1, 'ticketTiers');
+            ->assertJsonCount($initialCount - 1, 'data.ticketTiers');
 
         $this->assertDatabaseHas('ticket_tiers', [
             'event_id' => $this->event->id,
@@ -330,7 +330,7 @@ class EventTicketingPatchTest extends TestCase
             ],
         ]);
 
-        $tier = $response->json('ticketTiers.0');
+        $tier = $response->json('data.ticketTiers.0');
         $this->assertEquals('Addon', $tier['name']);
         $this->assertEquals(200, $tier['price']);
         $this->assertEquals(30, $tier['quantity']);
@@ -356,7 +356,7 @@ class EventTicketingPatchTest extends TestCase
 
         $response->assertStatus(200);
 
-        $tier = $response->json('ticketTiers.0');
+        $tier = $response->json('data.ticketTiers.0');
         $this->assertEquals('VIP Plus', $tier['name']);
         $this->assertEquals(6000, $tier['price']);
         $this->assertEquals(75, $tier['quantity']);
@@ -421,7 +421,7 @@ class EventTicketingPatchTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-            ->assertJsonCount(1, 'ticketTiers');
+            ->assertJsonCount(1, 'data.ticketTiers');
 
         $this->assertSoftDeleted('ticket_tiers', ['id' => $this->existingTier1->id]);
         $this->assertDatabaseHas('ticket_tiers', ['id' => $this->existingTier2->id, 'name' => 'Regular']);
@@ -436,7 +436,7 @@ class EventTicketingPatchTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-            ->assertJsonCount(1, 'ticketTiers');
+            ->assertJsonCount(1, 'data.ticketTiers');
 
         $this->assertSoftDeleted('ticket_tiers', ['id' => $this->existingTier1->id]);
         $this->assertSoftDeleted('ticket_tiers', ['id' => $this->existingTier2->id]);
@@ -455,9 +455,9 @@ class EventTicketingPatchTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-            ->assertJsonCount(2, 'ticketTiers');
+            ->assertJsonCount(2, 'data.ticketTiers');
 
-        $names = array_column($response->json('ticketTiers'), 'name');
+        $names = array_column($response->json('data.ticketTiers'), 'name');
         $this->assertContains('VIP Premium', $names);
         $this->assertContains('Backend', $names);
 
@@ -488,7 +488,7 @@ class EventTicketingPatchTest extends TestCase
 
         $response->assertStatus(200);
 
-        $tier = $response->json('ticketTiers.0');
+        $tier = $response->json('data.ticketTiers.0');
         $required = [
             'id', 'event_id', 'name', 'price', 'quantity',
             'sales_start_date', 'sales_end_date', 'benefits_description',
@@ -518,7 +518,7 @@ class EventTicketingPatchTest extends TestCase
 
         $response->assertStatus(200);
 
-        $tier = $response->json('ticketTiers.0');
+        $tier = $response->json('data.ticketTiers.0');
         $this->assertArrayHasKey('isEarlyBirdActive', $tier);
         $this->assertArrayHasKey('is_early_bird_active', $tier);
         $this->assertArrayHasKey('effectivePrice', $tier);
@@ -546,7 +546,7 @@ class EventTicketingPatchTest extends TestCase
 
         $response->assertStatus(200);
 
-        $tier = $response->json('ticketTiers.0');
+        $tier = $response->json('data.ticketTiers.0');
         $this->assertFalse($tier['isEarlyBirdActive']);
         $this->assertEquals(2000.0, $tier['effectivePrice']);
     }
@@ -619,7 +619,7 @@ class EventTicketingPatchTest extends TestCase
             ],
         ]);
 
-        $tier = $response->json('ticketTiers.0');
+        $tier = $response->json('data.ticketTiers.0');
         $this->assertEquals($this->event->id, $tier['event_id']);
 
         $this->assertDatabaseHas('ticket_tiers', [
@@ -638,7 +638,7 @@ class EventTicketingPatchTest extends TestCase
             ],
         ]);
 
-        $tiers = $response->json('ticketTiers');
+        $tiers = $response->json('data.ticketTiers');
         $this->assertEquals('Third', $tiers[0]['name']);
         $this->assertEquals('First', $tiers[1]['name']);
         $this->assertEquals('Second', $tiers[2]['name']);
@@ -658,7 +658,7 @@ class EventTicketingPatchTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-            ->assertJsonCount(10, 'ticketTiers');
+            ->assertJsonCount(10, 'data.ticketTiers');
 
         $this->assertEquals(10, \App\Models\TicketTier::where('event_id', $this->event->id)->count());
     }
@@ -711,7 +711,7 @@ class EventTicketingPatchTest extends TestCase
             ],
         ]);
 
-        $tier = $response->json('ticketTiers.0');
+        $tier = $response->json('data.ticketTiers.0');
         $this->assertEquals('NGN', $tier['currency']);
     }
 
@@ -723,7 +723,7 @@ class EventTicketingPatchTest extends TestCase
             ],
         ]);
 
-        $tier = $response->json('ticketTiers.0');
+        $tier = $response->json('data.ticketTiers.0');
         $this->assertEquals('published', $tier['status']);
     }
 
@@ -735,7 +735,7 @@ class EventTicketingPatchTest extends TestCase
             ],
         ]);
 
-        $tier = $response->json('ticketTiers.0');
+        $tier = $response->json('data.ticketTiers.0');
         $this->assertEquals('USD', $tier['currency']);
     }
 
@@ -747,7 +747,7 @@ class EventTicketingPatchTest extends TestCase
             ],
         ]);
 
-        $tier = $response->json('ticketTiers.0');
+        $tier = $response->json('data.ticketTiers.0');
         $this->assertEquals(2, $tier['max_per_customer']);
     }
 
@@ -762,7 +762,7 @@ class EventTicketingPatchTest extends TestCase
 
         $response->assertStatus(200);
 
-        $tier = $response->json('ticketTiers.0');
+        $tier = $response->json('data.ticketTiers.0');
         $this->assertEquals($benefits, $tier['benefits_description']);
     }
 
@@ -788,7 +788,7 @@ class EventTicketingPatchTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $tier = $response->json('ticketTiers.0');
+        $tier = $response->json('data.ticketTiers.0');
         $this->assertEquals($dataUri, $tier['tier_image_url']);
     }
 
@@ -804,16 +804,64 @@ class EventTicketingPatchTest extends TestCase
             ->withHeader('Idempotency-Key', 'test-key-123')
             ->patchJson("/api/organizer/events/{$this->event->id}/ticketing", $payload);
         $first->assertStatus(200)
-            ->assertJsonPath('ticketTiers.0.name', 'Idempotent Tier')
-            ->assertJsonPath('ticketTiers.0.price', 1500);
+            ->assertJsonPath('data.ticketTiers.0.name', 'Idempotent Tier')
+            ->assertJsonPath('data.ticketTiers.0.price', 1500);
 
         $second = $this->withHeader('Authorization', 'Bearer ' . $this->token)
             ->withHeader('Idempotency-Key', 'test-key-123')
             ->patchJson("/api/organizer/events/{$this->event->id}/ticketing", $payload);
         $second->assertStatus(200)
-            ->assertJsonPath('ticketTiers.0.name', 'Idempotent Tier')
-            ->assertJsonPath('ticketTiers.0.price', 1500);
+            ->assertJsonPath('data.ticketTiers.0.name', 'Idempotent Tier')
+            ->assertJsonPath('data.ticketTiers.0.price', 1500);
 
         $this->assertDatabaseCount('ticket_tiers', 3);
+    }
+
+    // ── 13. NEW VALIDATION HARDENING ───────────────────
+
+    public function test_rejects_empty_string_name_on_update(): void
+    {
+        $response = $this->patchWithAuthToken("/api/organizer/events/{$this->event->id}/ticketing", [
+            'ticketTiers' => [
+                ['id' => $this->existingTier1->id, 'name' => '   '],
+            ],
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('ticket_tiers', [
+            'id' => $this->existingTier1->id,
+            'name' => 'VIP',
+        ]);
+    }
+
+    public function test_rejects_duplicate_tier_names_in_same_request(): void
+    {
+        $response = $this->patchWithAuthToken("/api/organizer/events/{$this->event->id}/ticketing", [
+            'ticketTiers' => [
+                ['name' => 'Duplicate', 'price' => 100, 'quantity' => 10],
+                ['name' => 'Duplicate', 'price' => 200, 'quantity' => 20],
+            ],
+        ]);
+
+        // Application-level duplicate name detection rejects the second tier
+        $response->assertStatus(422);
+        $this->assertStringContainsString('already exists', $response->json('errors.ticketTiers.1.name.0'));
+        $this->assertEquals(2, TicketTier::where('event_id', $this->event->id)->count());
+    }
+
+    public function test_response_has_no_duplicate_keys(): void
+    {
+        $response = $this->patchWithAuthToken("/api/organizer/events/{$this->event->id}/ticketing", [
+            'ticketTiers' => [
+                ['name' => 'Single Key', 'price' => 100, 'quantity' => 10],
+            ],
+        ]);
+
+        $response->assertStatus(200);
+        $json = $response->json();
+        // Top-level should only have message + data
+        $this->assertEquals(['message', 'data'], array_keys($json));
+        // data should have event + ticketTiers (no legacy 'tiers' key)
+        $this->assertEquals(['event', 'ticketTiers'], array_keys($json['data']));
     }
 }

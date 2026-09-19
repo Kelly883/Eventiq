@@ -101,10 +101,7 @@ class EventTicketingController extends Controller
                         'title' => $event->title,
                     ],
                     'ticketTiers' => TicketTierResource::collection($updatedTiers),
-                    'tiers' => TicketTierResource::collection($updatedTiers),
                 ],
-                'ticketTiers' => TicketTierResource::collection($updatedTiers),
-                'tiers' => TicketTierResource::collection($updatedTiers),
             ], 200);
 
             if ($idempotencyCacheKey) {
