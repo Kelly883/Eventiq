@@ -5,6 +5,7 @@ import Icon from './dashboard/Icon';
 import MobileNav from './dashboard/MobileNav';
 import AccountDropdown from './dashboard/AccountDropdown';
 import BottomNav from './dashboard/BottomNav';
+import BrandLogo from '../../common/components/BrandLogo';
 import '../dashboard.css';
 
 const DashboardLayout = () => {
@@ -117,7 +118,9 @@ const DashboardLayout = () => {
     <div className="dashboard-layout">
       {/* ── Mobile Header (< 768px) ── */}
       <header className="dashboard-mobile-header">
-        <span className="dashboard-brand-name">EventIQ</span>
+        <NavLink to="/" className="dashboard-brand" aria-label="eventIQ home">
+          <BrandLogo variant="light" />
+        </NavLink>
         <div className="dashboard-mobile-header-actions">
           <button
             type="button"
@@ -169,8 +172,9 @@ const DashboardLayout = () => {
         {/* ── Sidebar (desktop, >= 768px) ── */}
         <aside className="dashboard-sidebar" aria-label="Dashboard sections">
           <div className="dashboard-sidebar-header">
-            <h2 className="dashboard-sidebar-title">EventIQ</h2>
-            <p className="dashboard-sidebar-subtitle">Your dashboard</p>
+            <NavLink to="/" aria-label="eventIQ home">
+              <BrandLogo variant="light" />
+            </NavLink>
           </div>
           <nav className="dashboard-sidebar-nav" aria-label="Dashboard">
             {sidebarNavItems.map((item) => {
