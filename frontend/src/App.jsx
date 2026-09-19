@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Suspense, lazy, useRef } from 'react';
-import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 // useLocation already imported above
 import { LoadingSpinner, ErrorBoundary } from './features/common';
 import BrandLogo from './features/common/components/BrandLogo';
