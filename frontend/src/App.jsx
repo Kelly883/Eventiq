@@ -342,8 +342,9 @@ function App() {
         </noscript>
         <ToastContainer />
         {recoveryBanner}
-        {/* Navigation Bar — hidden on auth pages and homepage (homepage has its own Header) */}
-        {!isAuthPage && !isHomepage && (
+        {/* Navigation Bar — hidden on auth pages, homepage, and authenticated app layouts
+            (DashboardLayout, AdminLayout, MyTicketsLayout, SettingsLayout, etc. have their own headers) */}
+        {!isAuthPage && !isHomepage && !location.pathname.startsWith('/dashboard') && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/my-tickets') && !location.pathname.startsWith('/settings') && !location.pathname.startsWith('/organizer') && !location.pathname.startsWith('/venue') && !location.pathname.startsWith('/check-in') && (
           <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 shadow-sm backdrop-blur-md bg-white/90">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="flex h-16 items-center justify-between">
