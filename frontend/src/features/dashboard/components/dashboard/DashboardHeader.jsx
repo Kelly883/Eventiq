@@ -1,5 +1,4 @@
 import React from 'react';
-import Icon from './Icon';
 
 const DashboardHeader = ({ user }) => {
   const firstName = user?.name?.split(' ')[0] || 'there';
@@ -11,13 +10,15 @@ const DashboardHeader = ({ user }) => {
   };
 
   return (
-    <div className="dashboard-header">
-      <h1 className="dashboard-title">
-        {getGreeting()}, {firstName}
-      </h1>
-      <p className="dashboard-subtitle">
-        Manage your tickets, discover upcoming events, and stay organized.
-      </p>
+    <div className="greeting-bar">
+      <div className="greeting-content">
+        <h2 className="greeting-title">
+          {getGreeting()}, {firstName}
+        </h2>
+        <p className="greeting-subtitle">
+          Manage your tickets, discover upcoming events, and stay organized.
+        </p>
+      </div>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, Suspense, lazy, useRef } from 'react';
-import { Routes, Route, NavLink, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+// useLocation already imported above
 import { LoadingSpinner, ErrorBoundary } from './features/common';
 import BrandLogo from './features/common/components/BrandLogo';
 import ToastContainer from './features/notifications/components/ToastContainer';
@@ -140,107 +141,43 @@ const hasAnyRole = (roles, ...names) => names.some((n) => roles.includes(n));
 
 // Visibility rules keep the nav honest: users only see destinations they can
 // actually reach. Public routes stay visible to everyone.
+// Labels are plain text — the EventIQ header is for public/marketing pages
+// (events, cart) and uses the design system link styling below.
 const NAV_ITEMS = [
-  { to: '/analytics', label: '📈 Analytics', visible: () => true },
   {
     to: '/events',
-    label: '📋 Browse Events',
+    label: 'Browse Events',
     visible: () => true,
   },
   {
     to: '/events/calendar',
-    label: '🗓️ Calendar',
+    label: 'Calendar',
     visible: () => true,
   },
   {
     to: '/cart',
-    label: '🛒 Cart',
+    label: 'Cart',
     visible: () => true,
   },
   {
-    to: '/dashboard/organizer',
-    label: '💼 Organizer',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
-  },
-  {
-    to: '/check-in',
-    label: '🎟️ Quick Check-In',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer'),
-  },
-  {
-    to: '/venue/dashboard',
-    label: 'Venue Dashboard',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'venue_staff', 'organizer'),
-  },
-  {
-    to: '/organizer/events',
-    label: '📦 Events',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
-  },
-  {
-    to: '/dashboard',
-    label: 'Dashboard',
-    visible: (isLoggedIn, roles) => isLoggedIn && hasAnyRole(roles, 'organizer'),
-  },
-  {
-    to: '/my/profile',
-    label: '👤 Profile',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
-  },
-  {
     to: '/my-tickets',
-    label: '🎫 My Tickets',
-    visible: (isLoggedIn) => isLoggedIn,
-  },
-  {
-    to: '/my-tickets/status',
-    label: '🔍 Check Ticket',
+    label: 'My Tickets',
     visible: (isLoggedIn) => isLoggedIn,
   },
   {
     to: '/settings',
-    label: '⚙️ Settings',
+    label: 'Settings',
     visible: (isLoggedIn) => isLoggedIn,
   },
   {
     to: '/admin',
-    label: '⚡ Admin',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
-  },
-  {
-    to: '/admin/roles',
-    label: '🛡️ Admin Roles',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
-  },
-  {
-    to: '/admin/fraud/dashboard',
-    label: '🕵️ Fraud Detection',
+    label: 'Admin',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
   },
   {
     to: '/organizer/payouts',
-    label: '💰 Payouts',
+    label: 'Payouts',
     visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
-  },
-  {
-    to: '/organizer/settings',
-    label: '🔧 Organizer Settings',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
-  },
-  {
-    to: '/developer',
-    label: '🧑‍💻 Developer',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'organizer'),
-  },
-  {
-    to: '/admin/analytics',
-    label: '📊 Analytics',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
-  },
-  {
-    to: '/admin/settlements/dashboard',
-    label: '💼 Settlements',
-    visible: (_isLoggedIn, roles) => hasAnyRole(roles, 'admin'),
   },
 ];
 
@@ -248,6 +185,7 @@ function App() {
   useFCMTokenSync();
   const location = useLocation();
   const navigate = useNavigate();
+  // location is now reactive — header visibility updates on route changes
   const { user, logout, sessionExpired, refreshAuth } = useAuthContext();
   const isLoggedIn = Boolean(user);
   const roles = user?.roles?.map((r) => r.name) || [];
@@ -311,17 +249,17 @@ function App() {
     user && location.state?.from && location.pathname !== '/' && !recoveryBannerDismissed ? (
       <div
         key="recovery-banner"
-        className="fixed top-0 left-0 right-0 z-50 bg-indigo-100 border-b border-indigo-200 p-4 text-indigo-800 shadow-sm animate-slide-in-down"
+        className="app-recovery-banner"
         role="alert"
       >
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-sm font-medium">
-            <span className="font-bold">Remembering where you wanted to go&hellip;</span>
+        <div className="app-recovery-banner-inner">
+          <p>
+            <strong>Remembering where you wanted to go&hellip;</strong>
             navigating back to {recoveryPath}…
           </p>
           <button
             onClick={() => setRecoveryBannerDismissed(true)}
-            className="mt-2 text-indigo-600 underline cursor-pointer text-sm"
+            className="app-recovery-banner-btn"
           >
             Don't show again
           </button>
@@ -330,85 +268,75 @@ function App() {
     ) : null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
-        <noscript>
-          <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200/80 p-4 text-slate-900 shadow-sm">
-            <div className="max-w-2xl mx-auto text-center">
-              <h2 className="text-2xl font-bold text-red-600">JavaScript Required</h2>
-              <p className="text-slate-700 mt-2">Eventiq requires JavaScript to function properly. Please enable JavaScript in your browser settings to access all features including admin route protection, session management, and interactive elements.</p>
-              <p className="text-slate-600 mt-4 text-sm">If JavaScript is disabled, the server-side authentication middleware will still protect admin routes, but the interactive user interface will not be available.</p>
-            </div>
+    <div className="app-shell">
+      <noscript>
+        <div className="app-noscript">
+          <div>
+            <h2>JavaScript Required</h2>
+            <p>Eventiq requires JavaScript to function properly. Please enable JavaScript in your browser settings to access all features including admin route protection, session management, and interactive elements.</p>
+            <p>If JavaScript is disabled, the server-side authentication middleware will still protect admin routes, but the interactive user interface will not be available.</p>
           </div>
-        </noscript>
-        <ToastContainer />
-        {recoveryBanner}
-        {/* Navigation Bar — hidden on auth pages, homepage, and authenticated app layouts
-            (DashboardLayout, AdminLayout, MyTicketsLayout, SettingsLayout, etc. have their own headers) */}
-        {!isAuthPage && !isHomepage && !location.pathname.startsWith('/dashboard') && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/my-tickets') && !location.pathname.startsWith('/settings') && !location.pathname.startsWith('/organizer') && !location.pathname.startsWith('/venue') && !location.pathname.startsWith('/check-in') && (
-          <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 shadow-sm backdrop-blur-md bg-white/90">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="flex h-16 items-center justify-between">
-                {/* Logo */}
-                <NavLink to="/" className="app-brand" aria-label="eventIQ home">
-                  <BrandLogo />
-                </NavLink>
+        </div>
+      </noscript>
+      <ToastContainer />
+      {recoveryBanner}
+      {/* Navigation Bar — hidden on auth pages, homepage, and authenticated app layouts
+          (DashboardLayout, AdminLayout, MyTicketsLayout, SettingsLayout, etc. have their own headers) */}
+      {!isAuthPage && !isHomepage && !location.pathname.startsWith('/dashboard') && !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/my-tickets') && !location.pathname.startsWith('/settings') && !location.pathname.startsWith('/organizer') && !location.pathname.startsWith('/venue') && !location.pathname.startsWith('/check-in') && (
+        <header className="app-header">
+          <div className="app-header-inner">
+            {/* Logo */}
+            <NavLink to="/" className="app-brand" aria-label="eventIQ home">
+              <BrandLogo />
+            </NavLink>
 
-                {/* Navigation Links — filtered by auth state and role so users
-                    never see destinations they cannot access */}
-                <nav className="flex space-x-1 sm:space-x-3">
-                  {NAV_ITEMS.map((item) => {
-                    if (!item.visible(isLoggedIn, roles)) return null;
-                    return (
-                      <NavLink
-                        key={item.to}
-                        to={item.to}
-                        className={({ isActive }) =>
-                          `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                            isActive
-                              ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                          }`
-                        }
-                      >
-                        {item.label}
-                      </NavLink>
-                    );
-                  })}
-                </nav>
-
-                {/* Auth buttons */}
-                {user ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      logout();
-                      navigate('/login', { replace: true });
-                    }}
-                    className="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 transition-colors"
-                  >
-                    🔓 Logout
-                  </button>
-                ) : (
+            {/* Navigation Links — filtered by auth state and role so users
+                never see destinations they cannot access */}
+            <nav className="app-header-nav" aria-label="Main">
+              {NAV_ITEMS.map((item) => {
+                if (!item.visible(isLoggedIn, roles)) return null;
+                return (
                   <NavLink
-                    to="/login"
+                    key={item.to}
+                    to={item.to}
                     className={({ isActive }) =>
-                      `px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                        isActive
-                          ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/40 border border-indigo-100/50'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                      }`
+                      `app-header-link ${isActive ? 'active' : ''}`
                     }
                   >
-                    🔒 Sign In
+                    {item.label}
                   </NavLink>
-                )}
-              </div>
-            </div>
-          </header>
-        )}
+                );
+              })}
+            </nav>
+
+            {/* Auth buttons */}
+            {user ? (
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  navigate('/login', { replace: true });
+                }}
+                className="app-header-link"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <NavLink
+                to="/login"
+                className={({ isActive }) =>
+                  `app-header-link ${isActive ? 'active' : ''}`
+                }
+              >
+                Sign In
+              </NavLink>
+            )}
+          </div>
+        </header>
+      )}
 
         {/* Page Content */}
-        <main className="flex-1">
+        <main className="app-main">
           <ErrorBoundary>
             <Suspense fallback={<LoadingSpinner message="Loading page..." />}>
               <Routes>

@@ -1,14 +1,93 @@
-/* App shell — replaced the Vite starter rules (#root max-width / centered
-   text) that constrained the whole SPA to a padded 1280px box and caused
-   homepage white space. */
-#root {
+/* =========================================================================
+   EventIQ App Shell — design-system-driven public/header styling
+   ========================================================================= */
+
+/* Root wrapper */
+.app-shell {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
+  background-color: #F7F8FA;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #333333;
 }
 
+/* Public top header (visible on non-dashboard pages) */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E3E4E6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.app-header-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  height: 64px;
+  gap: 32px;
+}
+
+@media (min-width: 768px) {
+  .app-header-inner {
+    padding: 0 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-header-inner {
+    padding: 0 32px;
+  }
+}
+
+.app-header-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.app-header-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666666;
+  transition: all 0.2s ease;
+  min-height: 40px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.app-header-link:hover {
+  color: #333333;
+  background: #F7F8FA;
+}
+
+.app-header-link.active {
+  color: #FF6B6B;
+  background: transparent;
+  font-weight: 600;
+}
+
+/* Logo */
 .app-brand {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
+  text-decoration: none;
 }
 
 .app-brand .brand-logo {
@@ -21,4 +100,94 @@
   .app-brand .brand-logo {
     width: 152px;
   }
+
+  .app-header-inner {
+    gap: 16px;
+  }
+
+  /* Hide less-important nav links on small screens to avoid wrapping */
+  .app-header-nav .app-header-link:not(:nth-child(-n+2)) {
+    display: none;
+  }
+}
+
+.app-main {
+  flex: 1;
+}
+
+/* Recovery banner */
+.app-recovery-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: #E8F0FE;
+  border-bottom: 1px solid #B8D4F0;
+  color: #1A56DB;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.app-recovery-banner-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.app-recovery-banner p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.app-recovery-banner-btn {
+  margin-top: 8px;
+  color: #1A56DB;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 14px;
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  font-family: inherit;
+}
+
+/* No-JS banner */
+.app-noscript {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E3E4E6;
+  padding: 16px;
+  color: #333333;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.app-noscript > div {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.app-noscript h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #FF6B6B;
+  margin: 0 0 8px;
+}
+
+.app-noscript p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.app-noscript p:last-child {
+  font-size: 12px;
+  color: #666666;
+  margin-bottom: 0;
 }
