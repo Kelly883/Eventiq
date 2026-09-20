@@ -187,7 +187,7 @@ export const AuthProvider = ({ children }) => {
       try {
         await fetchCurrentUser();
       } catch {
-        showToast('Session expired', 'Please log in again to continue.', 'warning');
+        window.dispatchEvent(new CustomEvent('session-expired'));
       }
     };
 
@@ -196,7 +196,7 @@ export const AuthProvider = ({ children }) => {
       try {
         await fetchCurrentUser();
       } catch {
-        showToast('Session expired', 'Please log in again to continue.', 'warning');
+        window.dispatchEvent(new CustomEvent('session-expired'));
       }
     };
 
@@ -285,11 +285,9 @@ export const AuthProvider = ({ children }) => {
       };
 
       const handleSessionExpired = () => {
-        // Fired by api.ts when a 401 refresh fails — redirects to /login.
-        // Use SPA navigation (via the router) rather than a hard reload so we
-        // never cascade into a reload loop for unauthenticated users.
+        // Fired by api.ts when a 401 refresh fails — shows modal.
         setUser(null);
-        showToast('Session expired', 'Your session has ended. Please log in again.', 'warning');
+        window.dispatchEvent(new CustomEvent('session-expired'));
         emitRedirectToLogin({ source: 'session-expired' });
       };
 

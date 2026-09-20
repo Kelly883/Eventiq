@@ -4,6 +4,7 @@ import { Routes, Route, Navigate, NavLink, useLocation, useNavigate, useParams }
 import { LoadingSpinner, ErrorBoundary } from './features/common';
 import BrandLogo from './features/common/components/BrandLogo';
 import ToastContainer from './features/notifications/components/ToastContainer';
+import SessionModal from './features/auth/components/SessionModal';
 import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMTokenSync';
 import { ProtectedRoute, PublicRoute } from './features/auth/components/RouteGuards';
 import { useAuthContext } from './features/auth/context/AuthContext';
@@ -243,6 +244,39 @@ function App() {
   // Track if recovery banner has been dismissed in this session
   const [recoveryBannerDismissed, setRecoveryBannerDismissed] = useState(false);
 
+  // Session modal state — shows a proper modal overlay when session expires
+  const [sessionModal, setSessionModal] = useState({ isOpen: false, title: '', message: '', type: 'warning' });
+
+  // Listen for session-expired events from AuthContext/api interceptors
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setSessionModal({
+        isOpen: true,
+        title: 'Session Expired',
+        message: 'Your session has expired. Please log in again to continue.',
+        type: 'warning',
+      });
+    };
+
+    const handleSessionExtended = () => {
+      setSessionModal({
+        isOpen: true,
+        title: 'Session Extended',
+        message: 'Your session has been extended. You can continue using the application.',
+        type: 'success',
+      });
+      // Auto-dismiss after 3 seconds
+      setTimeout(() => setSessionModal((prev) => ({ ...prev, isOpen: false })), 3000);
+    };
+
+    window.addEventListener('session-expired', handleSessionExpired);
+    window.addEventListener('session-extended', handleSessionExtended);
+    return () => {
+      window.removeEventListener('session-expired', handleSessionExpired);
+      window.removeEventListener('session-extended', handleSessionExtended);
+    };
+  }, []);
+
   // Show banner when deep-link recovery is active — not on the homepage itself
   const recoveryPath = normalizeFromPath(location.state?.from);
   const recoveryBanner =
@@ -279,6 +313,20 @@ function App() {
         </div>
       </noscript>
       <ToastContainer />
+      <SessionModal
+        isOpen={sessionModal.isOpen}
+        title={sessionModal.title}
+        message={sessionModal.message}
+        type={sessionModal.type}
+        primaryActionLabel={sessionModal.type === 'warning' ? 'Sign in' : undefined}
+        onPrimaryAction={sessionModal.type === 'warning' ? () => {
+          setSessionModal((prev) => ({ ...prev, isOpen: false }));
+          navigate('/login', { replace: true });
+        } : undefined}
+        secondaryActionLabel={sessionModal.type === 'warning' ? 'Dismiss' : undefined}
+        onSecondaryAction={() => setSessionModal((prev) => ({ ...prev, isOpen: false }))}
+        onClose={() => setSessionModal((prev) => ({ ...prev, isOpen: false }))}
+      />
       {recoveryBanner}
       {/* Navigation Bar — hidden on auth pages, homepage, and authenticated app layouts
           (DashboardLayout, AdminLayout, MyTicketsLayout, SettingsLayout, etc. have their own headers) */}

@@ -1,0 +1,205 @@
+/* =========================================================================
+   EventIQ Session Modal
+   Used for Session Expired and Session Extended notifications.
+   Replaces toast-based session notifications that had no overlay,
+   oversized icons, and browser-default buttons.
+   ========================================================================= */
+
+/* Backdrop overlay */
+.session-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  animation: sessionModalFadeIn 0.2s ease;
+}
+
+@keyframes sessionModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Modal container */
+.session-modal {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background: var(--color-surface, #ffffff);
+  border-radius: var(--radius-xl, 16px);
+  padding: var(--space-xl, 24px);
+  box-shadow: var(--shadow-xl, 0 20px 60px rgba(0, 0, 0, 0.15));
+  text-align: center;
+  animation: sessionModalSlideUp 0.25s ease;
+  overflow: hidden;
+}
+
+@keyframes sessionModalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Close button */
+.session-modal-close {
+  position: absolute;
+  top: var(--space-sm, 8px);
+  right: var(--space-sm, 8px);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  color: var(--color-text-muted, #9CA3AF);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.session-modal-close:hover {
+  background: var(--color-bg, #F7F8FA);
+  color: var(--color-text, #333333);
+}
+
+.session-modal-close:focus-visible {
+  outline: 2px solid var(--color-primary, #4F46E5);
+  outline-offset: 2px;
+}
+
+.session-modal-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Icon */
+.session-modal-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--space-md, 16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.session-modal-icon svg {
+  width: 48px;
+  height: 48px;
+}
+
+.session-modal--warning .session-modal-icon {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.session-modal--info .session-modal-icon {
+  background: #DBEAFE;
+  color: #2563EB;
+}
+
+.session-modal--success .session-modal-icon {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+/* Title */
+.session-modal-title {
+  font-size: var(--font-size-lg, 18px);
+  font-weight: var(--font-weight-bold, 700);
+  line-height: var(--line-height-snug, 1.375);
+  color: var(--color-text, #333333);
+  margin: 0 0 var(--space-xs, 4px);
+}
+
+/* Message */
+.session-modal-message {
+  font-size: var(--font-size-sm, 14px);
+  font-weight: var(--font-weight-normal, 400);
+  line-height: var(--line-height-normal, 1.5);
+  color: var(--color-text-secondary, #6B7280);
+  margin: 0 0 var(--space-lg, 20px);
+}
+
+/* Actions */
+.session-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm, 8px);
+}
+
+.session-modal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-sm, 8px) var(--space-md, 16px);
+  font-size: var(--font-size-sm, 14px);
+  font-weight: var(--font-weight-semibold, 600);
+  line-height: 1;
+  border-radius: var(--radius-md, 8px);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.session-modal-btn:focus-visible {
+  outline: 2px solid var(--color-primary, #4F46E5);
+  outline-offset: 2px;
+}
+
+.session-modal-btn--primary {
+  background: var(--color-primary, #4F46E5);
+  color: #FFFFFF;
+}
+
+.session-modal-btn--primary:hover {
+  background: #4338CA;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+.session-modal-btn--secondary {
+  background: transparent;
+  color: var(--color-text, #333333);
+  border: 1px solid var(--color-border, #E3E4E6);
+}
+
+.session-modal-btn--secondary:hover {
+  background: var(--color-bg, #F7F8FA);
+}
+
+/* Responsive adjustments */
+@media (max-width: 374px) {
+  .session-modal {
+    padding: var(--space-lg, 20px);
+  }
+
+  .session-modal-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .session-modal-icon svg {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (min-width: 640px) {
+  .session-modal {
+    max-width: 400px;
+    padding: var(--space-xl, 24px) var(--space-xl, 24px);
+  }
+}

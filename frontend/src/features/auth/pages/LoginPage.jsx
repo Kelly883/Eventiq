@@ -99,7 +99,7 @@ const LoginPage = () => {
 
     try {
       const { user: authenticatedUser } = await login(email, password, rememberMe, captchaToken || undefined);
-      showToast('Session Extended', 'Your session will remain active.', 'info');
+      window.dispatchEvent(new CustomEvent('session-extended'));
       const fromPath = normalizeFromPath(location.state?.from) || sessionExpiredReturn || null;
       const redirectTo = safeRedirectPath(
         fromPath,
