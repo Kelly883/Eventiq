@@ -13,6 +13,13 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class PricingWindowController extends Controller
 {
+    /**
+     * Maximum number of windows returned by the preview endpoint in a single
+     * response. Keeps the grouped payload bounded on pathological events;
+     * larger sets should use the paginated index endpoint.
+     */
+    private const PREVIEW_MAX_WINDOWS = 200;
+
     public function __construct()
     {
         // Authorization is handled per-method below because this controller
@@ -340,6 +347,13 @@ class PricingWindowController extends Controller
     {
         $this->authorizeEventAccess($request, $event);
 
+        // Cap the number of windows returned in a single response. Preview
+        // groups in PHP after loading, so an unbounded ->get() on a
+        // pathological event (thousands of windows) would build one giant
+        // JSON payload. The cap keeps the response bounded; organizers with
+        // more windows than the cap should use the paginated index endpoint.
+        $maxWindows = (int) ($request->integer('max_windows') ?: self::PREVIEW_MAX_WINDOWS);
+
         $query = PricingWindow::forEvent($event)
             ->with(['ticketTier'])
             ->prioritized();
@@ -352,9 +366,10 @@ class PricingWindowController extends Controller
             return response()->json(['message' => 'Only admins can include deleted windows.'], 403);
         }
 
-        $windows = $query->get();
+        $totalWindows = (clone $query)->toBase()->count();
+        $windows = $query->limit($maxWindows)->get();
 
-        // Paginate grouped results for performance with large datasets
+        // Group by ticket category
         $grouped = $windows->groupBy('ticket_category_id')->map(function ($group) {
             return [
                 'ticket_category_id' => (string) $group->first()->ticket_category_id,
@@ -365,7 +380,10 @@ class PricingWindowController extends Controller
 
         return response()->json([
             'event_id' => (string) $event,
-            'total_windows' => $windows->count(),
+            'total_windows' => $totalWindows,
+            'returned_windows' => $windows->count(),
+            'max_windows' => $maxWindows,
+            'truncated' => $totalWindows > $windows->count(),
             'categories' => $grouped,
         ]);
     }
