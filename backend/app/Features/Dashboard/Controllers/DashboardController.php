@@ -46,7 +46,7 @@ class DashboardController extends Controller
 
         $key = 'dashboard.metrics.' . $request->user()->id . '.' . $request->query('eventId', 'null');
 
-        return Cache::remember($key, minutes: 3, function () use ($request) {
+        return Cache::remember($key, 180, function () use ($request) {
             $user = $request->user();
             $eventId = $request->query('eventId');
 
