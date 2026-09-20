@@ -55,6 +55,9 @@ Thumbs.db
 event-ticketing-prd-export.md
 /backend/storage/app/public/qrcodes/
 
+# Laravel Storage::fake() scratch disk — regenerated on every test run
+/backend/storage/framework/testing/disks/
+
 # Playwright CLI runtime artifacts
 **/.playwright-cli/
 .claude/
