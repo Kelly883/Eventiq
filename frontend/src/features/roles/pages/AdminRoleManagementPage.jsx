@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api, showToast } from '../../../lib/api';
 import { LoadingSpinner } from '../../common';
+import '../../../styles/shared-pages.css';
 
 const AdminRoleManagementPage = () => {
   const [roles, setRoles] = useState([]);
@@ -38,14 +39,20 @@ const AdminRoleManagementPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 p-6 md:p-10">
-        <div className="mx-auto max-w-3xl">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-            <h2 className="text-xl font-semibold text-red-800 mb-2">Something went wrong</h2>
-            <p className="text-red-700">{error}</p>
+      <div className="spa-page">
+        <div className="spa-container" style={{ maxWidth: '768px' }}>
+          <div
+            className="spa-card"
+            style={{ padding: '24px', textAlign: 'center', background: '#fef2f2', borderColor: '#fecaca' }}
+          >
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#991b1b', marginBottom: '8px' }}>
+              Something went wrong
+            </h2>
+            <p style={{ color: '#b91c1c' }}>{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              className="spa-btn"
+              style={{ background: '#dc2626', color: '#fff', marginTop: '16px' }}
             >
               Retry
             </button>
@@ -56,61 +63,79 @@ const AdminRoleManagementPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10">
-      <div className="mx-auto max-w-5xl">
-        <div className="flex items-center justify-between mb-8">
+    <div className="spa-page">
+      <div className="spa-container" style={{ maxWidth: '1024px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '32px',
+            flexWrap: 'wrap',
+            gap: '16px',
+          }}
+        >
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Role Management</h1>
-            <p className="mt-2 text-sm text-slate-500">
+            <h1 className="spa-page__title" style={{ fontSize: '1.875rem' }}>
+              Role Management
+            </h1>
+            <p className="spa-page__subtitle">
               Manage user roles and permissions across the platform.
             </p>
           </div>
-          <Link
-            to="/settings/permissions"
-            className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200 transition-colors"
-          >
+          <Link to="/settings/permissions" className="spa-btn spa-btn--secondary">
             ← Back to Permissions
           </Link>
         </div>
 
         {roles.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 12c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" />
-                </svg>
-              </div>
+          <div className="spa-card spa-empty">
+            <div
+              className="spa-empty__icon"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                background: '#eef2ff',
+                color: '#4f46e5',
+              }}
+            >
+              <svg style={{ width: '24px', height: '24px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 12c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" />
+              </svg>
             </div>
-            <h2 className="text-xl font-semibold text-slate-800 mb-2">No roles configured</h2>
-            <p className="text-slate-500">
+            <h2 className="spa-empty__title">No roles configured</h2>
+            <p className="spa-empty__text">
               Role management is ready for configuration. Contact your system administrator
               to set up organizational roles and permission schemes.
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b">
+          <div className="spa-card" style={{ overflow: 'hidden', padding: 0 }}>
+            <table className="spa-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Permissions</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Users</th>
+                  <th>Role</th>
+                  <th>Permissions</th>
+                  <th>Users</th>
                 </tr>
               </thead>
               <tbody>
                 {roles.map((role) => (
-                  <tr key={role.id} className="border-b last:border-0">
-                    <td className="px-6 py-4">
-                      <span className="font-semibold text-slate-900">{role.name}</span>
+                  <tr key={role.id}>
+                    <td>
+                      <span style={{ fontWeight: 600, color: '#333' }}>{role.name}</span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
+                    <td style={{ color: '#666', fontSize: '14px' }}>
                       {role.permissions?.length > 0
                         ? role.permissions.map((p) => p.name).join(', ')
                         : 'No permissions assigned'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
+                    <td style={{ color: '#666', fontSize: '14px' }}>
                       {role.users_count || 0}
                     </td>
                   </tr>

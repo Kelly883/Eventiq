@@ -8,8 +8,10 @@ import {
 } from '../components';
 import { useOfflineSyncStore } from '../../offline/services/offlineSyncStore';
 import EventSelector from '../../analytics/components/EventSelector';
-const CHECKIN_FIRST_VISIT_KEY = "eventiq-checkin-first-visit";
 import { api } from '../../../lib/api';
+import '../../../styles/shared-pages.css';
+
+const CHECKIN_FIRST_VISIT_KEY = "eventiq-checkin-first-visit";
 
 const CheckInDashboardPage = () => {
   const [searchParams] = useSearchParams();
@@ -61,25 +63,55 @@ const CheckInDashboardPage = () => {
   }, [eventId]);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <div className="spa-page">
+      <div className="spa-container" style={{ maxWidth: '1280px' }}>
         
         {/* Connection Status Banner */}
-        <div className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm transition-all duration-300 ${
-          isOnline 
-            ? 'bg-emerald-50 border-emerald-100/80 text-emerald-800' 
-            : 'bg-amber-50 border-amber-100/80 text-amber-800'
-        }`}>
-          <div className="flex items-center gap-3">
-            <span className={`relative flex h-3 w-3 ${isOnline ? 'text-emerald-500' : 'text-amber-500'}`}>
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isOnline ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
-              <span className={`relative inline-flex rounded-full h-3 w-3 ${isOnline ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+        <div
+          className="spa-card"
+          style={{
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '12px',
+            marginBottom: '32px',
+            background: isOnline ? '#f0fdf4' : '#fffbeb',
+            borderColor: isOnline ? '#bbf7d0' : '#fde68a',
+            color: isOnline ? '#16a34a' : '#d97706',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ position: 'relative', display: 'inline-flex', width: '12px', height: '12px' }}>
+              <span
+                style={{
+                  position: 'absolute',
+                  display: 'inline-flex',
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  opacity: 0.75,
+                  background: isOnline ? '#16a34a' : '#d97706',
+                  animation: 'spaPing 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+                }}
+              />
+              <span
+                style={{
+                  position: 'relative',
+                  display: 'inline-flex',
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  background: isOnline ? '#16a34a' : '#d97706',
+                }}
+              />
             </span>
             <div>
-              <p className="text-sm font-extrabold tracking-tight">
+              <p style={{ fontSize: '14px', fontWeight: 800 }}>
                 {isOnline ? 'Connection Status: Online Mode' : 'Connection Status: Offline Buffer Mode'}
               </p>
-              <p className="text-xs opacity-85 mt-0.5">
+              <p style={{ fontSize: '12px', opacity: 0.85, marginTop: '2px' }}>
                 {isOnline 
                   ? 'Real-time validations are synchronized instantly with the cloud backend.' 
                   : 'Scans are saved securely in local storage and will sync automatically upon reconnection.'}
@@ -91,11 +123,27 @@ const CheckInDashboardPage = () => {
             <button
               onClick={syncQueue}
               disabled={isSyncing}
-              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold text-xs rounded-lg transition-all shadow-sm shadow-indigo-100 cursor-pointer flex items-center gap-2"
+              className="spa-btn"
+              style={{
+                background: isSyncing ? '#94a3b8' : '#4f46e5',
+                color: '#fff',
+                fontSize: '12px',
+                padding: '6px 16px',
+              }}
             >
               {isSyncing ? (
                 <>
-                  <span className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span
+                    style={{
+                      width: '12px',
+                      height: '12px',
+                      border: '2px solid #fff',
+                      borderTopColor: 'transparent',
+                      borderRadius: '50%',
+                      animation: 'spaSpin 1s linear infinite',
+                      display: 'inline-block',
+                    }}
+                  />
                   Syncing...
                 </>
               ) : (
@@ -106,52 +154,150 @@ const CheckInDashboardPage = () => {
         </div>
 
         {/* Dashboard Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '16px',
+            marginBottom: '24px',
+          }}
+        >
           <div>
-            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100/80 uppercase tracking-widest inline-block mb-2">
+            <span
+              style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                color: '#4f46e5',
+                background: '#eef2ff',
+                padding: '4px 10px',
+                borderRadius: '999px',
+                border: '1px solid #c7d2fe',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                display: 'inline-block',
+                marginBottom: '8px',
+              }}
+            >
               On-Site Venue Logistics
             </span>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Ticket Check-In Desk</h1>
-            <p className="mt-1.5 text-sm text-slate-500">
+            <h1 className="spa-page__title" style={{ fontSize: '1.875rem' }}>
+              Ticket Check-In Desk
+            </h1>
+            <p className="spa-page__subtitle">
               Unified check-in desk — scan QR codes, search attendees, view stats, export records & audit history. Select an event above to begin.
             </p>
           </div>
-          <div className="flex-shrink-0">
+          <div style={{ flexShrink: 0 }}>
             <EventSelector compact selectedEventId={eventId} />
           </div>
         </div>
 
         {/* Sticky active event banner */}
         {eventId && !eventError && (
-<div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-800">
-          <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
-          <span className="font-bold">{eventLoading ? 'Loading event...' : eventDetails?.name || eventDetails?.title || `Event #${eventId}`}</span>
-          <span className="text-indigo-500">·</span>
-          <Link to="/check-in" className="text-indigo-600 hover:text-indigo-800 underline text-xs">Clear</Link>
-          <span className="ml-4 text-indigo-500 hover:text-indigo-600 cursor-pointer text-xs" title="Works offline - scans save locally and sync when back online">
-            ⓘ
-          </span>
-        </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              background: '#eef2ff',
+              border: '1px solid #c7d2fe',
+              borderRadius: '12px',
+              fontSize: '14px',
+              color: '#3730a3',
+              marginBottom: '24px',
+            }}
+          >
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                background: '#16a34a',
+                borderRadius: '50%',
+                animation: 'spaPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                display: 'inline-block',
+              }}
+            />
+            <span style={{ fontWeight: 700 }}>
+              {eventLoading ? 'Loading event...' : eventDetails?.name || eventDetails?.title || `Event #${eventId}`}
+            </span>
+            <span style={{ color: '#6366f1' }}>·</span>
+            <Link to="/check-in" style={{ color: '#4f46e5', textDecoration: 'underline', fontSize: '12px' }}>
+              Clear
+            </Link>
+            <span
+              style={{ marginLeft: '16px', color: '#6366f1', cursor: 'pointer', fontSize: '12px' }}
+              title="Works offline - scans save locally and sync when back online"
+            >
+              ⓘ
+            </span>
+          </div>
         )}
         {!eventId && (
-          <div className="px-4 py-2 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-800">
+          <div
+            style={{
+              padding: '8px 16px',
+              background: '#fffbeb',
+              border: '1px solid #fde68a',
+              borderRadius: '12px',
+              fontSize: '14px',
+              color: '#d97706',
+              marginBottom: '24px',
+            }}
+          >
             No event selected — choose an event above to filter stats, search & exports. Queue works offline regardless.
           </div>
         )}
 
         {/* Event ended guard */}
         {eventDetails && eventDetails.status === 'ended' && (
-          <div className="p-4 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-700 flex items-center justify-between">
+          <div
+            style={{
+              padding: '16px',
+              background: '#f1f5f9',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              fontSize: '14px',
+              color: '#475569',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '24px',
+            }}
+          >
             <span>⚠️ This event has ended — check-ins are closed.</span>
-            <Link to="/events" className="text-indigo-600 hover:text-indigo-800 text-xs font-medium">Browse events →</Link>
+            <Link to="/events" style={{ color: '#4f46e5', fontSize: '12px', fontWeight: 500 }}>
+              Browse events →
+            </Link>
           </div>
         )}
 
         {/* Event missing / not found guard */}
         {eventError && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center justify-between" role="alert">
+          <div
+            style={{
+              padding: '16px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '12px',
+              fontSize: '14px',
+              color: '#dc2626',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '24px',
+            }}
+            role="alert"
+          >
             <span>⚠️ {eventError}</span>
-            <Link to="/check-in" className="text-red-700 hover:text-red-900 underline text-xs font-medium shrink-0 ml-4">Choose a valid event →</Link>
+            <Link
+              to="/check-in"
+              style={{ color: '#dc2626', textDecoration: 'underline', fontSize: '12px', fontWeight: 500, flexShrink: 0, marginLeft: '16px' }}
+            >
+              Choose a valid event →
+            </Link>
           </div>
         )}
 
@@ -161,43 +307,102 @@ const CheckInDashboardPage = () => {
         <CheckInStatsDisplay total={150} checkedIn={35} />
 
         {/* Core Layout Grid — disabled when no event selected, event ended, or event not found */}
-        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-8 ${!eventId || eventError || (eventDetails && eventDetails.status === 'ended') ? 'opacity-50 pointer-events-none' : ''}`}>
+        <div
+          className="spa-grid"
+          style={{
+            gridTemplateColumns: '1fr',
+            gap: '32px',
+            marginTop: '32px',
+            ...(window.innerWidth >= 1024 ? { gridTemplateColumns: '2fr 1fr' } : {}),
+            ...((!eventId || eventError || (eventDetails && eventDetails.status === 'ended'))
+              ? { opacity: 0.5, pointerEvents: 'none' }
+              : {}),
+          }}
+        >
           {/* Main scanner/manual input */}
-          <div className="lg:col-span-2 space-y-6">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <CheckInQRScanner eventId={eventId ? Number(eventId) : null} />
             <CheckInSearchBar eventId={eventId ? Number(eventId) : null} />
           </div>
 
           {/* Sync logs and recent checks side panel */}
-          <div className="space-y-6">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             
             {/* Pending Sync Queue — offline scans awaiting upload */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-              <div className="flex items-center justify-between mb-4 border-b border-slate-50 pb-3">
-                <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+            <div
+              className="spa-card"
+              style={{ padding: '20px', borderColor: '#e2e8f0' }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '16px',
+                  borderBottom: '1px solid #f8fafc',
+                  paddingBottom: '12px',
+                }}
+              >
+                <h3
+                  style={{
+                    fontWeight: 700,
+                    color: '#333',
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    margin: 0,
+                  }}
+                >
                   <span>📥 Pending Sync Queue</span>
-                  <span className="bg-amber-50 border border-amber-100 text-amber-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                  <span
+                    className="spa-badge spa-badge--warning"
+                  >
                     {queue.length} awaiting upload
                   </span>
                 </h3>
-                <span className="text-[10px] text-slate-400">offline scans</span>
+                <span style={{ fontSize: '10px', color: '#94a3b8' }}>offline scans</span>
               </div>
 
               {queue.length === 0 ? (
-                <div className="text-center py-6 text-slate-400 text-xs italic">
+                <div className="spa-empty" style={{ fontSize: '12px' }}>
                   No pending offline scans in queue
                 </div>
               ) : (
-                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
                   {queue.map((item) => (
-                    <div key={item.id} className="p-3 bg-amber-50/40 border border-amber-100/60 rounded-xl flex items-center justify-between text-xs">
+                    <div
+                      key={item.id}
+                      style={{
+                        padding: '12px',
+                        background: '#fffbeb',
+                        border: '1px solid #fef3c7',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        fontSize: '12px',
+                      }}
+                    >
                       <div>
-                        <span className="font-mono font-bold text-amber-900 block">{item.ticketCode}</span>
-                        <span className="text-[10px] text-slate-400">
+                        <span
+                          style={{
+                            fontFamily: 'monospace',
+                            fontWeight: 700,
+                            color: '#92400e',
+                            display: 'block',
+                          }}
+                        >
+                          {item.ticketCode}
+                        </span>
+                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>
                           Scanned at {new Date(item.scannedAt).toLocaleTimeString()}
                         </span>
                       </div>
-                      <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold uppercase tracking-wider animate-pulse">
+                      <span
+                        className="spa-badge spa-badge--warning"
+                        style={{ fontSize: '9px' }}
+                      >
                         {item.status}
                       </span>
                     </div>
@@ -207,13 +412,33 @@ const CheckInDashboardPage = () => {
             </div>
 
             {/* Recent Scans — synced & failed */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-              <div className="flex items-center justify-between mb-4 border-b border-slate-50 pb-3">
-                <h3 className="font-bold text-slate-800 text-sm">Recent Scans — synced & failed</h3>
+            <div
+              className="spa-card"
+              style={{ padding: '20px', borderColor: '#e2e8f0' }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '16px',
+                  borderBottom: '1px solid #f8fafc',
+                  paddingBottom: '12px',
+                }}
+              >
+                <h3 style={{ fontWeight: 700, color: '#333', fontSize: '14px', margin: 0 }}>
+                  Recent Scans — synced & failed
+                </h3>
                 {history.length > 0 && (
                   <button
                     onClick={clearSyncedHistory}
-                    className="text-[10px] text-slate-400 hover:text-rose-600 transition-colors"
+                    style={{
+                      fontSize: '10px',
+                      color: '#94a3b8',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
                   >
                     Clear Synced
                   </button>
@@ -221,39 +446,71 @@ const CheckInDashboardPage = () => {
               </div>
 
               {history.length === 0 ? (
-                <div className="text-center py-12">
-                  <span className="text-2xl block mb-2 filter grayscale">📋</span>
-                  <p className="text-xs text-slate-400 italic">No tickets processed in this session</p>
+                <div className="spa-empty">
+                  <span style={{ fontSize: '24px', display: 'block', marginBottom: '8px', filter: 'grayscale(100%)' }}>📋</span>
+                  <p style={{ fontSize: '12px', color: '#94a3b8' }}>No tickets processed in this session</p>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '384px', overflowY: 'auto', paddingRight: '4px' }}>
                   {history.map((item) => (
                     <div
                       key={item.id}
-                      className={`p-3 rounded-xl border text-xs flex flex-col gap-1.5 transition-all ${
-                        item.status === 'synced'
-                          ? 'bg-slate-50/50 border-slate-100'
-                          : 'bg-rose-50/40 border-rose-100 text-rose-900'
-                      }`}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '12px',
+                        border: '1px solid',
+                        fontSize: '12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        background: item.status === 'synced' ? '#f8fafc' : '#fef2f2',
+                        borderColor: item.status === 'synced' ? '#e2e8f0' : '#fecaca',
+                        color: item.status === 'synced' ? '#333' : '#991b1b',
+                      }}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono font-bold text-slate-900">{item.ticketCode}</span>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
-                          item.status === 'synced'
-                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100/50'
-                            : 'bg-rose-100 text-rose-700 border border-rose-200/50'
-                        }`}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span
+                          style={{
+                            fontFamily: 'monospace',
+                            fontWeight: 700,
+                            color: '#333',
+                          }}
+                        >
+                          {item.ticketCode}
+                        </span>
+                        <span
+                          className={`spa-badge ${item.status === 'synced' ? 'spa-badge--success' : 'spa-badge--error'}`}
+                        >
                           {item.status === 'synced' ? 'Synced' : 'Failed'}
                         </span>
                       </div>
                       
                       {item.error && (
-                        <p className="text-[10px] text-rose-600 font-medium leading-relaxed bg-rose-50 p-2 rounded-lg border border-rose-100/30">
+                        <p
+                          style={{
+                            fontSize: '10px',
+                            color: '#dc2626',
+                            fontWeight: 500,
+                            background: '#fef2f2',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            border: '1px solid #fecaca',
+                            margin: 0,
+                          }}
+                        >
                           ⚠️ {item.error}
                         </p>
                       )}
 
-                      <div className="flex justify-between items-center text-[9px] text-slate-400">
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: '9px',
+                          color: '#94a3b8',
+                        }}
+                      >
                         <span>{new Date(item.scannedAt).toLocaleTimeString()}</span>
                         <span>Event ID: {item.eventId}</span>
                       </div>

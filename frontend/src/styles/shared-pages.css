@@ -1,0 +1,329 @@
+/* =========================================================================
+   EventIQ Shared Page Styles
+   Used by pages that don't have their own dedicated CSS.
+   Uses the project's actual design system tokens from dashboard.css.
+   ========================================================================= */
+
+/* Page wrapper */
+.spa-page {
+  min-height: 100vh;
+  background: #F7F8FA;
+  padding: 24px 16px;
+}
+
+@media (min-width: 768px) {
+  .spa-page {
+    padding: 32px 24px;
+  }
+}
+
+/* Page header */
+.spa-page__header {
+  max-width: 1280px;
+  margin: 0 auto 24px;
+}
+
+.spa-page__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333333;
+  margin: 0;
+}
+
+.spa-page__subtitle {
+  font-size: 0.875rem;
+  color: #666666;
+  margin: 4px 0 0;
+}
+
+/* Card */
+.spa-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #E3E4E6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.spa-card--padded {
+  padding: 20px;
+}
+
+@media (min-width: 768px) {
+  .spa-card--padded {
+    padding: 24px;
+  }
+}
+
+/* Buttons */
+.spa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.spa-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spa-btn--primary {
+  background: #FF6B6B;
+  color: #fff;
+}
+
+.spa-btn--primary:hover:not(:disabled) {
+  background: #D94545;
+}
+
+.spa-btn--secondary {
+  background: transparent;
+  color: #333333;
+  border: 1px solid #E3E4E6;
+}
+
+.spa-btn--secondary:hover:not(:disabled) {
+  background: #F7F8FA;
+}
+
+.spa-btn--danger {
+  background: transparent;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.spa-btn--danger:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+/* Form controls */
+.spa-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.spa-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333333;
+}
+
+.spa-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #333333;
+  background: #fff;
+  border: 1px solid #E3E4E6;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.spa-input:focus {
+  border-color: #FF6B6B;
+  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+}
+
+.spa-input::placeholder {
+  color: #aaa;
+}
+
+/* Alert */
+.spa-alert {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.spa-alert--error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.spa-alert--warning {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.spa-alert--success {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.spa-alert--info {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+/* Empty state */
+.spa-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: #666666;
+}
+
+.spa-empty__icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.spa-empty__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #333333;
+  margin: 0 0 8px;
+}
+
+.spa-empty__text {
+  font-size: 0.875rem;
+  color: #666666;
+  margin: 0 0 20px;
+}
+
+/* Stat card */
+.spa-stat {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #E3E4E6;
+  padding: 20px;
+}
+
+.spa-stat__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #666666;
+  margin: 0 0 4px;
+}
+
+.spa-stat__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333333;
+  margin: 0;
+}
+
+/* Table */
+.spa-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.spa-table th,
+.spa-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #E3E4E6;
+  font-size: 14px;
+}
+
+.spa-table th {
+  font-weight: 600;
+  color: #666666;
+  background: #F7F8FA;
+}
+
+.spa-table td {
+  color: #333333;
+}
+
+/* Badge */
+.spa-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.spa-badge--success {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.spa-badge--warning {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.spa-badge--error {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.spa-badge--info {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+/* Loading skeleton */
+.spa-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: spaSkeletonShimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes spaSkeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Container */
+.spa-container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* Grid */
+.spa-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.spa-grid--2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.spa-grid--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.spa-grid--4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 767px) {
+  .spa-grid--2,
+  .spa-grid--3,
+  .spa-grid--4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .spa-grid--3,
+  .spa-grid--4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

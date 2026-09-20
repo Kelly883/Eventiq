@@ -4,6 +4,7 @@ import { useAuthContext } from '../../../features/auth/context/AuthContext';
 import { api } from '../../../lib/api';
 import CalendarGrid from '../components/calendar/CalendarGrid';
 import CalendarDayDetailModal from '../pages/CalendarDayDetailModal';
+import '../../../styles/shared-pages.css';
 
 const EventCalendarPage = () => {
   const navigate = useNavigate();
@@ -54,38 +55,42 @@ const EventCalendarPage = () => {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-bold mb-4">Event Calendar</h1>
-
-      {/* Calendar with date selection */}
-      <div className="mb-6">
-        <CalendarGrid
-          events={events}
-          onSelectDate={setSelectedDate}
-          onSelectEvent={handleSelectEvent}
-          defaultView="month"
-        />
-      </div>
-
-      {/* Selected date details */}
-      {selectedDate && (
-        <CalendarDayDetailModal
-          selectedDate={selectedDate}
-          events={events}
-        />
-      )}
-
-      {/* Create Event button - visible only to organizers */}
-      {isOrganizer && (
-        <div className="mt-6">
-          <Link
-            to="/organizer/events/create"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium shadow-sm hover:bg-indigo-700 transition-colors"
-          >
-            ✨ Create Event
-          </Link>
+    <div className="spa-page">
+      <div className="spa-container">
+        <div className="spa-page__header">
+          <h1 className="spa-page__title">Event Calendar</h1>
         </div>
-      )}
+
+        {/* Calendar with date selection */}
+        <div style={{ marginBottom: '24px' }}>
+          <CalendarGrid
+            events={events}
+            onSelectDate={setSelectedDate}
+            onSelectEvent={handleSelectEvent}
+            defaultView="month"
+          />
+        </div>
+
+        {/* Selected date details */}
+        {selectedDate && (
+          <CalendarDayDetailModal
+            selectedDate={selectedDate}
+            events={events}
+          />
+        )}
+
+        {/* Create Event button - visible only to organizers */}
+        {isOrganizer && (
+          <div style={{ marginTop: '24px' }}>
+            <Link
+              to="/organizer/events/create"
+              className="spa-btn spa-btn--primary"
+            >
+              ✨ Create Event
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

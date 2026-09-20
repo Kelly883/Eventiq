@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthContext } from '../../../features/auth/context/AuthContext';
 import { api } from '../../../lib/api';
+import '../../../styles/shared-pages.css';
 
 const OrganizerProfileEditPage = () => {
   const { organizerId, user } = useAuthContext();
@@ -96,218 +97,275 @@ const OrganizerProfileEditPage = () => {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between max-w-2xl mb-6">
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Edit Organizer Profile</h1>
-        {organizerId && (
-          <Link
-            to={`/o/${organizerId}`}
-            className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
-          >
-            View public profile →
-          </Link>
-        )}
-      </div>
-      <div className="space-y-4">
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Display Name</label>
-            <input
-              name="displayName"
-              value={form.displayName}
-              onChange={handleInputChange}
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Bio</label>
-            <textarea
-              name="bio"
-              value={form.bio}
-              onChange={handleInputChange}
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm h-24 resize-y"
-              rows={3}
-              required
-            ></textarea>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Avatar URL</label>
-            <input
-              name="avatarUrl"
-              value={form.avatarUrl}
-              onChange={handleInputChange}
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Email</label>
-            <input
-              name="email"
-              value={form.email}
-              onChange={handleInputChange}
-              type="email"
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Phone</label>
-            <input
-              name="phone"
-              value={form.phone}
-              onChange={handleInputChange}
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Website</label>
-            <input
-              name="website"
-              value={form.website}
-              onChange={handleInputChange}
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
-          <hr className="my-4" />
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Timezone</label>
-            <input
-              name="timezone"
-              value={form.timezone}
-              onChange={handleInputChange}
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Currency</label>
-            <input
-              name="currency"
-              value={form.currency}
-              onChange={handleInputChange}
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Country</label>
-            <input
-              name="country"
-              value={form.country}
-              onChange={handleInputChange}
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
-          <hr className="my-4" />
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Verification Status</label>
-            <select
-              name="verificationStatus"
-              value={form.verificationStatus}
-              onChange={handleInputChange}
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+    <div className="spa-page">
+      <div className="spa-container" style={{ maxWidth: '768px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '24px',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <h1 className="spa-page__title" style={{ fontSize: '1.875rem' }}>
+            Edit Organizer Profile
+          </h1>
+          {organizerId && (
+            <Link
+              to={`/o/${organizerId}`}
+              style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#4f46e5',
+              }}
             >
-              <option value="unverified">Unverified</option>
-              <option value="verified">Verified</option>
-              <option value="pending">Pending</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Payment Default</label>
-            <select
-              name="paymentDefault"
-              value={form.paymentDefault}
-              onChange={handleInputChange}
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              View public profile →
+            </Link>
+          )}
+        </div>
+
+        <div className="spa-card spa-card--padded">
+          <form onSubmit={handleSubmit}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '16px',
+                maxWidth: '768px',
+              }}
             >
-              <option value="true">Paystack</option>
-              <option value="false">Flutterwave</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Commission Rate</label>
-            <input
-              name="commissionRate"
-              value={form.commissionRate}
-              onChange={handleInputChange}
-              type="number"
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              min="0"
-              step="0.01"
-            />
-          </div>
-          <hr className="my-4" />
-          <div className="flex items-center gap-2">
-            <label className="block text-sm font-medium text-slate-900 mb-1">
-              <input
-                type="checkbox"
-                name="isPublic"
-                checked={form.isPublic}
-                onChange={handleInputChange}
-                className="rounded border border-slate-300 w-4 h-4 focus-border-indigo-500 focus:ring-indigo-500"
-              />
-              Profile Public
-            </label>
-            <label className="block text-sm font-medium text-slate-900 mb-1">
-              <input
-                type="checkbox"
-                name="emailPublic"
-                checked={form.emailPublic}
-                onChange={handleInputChange}
-                className="rounded border border-slate-300 w-4 h-4 focus-border-indigo-500 focus:ring-indigo-500"
-              />
-              Email Public
-            </label>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">
-              <input
-                type="checkbox"
-                name="phonePublic"
-                checked={form.phonePublic}
-                onChange={handleInputChange}
-                className="rounded border border-slate-300 w-4 h-4 focus-border-indigo-500 focus:ring-indigo-500"
-              />
-              Phone Public
-            </label>
-          </div>
-          <hr className="my-4" />
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Total Events Created</label>
-            <input
-              name="totalEventsCreated"
-              value={form.totalEventsCreated}
-              onChange={handleInputChange}
-              type="number"
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              min="0"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-900 mb-1">Total Tickets Sold</label>
-            <input
-              name="totalTicketsSold"
-              value={form.totalTicketsSold}
-              onChange={handleInputChange}
-              type="number"
-              className="shadow-sm rounded-md border border-slate-300 w-full py-2.5 px-3 focus outline-none focus-border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              min="0"
-              required
-            />
-          </div>
-        </form>
-        <div className="flex justify-end space-x-2 pt-4">
+              <div className="spa-field">
+                <label htmlFor="displayName">Display Name</label>
+                <input
+                  id="displayName"
+                  name="displayName"
+                  value={form.displayName}
+                  onChange={handleInputChange}
+                  className="spa-input"
+                  required
+                />
+              </div>
+              <div className="spa-field">
+                <label htmlFor="bio">Bio</label>
+                <textarea
+                  id="bio"
+                  name="bio"
+                  value={form.bio}
+                  onChange={handleInputChange}
+                  className="spa-input"
+                  style={{ height: '96px', resize: 'vertical' }}
+                  rows={3}
+                  required
+                />
+              </div>
+              <div className="spa-field">
+                <label htmlFor="avatarUrl">Avatar URL</label>
+                <input
+                  id="avatarUrl"
+                  name="avatarUrl"
+                  value={form.avatarUrl}
+                  onChange={handleInputChange}
+                  className="spa-input"
+                />
+              </div>
+              <div className="spa-field">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleInputChange}
+                  type="email"
+                  className="spa-input"
+                  required
+                />
+              </div>
+              <div className="spa-field">
+                <label htmlFor="phone">Phone</label>
+                <input
+                  id="phone"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleInputChange}
+                  className="spa-input"
+                />
+              </div>
+              <div className="spa-field">
+                <label htmlFor="website">Website</label>
+                <input
+                  id="website"
+                  name="website"
+                  value={form.website}
+                  onChange={handleInputChange}
+                  className="spa-input"
+                />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <hr style={{ border: 'none', borderTop: '1px solid #E3E4E6', margin: '16px 0' }} />
+              </div>
+              <div className="spa-field">
+                <label htmlFor="timezone">Timezone</label>
+                <input
+                  id="timezone"
+                  name="timezone"
+                  value={form.timezone}
+                  onChange={handleInputChange}
+                  className="spa-input"
+                />
+              </div>
+              <div className="spa-field">
+                <label htmlFor="currency">Currency</label>
+                <input
+                  id="currency"
+                  name="currency"
+                  value={form.currency}
+                  onChange={handleInputChange}
+                  className="spa-input"
+                />
+              </div>
+              <div className="spa-field">
+                <label htmlFor="country">Country</label>
+                <input
+                  id="country"
+                  name="country"
+                  value={form.country}
+                  onChange={handleInputChange}
+                  className="spa-input"
+                />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <hr style={{ border: 'none', borderTop: '1px solid #E3E4E6', margin: '16px 0' }} />
+              </div>
+              <div className="spa-field">
+                <label htmlFor="verificationStatus">Verification Status</label>
+                <select
+                  id="verificationStatus"
+                  name="verificationStatus"
+                  value={form.verificationStatus}
+                  onChange={handleInputChange}
+                  className="spa-input"
+                >
+                  <option value="unverified">Unverified</option>
+                  <option value="verified">Verified</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+              <div className="spa-field">
+                <label htmlFor="paymentDefault">Payment Default</label>
+                <select
+                  id="paymentDefault"
+                  name="paymentDefault"
+                  value={form.paymentDefault}
+                  onChange={handleInputChange}
+                  className="spa-input"
+                >
+                  <option value="true">Paystack</option>
+                  <option value="false">Flutterwave</option>
+                </select>
+              </div>
+              <div className="spa-field">
+                <label htmlFor="commissionRate">Commission Rate</label>
+                <input
+                  id="commissionRate"
+                  name="commissionRate"
+                  value={form.commissionRate}
+                  onChange={handleInputChange}
+                  type="number"
+                  className="spa-input"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <hr style={{ border: 'none', borderTop: '1px solid #E3E4E6', margin: '16px 0' }} />
+              </div>
+              <div className="spa-field" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                <input
+                  id="isPublic"
+                  type="checkbox"
+                  name="isPublic"
+                  checked={form.isPublic}
+                  onChange={handleInputChange}
+                  style={{ width: '16px', height: '16px' }}
+                />
+                <label htmlFor="isPublic" style={{ marginBottom: 0 }}>Profile Public</label>
+              </div>
+              <div className="spa-field" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                <input
+                  id="emailPublic"
+                  type="checkbox"
+                  name="emailPublic"
+                  checked={form.emailPublic}
+                  onChange={handleInputChange}
+                  style={{ width: '16px', height: '16px' }}
+                />
+                <label htmlFor="emailPublic" style={{ marginBottom: 0 }}>Email Public</label>
+              </div>
+              <div className="spa-field" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                <input
+                  id="phonePublic"
+                  type="checkbox"
+                  name="phonePublic"
+                  checked={form.phonePublic}
+                  onChange={handleInputChange}
+                  style={{ width: '16px', height: '16px' }}
+                />
+                <label htmlFor="phonePublic" style={{ marginBottom: 0 }}>Phone Public</label>
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <hr style={{ border: 'none', borderTop: '1px solid #E3E4E6', margin: '16px 0' }} />
+              </div>
+              <div className="spa-field">
+                <label htmlFor="totalEventsCreated">Total Events Created</label>
+                <input
+                  id="totalEventsCreated"
+                  name="totalEventsCreated"
+                  value={form.totalEventsCreated}
+                  onChange={handleInputChange}
+                  type="number"
+                  className="spa-input"
+                  min="0"
+                  required
+                />
+              </div>
+              <div className="spa-field">
+                <label htmlFor="totalTicketsSold">Total Tickets Sold</label>
+                <input
+                  id="totalTicketsSold"
+                  name="totalTicketsSold"
+                  value={form.totalTicketsSold}
+                  onChange={handleInputChange}
+                  type="number"
+                  className="spa-input"
+                  min="0"
+                  required
+                />
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '8px',
+            marginTop: '16px',
+          }}
+        >
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2 rounded-md bg-indigo-600 text-white font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="spa-btn spa-btn--primary"
           >
             {saving ? 'Saving...' : 'Save Profile'}
           </button>
           <button
             type="button"
             onClick={() => localStorage.removeItem(`organizer_profile_${organizerId}_form`)}
-            className="px-4 py-2 rounded-md bg-white text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 focus-offset-2"
+            className="spa-btn spa-btn--secondary"
           >
             Reset
           </button>
