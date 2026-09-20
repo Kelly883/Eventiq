@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "check:enums": "tsx scripts/check-enum-sync.ts",
-    "check:mocks": "node scripts/verify-mocks.mjs"
+    "check:mocks": "node scripts/verify-mocks.mjs",
+    "check:session-modal": "node scripts/verify-session-modal.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
