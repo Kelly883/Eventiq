@@ -391,11 +391,34 @@ class PublicEventEndpointTest extends TestCase
 
     // ── Legacy endpoints ───────────────────────────────────────────────
 
-    public function test_legacy_categories_returns_same_as_filters(): void
+    /**
+     * /api/public/categories is a legacy endpoint: its contract is a flat
+     * `data` array of {id, slug, name, events_count} objects (what
+     * CategorySection.jsx consumes and PublicEventsTest asserts), while
+     * /api/public/events/filters wraps the same categories in
+     * `data.categories` alongside `data.price_range`. Guard both halves so
+     * the legacy wrapper can't silently regress into the nested shape.
+     */
+    public function test_legacy_categories_returns_flat_category_list_matching_filters(): void
     {
         $response = $this->getJson('/api/public/categories');
         $response->assertStatus(200);
-        $this->assertArrayHasKey('data', $response->json());
+
+        $data = $response->json('data');
+        $this->assertIsArray($data);
+        $this->assertArrayNotHasKey('categories', $data);
+
+        $category = collect($data)->firstWhere('slug', 'music');
+        $this->assertNotNull($category, 'expected a flat category object with slug "music"');
+        $this->assertArrayHasKey('id', $category);
+        $this->assertArrayHasKey('name', $category);
+        $this->assertArrayHasKey('events_count', $category);
+
+        $filtersCategories = collect($this->getJson('/api/public/events/filters')->json('data.categories'));
+        $this->assertEqualsCanonicalizing(
+            $filtersCategories->pluck('slug')->all(),
+            collect($data)->pluck('slug')->all()
+        );
     }
 
     public function test_legacy_ticket_tiers_returns_tiers(): void
