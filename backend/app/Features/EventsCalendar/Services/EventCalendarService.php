@@ -37,28 +37,32 @@ class EventCalendarService
     {
         $query = $this->buildEventsQuery($filters);
         $sortDirection = ($filters['sort'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
+        $sortBy = $filters['sort_by'] ?? 'date';
         $perPage = $this->resolvePerPage($filters);
 
         $events = $query
-            ->orderBy('events.start_datetime', $sortDirection)
+            ->orderBy($this->resolveSortColumn($sortBy), $sortDirection)
             ->paginate($perPage)
             ->appends($filters);
 
         $startDate = $filters['start_date'] ?? now()->startOfMonth()->toDateString();
         $endDate = $filters['end_date'] ?? now()->endOfMonth()->toDateString();
 
-        $summary = EventsCalendarSummary::query()
-            ->inDateRange($startDate, $endDate)
-            ->orderBy('event_date')
-            ->get([
-                'event_date',
-                'total_events',
-                'published_events',
-                'published_capacity',
-                'draft_events',
-                'cancelled_events',
-                'last_refreshed_at',
-            ]);
+        $cacheKey = "calendar_summary_{$startDate}_{$endDate}";
+        $summary = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($startDate, $endDate) {
+            return EventsCalendarSummary::query()
+                ->inDateRange($startDate, $endDate)
+                ->orderBy('event_date')
+                ->get([
+                    'event_date',
+                    'total_events',
+                    'published_events',
+                    'published_capacity',
+                    'draft_events',
+                    'cancelled_events',
+                    'last_refreshed_at',
+                ]);
+        });
 
         return [
             'events' => $events,
@@ -66,12 +70,14 @@ class EventCalendarService
             'filters' => [
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'status' => $filters['status'] ?? 'published',
+                'status' => 'published',
                 'category' => $filters['category'] ?? null,
+                'location' => $filters['location'] ?? null,
                 'min_price' => $filters['min_price'] ?? null,
                 'max_price' => $filters['max_price'] ?? null,
                 'organizer_id' => $filters['organizer_id'] ?? null,
                 'per_page' => $perPage,
+                'sort_by' => $sortBy,
                 'sort' => $sortDirection,
             ],
         ];
@@ -90,19 +96,30 @@ class EventCalendarService
         $pricingAgg = DB::table('pricing_windows')
             ->select([
                 'event_id',
-                DB::raw('MIN(price) as min_price'),
-                DB::raw('MAX(price) as max_price'),
+                DB::raw('MIN(CAST(price AS REAL)) as min_price'),
+                DB::raw('MAX(CAST(price AS REAL)) as max_price'),
             ])
             ->where('is_active', true)
             ->whereNull('deleted_at')
             ->groupBy('event_id');
 
+        $popularityAgg = DB::table('tickets')
+            ->select([
+                'event_id',
+                DB::raw('COUNT(*) as tickets_sold'),
+            ])
+            ->groupBy('event_id');
+
         $query = Event::query()
+            ->with('organizer')
             ->leftJoinSub($inventoryAgg, 'inv', function ($join) {
                 $join->on('inv.event_id', '=', 'events.id');
             })
             ->leftJoinSub($pricingAgg, 'pw', function ($join) {
                 $join->on('pw.event_id', '=', 'events.id');
+            })
+            ->leftJoinSub($popularityAgg, 'pop', function ($join) {
+                $join->on('pop.event_id', '=', 'events.id');
             })
             ->select([
                 'events.id',
@@ -119,10 +136,12 @@ class EventCalendarService
                 DB::raw('COALESCE(inv.total_sold_sum, 0) as total_sold'),
                 DB::raw('pw.min_price as min_price'),
                 DB::raw('pw.max_price as max_price'),
+                DB::raw('COALESCE(pop.tickets_sold, 0) as popularity'),
             ]);
 
-        $status = $filters['status'] ?? 'published';
-        $query->where('events.status', $status);
+        // Always enforce published-only and public-only — never allow user to override
+        $query->where('events.status', 'published');
+        $query->where('events.is_public', true);
 
         if (!empty($filters['start_date'])) {
             $query->where('events.start_datetime', '>=', $filters['start_date'] . ' 00:00:00');
@@ -136,19 +155,35 @@ class EventCalendarService
             $query->where('events.category', $filters['category']);
         }
 
+        if (!empty($filters['location'])) {
+            $query->where(function ($q) use ($filters) {
+                $q->where('events.venue_name', 'like', '%' . $filters['location'] . '%')
+                  ->orWhere('events.venue_address', 'like', '%' . $filters['location'] . '%');
+            });
+        }
+
         if (!empty($filters['organizer_id'])) {
             $query->where('events.organizer_id', (int) $filters['organizer_id']);
         }
 
         if (isset($filters['min_price'])) {
-            $query->where('pw.min_price', '>=', (float) $filters['min_price']);
+            $query->whereRaw('CAST(pw.min_price AS REAL) >= ?', [(float) $filters['min_price']]);
         }
 
         if (isset($filters['max_price'])) {
-            $query->where('pw.max_price', '<=', (float) $filters['max_price']);
+            $query->whereRaw('CAST(pw.max_price AS REAL) <= ?', [(float) $filters['max_price']]);
         }
 
         return $query;
+    }
+
+    private function resolveSortColumn(string $sortBy): string
+    {
+        return match ($sortBy) {
+            'price' => 'pw.min_price',
+            'popularity' => 'popularity',
+            default => 'events.start_datetime',
+        };
     }
 
     public function getDateGroupedAvailability(array $filters): array

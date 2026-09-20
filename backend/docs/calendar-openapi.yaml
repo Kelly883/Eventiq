@@ -1,0 +1,297 @@
+openapi: 3.0.0
+info:
+  title: EventIQ Calendar API
+  version: 1.0.0
+  description: Public calendar endpoints for discovering events by date, month, week, or range.
+
+paths:
+  /api/events/public/calendar:
+    get:
+      summary: Get calendar month overview
+      description: Returns published, public events grouped by date with availability status. Defaults to current month.
+      operationId: getCalendarIndex
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Target date (Y-m-d). Defaults to today.
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Start date (Y-m-d).
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: End date (Y-m-d). Must be >= start_date.
+        - name: category
+          in: query
+          schema:
+            type: string
+            maxLength: 255
+          description: Filter by category.
+        - name: location
+          in: query
+          schema:
+            type: string
+            maxLength: 255
+          description: Filter by venue name or address (partial match).
+        - name: min_price
+          in: query
+          schema:
+            type: number
+            minimum: 0
+          description: Minimum price filter.
+        - name: max_price
+          in: query
+          schema:
+            type: number
+            minimum: 0
+          description: Maximum price filter.
+        - name: organizer_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+          description: Filter by organizer.
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [date, price, popularity]
+          description: Sort field.
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+          description: Sort direction.
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+          description: Page number.
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+          description: Items per page.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarResponse'
+        '422':
+          description: Validation error
+        '429':
+          description: Rate limit exceeded
+
+  /api/events/public/calendar/day/{date}:
+    get:
+      summary: Get events for a specific day
+      description: Returns all published, public events for the given date.
+      operationId: getCalendarDayDetail
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Date (Y-m-d).
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: min_price
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: max_price
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [date, price, popularity]
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarResponse'
+        '400':
+          description: Invalid date format
+        '429':
+          description: Rate limit exceeded
+
+  /api/events/public/calendar/range:
+    get:
+      summary: Get events within a date range
+      description: Returns published, public events between start_date and end_date.
+      operationId: getCalendarRange
+      parameters:
+        - name: start_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: min_price
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: max_price
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [date, price, popularity]
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarResponse'
+        '422':
+          description: Validation error
+        '429':
+          description: Rate limit exceeded
+
+components:
+  schemas:
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+        organizer_id:
+          type: integer
+        title:
+          type: string
+        start_datetime:
+          type: string
+          format: date-time
+        end_datetime:
+          type: string
+          format: date-time
+        venue_name:
+          type: string
+        venue_address:
+          type: string
+        status:
+          type: string
+          enum: [published, draft, cancelled]
+        category:
+          type: string
+        capacity:
+          type: integer
+        total_available:
+          type: integer
+        total_sold:
+          type: integer
+        min_price:
+          type: number
+        max_price:
+          type: number
+        popularity:
+          type: integer
+
+    CalendarSummary:
+      type: object
+      properties:
+        event_date:
+          type: string
+          format: date
+        total_events:
+          type: integer
+        published_events:
+          type: integer
+        published_capacity:
+          type: integer
+        draft_events:
+          type: integer
+        cancelled_events:
+          type: integer
+        last_refreshed_at:
+          type: string
+          format: date-time
+
+    CalendarResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            events:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Event'
+            summary:
+              type: array
+              items:
+                $ref: '#/components/schemas/CalendarSummary'
+            filters:
+              type: object
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+security:
+  - bearerAuth: []

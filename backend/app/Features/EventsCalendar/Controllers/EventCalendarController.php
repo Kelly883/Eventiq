@@ -20,11 +20,22 @@ class EventCalendarController extends Controller
         ]);
     }
 
-    public function dayDetail(CalendarFilterRequest $request)
+    public function dayDetail(string $date, CalendarFilterRequest $request)
     {
+        // Validate the date format before passing to the service
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid date format. Expected Y-m-d.',
+            ], 400);
+        }
+
+        $data = $request->validated();
+        $data['date'] = $date;
+
         return response()->json([
             'success' => true,
-            'data' => $this->calendarService->getDayDetails($request->validated()),
+            'data' => $this->calendarService->getDayDetails($data),
         ]);
     }
 
