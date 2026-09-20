@@ -145,7 +145,7 @@ class PublicEventsTest extends TestCase
 
         $response->assertOk();
         $data = $response->json('data');
-        $music = collect($data)->firstWhere('slug', 'music');
+        $music = collect($data['categories'])->firstWhere('slug', 'music');
         $this->assertNotNull($music);
         $this->assertEquals(2, $music['events_count']);
     }
