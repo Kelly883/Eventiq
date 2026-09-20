@@ -4,7 +4,19 @@ use Illuminate\Support\Str;
 
 return [
 
-    'driver' => env('SESSION_DRIVER', 'database'),
+    /*
+    |----------------------------------------------------------------------
+    | Default: cookie driver
+    |----------------------------------------------------------------------
+    | The 'database' driver CANNOT be used with this app: the `sessions`
+    | table is the custom bearer-token store (app/Models/Session.php),
+    | whose schema (token, expiresAt, revokedAt) has no `payload` column.
+    | With the database driver every request 500s on session write.
+    | Production uses signed stateless cookies (see .env.example) — this
+    | default keeps any environment without an explicit SESSION_DRIVER
+    | safe instead of crashing.
+    */
+    'driver' => env('SESSION_DRIVER', 'cookie'),
 
     'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
