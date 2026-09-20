@@ -60,24 +60,25 @@
   }
 }
 
-/* Toast type variants use existing design system colors */
+/* Toast type variants — aligned with EventIQ status badge colors
+   (.status-confirmed/.status-pending/.status-cancelled in dashboard.css) */
 .toast-item--info {
   border-color: var(--color-border);
 }
 
 .toast-item--success {
   border-color: var(--color-success);
-  background: #F0FCFB;
+  background: #E6F7F6;
 }
 
 .toast-item--warning {
   border-color: var(--color-warning);
-  background: #FFFDF5;
+  background: #FFF8E1;
 }
 
 .toast-item--error {
   border-color: var(--color-error);
-  background: #FEF2F2;
+  background: #FDECEA;
 }
 
 /* Toast layout: icon + content + close */
@@ -125,15 +126,15 @@
 }
 
 .toast-item--success .toast-title {
-  color: #0F766E;
+  color: #2A9D8F;
 }
 
 .toast-item--warning .toast-title {
-  color: #92400E;
+  color: #B8860B;
 }
 
 .toast-item--error .toast-title {
-  color: #991B1B;
+  color: var(--color-error);
 }
 
 .toast-description {
@@ -145,15 +146,15 @@
 }
 
 .toast-item--success .toast-description {
-  color: #115E59;
+  color: #2A9D8F;
 }
 
 .toast-item--warning .toast-description {
-  color: #78350F;
+  color: #B8860B;
 }
 
 .toast-item--error .toast-description {
-  color: #7F1D1D;
+  color: var(--color-error);
 }
 
 /* Close button uses existing .dashboard-icon-btn styling pattern */
@@ -161,7 +162,7 @@
   flex-shrink: 0;
   background: transparent;
   border: none;
-  padding: var(--space-xs);
+  padding: 0;
   color: var(--color-text-muted);
   cursor: pointer;
   border-radius: var(--radius-sm);
@@ -171,8 +172,6 @@
   transition: var(--transition);
   width: 28px;
   height: 28px;
-  margin-top: -2px;
-  margin-right: -4px;
 }
 
 .toast-close:hover {

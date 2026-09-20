@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
+import BrandLogo from '../../common/components/BrandLogo';
+import './AuthPage.css';
 
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
@@ -13,19 +15,10 @@ const ResetPasswordPage = () => {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!token) {
-      setError('Reset token is missing from the URL.');
-      return;
-    }
-
-    if (!email) {
-      setError('Reset email is missing from the URL.');
-      return;
-    }
 
     if (password !== passwordConfirm) {
       setError('Passwords do not match.');
@@ -42,85 +35,153 @@ const ResetPasswordPage = () => {
 
     try {
       await resetPassword(token, email, password);
-      navigate('/login', { state: { message: 'Password reset successful. Please log in.', messageType: 'success' } });
+      setSuccess(true);
     } catch (err) {
-      setError(err.message || 'Failed to reset password.');
+      setError(err.response?.data?.message || err.message || 'Failed to reset password.');
     } finally {
       setLoading(false);
     }
   };
 
+  // Missing token — show error state
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="max-w-md w-full bg-white p-8 rounded-xl border border-red-100 shadow-sm">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Invalid Link</h1>
-          <p className="text-slate-600 mb-4">
-            This password reset link is invalid or has expired. Please request a new reset link.
-          </p>
-          <button
-            onClick={() => navigate('/forgot-password')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors"
-          >
-            Request New Reset Link
-          </button>
-        </div>
+      <div className="auth-page">
+        <div className="auth-page__orb auth-page__orb--coral" aria-hidden="true" />
+        <div className="auth-page__orb auth-page__orb--teal" aria-hidden="true" />
+
+        <section className="auth-page__content">
+          <div className="auth-page__brand-row">
+            <a href="/" className="auth-page__brand" aria-label="EventIQ home">
+              <BrandLogo />
+            </a>
+          </div>
+
+          <div className="auth-page__card">
+            <div className="auth-page__intro">
+              <h1>Invalid Link</h1>
+              <p>This password reset link is invalid or has expired. Please request a new reset link.</p>
+            </div>
+
+            <button
+              type="button"
+              className="auth-page__submit"
+              onClick={() => navigate('/forgot-password')}
+            >
+              Request New Reset Link
+            </button>
+          </div>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="max-w-md w-full bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Reset Password</h1>
-        <p className="text-sm text-slate-500 mb-6">Enter your new password below.</p>
+    <div className="auth-page">
+      <div className="auth-page__orb auth-page__orb--coral" aria-hidden="true" />
+      <div className="auth-page__orb auth-page__orb--teal" aria-hidden="true" />
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
+      <section className="auth-page__content">
+        <div className="auth-page__brand-row">
+          <a href="/" className="auth-page__brand" aria-label="EventIQ home">
+            <BrandLogo />
+          </a>
+          <span className="auth-page__secure-badge">Password Reset</span>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              New Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              required
-              minLength={8}
-              autoComplete="new-password"
-            />
+        <div className="auth-page__card">
+          <div className="auth-page__intro">
+            <p>Create New Password</p>
+            <h1>Reset Password</h1>
+            <p>Enter your new password below.</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Confirm Password
-            </label>
-            <input
-              type="password"
-              value={passwordConfirm}
-              onChange={(e) => setPasswordConfirm(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              required
-              minLength={8}
-              autoComplete="new-password"
-            />
-          </div>
+          {error && (
+            <div className="auth-page__alert auth-page__alert--error" role="alert">
+              {error}
+            </div>
+          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 px-4 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Resetting...' : 'Reset Password'}
-          </button>
-        </form>
-      </div>
+          {success ? (
+            <div className="auth-page__success">
+              <div className="auth-page__alert auth-page__alert--success">
+                Your password has been reset successfully.
+              </div>
+              <button
+                type="button"
+                className="auth-page__submit"
+                onClick={() => navigate('/login')}
+              >
+                Continue to Login
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="auth-page__form" aria-busy={loading}>
+              <div className="auth-page__field">
+                <label htmlFor="reset-password">New Password</label>
+                <input
+                  id="reset-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="auth-page__input"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  placeholder="Enter new password"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="auth-page__field">
+                <label htmlFor="reset-password-confirm">Confirm New Password</label>
+                <input
+                  id="reset-password-confirm"
+                  type="password"
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  className="auth-page__input"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  placeholder="Confirm new password"
+                  disabled={loading}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="auth-page__submit"
+              >
+                {loading ? (
+                  <>
+                    <span className="auth-page__spinner" aria-hidden="true" />
+                    Resetting...
+                  </>
+                ) : (
+                  'Reset Password'
+                )}
+              </button>
+            </form>
+          )}
+
+          <div className="auth-page__footer-link">
+            Remember your password?{' '}
+            <button
+              type="button"
+              className="auth-page__text-link"
+              onClick={() => navigate('/login')}
+            >
+              Back to Login
+            </button>
+          </div>
+        </div>
+
+        <p className="auth-page__security-note">
+          Your account is protected with secure authentication.
+        </p>
+      </section>
     </div>
   );
 };

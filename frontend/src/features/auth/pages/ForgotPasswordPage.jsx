@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
+import BrandLogo from '../../common/components/BrandLogo';
+import './AuthPage.css';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
@@ -30,70 +32,96 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="max-w-md w-full bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Forgot Password</h1>
-        <p className="text-sm text-slate-500 mb-6">
-          Enter your email address and we'll send you a link to reset your password.
+    <div className="auth-page">
+      <div className="auth-page__orb auth-page__orb--coral" aria-hidden="true" />
+      <div className="auth-page__orb auth-page__orb--teal" aria-hidden="true" />
+
+      <section className="auth-page__content">
+        <div className="auth-page__brand-row">
+          <a href="/" className="auth-page__brand" aria-label="EventIQ home">
+            <BrandLogo />
+          </a>
+          <span className="auth-page__secure-badge">Password Recovery</span>
+        </div>
+
+        <div className="auth-page__card">
+          <div className="auth-page__intro">
+            <p>Account Recovery</p>
+            <h1>Forgot Password</h1>
+            <p>Enter your email address and we'll send you a link to reset your password.</p>
+          </div>
+
+          {error && (
+            <div className="auth-page__alert auth-page__alert--error" role="alert">
+              {error}
+            </div>
+          )}
+
+          {submitted ? (
+            <div className="auth-page__success">
+              <div className="auth-page__alert auth-page__alert--success">
+                Password reset instructions have been sent to <strong>{email}</strong>. Check your inbox (and spam folder).
+              </div>
+              <button
+                type="button"
+                className="auth-page__submit"
+                onClick={() => navigate('/login')}
+              >
+                Back to Login
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="auth-page__form" aria-busy={loading}>
+              <div className="auth-page__field">
+                <label htmlFor="forgot-email">Email Address</label>
+                <input
+                  id="forgot-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="auth-page__input"
+                  required
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  disabled={loading}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="auth-page__submit"
+              >
+                {loading ? (
+                  <>
+                    <span className="auth-page__spinner" aria-hidden="true" />
+                    Sending...
+                  </>
+                ) : (
+                  'Send Reset Link'
+                )}
+              </button>
+            </form>
+          )}
+
+          {!submitted && (
+            <div className="auth-page__footer-link">
+              Remember your password?{' '}
+              <button
+                type="button"
+                className="auth-page__text-link"
+                onClick={() => navigate('/login')}
+              >
+                Back to Login
+              </button>
+            </div>
+          )}
+        </div>
+
+        <p className="auth-page__security-note">
+          Your account is protected with secure authentication.
         </p>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
-
-        {submitted ? (
-          <div className="space-y-4">
-            <div className="p-4 bg-green-50 text-green-700 rounded-lg text-sm">
-              Password reset instructions have been sent to {email}. Check your inbox (and spam folder).
-            </div>
-            <button
-              onClick={() => navigate('/login')}
-              className="w-full py-2.5 px-4 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors"
-            >
-              Back to Login
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                required
-                autoComplete="email"
-                placeholder="you@example.com"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 px-4 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-            >
-              {loading ? 'Sending...' : 'Send Reset Link'}
-            </button>
-          </form>
-        )}
-
-        {!submitted && (
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => navigate('/login')}
-              className="text-sm text-indigo-600 hover:text-indigo-800"
-            >
-              Back to Login
-            </button>
-          </div>
-        )}
-      </div>
+      </section>
     </div>
   );
 };
