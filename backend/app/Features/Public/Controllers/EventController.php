@@ -9,6 +9,7 @@ use App\Features\Public\Resources\EventResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -108,20 +109,7 @@ class EventController extends Controller
      */
     public function filters(): JsonResponse
     {
-        $categories = Event::published()
-            ->whereNotNull('category')
-            ->selectRaw('category, count(*) as events_count')
-            ->groupBy('category')
-            ->orderBy('category')
-            ->get()
-            ->filter(fn ($row) => trim((string) $row->category) !== '')
-            ->map(fn ($row) => [
-                'id' => $row->category,
-                'slug' => $row->category,
-                'name' => ucwords($row->category),
-                'events_count' => $row->events_count,
-            ])
-            ->values();
+        $categories = $this->categoryCounts();
 
         $priceRange = DB::table('ticket_tiers')
             ->join('events', 'ticket_tiers.event_id', '=', 'events.id')
@@ -139,6 +127,33 @@ class EventController extends Controller
                 ],
             ],
         ]);
+    }
+
+    /**
+     * Distinct published-event categories with real per-category counts,
+     * shared by filters() and the legacy categories() endpoint.
+     *
+     * There is no Category model -- category is a plain string column on
+     * events -- so id/slug are both the raw stored value (needed for
+     * byCategory()'s exact-match filtering via ?category=<slug>); name is a
+     * display-only title-cased version.
+     */
+    private function categoryCounts(): Collection
+    {
+        return Event::published()
+            ->whereNotNull('category')
+            ->selectRaw('category, count(*) as events_count')
+            ->groupBy('category')
+            ->orderBy('category')
+            ->get()
+            ->filter(fn ($row) => trim((string) $row->category) !== '')
+            ->map(fn ($row) => [
+                'id' => $row->category,
+                'slug' => $row->category,
+                'name' => ucwords($row->category),
+                'events_count' => $row->events_count,
+            ])
+            ->values();
     }
 
     /**
@@ -283,10 +298,19 @@ class EventController extends Controller
 
     /**
      * GET /api/public/categories (legacy)
+     *
+     * This is a legacy alias but NOT a shape-identical alias of filters():
+     * it predates the discovery endpoints and its contract is a flat
+     * `data` array of {id, slug, name, events_count} category objects
+     * (same as GET /api/categories and what CategorySection.jsx consumes).
+     * Delegating to filters() here regressed it to a nested
+     * `data: {categories, price_range}` object and broke that contract --
+     * keep the flat wrapper. Callers that want the price range use
+     * GET /api/public/events/filters.
      */
     public function categories(): JsonResponse
     {
-        return $this->filters();
+        return response()->json(['data' => $this->categoryCounts()]);
     }
 
     /**
