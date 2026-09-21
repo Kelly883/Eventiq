@@ -26,6 +26,7 @@ class CalendarFilterRequest extends FormRequest
             'sort' => ['sometimes', 'string', 'in:asc,desc'],
             'page' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:200'],
+            'timezone' => ['sometimes', 'string', 'timezone'],
         ];
     }
 

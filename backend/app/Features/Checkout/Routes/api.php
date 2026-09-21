@@ -11,7 +11,10 @@ use Illuminate\Support\Facades\Route;
 // Webhook is intentionally unauthenticated (called by the payment
 // provider, not a logged-in user) - signature verification inside the
 // controller is what actually protects it.
-Route::post('/webhooks/payment-provider', [WebhookController::class, 'handle']);
+//
+// Rate limited to prevent flood attacks and gateway verification API
+// exhaustion from spoofed requests.
+Route::post('/webhooks/payment-provider', [WebhookController::class, 'handle'])->middleware('throttle:webhooks');
 
 Route::middleware('bearer')->group(function () {
     Route::post('/cart/verify', [CartController::class, 'verify']);

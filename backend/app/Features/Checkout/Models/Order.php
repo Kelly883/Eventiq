@@ -55,6 +55,7 @@ class Order extends Model
         'billing_email',
         'billing_phone',
         'failure_reason',
+        'idempotency_key',
     ];
 
     protected $casts = [
@@ -114,5 +115,21 @@ class Order extends Model
     public function scopeForUser($query, string $userId)
     {
         return $query->where('user_id', $userId);
+    }
+
+    public function scopePendingOlderThan($query, string $datetime)
+    {
+        return $query->where('status', 'pending')
+            ->where('created_at', '<', $datetime);
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->status === 'expired';
+    }
+
+    public function canExpire(): bool
+    {
+        return $this->status === 'pending';
     }
 }

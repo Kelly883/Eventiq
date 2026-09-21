@@ -40,7 +40,17 @@ class EventsQuery extends Query
 
         return $this->rememberGraphQLResult($cacheKey, function () use ($request) {
             return $this->optimizeQuery(
-                Event::query()->where('organizer_id', $request->attributes->get('organizer')->id),
+                Event::query()
+                    ->where('organizer_id', $request->attributes->get('organizer')->id)
+                    ->where('status', 'published')
+                    ->where('is_public', true)
+                    ->whereExists(function ($q) {
+                        $q->selectRaw('1')
+                          ->from('organizers')
+                          ->whereRaw('organizers.id = events.organizer_id')
+                          ->where('organizers.isPublic', true)
+                          ->where('organizers.verificationStatus', 'verified');
+                    }),
                 ['organizer:id']
             )->latest()->get()->all();
         }, (int) config('graphql.cache.ttl', 120));

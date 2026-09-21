@@ -55,10 +55,12 @@ class CalendarEndpointsTest extends TestCase
         $inMonth = Event::factory()->create([
             'status' => 'published',
             'start_datetime' => now()->addDays(10),
+            'end_datetime' => now()->addDays(10)->addHours(3),
         ]);
         $outOfMonth = Event::factory()->create([
             'status' => 'published',
             'start_datetime' => now()->addDays(400),
+            'end_datetime' => now()->addDays(400)->addHours(3),
         ]);
 
         $response = $this->getJson('/api/events/public/calendar?start_date=' . now()->addDays(10)->toDateString() . '&end_date=' . now()->addDays(10)->toDateString());
@@ -453,6 +455,12 @@ class CalendarEndpointsTest extends TestCase
                             'min_price',
                             'max_price',
                             'popularity',
+                            'availability_status',
+                            'organizer' => [
+                                'id',
+                                'displayName',
+                                'avatarUrl',
+                            ],
                         ],
                     ],
                 ],
@@ -469,6 +477,7 @@ class CalendarEndpointsTest extends TestCase
                     'per_page',
                     'sort_by',
                     'sort',
+                    'timezone',
                 ],
             ],
         ]);
@@ -502,6 +511,12 @@ class CalendarEndpointsTest extends TestCase
                             'min_price',
                             'max_price',
                             'popularity',
+                            'availability_status',
+                            'organizer' => [
+                                'id',
+                                'displayName',
+                                'avatarUrl',
+                            ],
                         ],
                     ],
                 ],
@@ -539,6 +554,12 @@ class CalendarEndpointsTest extends TestCase
                             'min_price',
                             'max_price',
                             'popularity',
+                            'availability_status',
+                            'organizer' => [
+                                'id',
+                                'displayName',
+                                'avatarUrl',
+                            ],
                         ],
                     ],
                 ],
@@ -838,5 +859,287 @@ class CalendarEndpointsTest extends TestCase
         $this->assertNotNull($eventData);
         // Organizer should be loaded (not null)
         $this->assertArrayHasKey('organizer', $eventData);
+    }
+
+    // ------------------------------------------------------------------
+    // P0: Organizer data sanitization
+    // ------------------------------------------------------------------
+
+    public function test_calendar_index_does_not_leak_organizer_sensitive_fields(): void
+    {
+        $organizer = Organizer::factory()->create([
+            'displayName' => 'Test Organizer',
+            'email' => 'secret@example.com',
+            'phone' => '+1234567890',
+            'commissionRate' => 15.5,
+            'paystack_subaccount_code' => 'ACCT_123',
+            'paystack_recipient_code' => 'RCP_456',
+            'flutterwave_subaccount_id' => 'FLW_789',
+        ]);
+        Event::factory()->create(['status' => 'published', 'is_public' => true, 'organizer_id' => $organizer->id]);
+
+        $response = $this->getJson('/api/events/public/calendar');
+
+        $response->assertOk();
+        $body = $response->getContent();
+        $this->assertStringNotContainsString('secret@example.com', $body);
+        $this->assertStringNotContainsString('+1234567890', $body);
+        $this->assertStringNotContainsString('commissionRate', $body);
+        $this->assertStringNotContainsString('ACCT_123', $body);
+        $this->assertStringNotContainsString('RCP_456', $body);
+        $this->assertStringNotContainsString('FLW_789', $body);
+        $this->assertStringNotContainsString('paystack', $body);
+        $this->assertStringNotContainsString('flutterwave', $body);
+    }
+
+    public function test_calendar_index_returns_organizer_with_only_safe_fields(): void
+    {
+        $organizer = Organizer::factory()->create([
+            'displayName' => 'Safe Org',
+            'avatarUrl' => 'https://example.com/avatar.png',
+        ]);
+        Event::factory()->create(['status' => 'published', 'is_public' => true, 'organizer_id' => $organizer->id]);
+
+        $response = $this->getJson('/api/events/public/calendar');
+
+        $response->assertOk();
+        $events = collect($response->json('data.events.data'));
+        $eventData = $events->first();
+        $this->assertNotNull($eventData);
+        $this->assertArrayHasKey('organizer', $eventData);
+        $this->assertEquals($organizer->id, $eventData['organizer']['id']);
+        $this->assertEquals('Safe Org', $eventData['organizer']['displayName']);
+        $this->assertEquals('https://example.com/avatar.png', $eventData['organizer']['avatarUrl']);
+        // Ensure no extra keys leaked
+        $this->assertArrayNotHasKey('email', $eventData['organizer']);
+        $this->assertArrayNotHasKey('phone', $eventData['organizer']);
+        $this->assertArrayNotHasKey('commissionRate', $eventData['organizer']);
+    }
+
+    // ------------------------------------------------------------------
+    // P0: Timezone handling
+    // ------------------------------------------------------------------
+
+    public function test_calendar_index_honors_timezone_param(): void
+    {
+        // Create an event at 23:30 UTC on 2026-09-20
+        // In Africa/Lagos (UTC+1), this is 2026-09-21 00:30
+        $event = Event::factory()->create([
+            'status' => 'published',
+            'is_public' => true,
+            'start_datetime' => '2026-09-20 23:30:00',
+        ]);
+
+        // Without timezone (UTC), event is on 2026-09-20
+        $responseUtc = $this->getJson('/api/events/public/calendar?start_date=2026-09-20&end_date=2026-09-20');
+        $responseUtc->assertOk();
+        $idsUtc = collect($responseUtc->json('data.events.data'))->pluck('id');
+        $this->assertTrue($idsUtc->contains($event->id));
+
+        // With Africa/Lagos timezone, event is on 2026-09-21
+        $responseTz = $this->getJson('/api/events/public/calendar?start_date=2026-09-21&end_date=2026-09-21&timezone=Africa/Lagos');
+        $responseTz->assertOk();
+        $idsTz = collect($responseTz->json('data.events.data'))->pluck('id');
+        $this->assertTrue($idsTz->contains($event->id));
+
+        // With Africa/Lagos timezone, event should NOT appear on 2026-09-20
+        $responseTzPrev = $this->getJson('/api/events/public/calendar?start_date=2026-09-20&end_date=2026-09-20&timezone=Africa/Lagos');
+        $responseTzPrev->assertOk();
+        $idsTzPrev = collect($responseTzPrev->json('data.events.data'))->pluck('id');
+        $this->assertFalse($idsTzPrev->contains($event->id));
+    }
+
+    public function test_calendar_index_rejects_invalid_timezone(): void
+    {
+        $response = $this->getJson('/api/events/public/calendar?timezone=Invalid/Timezone');
+
+        $response->assertStatus(422);
+    }
+
+    // ------------------------------------------------------------------
+    // P0: Cache key includes filters
+    // ------------------------------------------------------------------
+
+    public function test_calendar_index_cache_key_includes_category_filter(): void
+    {
+        $musicEvent = Event::factory()->create(['status' => 'published', 'is_public' => true, 'category' => 'music']);
+        $sportsEvent = Event::factory()->create(['status' => 'published', 'is_public' => true, 'category' => 'sports']);
+
+        // Request with category=music
+        $responseMusic = $this->getJson('/api/events/public/calendar?category=music');
+        $responseMusic->assertOk();
+        $idsMusic = collect($responseMusic->json('data.events.data'))->pluck('id');
+        $this->assertTrue($idsMusic->contains($musicEvent->id));
+        $this->assertFalse($idsMusic->contains($sportsEvent->id));
+
+        // Request with category=sports (should NOT return cached music results)
+        $responseSports = $this->getJson('/api/events/public/calendar?category=sports');
+        $responseSports->assertOk();
+        $idsSports = collect($responseSports->json('data.events.data'))->pluck('id');
+        $this->assertTrue($idsSports->contains($sportsEvent->id));
+        $this->assertFalse($idsSports->contains($musicEvent->id));
+    }
+
+    // ------------------------------------------------------------------
+    // P1: Organizer public check
+    // ------------------------------------------------------------------
+
+    public function test_calendar_index_filters_by_public_organizer_only(): void
+    {
+        $publicOrganizer = Organizer::factory()->create(['isPublic' => true, 'verificationStatus' => 'verified']);
+        $privateOrganizer = Organizer::factory()->create(['isPublic' => false, 'verificationStatus' => 'verified']);
+
+        Event::factory()->create(['status' => 'published', 'is_public' => true, 'organizer_id' => $publicOrganizer->id]);
+        Event::factory()->create(['status' => 'published', 'is_public' => true, 'organizer_id' => $privateOrganizer->id]);
+
+        $response = $this->getJson('/api/events/public/calendar?organizer_id=' . $publicOrganizer->id);
+
+        $response->assertOk();
+        $ids = collect($response->json('data.events.data'))->pluck('id');
+        $this->assertCount(1, $ids);
+    }
+
+    public function test_calendar_index_returns_empty_for_private_organizer(): void
+    {
+        $privateOrganizer = Organizer::factory()->create(['isPublic' => false, 'verificationStatus' => 'verified']);
+        Event::factory()->create(['status' => 'published', 'is_public' => true, 'organizer_id' => $privateOrganizer->id]);
+
+        $response = $this->getJson('/api/events/public/calendar?organizer_id=' . $privateOrganizer->id);
+
+        $response->assertOk();
+        $ids = collect($response->json('data.events.data'))->pluck('id');
+        $this->assertCount(0, $ids);
+    }
+
+    public function test_calendar_index_returns_empty_for_unverified_organizer(): void
+    {
+        $unverifiedOrganizer = Organizer::factory()->create(['isPublic' => true, 'verificationStatus' => 'pending']);
+        Event::factory()->create(['status' => 'published', 'is_public' => true, 'organizer_id' => $unverifiedOrganizer->id]);
+
+        $response = $this->getJson('/api/events/public/calendar?organizer_id=' . $unverifiedOrganizer->id);
+
+        $response->assertOk();
+        $ids = collect($response->json('data.events.data'))->pluck('id');
+        $this->assertCount(0, $ids);
+    }
+
+    // ------------------------------------------------------------------
+    // P1: availability_status field
+    // ------------------------------------------------------------------
+
+    public function test_calendar_index_returns_availability_status_available(): void
+    {
+        $event = Event::factory()->create(['status' => 'published', 'is_public' => true]);
+        TicketInventory::factory()->create([
+            'event_id' => $event->id,
+            'total_allocated' => 100,
+            'total_sold' => 50,
+        ]);
+
+        $response = $this->getJson('/api/events/public/calendar');
+
+        $response->assertOk();
+        $events = collect($response->json('data.events.data'));
+        $eventData = $events->firstWhere('id', $event->id);
+        $this->assertEquals('available', $eventData['availability_status']);
+    }
+
+    public function test_calendar_index_returns_availability_status_sold_out(): void
+    {
+        $event = Event::factory()->create(['status' => 'published', 'is_public' => true]);
+        TicketInventory::factory()->create([
+            'event_id' => $event->id,
+            'total_allocated' => 100,
+            'total_sold' => 100,
+        ]);
+
+        $response = $this->getJson('/api/events/public/calendar');
+
+        $response->assertOk();
+        $events = collect($response->json('data.events.data'));
+        $eventData = $events->firstWhere('id', $event->id);
+        $this->assertEquals('sold_out', $eventData['availability_status']);
+    }
+
+    public function test_calendar_index_returns_availability_status_unavailable(): void
+    {
+        $event = Event::factory()->create(['status' => 'published', 'is_public' => true]);
+
+        $response = $this->getJson('/api/events/public/calendar');
+
+        $response->assertOk();
+        $events = collect($response->json('data.events.data'));
+        $eventData = $events->firstWhere('id', $event->id);
+        $this->assertEquals('unavailable', $eventData['availability_status']);
+    }
+
+    // ------------------------------------------------------------------
+    // P2: HTTP cache headers
+    // ------------------------------------------------------------------
+
+    public function test_calendar_index_returns_cache_control_header(): void
+    {
+        $response = $this->getJson('/api/events/public/calendar');
+
+        $response->assertOk();
+        $response->assertHeader('Cache-Control', 'max-age=60, public');
+    }
+
+    // ------------------------------------------------------------------
+    // P0: Events spanning midnight appear on day 2
+    // ------------------------------------------------------------------
+
+    public function test_calendar_day_detail_shows_events_spanning_from_previous_day(): void
+    {
+        // Event: starts yesterday at 22:00, ends today at 04:00
+        // It should appear when querying for "today"
+        $today = now()->toDateString();
+        $spanningEvent = Event::factory()->create([
+            'status' => 'published',
+            'is_public' => true,
+            'start_datetime' => now()->subDay()->setTime(22, 0),
+            'end_datetime' => now()->setTime(4, 0),
+        ]);
+
+        $response = $this->getJson('/api/events/public/calendar/day/' . $today);
+
+        $response->assertOk();
+        $ids = collect($response->json('data.events.data'))->pluck('id');
+        $this->assertTrue($ids->contains($spanningEvent->id));
+    }
+
+    public function test_calendar_day_detail_shows_events_spanning_into_next_day(): void
+    {
+        // Event: starts today at 22:00, ends tomorrow at 04:00
+        // It should appear when querying for "today"
+        $today = now()->toDateString();
+        $spanningEvent = Event::factory()->create([
+            'status' => 'published',
+            'is_public' => true,
+            'start_datetime' => now()->setTime(22, 0),
+            'end_datetime' => now()->addDay()->setTime(4, 0),
+        ]);
+
+        $response = $this->getJson('/api/events/public/calendar/day/' . $today);
+
+        $response->assertOk();
+        $ids = collect($response->json('data.events.data'))->pluck('id');
+        $this->assertTrue($ids->contains($spanningEvent->id));
+    }
+
+    public function test_calendar_day_detail_returns_cache_control_header(): void
+    {
+        $response = $this->getJson('/api/events/public/calendar/day/' . now()->toDateString());
+
+        $response->assertOk();
+        $response->assertHeader('Cache-Control', 'max-age=60, public');
+    }
+
+    public function test_calendar_range_returns_cache_control_header(): void
+    {
+        $response = $this->getJson('/api/events/public/calendar/range?start_date=' . now()->toDateString() . '&end_date=' . now()->addWeek()->toDateString());
+
+        $response->assertOk();
+        $response->assertHeader('Cache-Control', 'max-age=60, public');
     }
 }

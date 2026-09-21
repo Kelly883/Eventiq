@@ -25,6 +25,7 @@ class EventFactory extends Factory
             'venue_address' => $this->faker->address(),
                                     'status' => 'published',
             'capacity' => 100,
+            'is_public' => true,
             'version' => 1,
         ];
     }

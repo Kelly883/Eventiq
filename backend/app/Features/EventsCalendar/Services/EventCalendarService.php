@@ -2,54 +2,80 @@
 
 namespace App\Features\EventsCalendar\Services;
 
+use App\Features\EventsCalendar\Http\Resources\CalendarEventResource;
 use App\Models\Event;
 use App\Models\EventsCalendarSummary;
+use App\Models\Organizer;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class EventCalendarService
 {
+    /**
+     * Get month overview for the calendar grid.
+     * Honors ?timezone= param to correctly map user-local dates to UTC stored events.
+     */
     public function getMonthOverview(array $filters): array
     {
+        $tz = $this->resolveTimezone($filters['timezone'] ?? null);
+
         $monthDate = isset($filters['date'])
-            ? Carbon::createFromFormat('Y-m-d', $filters['date'])
-            : now();
+            ? Carbon::createFromFormat('Y-m-d', $filters['date'], $tz)->setTimezone('UTC')
+            : Carbon::now($tz);
 
         $filters['start_date'] = $filters['start_date'] ?? $monthDate->copy()->startOfMonth()->toDateString();
         $filters['end_date'] = $filters['end_date'] ?? $monthDate->copy()->endOfMonth()->toDateString();
 
-        return $this->getRangeOverview($filters);
+        return $this->getRangeOverview($filters, $tz);
     }
 
+    /**
+     * Get day detail. The :date route param is in user's local time (or UTC if no tz).
+     */
     public function getDayDetails(array $filters): array
     {
+        $tz = $this->resolveTimezone($filters['timezone'] ?? null);
+
         $day = isset($filters['date'])
-            ? Carbon::createFromFormat('Y-m-d', $filters['date'])
-            : now();
+            ? Carbon::createFromFormat('Y-m-d', $filters['date'], $tz)->setTimezone('UTC')
+            : Carbon::now($tz);
 
         $filters['start_date'] = $day->toDateString();
         $filters['end_date'] = $day->toDateString();
 
-        return $this->getRangeOverview($filters);
+        return $this->getRangeOverview($filters, $tz);
     }
 
-    public function getRangeOverview(array $filters): array
+    /**
+     * Get range overview. Both start_date and end_date are user-local; converted to UTC.
+     */
+    public function getRangeOverview(array $filters, ?string $userTimezone = null): array
     {
-        $query = $this->buildEventsQuery($filters);
+        $tz = $userTimezone ?? $this->resolveTimezone($filters['timezone'] ?? null);
+        $query = $this->buildEventsQuery($filters, $tz);
+
         $sortDirection = ($filters['sort'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
         $sortBy = $filters['sort_by'] ?? 'date';
         $perPage = $this->resolvePerPage($filters);
 
         $events = $query
+            ->with('organizer')
             ->orderBy($this->resolveSortColumn($sortBy), $sortDirection)
             ->paginate($perPage)
             ->appends($filters);
 
-        $startDate = $filters['start_date'] ?? now()->startOfMonth()->toDateString();
-        $endDate = $filters['end_date'] ?? now()->endOfMonth()->toDateString();
+        // Wrap in Resource to strip sensitive organizer data
+        $events->setCollection(
+            $events->getCollection()->map(fn ($event) => new CalendarEventResource($event))
+        );
 
-        $cacheKey = "calendar_summary_{$startDate}_{$endDate}";
-        $summary = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($startDate, $endDate) {
+        $startDate = $filters['start_date'] ?? Carbon::now($tz)->startOfMonth()->toDateString();
+        $endDate = $filters['end_date'] ?? Carbon::now($tz)->endOfMonth()->toDateString();
+
+        // Cache key MUST include all filters that affect the result (P0 fix)
+        $cacheKey = $this->buildSummaryCacheKey($filters, $startDate, $endDate);
+        $summary = Cache::remember($cacheKey, 300, function () use ($startDate, $endDate) {
             return EventsCalendarSummary::query()
                 ->inDateRange($startDate, $endDate)
                 ->orderBy('event_date')
@@ -79,16 +105,20 @@ class EventCalendarService
                 'per_page' => $perPage,
                 'sort_by' => $sortBy,
                 'sort' => $sortDirection,
+                'timezone' => $tz,
             ],
         ];
     }
 
-    private function buildEventsQuery(array $filters)
+    /**
+     * Build the events query with timezone-aware date filtering and optional organizer public check.
+     */
+    private function buildEventsQuery(array $filters, string $userTimezone = 'UTC')
     {
         $inventoryAgg = DB::table('ticket_inventory')
             ->select([
                 'event_id',
-                DB::raw('SUM(total_available) as total_available_sum'),
+                DB::raw('SUM(total_allocated - total_sold) as total_available_sum'),
                 DB::raw('SUM(total_sold) as total_sold_sum'),
             ])
             ->groupBy('event_id');
@@ -143,12 +173,36 @@ class EventCalendarService
         $query->where('events.status', 'published');
         $query->where('events.is_public', true);
 
+        // Global organizer public filter: only show events from verified public organizers.
+        // This prevents leaking events from private or unverified organizers regardless of
+        // whether the organizer_id query param is used (defense-in-depth alongside the
+        // organizer_id-specific check below).
+        $query->whereExists(function ($q) {
+            $q->selectRaw('1')
+              ->from('organizers')
+              ->whereRaw('organizers.id = events.organizer_id')
+              ->where('organizers.isPublic', true)
+              ->where('organizers.verificationStatus', 'verified');
+        });
+
+        // Timezone-aware date filtering: convert user-local dates to UTC for DB comparison.
+        // Uses interval overlap test: event [start, end] overlaps query [utcStart, utcEnd]
+        // iff end >= utcStart AND start <= utcEnd. This correctly includes events that
+        // span across the queried date range (e.g., started yesterday, ends tomorrow).
         if (!empty($filters['start_date'])) {
-            $query->where('events.start_datetime', '>=', $filters['start_date'] . ' 00:00:00');
+            $utcStart = Carbon::createFromFormat('Y-m-d', $filters['start_date'], $userTimezone)
+                ->startOfDay()
+                ->setTimezone('UTC')
+                ->toDateTimeString();
+            $query->where('events.end_datetime', '>=', $utcStart);
         }
 
         if (!empty($filters['end_date'])) {
-            $query->where('events.start_datetime', '<=', $filters['end_date'] . ' 23:59:59');
+            $utcEnd = Carbon::createFromFormat('Y-m-d', $filters['end_date'], $userTimezone)
+                ->endOfDay()
+                ->setTimezone('UTC')
+                ->toDateTimeString();
+            $query->where('events.start_datetime', '<=', $utcEnd);
         }
 
         if (!empty($filters['category'])) {
@@ -162,8 +216,22 @@ class EventCalendarService
             });
         }
 
+        // Organizer filter: only allow if organizer profile is public (P1 fix)
         if (!empty($filters['organizer_id'])) {
-            $query->where('events.organizer_id', (int) $filters['organizer_id']);
+            $organizerId = (int) $filters['organizer_id'];
+
+            $organizer = Organizer::query()
+                ->where('id', $organizerId)
+                ->where('isPublic', true)
+                ->where('verificationStatus', 'verified')
+                ->first();
+
+            if (!$organizer) {
+                // Force no results — don't leak that the organizer exists
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->where('events.organizer_id', $organizerId);
+            }
         }
 
         if (isset($filters['min_price'])) {
@@ -186,37 +254,35 @@ class EventCalendarService
         };
     }
 
-    public function getDateGroupedAvailability(array $filters): array
+    /**
+     * Resolve timezone from input or default to UTC.
+     * Uses Laravel's timezone validation (DateTimeZone::listIdentifiers()).
+     */
+    private function resolveTimezone(?string $tz): string
     {
-        $startDate = $filters['start_date'] ?? now()->startOfMonth()->toDateString();
-        $endDate = $filters['end_date'] ?? now()->endOfMonth()->toDateString();
-        $status = $filters['status'] ?? 'published';
-
-        $query = DB::table('calendar_events_availability')
-            ->where('status', $status)
-            ->whereBetween('event_date', [$startDate, $endDate]);
-
-        if (!empty($filters['category_id'])) {
-            $query->where('category_id', $filters['category_id']);
+        if ($tz && in_array($tz, \DateTimeZone::listIdentifiers())) {
+            return $tz;
         }
+        return 'UTC';
+    }
 
-        if (!empty($filters['location_id'])) {
-            $query->where('location_id', $filters['location_id']);
-        }
+    /**
+     * Build cache key that includes ALL filters affecting the summary result.
+     * Uses a hash of the validated filter set to avoid key collisions.
+     */
+    private function buildSummaryCacheKey(array $filters, string $startDate, string $endDate): string
+    {
+        // Only include filters that affect the summary query
+        $summaryRelevant = [
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'category' => $filters['category'] ?? null,
+            'location' => $filters['location'] ?? null,
+            'organizer_id' => $filters['organizer_id'] ?? null,
+        ];
 
-        return $query
-            ->orderBy('event_date')
-            ->get([
-                'event_id',
-                'event_date',
-                'availability_status',
-                'total_tickets',
-                'sold_tickets',
-                'reserved_tickets',
-                'remaining_tickets',
-            ])
-            ->groupBy('event_date')
-            ->toArray();
+        $hash = md5(serialize($summaryRelevant));
+        return "calendar_summary_{$hash}";
     }
 
     private function resolvePerPage(array $filters): int

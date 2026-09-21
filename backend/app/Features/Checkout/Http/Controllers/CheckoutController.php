@@ -41,9 +41,33 @@ class CheckoutController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.ticket_tier_id' => ['required', 'integer'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
+            // Optional idempotency key to prevent duplicate payment intent creation
+            // on network retry or double-click. If provided and an order with this
+            // key already exists for this user, return the existing order.
+            'idempotency_key' => ['nullable', 'string', 'max:255'],
         ]);
 
         $user = $request->user();
+
+        // Idempotency: check if this key was already used by this user
+        if (!empty($validated['idempotency_key'])) {
+            $existingOrder = Order::where('user_id', $user->id)
+                ->where('idempotency_key', $validated['idempotency_key'])
+                ->where('status', 'pending')
+                ->first();
+
+            if ($existingOrder) {
+                $gatewayService = $existingOrder->payment_gateway === 'paystack' ? $this->paystack : $this->flutterwave;
+                
+                return response()->json([
+                    'order_id' => $existingOrder->id,
+                    'reference' => $existingOrder->payment_intent_id,
+                    'gateway' => $existingOrder->payment_gateway,
+                    'gateway_data' => null, // Can't re-initialize, but frontend can use stored data or redirect to existing payment
+                    'idempotent' => true,
+                ]);
+            }
+        }
 
         $reference = 'ord_' . Str::uuid();
         [$order, $total] = DB::transaction(function () use ($user, $validated, $reference) {
@@ -118,6 +142,7 @@ class CheckoutController extends Controller
                 'payment_gateway' => $validated['gateway'],
                 'payment_intent_id' => $reference,
                 'ip_address' => request()->ip(),
+                'idempotency_key' => $validated['idempotency_key'] ?? null,
             ]);
 
             foreach ($lineItems as $line) {

@@ -67,6 +67,19 @@ class WebhookController extends Controller
             return response()->json(['received' => true]); // Already processed - webhook delivery isn't guaranteed exactly-once
         }
 
+        // Event ID deduplication: prevent duplicate webhook processing
+        $eventId = $this->extractEventId($request, $gateway);
+        if ($eventId && $this->isEventAlreadyProcessed($eventId)) {
+            Log::info("WebhookController: duplicate event {$eventId} for order {$order->id}, skipping");
+            return response()->json(['received' => true]);
+        }
+
+        // Handle refund/chargeback events
+        $eventType = $request->input('event', $request->input('type', ''));
+        if ($this->isRefundEvent($eventType)) {
+            return $this->handleRefundEvent($order, $request, $gateway, $eventType);
+        }
+
         if ($gateway === 'flutterwave' && empty($request->input('data.id'))) {
             Log::warning("WebhookController: flutterwave payload missing data.id for reference {$reference}");
 
@@ -102,6 +115,32 @@ class WebhookController extends Controller
                 default => 'failed',
             };
 
+        // Amount verification: defense in depth
+        // Ensure gateway amount matches order total (with small tolerance for rounding)
+        // Only verify if the gateway returned an amount - if not, proceed without verification
+        if ($status === 'success') {
+            $rawAmount = data_get($verification, 'data.amount') ?? data_get($verification, 'amount', null);
+            
+            if ($rawAmount !== null) {
+                $verifiedAmount = (float) $rawAmount;
+                
+                // Paystack returns amount in kobo (smallest unit), divide by 100
+                if ($gateway === 'paystack') {
+                    $verifiedAmount = $verifiedAmount / 100;
+                }
+                
+                $orderAmount = (float) $order->total_amount;
+                $allowedDiff = max(0.01, $orderAmount * 0.005); // 0.5% tolerance or 1 cent minimum
+                
+                if (abs($verifiedAmount - $orderAmount) > $allowedDiff) {
+                    Log::error("WebhookController: amount mismatch for order {$order->id}. Expected: {$orderAmount}, Gateway: {$verifiedAmount}");
+                    
+                    return response()->json(['message' => 'Amount mismatch - payment not processed'], 422);
+                }
+            }
+            // If no amount returned, continue processing without amount verification
+        }
+
         if (! in_array($status, ['success', 'pending'])) {
             $order->update(['status' => $status === 'abandoned' ? 'abandoned' : 'failed']);
             Payment::where('order_id', $order->id)->update(['status' => $status, 'gateway_response' => $verification]);
@@ -134,7 +173,7 @@ class WebhookController extends Controller
                         'event_id' => $order->event_id,
                         'user_id' => $order->user_id,
                         'ticket_tier_id' => $item->ticket_tier_id,
-                        'ticket_id' => 'TCK-' . Str::upper(Str::random(12)),
+                        'ticket_id' => 'TCK-' . Str::uuid(),
                         'attendee_name' => $attendeeName,
                         'attendee_email' => $attendeeEmail,
                         'tier' => $tierName,
@@ -198,5 +237,142 @@ class WebhookController extends Controller
         $valid = $this->flutterwave->verifyWebhookSignature($request->header('verif-hash', ''));
 
         return $valid ? ($request->input('data.tx_ref') ?? $request->input('txRef')) : null;
+    }
+
+    private function extractEventId(Request $request, string $gateway): ?string
+    {
+        if ($gateway === 'paystack') {
+            return $request->input('data.event.id') 
+                ?? $request->header('x-paystack-event-id')
+                ?? null;
+        }
+
+        if ($gateway === 'flutterwave') {
+            return $request->input('data.id')
+                ?? $request->header('verif-hash')
+                ?? null;
+        }
+
+        return null;
+    }
+
+    private function isEventAlreadyProcessed(?string $eventId): bool
+    {
+        if (!$eventId) {
+            return false;
+        }
+
+        return Payment::where('webhook_event_id', $eventId)->exists();
+    }
+
+    private function isRefundEvent(string $eventType): bool
+    {
+        $refundEvents = [
+            'charge.dispute',
+            'charge.refund',
+            'chargeback',
+            'refund.process',
+            'transaction.refund',
+        ];
+
+        return in_array(strtolower($eventType), array_map('strtolower', $refundEvents), true);
+    }
+
+    private function handleRefundEvent(Order $order, Request $request, string $gateway, string $eventType): \Illuminate\Http\JsonResponse
+    {
+        $isChargeback = str_contains(strtolower($eventType), 'dispute') || str_contains(strtolower($eventType), 'chargeback');
+        
+        DB::transaction(function () use ($order, $request, $gateway, $eventType, $isChargeback) {
+            $order->lockForUpdate()->first();
+
+            if (in_array($order->status, ['refunded', 'partially_refunded', 'chargeback'], true)) {
+                return;
+            }
+
+            $payment = $order->payments()->where('status', 'success')->first();
+            if (!$payment) {
+                return;
+            }
+
+            $gatewayTransactionId = $request->input('data.transaction_id') 
+                ?? $request->input('data.id')
+                ?? null;
+
+            $refundAmount = (float) ($request->input('data.amount') ?? $request->input('data.refund_amount') ?? 0);
+            
+            if ($gateway === 'paystack') {
+                $refundAmount = $refundAmount / 100;
+            }
+
+            if ($eventId = $this->extractEventId($request, $gateway)) {
+                $payment->update(['webhook_event_id' => $eventId]);
+            }
+
+            if ($isChargeback) {
+                $order->update([
+                    'status' => 'chargeback',
+                    'failure_reason' => "Chargeback received: {$eventType}",
+                ]);
+                
+                $payment->update([
+                    'status' => 'charged_back',
+                    'gateway_transaction_id' => $gatewayTransactionId,
+                    'gateway_response' => $request->all(),
+                    'last_error' => "Chargeback: {$eventType}",
+                ]);
+                
+                if ($order->tickets()->where('status', 'valid')->count() > 0) {
+                    $order->tickets()->where('status', 'valid')->update([
+                        'status' => 'voided',
+                        'refund_status' => 'charged_back',
+                    ]);
+                }
+                
+                Log::warning("WebhookController: order {$order->id} chargeback received, tickets voided");
+            } elseif ($refundAmount >= (float) $order->total_amount * 0.99) {
+                $order->update([
+                    'status' => 'refunded',
+                    'failure_reason' => "Full refund processed: {$eventType}",
+                ]);
+                
+                $payment->update([
+                    'status' => 'refunded',
+                    'refunded_amount' => $refundAmount,
+                    'is_fully_refunded' => true,
+                    'refunded_at' => now(),
+                    'refund_reason' => $request->input('data.reason', $eventType),
+                    'gateway_transaction_id' => $gatewayTransactionId,
+                    'gateway_response' => $request->all(),
+                ]);
+                
+                if ($order->tickets()->where('status', 'valid')->count() > 0) {
+                    $order->tickets()->where('status', 'valid')->update([
+                        'status' => 'voided',
+                        'refund_status' => 'fully_refunded',
+                    ]);
+                }
+                
+                Log::info("WebhookController: order {$order->id} fully refunded, tickets voided");
+            } else {
+                $order->update([
+                    'status' => 'partially_refunded',
+                    'failure_reason' => "Partial refund: {$eventType}",
+                ]);
+                
+                $payment->update([
+                    'status' => 'partially_refunded',
+                    'refunded_amount' => ($payment->refunded_amount ?? 0) + $refundAmount,
+                    'is_fully_refunded' => false,
+                    'refunded_at' => now(),
+                    'refund_reason' => $request->input('data.reason', $eventType),
+                    'gateway_transaction_id' => $gatewayTransactionId,
+                    'gateway_response' => $request->all(),
+                ]);
+                
+                Log::info("WebhookController: order {$order->id} partially refunded ({$refundAmount})");
+            }
+        });
+
+        return response()->json(['received' => true]);
     }
 }

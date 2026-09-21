@@ -17,6 +17,9 @@ class EventCalendarController extends Controller
         return response()->json([
             'success' => true,
             'data' => $this->calendarService->getMonthOverview($request->validated()),
+        ])->withHeaders([
+            'Cache-Control' => 'public, max-age=60',
+            'Vary' => 'Accept-Encoding, Timezone',
         ]);
     }
 
@@ -36,6 +39,9 @@ class EventCalendarController extends Controller
         return response()->json([
             'success' => true,
             'data' => $this->calendarService->getDayDetails($data),
+        ])->withHeaders([
+            'Cache-Control' => 'public, max-age=60',
+            'Vary' => 'Accept-Encoding, Timezone',
         ]);
     }
 
@@ -44,6 +50,9 @@ class EventCalendarController extends Controller
         return response()->json([
             'success' => true,
             'data' => $this->calendarService->getRangeOverview($request->validated()),
+        ])->withHeaders([
+            'Cache-Control' => 'public, max-age=60',
+            'Vary' => 'Accept-Encoding, Timezone',
         ]);
     }
 }

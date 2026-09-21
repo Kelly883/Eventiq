@@ -74,6 +74,14 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(30)->by($request->ip());
         });
 
+        // Webhooks: rate limit to prevent flood attacks and gateway verification
+        // API exhaustion from spoofed requests. Paystack/Flutterwave send
+        // webhooks asynchronously, so 30/min is generous but protects against
+        // abuse. Keyed by IP since webcalls come from gateway IPs, not users.
+        RateLimiter::for('webhooks', function ($request) {
+            return Limit::perMinute(30)->by($request->ip());
+        });
+
         // Admin user/role/permission management — 10/min per admin (strict)
         RateLimiter::for('admin-users', function ($request) {
             return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
