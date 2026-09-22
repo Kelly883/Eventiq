@@ -67,14 +67,16 @@ class CheckoutFlowIntegrationTest extends TestCase
                 ],
             ]);
 
+        // NOTE: whole-number money encodes as JSON ints (serialize_precision=-1),
+        // so assert the decoded values the wire actually carries.
         $response->assertOk()
             ->assertJsonPath('valid', true)
-            ->assertJsonPath('total', 30000.00)
+            ->assertJsonPath('total', 30000)
             ->assertJsonCount(1, 'items')
             ->assertJsonPath('items.0.valid', true)
             ->assertJsonPath('items.0.quantity', 2)
-            ->assertJsonPath('items.0.unit_price', 15000.00)
-            ->assertJsonPath('items.0.line_total', 30000.00);
+            ->assertJsonPath('items.0.unit_price', 15000)
+            ->assertJsonPath('items.0.line_total', 30000);
     }
 
     public function test_cart_verify_returns_valid_false_for_unavailable_items(): void

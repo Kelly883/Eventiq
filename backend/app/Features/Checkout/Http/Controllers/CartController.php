@@ -73,15 +73,15 @@ class CartController extends Controller
                 'ticket_tier_id' => $tier->id,
                 'valid' => true,
                 'quantity' => $item['quantity'],
-                'unit_price' => $unitPrice,
-                'line_total' => $lineTotal,
+                'unit_price' => (float) $unitPrice,
+                'line_total' => (float) $lineTotal,
             ];
         }
 
         return response()->json([
             'valid' => $valid,
             'items' => $results,
-            'total' => $total,
+            'total' => (float) $total,
         ], $valid ? 200 : 422);
     }
 }
