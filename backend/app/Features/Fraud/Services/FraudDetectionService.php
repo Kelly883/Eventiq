@@ -88,8 +88,8 @@ class FraudDetectionService
 
         // Check duplicate ticket if qr code is supplied
         $duplicateTicket = false;
-        if (!empty($transaction['ticket_tier_id']) && !empty($transaction['qr_code'])) {
-            $dupCheck = $this->detectDuplicateTickets((int)$transaction['ticket_tier_id'], $transaction['qr_code']);
+        if (!empty($transaction['ticket_tier_id']) && !empty($transaction['qr_code_data'])) {
+            $dupCheck = $this->detectDuplicateTickets((int)$transaction['ticket_tier_id'], $transaction['qr_code_data']);
             $duplicateTicket = $dupCheck['duplicate'] ?? false;
         }
 
@@ -276,7 +276,7 @@ class FraudDetectionService
     /**
      * Flags a user exceeding the configured order-velocity thresholds.
      */
-    public function checkVelocity(?int $userId, float $amount): array
+    public function checkVelocity(?string $userId, float $amount): array
     {
         if (! $userId || ! Schema::hasTable('orders') || ! Schema::hasColumn('orders', 'user_id')) {
             Log::warning('FraudDetectionService::checkVelocity skipped - orders table/columns not available yet.');
@@ -302,14 +302,14 @@ class FraudDetectionService
      */
     public function detectDuplicateTickets(int $ticketTierId, string $qrCode): array
     {
-        if (! Schema::hasTable('tickets') || ! Schema::hasColumn('tickets', 'qr_code')) {
+        if (! Schema::hasTable('tickets') || ! Schema::hasColumn('tickets', 'qr_code_data')) {
             Log::warning('FraudDetectionService::detectDuplicateTickets skipped - tickets.qr_code column not available yet.');
 
             return ['duplicate' => false, 'matches' => null, 'checked' => false];
         }
 
         $matches = Ticket::where('ticket_tier_id', $ticketTierId)
-            ->where('qr_code', $qrCode)
+            ->where('qr_code_data', $qrCode)
             ->count();
 
         return ['duplicate' => $matches > 1, 'matches' => $matches, 'checked' => true];

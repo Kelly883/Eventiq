@@ -1,11 +1,12 @@
 <?php
 
+use App\Features\Fraud\Http\Controllers\AdminFraudController;
 use App\Features\Fraud\Http\Controllers\FraudController;
 use Illuminate\Support\Facades\Route;
 
 // Fraud tooling exposes payment-gateway transaction lookups and cross-user
 // velocity data — restricted to admins.
-Route::middleware(['bearer', 'role:admin'])->prefix('fraud')->group(function () {
+Route::middleware(['bearer', 'role:admin', 'throttle:discovery'])->prefix('fraud')->group(function () {
     Route::post('/detect', [FraudController::class, 'detect']);
     Route::get('/transactions/paystack/{reference}', [FraudController::class, 'verifyPaystack']);
     Route::get('/transactions/flutterwave/{transactionId}', [FraudController::class, 'verifyFlutterwave']);
@@ -14,4 +15,10 @@ Route::middleware(['bearer', 'role:admin'])->prefix('fraud')->group(function () 
     Route::post('/device', [FraudController::class, 'deviceFingerprint']);
     Route::post('/ip', [FraudController::class, 'ipReputation']);
     Route::get('/event/{id}', [FraudController::class, 'eventDetails']);
+});
+
+// Admin fraud management — flagged transactions list and details
+Route::middleware(['bearer', 'role:admin'])->prefix('admin/fraud')->group(function () {
+    Route::get('/flagged-transactions', [AdminFraudController::class, 'flaggedTransactions']);
+    Route::get('/transaction-details/{fraudEventId}', [AdminFraudController::class, 'transactionDetails']);
 });

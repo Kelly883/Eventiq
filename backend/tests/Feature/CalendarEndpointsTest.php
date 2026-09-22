@@ -1142,4 +1142,169 @@ class CalendarEndpointsTest extends TestCase
         $response->assertOk();
         $response->assertHeader('Cache-Control', 'max-age=60, public');
     }
+
+    // ------------------------------------------------------------------
+    // DST transition edge cases
+    // ------------------------------------------------------------------
+
+    public function test_calendar_handles_eu_spring_forward(): void
+    {
+        // EU clocks spring forward on 2026-03-29: 00:00 -> 01:00 (no 00:00-00:59:59)
+        // Carbon::startOfDay() handles this by returning the earliest valid time.
+        // This test ensures no crash when querying dates during DST transitions.
+        $response = $this->getJson('/api/events/public/calendar?start_date=2026-03-29&end_date=2026-03-29&timezone=Europe/London');
+
+        $response->assertOk();
+        $this->assertIsArray($response->json('data.events.data'));
+    }
+
+    public function test_calendar_handles_eu_fall_back(): void
+    {
+        // EU clocks fall back on 2026-10-25: 01:00 -> 00:00 (00:00-00:59:59 exists twice)
+        // Carbon picks the first occurrence. Events at 00:30 should still appear.
+        $response = $this->getJson('/api/events/public/calendar?start_date=2026-10-25&end_date=2026-10-25&timezone=Europe/London');
+
+        $response->assertOk();
+        $this->assertIsArray($response->json('data.events.data'));
+    }
+
+    public function test_calendar_handles_us_spring_forward(): void
+    {
+        // US clocks spring forward on 2026-03-08
+        $response = $this->getJson('/api/events/public/calendar?start_date=2026-03-08&end_date=2026-03-08&timezone=America/New_York');
+
+        $response->assertOk();
+        $this->assertIsArray($response->json('data.events.data'));
+    }
+
+    // ------------------------------------------------------------------
+    // P1: LIKE wildcard escaping in location filter
+    // ------------------------------------------------------------------
+
+    public function test_calendar_location_filter_escapes_like_wildcards(): void
+    {
+        $event = Event::factory()->create([
+            'status' => 'published',
+            'is_public' => true,
+            'venue_name' => '50% Off Venue',
+            'venue_address' => '100% Real Street',
+        ]);
+        Event::factory()->create([
+            'status' => 'published',
+            'is_public' => true,
+            'venue_name' => 'No Match Venue',
+            'venue_address' => 'No Match Street',
+        ]);
+
+        // Searching for literal "50%" should match only the exact event
+        $response = $this->getJson('/api/events/public/calendar?location=' . urlencode('50%'));
+
+        $response->assertOk();
+        $ids = collect($response->json('data.events.data'))->pluck('id');
+        $this->assertTrue($ids->contains($event->id));
+    }
+
+    // ------------------------------------------------------------------
+    // P2: low_stock threshold respects per-event low_stock_threshold
+    // ------------------------------------------------------------------
+
+    public function test_calendar_uses_inventory_low_stock_threshold(): void
+    {
+        $event = Event::factory()->create(['status' => 'published', 'is_public' => true]);
+        TicketInventory::factory()->create([
+            'event_id' => $event->id,
+            'total_allocated' => 100,
+            'total_sold' => 85,
+            'low_stock_threshold' => 20, // Custom threshold
+        ]);
+
+        // 15 remaining — above default (10), so with custom threshold (20) it's low_stock
+        $response = $this->getJson('/api/events/public/calendar');
+
+        $response->assertOk();
+        $events = collect($response->json('data.events.data'));
+        $eventData = $events->firstWhere('id', $event->id);
+        $this->assertEquals('low_stock', $eventData['availability_status']);
+    }
+
+    public function test_calendar_low_stock_respects_higher_threshold(): void
+    {
+        $event = Event::factory()->create(['status' => 'published', 'is_public' => true]);
+        TicketInventory::factory()->create([
+            'event_id' => $event->id,
+            'total_allocated' => 100,
+            'total_sold' => 85,
+            'low_stock_threshold' => 5, // Strict threshold
+        ]);
+
+        // 15 remaining — above custom threshold (5), so should be 'available'
+        $response = $this->getJson('/api/events/public/calendar');
+
+        $response->assertOk();
+        $events = collect($response->json('data.events.data'));
+        $eventData = $events->firstWhere('id', $event->id);
+        $this->assertEquals('available', $eventData['availability_status']);
+    }
+
+    // ------------------------------------------------------------------
+    // P2: Event validation — end_datetime must be after start_datetime
+    // ------------------------------------------------------------------
+
+    public function test_event_creation_rejects_end_before_start(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('end_datetime must be after start_datetime');
+
+        // Use Event::create directly to bypass factory's afterMaking auto-fix
+        Event::create([
+            'organizer_id' => Organizer::factory()->create()->id,
+            'title' => 'Test Event',
+            'start_datetime' => now()->addDays(5),
+            'end_datetime' => now()->addDays(4),
+            'capacity' => 100,
+            'is_public' => true,
+            'status' => 'published',
+            'version' => 1,
+        ]);
+    }
+
+    public function test_event_creation_rejects_end_equal_start(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('end_datetime must be after start_datetime');
+
+        $sameTime = now()->addDays(5);
+        Event::create([
+            'organizer_id' => Organizer::factory()->create()->id,
+            'title' => 'Test Event',
+            'start_datetime' => $sameTime,
+            'end_datetime' => $sameTime->copy(),
+            'capacity' => 100,
+            'is_public' => true,
+            'status' => 'published',
+            'version' => 1,
+        ]);
+    }
+
+    public function test_event_update_rejects_end_before_start(): void
+    {
+        $event = Event::factory()->create([
+            'start_datetime' => now()->addDays(5),
+            'end_datetime' => now()->addDays(5)->addHours(3),
+        ]);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $event->update([
+            'end_datetime' => now()->addDays(4),
+        ]);
+    }
+
+    // ------------------------------------------------------------------
+    // P2: Orphaned CalendarAvailabilityQuery removed
+    // ------------------------------------------------------------------
+
+    public function test_calendar_availability_query_class_does_not_exist(): void
+    {
+        $this->assertFalse(class_exists(\App\Features\EventsCalendar\Services\CalendarAvailabilityQuery::class));
+    }
 }

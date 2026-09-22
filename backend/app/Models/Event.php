@@ -62,6 +62,13 @@ class Event extends Model
             if ($event->capacity === null || $event->capacity < 0) {
                 throw new \InvalidArgumentException('Event capacity is required and must be a non-negative integer.');
             }
+            if ($event->start_datetime && $event->end_datetime) {
+                $start = \Carbon\Carbon::parse($event->start_datetime);
+                $end = \Carbon\Carbon::parse($event->end_datetime);
+                if ($end->lessThanOrEqualTo($start)) {
+                    throw new \InvalidArgumentException('Event end_datetime must be after start_datetime.');
+                }
+            }
             // Fix #4: Initialize version for optimistic locking
             if ($event->version === null) {
                 $event->version = 1;
@@ -71,6 +78,14 @@ class Event extends Model
                 static::updating(function (Event $event) {
             if ($event->isDirty('capacity') && ($event->capacity === null || $event->capacity < 0)) {
                 throw new \InvalidArgumentException('Event capacity is required and must be a non-negative integer.');
+            }
+            // Validate on update only when both fields are present
+            if ($event->start_datetime && $event->end_datetime) {
+                $start = \Carbon\Carbon::parse($event->start_datetime);
+                $end = \Carbon\Carbon::parse($event->end_datetime);
+                if ($end->lessThanOrEqualTo($start)) {
+                    throw new \InvalidArgumentException('Event end_datetime must be after start_datetime.');
+                }
             }
             // Version is incremented explicitly in controller when optimistic locking is used
         });

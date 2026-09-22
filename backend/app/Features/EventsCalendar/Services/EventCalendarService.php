@@ -120,6 +120,7 @@ class EventCalendarService
                 'event_id',
                 DB::raw('SUM(total_allocated - total_sold) as total_available_sum'),
                 DB::raw('SUM(total_sold) as total_sold_sum'),
+                DB::raw('MAX(low_stock_threshold) as low_stock_threshold'),
             ])
             ->groupBy('event_id');
 
@@ -164,6 +165,7 @@ class EventCalendarService
                 'events.capacity',
                 DB::raw('COALESCE(inv.total_available_sum, 0) as total_available'),
                 DB::raw('COALESCE(inv.total_sold_sum, 0) as total_sold'),
+                DB::raw('COALESCE(inv.low_stock_threshold, 10) as low_stock_threshold'),
                 DB::raw('pw.min_price as min_price'),
                 DB::raw('pw.max_price as max_price'),
                 DB::raw('COALESCE(pop.tickets_sold, 0) as popularity'),
@@ -210,9 +212,13 @@ class EventCalendarService
         }
 
         if (!empty($filters['location'])) {
-            $query->where(function ($q) use ($filters) {
-                $q->where('events.venue_name', 'like', '%' . $filters['location'] . '%')
-                  ->orWhere('events.venue_address', 'like', '%' . $filters['location'] . '%');
+            // Escape LIKE wildcards in user input so `%` and `_` don't match anything.
+            // Use explicit ESCAPE clause because SQLite/PostgreSQL have no default escape char.
+            $escapedLocation = str_replace(['%', '_'], ['\%', '\_'], $filters['location']);
+            $likePattern = '%' . $escapedLocation . '%';
+            $query->where(function ($q) use ($likePattern) {
+                $q->whereRaw("events.venue_name LIKE ? ESCAPE '\\'", [$likePattern])
+                  ->orWhereRaw("events.venue_address LIKE ? ESCAPE '\\'", [$likePattern]);
             });
         }
 

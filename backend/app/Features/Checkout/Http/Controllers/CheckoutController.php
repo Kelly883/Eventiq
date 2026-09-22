@@ -21,6 +21,7 @@ class CheckoutController extends Controller
     public function __construct(
         private PaystackService $paystack,
         private FlutterwaveService $flutterwave,
+        private \App\Services\FraudScorer $fraudScorer,
     ) {
     }
 
@@ -57,19 +58,72 @@ class CheckoutController extends Controller
                 ->first();
 
             if ($existingOrder) {
-                $gatewayService = $existingOrder->payment_gateway === 'paystack' ? $this->paystack : $this->flutterwave;
-                
                 return response()->json([
                     'order_id' => $existingOrder->id,
                     'reference' => $existingOrder->payment_intent_id,
                     'gateway' => $existingOrder->payment_gateway,
-                    'gateway_data' => null, // Can't re-initialize, but frontend can use stored data or redirect to existing payment
+                    'gateway_data' => null,
                     'idempotent' => true,
                 ]);
             }
         }
 
         $reference = 'ord_' . Str::uuid();
+
+        // Fraud scoring: simple rules-based check before creating order.
+        // Amount is estimated from cart items (recomputed server-side below).
+        $estimatedAmount = 0;
+        foreach ($validated['items'] as $item) {
+            $tier = TicketTier::find($item['ticket_tier_id']);
+            if ($tier) {
+                $estimatedAmount += ($tier->price ?? 0) * ($item['quantity'] ?? 1);
+            }
+        }
+
+        $fraudScore = $this->fraudScorer->score([
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'ip_address' => $request->ip(),
+            'event_id' => $validated['event_id'],
+            'amount' => $estimatedAmount,
+        ]);
+
+        Log::info('CheckoutController: Fraud score result', [
+            'user_id' => $user->id,
+            'order_reference' => $reference,
+            'risk_level' => $fraudScore['risk_level'],
+            'action' => $fraudScore['action'],
+            'score' => $fraudScore['score'],
+        ]);
+
+        // HIGH RISK: Block the transaction entirely
+        if ($fraudScore['action'] === 'review') {
+            Log::warning('CheckoutController: High-risk transaction blocked', [
+                'user_id' => $user->id,
+                'order_reference' => $reference,
+                'fraud_score' => $fraudScore,
+            ]);
+
+            return response()->json([
+                'message' => 'Transaction blocked due to suspicious activity. Please contact support.',
+                'reason' => 'high_risk',
+                'risk_score' => $fraudScore['score'],
+                'risk_level' => $fraudScore['risk_level'],
+                'flags' => $fraudScore['flags'],
+            ], 403);
+        }
+
+        // MEDIUM RISK: Allow but flag for additional verification
+        $requiresVerification = $fraudScore['action'] === 'monitor';
+
+        if ($requiresVerification) {
+            Log::info('CheckoutController: Medium-risk transaction requires verification', [
+                'user_id' => $user->id,
+                'order_reference' => $reference,
+                'fraud_score' => $fraudScore,
+            ]);
+        }
+
         [$order, $total] = DB::transaction(function () use ($user, $validated, $reference) {
             // Re-verify prices/availability server-side - never trust amounts
             // the client sends, even if CartController::verify was already
@@ -192,7 +246,8 @@ class CheckoutController extends Controller
             'order_id' => $order->id,
             'reference' => $reference,
             'gateway' => $validated['gateway'],
-            'gateway_data' => $gatewayData, // authorization_url/access_code (Paystack) or link (Flutterwave)
+            'gateway_data' => $gatewayData,
+            'requires_additional_verification' => $requiresVerification,
         ]);
     }
 }

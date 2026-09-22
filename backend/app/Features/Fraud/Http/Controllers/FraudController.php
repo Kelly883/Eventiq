@@ -52,7 +52,7 @@ class FraudController extends Controller
     public function velocity(Request $request)
     {
         $validated = $request->validate([
-            'user_id' => ['required', 'integer'],
+            'user_id' => ['required', 'string'],
             'amount' => ['required', 'numeric', 'min:0'],
         ]);
 
@@ -68,11 +68,11 @@ class FraudController extends Controller
     {
         $validated = $request->validate([
             'ticket_tier_id' => ['required', 'integer'],
-            'qr_code' => ['required', 'string'],
+            'qr_code_data' => ['required', 'string'],
         ]);
 
         return response()->json(
-            $this->fraudDetection->detectDuplicateTickets($validated['ticket_tier_id'], $validated['qr_code'])
+            $this->fraudDetection->detectDuplicateTickets($validated['ticket_tier_id'], $validated['qr_code_data'])
         );
     }
 

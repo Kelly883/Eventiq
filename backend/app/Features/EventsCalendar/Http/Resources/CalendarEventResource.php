@@ -50,7 +50,7 @@ class CalendarEventResource extends JsonResource
     {
         $totalAvailable = (int) ($resource->total_available ?? 0);
         $totalSold = (int) ($resource->total_sold ?? 0);
-        $capacity = (int) ($resource->capacity ?? 0);
+        $lowStockThreshold = (int) ($resource->low_stock_threshold ?? 10);
 
         // No inventory rows configured at all -> treat as unavailable.
         if ($totalAvailable === 0 && $totalSold === 0) {
@@ -61,7 +61,7 @@ class CalendarEventResource extends JsonResource
             return 'sold_out';
         }
 
-        if ($totalAvailable <= 10) {
+        if ($totalAvailable <= $lowStockThreshold) {
             return 'low_stock';
         }
 

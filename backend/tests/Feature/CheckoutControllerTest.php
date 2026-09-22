@@ -107,7 +107,7 @@ class CheckoutControllerTest extends TestCase
             ]);
 
         $response->assertOk()
-            ->assertJsonStructure(['order_id', 'reference', 'gateway', 'gateway_data'])
+            ->assertJsonStructure(['order_id', 'reference', 'gateway', 'gateway_data', 'requires_additional_verification'])
             ->assertJsonPath('gateway', 'paystack');
 
         $this->assertDatabaseHas('orders', [
