@@ -49,6 +49,10 @@ class Organizer extends Model
         'flutterwave_business_reference',
         'flutterwave_connect_status',
         'flutterwave_connected_at',
+        'fraud_hold',
+        'fraud_hold_reason',
+        'fraud_hold_at',
+        'fraud_hold_by',
     ];
 
     protected $casts = [
@@ -66,6 +70,8 @@ class Organizer extends Model
         'deletedAt' => 'datetime',
         'paystack_connected_at' => 'datetime',
         'flutterwave_connected_at' => 'datetime',
+        'fraud_hold' => 'boolean',
+        'fraud_hold_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

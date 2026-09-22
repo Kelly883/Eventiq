@@ -470,7 +470,7 @@ class FraudDetectionService
                 'user_id' => $event['user_id'] ?? '00000000-0000-0000-0000-000000000000',
                 'ticket_id' => $event['ticket_id'] ?? null,
                 'event_id' => $event['event_id'] ?? null,
-                'event_type' => $eventType,
+                'fraud_type' => $eventType,
                 'risk_score' => $riskScore,
                 'risk_level' => $riskLevel,
                 'detection_method' => $detectionMethod,

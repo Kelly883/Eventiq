@@ -20,6 +20,18 @@ class Kernel extends ConsoleKernel
         $schedule->job(new \App\Jobs\ExpirePendingOrders())
             ->everyFiveMinutes()
             ->name('checkout:expire-pending-orders');
+
+        // Payment reconciliation - runs every 6 hours
+        $schedule->command('payments:reconcile --hours=6')
+            ->everySixHours()
+            ->name('payments:reconcile')
+            ->withoutOverlapping();
+
+        // Refund reconciliation - runs every 12 hours
+        $schedule->command('refunds:reconcile --hours=12')
+            ->twiceDaily()
+            ->name('refunds:reconcile')
+            ->withoutOverlapping();
     }
 
     /**

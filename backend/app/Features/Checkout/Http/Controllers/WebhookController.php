@@ -204,6 +204,33 @@ class WebhookController extends Controller
             }
             // If no amount returned, continue processing without amount verification
 
+            // Currency verification: gateway currency MUST match order currency
+            $gatewayCurrency = match ($gateway) {
+                'paystack' => strtoupper((string) data_get($verification, 'data.currency', '')),
+                'flutterwave' => strtoupper((string) data_get($verification, 'data.currency', '')),
+                default => '',
+            };
+
+            $orderCurrency = strtoupper((string) ($order->currency ?? 'NGN'));
+
+            if ($gatewayCurrency !== '' && $gatewayCurrency !== $orderCurrency) {
+                Log::error("WebhookController: currency mismatch for order {$order->id}. Expected: {$orderCurrency}, Gateway: {$gatewayCurrency}");
+                $this->webhookAlerts->alert('currency_mismatch', 'Gateway currency does not match order currency', [
+                    'gateway' => $gateway,
+                    'order_id' => $order->id,
+                    'reference' => $reference,
+                    'expected' => $orderCurrency,
+                    'gateway_currency' => $gatewayCurrency,
+                ]);
+
+                if ($isLatePayment) {
+                    $this->handleLateExpiredPayment($order, $gateway, $reference, $verification, null, 'Currency mismatch on late payment for expired order', $eventId);
+                    return response()->json(['received' => true, 'refunded' => true]);
+                }
+
+                return response()->json(['message' => 'Currency mismatch - payment not processed'], 422);
+            }
+
             if ($isLatePayment && ! $this->hasInventoryForOrder($order)) {
                 // Fast path: tickets are gone - refund without entering the
                 // fulfilment transaction. (Re-checked under lock below.)
