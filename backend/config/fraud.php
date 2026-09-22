@@ -11,12 +11,19 @@ return [
     ],
     'paystack' => [
         'secret_key' => env('PAYSTACK_SECRET_KEY'),
-        'webhook_secret' => env('PAYSTACK_WEBHOOK_SECRET'),
+        // Paystack signs webhooks with HMAC-SHA512 keyed on the account secret
+        // key (see PaystackService::verifyWebhookSignature). There is no
+        // separate webhook secret, so this mirrors PAYSTACK_SECRET_KEY.
+        'webhook_secret' => env('PAYSTACK_SECRET_KEY'),
     ],
     'flutterwave' => [
         'secret_key' => env('FLUTTERWAVE_SECRET_KEY'),
         'encryption_key' => env('FLUTTERWAVE_ENCRYPTION_KEY'),
-        'webhook_secret' => env('FLUTTERWAVE_WEBHOOK_SECRET'),
+        // Must match the verif-hash configured in the Flutterwave dashboard.
+        // Note: this is FLUTTERWAVE_WEBHOOK_SECRET_HASH (not
+        // FLUTTERWAVE_WEBHOOK_SECRET), the same variable read by
+        // config/payment.php and injected into FlutterwaveService.
+        'webhook_secret' => env('FLUTTERWAVE_WEBHOOK_SECRET_HASH'),
     ],
     'thresholds' => [
         'high_risk' => env('HIGH_RISK_THRESHOLD', 75),

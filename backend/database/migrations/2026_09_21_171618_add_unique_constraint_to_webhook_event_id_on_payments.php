@@ -7,32 +7,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    private function indexExists(string $table, string $indexName): bool
-    {
-        $driver = DB::getDriverName();
-        $name = strtolower($indexName);
-        try {
-            if ($driver === 'sqlite') {
-                $rows = DB::select("PRAGMA index_list(`{$table}`)");
-                foreach ($rows as $r) {
-                    if (strtolower($r->name) === $name) {
-                        return true;
-                    }
-                }
-            } else {
-                $rows = DB::select("SHOW INDEX FROM `{$table}`");
-                foreach ($rows as $r) {
-                    if (strtolower($r->Key_name) === $name) {
-                        return true;
-                    }
-                }
-            }
-        } catch (\Throwable) {
-            return false;
-        }
-        return false;
-    }
-
     public function up(): void
     {
         // Add webhook_event_id to payments if missing, then add unique
@@ -44,7 +18,7 @@ return new class extends Migration
             });
         }
 
-        if (Schema::hasTable('payments') && ! $this->indexExists('payments', 'payments_webhook_event_id_unique')) {
+        if (Schema::hasTable('payments') && ! Schema::hasIndex('payments', 'payments_webhook_event_id_unique')) {
             Schema::table('payments', function (Blueprint $table) {
                 $table->unique('webhook_event_id', 'payments_webhook_event_id_unique');
             });
@@ -59,7 +33,7 @@ return new class extends Migration
             });
         }
 
-        if (Schema::hasTable('orders') && ! $this->indexExists('orders', 'orders_idempotency_key_unique')) {
+        if (Schema::hasTable('orders') && ! Schema::hasIndex('orders', 'orders_idempotency_key_unique')) {
             Schema::table('orders', function (Blueprint $table) {
                 $table->unique('idempotency_key', 'orders_idempotency_key_unique');
             });
@@ -68,13 +42,13 @@ return new class extends Migration
 
     public function down(): void
     {
-        if ($this->indexExists('payments', 'payments_webhook_event_id_unique')) {
+        if (Schema::hasIndex('payments', 'payments_webhook_event_id_unique')) {
             Schema::table('payments', function (Blueprint $table) {
                 $table->dropUnique('payments_webhook_event_id_unique');
             });
         }
 
-        if ($this->indexExists('orders', 'orders_idempotency_key_unique')) {
+        if (Schema::hasIndex('orders', 'orders_idempotency_key_unique')) {
             Schema::table('orders', function (Blueprint $table) {
                 $table->dropUnique('orders_idempotency_key_unique');
             });

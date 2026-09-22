@@ -34,6 +34,8 @@ class OrganizerPayout extends Model
         'organizer_id',
         'gateway',
         'reference',
+        'gateway_transfer_id',
+        'payout_idempotency_key',
         'status',
         'amount',
         'fees',

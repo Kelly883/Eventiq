@@ -156,7 +156,7 @@ class PayoutTest extends TestCase
             'clean-payout-key',
         );
 
-        $this->assertEquals('processing', $payout->status);
+        $this->assertEquals('processing', $payout->status->value);
         $this->assertEquals('trx_success_123', $payout->gateway_transfer_id);
         $this->assertDatabaseHas('organizer_payouts', [
             'id' => $payout->id,
