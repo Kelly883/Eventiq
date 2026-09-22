@@ -156,6 +156,16 @@ Route::middleware('bearer')->group(function () {
     Route::middleware('role:admin')->prefix('admin/delivery')->group(function () {
         //
     });
+
+    // User dashboard routes
+    Route::prefix('users/me')->group(function () {
+        Route::get('/dashboard-overview', [\App\Features\Checkout\Http\Controllers\MyTicketsController::class, 'dashboardOverview'])->middleware('throttle:dashboard-metrics');
+        Route::get('/dashboard-preferences', [\App\Features\Checkout\Http\Controllers\MyTicketsController::class, 'dashboardPreferences'])->middleware('throttle:dashboard-preferences');
+        Route::patch('/dashboard-preferences', [\App\Features\Checkout\Http\Controllers\MyTicketsController::class, 'updateDashboardPreferences'])->middleware('throttle:dashboard-preferences');
+    });
+
+    // Ticket details route
+    Route::get('/tickets/{ticketId}/details', [\App\Features\Checkout\Http\Controllers\MyTicketsController::class, 'ticketDetails'])->middleware('throttle:dashboard-metrics');
 });
 
 // Admin routes
