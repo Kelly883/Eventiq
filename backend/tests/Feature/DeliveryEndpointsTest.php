@@ -47,7 +47,7 @@ class DeliveryEndpointsTest extends TestCase
         return $user;
     }
 
-    private function seedTicket(User $user): Ticket
+    private function seedTicket(User $user, string $ticketStatus = 'valid'): Ticket
     {
         $organizer = $user->organizer ?? $user->organizer()->create(['displayName' => $user->name ?? 'Test User']);
 
@@ -80,7 +80,7 @@ class DeliveryEndpointsTest extends TestCase
             'event_id' => $event->id,
             'ticket_tier_id' => $tier->id,
             'order_id' => $order->id,
-            'status' => 'valid',
+            'status' => $ticketStatus,
         ]);
     }
 
@@ -265,6 +265,65 @@ class DeliveryEndpointsTest extends TestCase
 
         $response->assertStatus(403)
             ->assertJsonPath('reason', 'ticket_blocked');
+    }
+
+    public function test_delivery_status_pagination(): void
+    {
+        $user = $this->makeUser();
+        $ticket = $this->seedTicket($user);
+
+        // Create 25 delivery events to test pagination
+        for ($i = 0; $i < 25; $i++) {
+            DeliveryEvent::factory()->create([
+                'ticket_id' => $ticket->id,
+                'user_id' => $user->id,
+                'event_id' => $ticket->event_id,
+                'channel' => 'email',
+                'status' => 'delivered',
+                'recipient' => 'test@example.com',
+            ]);
+        }
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson('/api/tickets/' . $ticket->id . '/delivery-status?page=2');
+
+        $response->assertOk();
+        $this->assertEquals(2, $response->json('data.pagination.current_page'));
+        $this->assertEquals(25, $response->json('data.pagination.total'));
+    }
+
+    public function test_resend_delivery_rejects_refunded_order(): void
+    {
+        $user = $this->makeUser();
+        $ticket = $this->seedTicket($user);
+
+        // Update order status to refunded
+        $order = $ticket->order;
+        $order->update(['status' => 'refunded']);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
+                'channel' => 'email',
+                'recipient' => 'test@example.com',
+            ]);
+
+        $response->assertStatus(403)
+            ->assertJsonPath('reason', 'order_refunded');
+    }
+
+    public function test_resend_delivery_rejects_invalid_channel(): void
+    {
+        $user = $this->makeUser();
+        $ticket = $this->seedTicket($user);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
+                'channel' => 'invalid',
+                'recipient' => 'test@example.com',
+            ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['channel']);
     }
 
     public function test_resend_delivery_requires_ownership(): void

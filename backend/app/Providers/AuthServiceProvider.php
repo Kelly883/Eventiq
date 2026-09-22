@@ -34,6 +34,7 @@ class AuthServiceProvider extends ServiceProvider
         ApiKey::class => ApiKeyPolicy::class,
         Webhook::class => WebhookPolicy::class,
         PricingWindow::class => PricingWindowPolicy::class,
+        \App\Features\Checkout\Models\Ticket::class => \App\Features\Tickets\Policies\TicketPolicy::class,
     ];
 
     public function register(): void
@@ -43,6 +44,15 @@ class AuthServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        // Illuminate\Foundation\Support\Providers\AuthServiceProvider normally
+        // calls registerPolicies() from its own register() method, but register()
+        // below overrides that hook with an empty body. Without this explicit
+        // call every entry in $policies is inert and Gate silently falls back to
+        // convention-based auto-discovery, which:
+        //   - denies access whenever the policy is not at the conventional path
+        //     (e.g. App\Features\Tickets\Policies\TicketPolicy), and
+        //   - silently ignores any deliberately stricter mapping in $policies,
+        //     which is a fail-open security hazard.
+        $this->registerPolicies();
     }
 }

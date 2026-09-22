@@ -4,23 +4,19 @@ namespace App\Features\Delivery\Controllers;
 
 use App\Features\Checkout\Models\Ticket;
 use App\Features\Delivery\Models\DeliveryEvent;
+use App\Features\Fraud\Models\FraudEvent;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 
 class DeliveryController extends Controller
 {
     /**
      * GET /api/tickets/:ticketId/delivery-status
-     *
-     * Returns the delivery status and full delivery history for a ticket.
-     * Only the ticket owner or admin can access.
      */
     public function status(Request $request, string $ticketId)
     {
-        $ticket = Ticket::with(['event', 'ticketTier'])->whereKey($ticketId)->first();
+        $ticket = Ticket::whereKey($ticketId)->first();
 
         if (!$ticket) {
             return response()->json(['message' => 'Ticket not found.'], 404);
@@ -33,7 +29,7 @@ class DeliveryController extends Controller
 
         $deliveryEvents = DeliveryEvent::where('ticket_id', $ticket->id)
             ->orderByDesc('created_at')
-            ->get();
+            ->paginate(20);
 
         return response()->json([
             'data' => [
@@ -53,24 +49,27 @@ class DeliveryController extends Controller
                     'next_retry_at' => $d->next_retry_at?->toDateTimeString(),
                     'created_at' => $d->created_at?->toDateTimeString(),
                 ]),
+                'pagination' => [
+                    'current_page' => $deliveryEvents->currentPage(),
+                    'last_page' => $deliveryEvents->lastPage(),
+                    'per_page' => $deliveryEvents->perPage(),
+                    'total' => $deliveryEvents->total(),
+                ],
             ],
         ]);
     }
 
     /**
      * POST /api/tickets/:ticketId/resend-delivery
-     *
-     * Resend a ticket delivery. Updates the latest delivery event status
-     * to 'pending' and sets next_retry_at.
      */
     public function resend(Request $request, string $ticketId)
     {
         $request->validate([
             'channel' => ['required', 'in:email,sms,dashboard'],
-            'recipient' => ['required', 'string'],
+            'recipient' => ['required', 'string', 'max:255'],
         ]);
 
-        $ticket = Ticket::with(['event', 'ticketTier', 'order'])->whereKey($ticketId)->first();
+        $ticket = Ticket::with(['order'])->whereKey($ticketId)->first();
 
         if (!$ticket) {
             return response()->json(['message' => 'Ticket not found.'], 404);
@@ -81,7 +80,6 @@ class DeliveryController extends Controller
             return response()->json(['message' => 'You do not have access to this ticket.'], 403);
         }
 
-        // Validate recipient email if channel is email
         $recipient = $request->input('recipient');
         $channel = $request->input('channel');
 
@@ -89,21 +87,40 @@ class DeliveryController extends Controller
             return response()->json(['message' => 'Invalid email format.'], 400);
         }
 
-        // Check fraud-blocked order
-        if (in_array($ticket->status, ['fraud_flagged', 'suspicious', 'void'], true)) {
+        // Check if ticket is void/blocked
+        if ($ticket->status === 'void') {
             return response()->json([
                 'message' => 'Cannot resend delivery for a blocked ticket. Contact support.',
                 'reason' => 'ticket_blocked',
             ], 403);
         }
 
-        // Find latest delivery event for this ticket and channel
+        // Check if ticket has associated fraud events
+        $hasFraudEvent = FraudEvent::where('ticket_id', $ticket->id)
+            ->whereIn('status', ['flagged', 'auto_blocked'])
+            ->exists();
+
+        if ($hasFraudEvent) {
+            return response()->json([
+                'message' => 'Cannot resend delivery for a ticket under fraud investigation. Contact support.',
+                'reason' => 'ticket_blocked',
+            ], 403);
+        }
+
+        // Check if order was refunded/chargeback
+        $order = $ticket->order;
+        if ($order && in_array($order->status, ['refunded', 'chargeback', 'partially_refunded'], true)) {
+            return response()->json([
+                'message' => 'Cannot resend delivery for a refunded order. Contact support.',
+                'reason' => 'order_refunded',
+            ], 403);
+        }
+
         $latestEvent = DeliveryEvent::where('ticket_id', $ticket->id)
             ->where('channel', $channel)
             ->orderByDesc('created_at')
             ->first();
 
-        // Check max attempts
         if ($latestEvent && $latestEvent->attempt_count >= $latestEvent->max_attempts) {
             return response()->json([
                 'message' => 'Maximum delivery attempts exceeded. Contact support.',
@@ -111,11 +128,9 @@ class DeliveryController extends Controller
             ], 400);
         }
 
-        // Create new delivery event or reset existing one
         $nextRetryAt = now()->addMinutes(5);
 
         if ($latestEvent && in_array($latestEvent->status, ['failed', 'pending'], true)) {
-            // Reset the existing event
             $latestEvent->update([
                 'status' => 'pending',
                 'recipient' => $recipient,
@@ -125,7 +140,6 @@ class DeliveryController extends Controller
                 'error_message' => null,
             ]);
         } else {
-            // Create a new delivery event
             $latestEvent = DeliveryEvent::create([
                 'ticket_id' => $ticket->id,
                 'user_id' => $ticket->user_id,
@@ -135,7 +149,7 @@ class DeliveryController extends Controller
                 'status' => 'pending',
                 'ticket_reference' => $ticket->ticket_id ?? $ticket->id,
                 'recipient' => $recipient,
-                'subject' => 'Your ticket - ' . ($ticket->ticketTier->name ?? 'event'),
+                'subject' => 'Your ticket delivery',
                 'body' => 'Ticket reference: ' . ($ticket->ticket_id ?? $ticket->id),
                 'attempt_count' => 1,
                 'max_attempts' => 3,
