@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Features\Delivery\Jobs\SendTicketDeliveryJob;
+use App\Features\Payment\Services\FlutterwaveService;
 use App\Features\Payment\Services\PaystackService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
@@ -202,10 +203,133 @@ class CheckoutWebhookTest extends TestCase
         $this->assertSame(30000.0, $refundedAmount);
     }
 
+    public function test_flutterwave_webhook_success_marks_order_paid_and_issues_tickets(): void
+    {
+        Queue::fake();
+
+        $reference = 'flw-ref-success-' . Str::lower(Str::random(8));
+        $transactionId = 'flw_trx_' . rand(10000, 99999);
+        $seed = $this->seedCheckoutGraph($reference, 2, 'flutterwave');
+
+        $flutterwave = Mockery::mock(FlutterwaveService::class);
+        $flutterwave->shouldReceive('verifyWebhookSignature')->once()->andReturn(true);
+        $flutterwave->shouldReceive('verifyTransaction')->once()->with($transactionId)->andReturn([
+            'status' => 'successful',
+            'id' => $transactionId,
+        ]);
+        $this->app->instance(FlutterwaveService::class, $flutterwave);
+
+        $response = $this->postJson('/api/webhooks/payment-provider', [
+            'event' => 'charge.completed',
+            'data' => [
+                'tx_ref' => $reference,
+                'id' => $transactionId,
+            ],
+        ], [
+            'verif-hash' => 'valid-hash',
+        ]);
+
+        $response->assertOk()->assertJson(['received' => true]);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $seed['order_id'],
+            'status' => 'completed',
+        ]);
+
+        $this->assertSame(2, DB::table('tickets')->where('order_id', $seed['order_id'])->count());
+        Queue::assertPushed(SendTicketDeliveryJob::class, 1);
+    }
+
+    public function test_paystack_webhook_for_expired_order_with_sold_out_inventory_refunds(): void
+    {
+        Queue::fake();
+
+        $reference = 'ps-ref-expired-' . Str::lower(Str::random(8));
+        $seed = $this->seedCheckoutGraph($reference, 1);
+
+        // Mark order as expired (simulating ExpirePendingOrders command)
+        DB::table('orders')->where('id', $seed['order_id'])->update(['status' => 'expired']);
+        // Exhaust inventory so the expired order cannot be fulfilled
+        DB::table('ticket_tiers')->where('id', $seed['ticket_tier_id'])->update(['sold_count' => 50]);
+
+        $paystack = Mockery::mock(PaystackService::class);
+        $paystack->shouldReceive('verifyWebhookSignature')->once()->andReturn(true);
+        $paystack->shouldReceive('verifyTransaction')->once()->with($reference)->andReturn([
+            'status' => 'success',
+            'id' => 'trx_expired_123',
+            'amount' => 1500000, // kobo = 15000.00 NGN
+        ]);
+        // Mock a successful refund (since inventory is sold out)
+        $paystack->shouldReceive('refund')->once()->andReturn([
+            'id' => 'refund_123',
+            'status' => 'success',
+        ]);
+        $this->app->instance(PaystackService::class, $paystack);
+
+        $response = $this->postJson('/api/webhooks/payment-provider', [
+            'event' => 'charge.success',
+            'data' => [
+                'reference' => $reference,
+            ],
+        ], [
+            'x-paystack-signature' => 'valid-signature',
+        ]);
+
+        $response->assertOk();
+
+        // Order should be refunded, not completed
+        $orderStatus = DB::table('orders')->where('id', $seed['order_id'])->value('status');
+        $this->assertEquals('refunded', $orderStatus);
+
+        // No tickets should be issued
+        $this->assertSame(0, DB::table('tickets')->where('order_id', $seed['order_id'])->count());
+    }
+
+    public function test_paystack_webhook_amount_mismatch_returns_422(): void
+    {
+        Queue::fake();
+
+        $reference = 'ps-ref-amount-' . Str::lower(Str::random(8));
+        $seed = $this->seedCheckoutGraph($reference, 1);
+
+        $paystack = Mockery::mock(PaystackService::class);
+        $paystack->shouldReceive('verifyWebhookSignature')->once()->andReturn(true);
+        $paystack->shouldReceive('verifyTransaction')->once()->with($reference)->andReturn([
+            'status' => 'success',
+            'id' => 'trx_amount_123',
+            'amount' => 9999900, // kobo = 99999.00 NGN — way more than 15000
+        ]);
+        $this->app->instance(PaystackService::class, $paystack);
+
+        $response = $this->postJson('/api/webhooks/payment-provider', [
+            'event' => 'charge.success',
+            'data' => [
+                'reference' => $reference,
+            ],
+        ], [
+            'x-paystack-signature' => 'valid-signature',
+        ]);
+
+        $response->assertStatus(422);
+
+        // Order should NOT be completed
+        $this->assertDatabaseHas('orders', [
+            'id' => $seed['order_id'],
+            'status' => 'pending',
+        ]);
+
+        // No tickets issued
+        $this->assertSame(0, DB::table('tickets')->where('order_id', $seed['order_id'])->count());
+    }
+
     /**
      * Creates a minimal valid checkout graph used by webhook tests.
+     *
+     * @param string $paymentIntentId Unique reference for the payment intent
+     * @param int $quantity Number of tickets to purchase
+     * @param string $gateway Payment gateway ('paystack' or 'flutterwave')
      */
-    private function seedCheckoutGraph(string $paymentIntentId, int $quantity): array
+    private function seedCheckoutGraph(string $paymentIntentId, int $quantity, string $gateway = 'paystack'): array
     {
         $now = now();
         $userId = (string) Str::uuid();
@@ -299,7 +423,7 @@ class CheckoutWebhookTest extends TestCase
             'amount' => $unitPrice * $quantity,
             'currency' => 'NGN',
             'status' => 'pending',
-            'gateway' => 'paystack',
+            'gateway' => $gateway,
             'created_at' => $now,
             'updated_at' => $now,
         ]);

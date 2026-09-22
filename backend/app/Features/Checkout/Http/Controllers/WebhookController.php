@@ -450,7 +450,8 @@ class WebhookController extends Controller
     private function extractEventId(Request $request, string $gateway): ?string
     {
         if ($gateway === 'paystack') {
-            return $request->input('data.event.id') 
+            return $request->input('data.id')
+                ?? $request->input('data.event.id')
                 ?? $request->header('x-paystack-event-id')
                 ?? null;
         }

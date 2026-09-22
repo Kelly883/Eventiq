@@ -13,4 +13,6 @@ enum PaymentStatus: string
     case PARTIALLY_REFUNDED = 'partially_refunded';
     case EXPIRED = 'expired';
     case REVERSED = 'reversed';
+    case REFUND_PENDING = 'refund_pending';
+    case REFUND_FAILED = 'refund_failed';
 }

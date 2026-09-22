@@ -228,16 +228,20 @@ class FraudEndpointsTest extends TestCase
         $order = Order::factory()->create(['user_id' => $user->id]);
         $qrCode = 'DUPLICATE_QR_' . rand(10000, 99999);
 
-        // Create two tickets with the same QR code for the same tier
+        // Create two VALID tickets with the same QR code for the same tier -
+        // void/purged tickets are intentionally excluded from the duplicate
+        // check (they cannot be used for entry), so pin the status here.
         \App\Features\Checkout\Models\Ticket::factory()->create([
             'order_id' => $order->id,
             'ticket_tier_id' => $tier->id,
             'qr_code_data' => $qrCode,
+            'status' => 'valid',
         ]);
         \App\Features\Checkout\Models\Ticket::factory()->create([
             'order_id' => Order::factory()->create(['user_id' => $user->id])->id,
             'ticket_tier_id' => $tier->id,
             'qr_code_data' => $qrCode,
+            'status' => 'valid',
         ]);
 
         $response = $this->actingAs($admin, 'sanctum')

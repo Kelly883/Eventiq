@@ -9,6 +9,12 @@ class FraudScorer
     /**
      * Score a transaction for fraud risk (0-100, higher = more risky).
      * Simple rules-based system for v1.
+     *
+     * SECURITY: This method receives $context from the caller. The caller
+     * (CheckoutController) is responsible for populating user_id, email,
+     * ip_address, and amount from trusted sources (authenticated user,
+     * server-side price computation, trusted proxy layer). This method
+     * does NOT read from $request directly to prevent input spoofing.
      */
     public function score(array $context): array
     {
@@ -33,6 +39,7 @@ class FraudScorer
         // Flag 3: Multiple orders in short time (> 3 in 1 hour)
         if (!empty($context['user_id'])) {
             $orderCount = \App\Features\Checkout\Models\Order::where('user_id', $context['user_id'])
+                ->whereNull('deleted_at')
                 ->where('created_at', '>', now()->subHour())
                 ->count();
             if ($orderCount > 3) {
@@ -44,6 +51,7 @@ class FraudScorer
         // Flag 4: Different IP from user history
         if (!empty($context['user_id']) && !empty($context['ip_address'])) {
             $lastOrder = \App\Features\Checkout\Models\Order::where('user_id', $context['user_id'])
+                ->whereNull('deleted_at')
                 ->orderBy('created_at', 'desc')
                 ->first();
             if ($lastOrder && $lastOrder->ip_address !== $context['ip_address']) {

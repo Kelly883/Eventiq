@@ -286,8 +286,8 @@ class FraudDetectionService
 
         $thresholds = config('fraud.thresholds');
 
-        $count1h = Order::where('user_id', $userId)->where('created_at', '>=', now()->subHour())->count();
-        $count24h = Order::where('user_id', $userId)->where('created_at', '>=', now()->subDay())->count();
+        $count1h = Order::where('user_id', $userId)->whereNull('deleted_at')->where('created_at', '>=', now()->subHour())->count();
+        $count24h = Order::where('user_id', $userId)->whereNull('deleted_at')->where('created_at', '>=', now()->subDay())->count();
 
         return [
             'exceeded' => $count1h > ($thresholds['velocity_limit_1h'] ?? 3) || $count24h > ($thresholds['velocity_limit_24h'] ?? 10),
@@ -310,6 +310,7 @@ class FraudDetectionService
 
         $matches = Ticket::where('ticket_tier_id', $ticketTierId)
             ->where('qr_code_data', $qrCode)
+            ->where('status', 'valid')
             ->count();
 
         return ['duplicate' => $matches > 1, 'matches' => $matches, 'checked' => true];
