@@ -217,6 +217,7 @@ class TicketPurgeTest extends TestCase
             $table->string('status')->default('draft');
             $table->string('currency', 3)->default('NGN');
             $table->unsignedInteger('version')->default(1);
+            $table->boolean('is_public')->default(true);
             $table->timestamps();
             $table->softDeletes();
         });

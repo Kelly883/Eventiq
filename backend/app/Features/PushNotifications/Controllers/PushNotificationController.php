@@ -20,7 +20,14 @@ class PushNotificationController extends Controller
             ['user_id' => request()->user()->id]
         );
 
-        return response()->json(new \App\Features\PushNotifications\Http\Resources\DeliveryPreferencesResource($preferences));
+        // ->json(new JsonResource(...)) serializes WITHOUT the `data`
+        // wrapper; the SPA api client reads response.data.data.* and the
+        // endpoint contract tests assert the wrapped shape, so force the
+        // standard resource envelope explicitly.
+        return response()->json(
+            \App\Features\PushNotifications\Http\Resources\DeliveryPreferencesResource::make($preferences)
+                ->response()->getData(true)
+        );
     }
 
     public function updatePreferences(Request $request)
@@ -39,7 +46,11 @@ class PushNotificationController extends Controller
 
         $preferences->update($validated);
 
-        return response()->json(new \App\Features\PushNotifications\Http\Resources\DeliveryPreferencesResource($preferences));
+        // Same envelope as preferences() - see comment there.
+        return response()->json(
+            \App\Features\PushNotifications\Http\Resources\DeliveryPreferencesResource::make($preferences)
+                ->response()->getData(true)
+        );
     }
 
     public function templates()

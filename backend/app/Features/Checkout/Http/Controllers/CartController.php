@@ -41,7 +41,14 @@ class CartController extends Controller
             }
 
             $inventory = TicketInventory::where('ticket_tier_id', $tier->id)->first();
-            $remaining = $inventory?->remaining ?? $tier->capacity;
+
+            // Real-time availability mirrors CheckoutController: prefer the
+            // tier's own quantity/sold_count (DB-level source of truth),
+            // falling back to TicketInventory.remaining, then capacity.
+            $availableCount = $tier->quantity !== null
+                ? (int) $tier->quantity - (int) $tier->sold_count
+                : null;
+            $remaining = $availableCount ?? $inventory?->remaining ?? $tier->quantity;
 
             if ($remaining < $item['quantity']) {
                 $results[] = [
