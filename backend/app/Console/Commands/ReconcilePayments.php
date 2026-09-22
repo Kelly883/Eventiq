@@ -22,8 +22,7 @@ class ReconcilePayments extends Command
     protected $signature = 'payments:reconcile
                             {--hours=24 : Look back this many hours}
                             {--gateway= : Specific gateway (paystack|flutterwave), default both}
-                            {--dry-run : Report only, make no changes}
-                            {--verbose : Show detailed output}';
+                            {--dry-run : Report only, make no changes}';
 
     protected $description = 'Reconcile local payment/order state with payment gateways';
 
