@@ -50,6 +50,22 @@ return [
         | rows are kept, which is a different concern (compliance
         | retention vs disk space).
         */
+        /*
+        | Dedicated channel for payment-webhook security events (signature
+        | failures, verification errors, amount mismatches, refund anomalies).
+        | WebhookAlertService writes here so these events (a) survive in their
+        | own rotated file for incident forensics and (b) can be tailed/shipped
+        | to an external monitor (e.g. a log-based alert on
+        | "webhooks-alert" ERROR entries) without touching the general log.
+        */
+        'webhooks' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/webhooks.log'),
+            'level' => 'info',
+            'days' => (int) env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
         'audit' => [
             'driver' => 'daily',
             'path' => storage_path('logs/audit.log'),

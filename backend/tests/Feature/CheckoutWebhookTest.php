@@ -109,6 +109,99 @@ class CheckoutWebhookTest extends TestCase
         Queue::assertNothingPushed();
     }
 
+    public function test_duplicate_webhook_event_is_only_verified_and_processed_once(): void
+    {
+        Queue::fake();
+
+        $reference = 'ps-ref-dedup-' . Str::lower(Str::random(8));
+        $seed = $this->seedCheckoutGraph($reference, 1);
+
+        $paystack = Mockery::mock(PaystackService::class);
+        $paystack->shouldReceive('verifyWebhookSignature')->twice()->andReturn(true);
+        // Only the first delivery should hit the verify API - the second one
+        // must be dropped by the event-id dedup check.
+        $paystack->shouldReceive('verifyTransaction')->once()->with($reference)->andReturn([
+            'status' => 'abandoned',
+            'id' => 'trx_dedup_1',
+        ]);
+        $this->app->instance(PaystackService::class, $paystack);
+
+        $payload = [
+            'event' => 'charge.abandoned',
+            'data' => [
+                'reference' => $reference,
+                'event' => ['id' => 'evt-dedup-777'],
+            ],
+        ];
+
+        $first = $this->postJson('/api/webhooks/payment-provider', $payload, [
+            'x-paystack-signature' => 'valid-signature',
+        ]);
+        $first->assertOk()->assertJson(['received' => true]);
+
+        $second = $this->postJson('/api/webhooks/payment-provider', $payload, [
+            'x-paystack-signature' => 'valid-signature',
+        ]);
+        $second->assertOk()->assertJson(['received' => true]);
+
+        // First delivery persisted the event id on the payment row.
+        $this->assertSame(
+            'evt-dedup-777',
+            DB::table('payments')->where('order_id', $seed['order_id'])->value('webhook_event_id')
+        );
+
+        // State from the first delivery must not be re-applied.
+        $this->assertDatabaseHas('orders', ['id' => $seed['order_id'], 'status' => 'abandoned']);
+    }
+
+    public function test_refund_event_on_completed_order_voids_tickets_and_marks_refunded(): void
+    {
+        Queue::fake();
+
+        $reference = 'ps-ref-refund-' . Str::lower(Str::random(8));
+        $seed = $this->seedCheckoutGraph($reference, 2);
+
+        // First: a successful charge that completes the order and issues tickets.
+        $paystack = Mockery::mock(PaystackService::class);
+        $paystack->shouldReceive('verifyWebhookSignature')->twice()->andReturn(true);
+        $paystack->shouldReceive('verifyTransaction')->once()->with($reference)->andReturn([
+            'status' => 'success',
+            'id' => 'trx_refunded_1',
+        ]);
+        $this->app->instance(PaystackService::class, $paystack);
+
+        $this->postJson('/api/webhooks/payment-provider', [
+            'event' => 'charge.success',
+            'data' => ['reference' => $reference],
+        ], ['x-paystack-signature' => 'valid-signature'])->assertOk();
+
+        $this->assertDatabaseHas('orders', ['id' => $seed['order_id'], 'status' => 'completed']);
+
+        // Then: a refund event for that same (completed) order. It must NOT
+        // be swallowed by the completed-order early return, and must not
+        // trigger another gateway verification call.
+        $response = $this->postJson('/api/webhooks/payment-provider', [
+            'event' => 'charge.refund',
+            'data' => [
+                'reference' => $reference,
+                'amount' => 3000000, // kobo = 30000.00 NGN = full amount
+                'reason' => 'customer_request',
+            ],
+        ], ['x-paystack-signature' => 'valid-signature']);
+
+        $response->assertOk()->assertJson(['received' => true]);
+
+        $this->assertDatabaseHas('orders', ['id' => $seed['order_id'], 'status' => 'refunded']);
+        $this->assertDatabaseHas('payments', [
+            'order_id' => $seed['order_id'],
+            'status' => 'refunded',
+            'is_fully_refunded' => 1,
+        ]);
+
+        $refundedAmount = (float) DB::table('payments')->where('order_id', $seed['order_id'])->value('refunded_amount');
+        $this->assertSame(30000.0, $refundedAmount);
+    }
+
     /**
      * Creates a minimal valid checkout graph used by webhook tests.
      */
@@ -336,9 +429,12 @@ class CheckoutWebhookTest extends TestCase
             $table->string('payment_gateway')->nullable();
             $table->string('payment_intent_id')->nullable();
             $table->string('gateway_transaction_id')->nullable();
+            $table->string('idempotency_key')->nullable();
+            $table->text('failure_reason')->nullable();
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
+            $table->unique('idempotency_key', 'orders_idempotency_key_unique');
         });
 
         Schema::create('order_items', function (Blueprint $table) {
@@ -362,9 +458,18 @@ class CheckoutWebhookTest extends TestCase
             $table->string('status')->default('pending');
             $table->string('gateway');
             $table->json('gateway_response')->nullable();
+            // Mirror of the production schema additions: webhook dedup key
+            // (unique) + refund bookkeeping written by the webhook controller.
+            $table->string('webhook_event_id')->nullable();
+            $table->decimal('refunded_amount', 10, 2)->default(0);
+            $table->timestamp('refunded_at')->nullable();
+            $table->text('refund_reason')->nullable();
+            $table->boolean('is_fully_refunded')->default(false);
+            $table->text('last_error')->nullable();
             $table->timestamps();
 
             $table->foreign('order_id')->references('id')->on('orders')->cascadeOnDelete();
+            $table->unique('webhook_event_id', 'payments_webhook_event_id_unique');
         });
 
         Schema::create('tickets', function (Blueprint $table) {
@@ -388,6 +493,7 @@ class CheckoutWebhookTest extends TestCase
             $table->integer('qr_code_scanned_count')->default(0);
             $table->timestamp('last_qr_scan_at')->nullable();
             $table->timestamp('first_scanned_at')->nullable();
+            $table->string('refund_status')->nullable();
             $table->timestamps();
 
             $table->foreign('order_id')->references('id')->on('orders')->nullOnDelete();
