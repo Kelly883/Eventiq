@@ -61,3 +61,6 @@ event-ticketing-prd-export.md
 # Playwright CLI runtime artifacts
 **/.playwright-cli/
 .claude/
+
+# Agent scratch files
+.hermes-tmp.*

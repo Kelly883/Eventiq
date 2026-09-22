@@ -139,6 +139,181 @@ services:
       - key: AWS_URL
         sync: false
 
+  # Background worker: executes queued jobs.
+  # REQUIRED. Ticket delivery emails (SendTicketDeliveryJob), payment
+  # confirmations, fraud alerts and push notifications are all dispatched onto
+  # the queue (QUEUE_CONNECTION=redis). Without a running worker those jobs are
+  # never executed - buyers pay, tickets are created, and no ticket email is
+  # ever sent.
+  - type: worker
+    name: eventiq-worker
+    runtime: php
+    buildCommand: |
+      cd backend
+      composer install --no-interaction --prefer-dist --no-progress
+      php artisan config:cache
+    # --max-time recycles the process hourly so long-lived memory leaks cannot
+    # accumulate; Render restarts it automatically.
+    startCommand: cd backend && php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        fromService:
+          name: eventiq-api
+          type: web
+          envVarKey: APP_KEY
+      - key: APP_URL
+        value: https://eventiq-qvh2.onrender.com
+      - key: FRONTEND_URL
+        fromService:
+          name: eventiq-frontend
+          type: static
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: SESSION_DRIVER
+        value: cookie
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: eventiq-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: eventiq-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: eventiq-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: eventiq-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: eventiq-db
+          property: password
+      - key: CACHE_STORE
+        value: redis
+      - key: REDIS_URL
+        fromService:
+          name: eventiq-redis
+          type: redis
+          property: connectionString
+      - key: REDIS_CACHE_DB
+        value: 1
+      - key: QUEUE_CONNECTION
+        value: redis
+      # Mail: MAIL_MAILER defaults to "log", which only writes messages to the
+      # log file and delivers nothing. Set a real transport (smtp/ ses/ etc.)
+      # in the dashboard for this worker service or ticket emails stay silent.
+      - key: MAIL_MAILER
+        sync: false
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: FLUTTERWAVE_PUBLIC_KEY
+        sync: false
+      - key: FLUTTERWAVE_SECRET_KEY
+        sync: false
+      - key: FLUTTERWAVE_ENCRYPTION_KEY
+        sync: false
+      - key: FLUTTERWAVE_WEBHOOK_SECRET_HASH
+        sync: false
+
+  # Scheduler: drives everything registered in routes/console.php - pending
+  # order expiry (frees reserved inventory), QR code expiry, log/token pruning,
+  # and payment/refund reconciliation. Render cron only supports fixed
+  # schedules, so fire schedule:run every minute and let Laravel decide what is
+  # actually due.
+  - type: cron
+    name: eventiq-scheduler
+    runtime: php
+    schedule: "* * * * *"
+    buildCommand: |
+      cd backend
+      composer install --no-interaction --prefer-dist --no-progress
+      php artisan config:cache
+    startCommand: cd backend && php artisan schedule:run
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        fromService:
+          name: eventiq-api
+          type: web
+          envVarKey: APP_KEY
+      - key: APP_URL
+        value: https://eventiq-qvh2.onrender.com
+      - key: FRONTEND_URL
+        fromService:
+          name: eventiq-frontend
+          type: static
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: SESSION_DRIVER
+        value: cookie
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: eventiq-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: eventiq-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: eventiq-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: eventiq-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: eventiq-db
+          property: password
+      - key: CACHE_STORE
+        value: redis
+      - key: REDIS_URL
+        fromService:
+          name: eventiq-redis
+          type: redis
+          property: connectionString
+      - key: REDIS_CACHE_DB
+        value: 1
+      - key: QUEUE_CONNECTION
+        value: redis
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: FLUTTERWAVE_PUBLIC_KEY
+        sync: false
+      - key: FLUTTERWAVE_SECRET_KEY
+        sync: false
+      - key: FLUTTERWAVE_ENCRYPTION_KEY
+        sync: false
+      - key: FLUTTERWAVE_WEBHOOK_SECRET_HASH
+        sync: false
+
   - type: redis
     name: eventiq-redis
     plan: free
