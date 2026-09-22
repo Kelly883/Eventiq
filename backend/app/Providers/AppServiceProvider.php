@@ -176,6 +176,14 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Delivery endpoints — status 20/min, resend 10/min per user
+        RateLimiter::for('delivery-status', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('delivery-resend', function ($request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
+
         Event::observe(EventObserver::class);
         Ticket::observe(TicketObserver::class);
         PricingWindow::observe(PricingWindowObserver::class);

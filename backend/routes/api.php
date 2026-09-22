@@ -147,10 +147,11 @@ Route::middleware('throttle:discovery')->group(function () {
 // Ticket Delivery Endpoints
 Route::middleware('bearer')->group(function () {
     // User delivery routes
-    Route::prefix('delivery')->group(function () {
-        //
+    Route::prefix('tickets')->group(function () {
+        Route::get('/{ticketId}/delivery-status', [\App\Features\Delivery\Controllers\DeliveryController::class, 'status'])->middleware('throttle:delivery-status');
+        Route::post('/{ticketId}/resend-delivery', [\App\Features\Delivery\Controllers\DeliveryController::class, 'resend'])->middleware('throttle:delivery-resend');
     });
-    
+
     // Admin delivery routes
     Route::middleware('role:admin')->prefix('admin/delivery')->group(function () {
         //

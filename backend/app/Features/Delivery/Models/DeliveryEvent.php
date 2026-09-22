@@ -9,11 +9,11 @@ use App\Models\User;
 use App\Features\Fraud\Models\FraudEvent;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+
 
 class DeliveryEvent extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     /**
      * Threshold in bytes above which payload is auto-offloaded to delivery_event_data.
@@ -55,6 +55,7 @@ class DeliveryEvent extends Model
         'max_attempts',
         'last_attempt_at',
         'delivered_at',
+        'next_retry_at',
         'opened_at',
         'clicked_at',
         'archived_at',
@@ -77,7 +78,7 @@ class DeliveryEvent extends Model
         'archived_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'deleted_at' => 'datetime',
+        
         'recipient' => 'encrypted',
     ];
 
@@ -243,5 +244,13 @@ class DeliveryEvent extends Model
     public function isBlocked(): bool
     {
         return $this->status === 'blocked' || $this->status === 'void';
+    }
+
+    /**
+     * Create a new factory instance for the model.
+     */
+    public static function newFactory()
+    {
+        return \Database\Factories\DeliveryEventFactory::new();
     }
 }
