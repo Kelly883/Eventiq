@@ -7,6 +7,7 @@ use App\Features\Delivery\Models\DeliveryEvent;
 use App\Features\Fraud\Models\FraudEvent;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class DeliveryController extends Controller
@@ -69,7 +70,7 @@ class DeliveryController extends Controller
             'recipient' => ['required', 'string', 'max:255'],
         ]);
 
-        $ticket = Ticket::with(['order'])->whereKey($ticketId)->first();
+        $ticket = Ticket::with(['order', 'user'])->whereKey($ticketId)->first();
 
         if (!$ticket) {
             return response()->json(['message' => 'Ticket not found.'], 404);
@@ -85,6 +86,12 @@ class DeliveryController extends Controller
 
         if ($channel === 'email' && !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
             return response()->json(['message' => 'Invalid email format.'], 400);
+        }
+
+        // Check if recipient differs from ticket owner's email
+        $recipientWarning = null;
+        if ($channel === 'email' && $recipient !== $ticket->user?->email) {
+            $recipientWarning = 'Recipient differs from ticket owner email.';
         }
 
         // Check if ticket is void/blocked
@@ -119,6 +126,7 @@ class DeliveryController extends Controller
         $latestEvent = DeliveryEvent::where('ticket_id', $ticket->id)
             ->where('channel', $channel)
             ->orderByDesc('created_at')
+            ->lockForUpdate()
             ->first();
 
         if ($latestEvent && $latestEvent->attempt_count >= $latestEvent->max_attempts) {
@@ -130,39 +138,42 @@ class DeliveryController extends Controller
 
         $nextRetryAt = now()->addMinutes(5);
 
-        if ($latestEvent && in_array($latestEvent->status, ['failed', 'pending'], true)) {
-            $latestEvent->update([
-                'status' => 'pending',
-                'recipient' => $recipient,
-                'next_retry_at' => $nextRetryAt,
-                'last_attempt_at' => now(),
-                'attempt_count' => $latestEvent->attempt_count + 1,
-                'error_message' => null,
-            ]);
-        } else {
-            $latestEvent = DeliveryEvent::create([
-                'ticket_id' => $ticket->id,
-                'user_id' => $ticket->user_id,
-                'event_id' => $ticket->event_id,
-                'order_id' => $ticket->order_id,
-                'channel' => $channel,
-                'status' => 'pending',
-                'ticket_reference' => $ticket->ticket_id ?? $ticket->id,
-                'recipient' => $recipient,
-                'subject' => 'Your ticket delivery',
-                'body' => 'Ticket reference: ' . ($ticket->ticket_id ?? $ticket->id),
-                'attempt_count' => 1,
-                'max_attempts' => 3,
-                'last_attempt_at' => now(),
-                'next_retry_at' => $nextRetryAt,
-            ]);
-        }
+        DB::transaction(function () use ($latestEvent, $ticket, $recipient, $channel, $nextRetryAt) {
+            if ($latestEvent && in_array($latestEvent->status, ['failed', 'pending'], true)) {
+                $latestEvent->update([
+                    'status' => 'pending',
+                    'recipient' => $recipient,
+                    'next_retry_at' => $nextRetryAt,
+                    'last_attempt_at' => now(),
+                    'attempt_count' => $latestEvent->attempt_count + 1,
+                    'error_message' => null,
+                ]);
+            } else {
+                $latestEvent = DeliveryEvent::create([
+                    'ticket_id' => $ticket->id,
+                    'user_id' => $ticket->user_id,
+                    'event_id' => $ticket->event_id,
+                    'order_id' => $ticket->order_id,
+                    'channel' => $channel,
+                    'status' => 'pending',
+                    'ticket_reference' => $ticket->ticket_id ?? $ticket->id,
+                    'recipient' => $recipient,
+                    'subject' => 'Your ticket delivery',
+                    'body' => 'Ticket reference: ' . ($ticket->ticket_id ?? $ticket->id),
+                    'attempt_count' => 1,
+                    'max_attempts' => 3,
+                    'last_attempt_at' => now(),
+                    'next_retry_at' => $nextRetryAt,
+                ]);
+            }
+        });
 
         Log::info('DeliveryController: Resend delivery initiated', [
             'ticket_id' => $ticket->id,
             'channel' => $channel,
             'recipient' => $recipient,
             'next_retry_at' => $nextRetryAt->toDateTimeString(),
+            'recipient_warning' => $recipientWarning,
         ]);
 
         return response()->json([
@@ -171,6 +182,7 @@ class DeliveryController extends Controller
                 'delivery_event_id' => $latestEvent->id,
                 'status' => 'pending',
                 'next_retry_at' => $nextRetryAt->toDateTimeString(),
+                'recipient_warning' => $recipientWarning,
             ],
         ]);
     }
