@@ -7,12 +7,10 @@ use App\Features\Delivery\Models\DeliveryEvent;
 use App\Features\Dashboard\Models\UserDashboardPreference;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MyTicketsController extends Controller
 {
-    /**
-     * GET /api/my-tickets
-     */
     public function index(Request $request)
     {
         $validated = $request->validate([
@@ -71,9 +69,6 @@ class MyTicketsController extends Controller
         ]);
     }
 
-    /**
-     * GET /api/users/me/dashboard-overview
-     */
     public function dashboardOverview(Request $request)
     {
         $user = $request->user();
@@ -123,38 +118,21 @@ class MyTicketsController extends Controller
         ]);
     }
 
-    /**
-     * GET /api/users/me/dashboard-preferences
-     */
     public function dashboardPreferences(Request $request)
     {
-        try {
-            $prefs = UserDashboardPreference::firstOrCreateForUser($request->user());
-            return response()->json([
-                'data' => [
-                    'default_ticket_filter' => $prefs->default_ticket_filter,
-                    'default_date_range' => $prefs->default_date_range,
-                    'show_recommendations' => (bool) $prefs->show_recommendations,
-                    'show_activity_feed' => (bool) $prefs->show_activity_feed,
-                    'auto_refresh_enabled' => (bool) $prefs->auto_refresh_enabled,
-                ],
-            ]);
-        } catch (\Throwable) {
-            return response()->json([
-                'data' => [
-                    'default_ticket_filter' => 'all',
-                    'default_date_range' => '30days',
-                    'show_recommendations' => true,
-                    'show_activity_feed' => true,
-                    'auto_refresh_enabled' => true,
-                ],
-            ]);
-        }
+        $prefs = UserDashboardPreference::firstOrCreateForUser($request->user());
+
+        return response()->json([
+            'data' => [
+                'default_ticket_filter' => $prefs->default_ticket_filter,
+                'default_date_range' => $prefs->default_date_range,
+                'show_recommendations' => (bool) $prefs->show_recommendations,
+                'show_activity_feed' => (bool) $prefs->show_activity_feed,
+                'auto_refresh_enabled' => (bool) $prefs->auto_refresh_enabled,
+            ],
+        ]);
     }
 
-    /**
-     * PATCH /api/users/me/dashboard-preferences
-     */
     public function updateDashboardPreferences(Request $request)
     {
         $validated = $request->validate([
@@ -165,8 +143,10 @@ class MyTicketsController extends Controller
             'auto_refresh_enabled' => ['nullable', 'boolean'],
         ]);
 
+        $user = $request->user();
+
         $prefs = UserDashboardPreference::firstOrCreate(
-            ['user_id' => $request->user()->id],
+            ['user_id' => $user->id],
             [
                 'default_ticket_filter' => 'all',
                 'default_date_range' => '30days',
@@ -176,25 +156,17 @@ class MyTicketsController extends Controller
             ]
         );
 
-        $updateData = [];
-        if (array_key_exists('default_ticket_filter', $validated)) {
-            $updateData['default_ticket_filter'] = $validated['default_ticket_filter'];
-        }
-        if (array_key_exists('default_date_range', $validated)) {
-            $updateData['default_date_range'] = $validated['default_date_range'];
-        }
-        if (array_key_exists('show_recommendations', $validated)) {
-            $updateData['show_recommendations'] = (int) $validated['show_recommendations'];
-        }
-        if (array_key_exists('show_activity_feed', $validated)) {
-            $updateData['show_activity_feed'] = (int) $validated['show_activity_feed'];
-        }
-        if (array_key_exists('auto_refresh_enabled', $validated)) {
-            $updateData['auto_refresh_enabled'] = (int) $validated['auto_refresh_enabled'];
-        }
+        $updateData = array_filter([
+            'default_ticket_filter' => $validated['default_ticket_filter'] ?? null,
+            'default_date_range' => $validated['default_date_range'] ?? null,
+            'show_recommendations' => isset($validated['show_recommendations']) ? (int) $validated['show_recommendations'] : null,
+            'show_activity_feed' => isset($validated['show_activity_feed']) ? (int) $validated['show_activity_feed'] : null,
+            'auto_refresh_enabled' => isset($validated['auto_refresh_enabled']) ? (int) $validated['auto_refresh_enabled'] : null,
+        ], fn($v) => $v !== null);
 
         if (!empty($updateData)) {
             $prefs->update($updateData);
+            $prefs->refresh();
         }
 
         return response()->json([
@@ -208,9 +180,6 @@ class MyTicketsController extends Controller
         ]);
     }
 
-    /**
-     * GET /api/tickets/:ticketId/details
-     */
     public function ticketDetails(Request $request, string $ticketId)
     {
         $ticket = Ticket::with(['event', 'ticketTier'])
