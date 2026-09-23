@@ -145,29 +145,7 @@ class MyTicketsController extends Controller
 
         $user = $request->user();
 
-        $prefs = UserDashboardPreference::firstOrCreate(
-            ['user_id' => $user->id],
-            [
-                'default_ticket_filter' => 'all',
-                'default_date_range' => '30days',
-                'show_recommendations' => 1,
-                'show_activity_feed' => 1,
-                'auto_refresh_enabled' => 1,
-            ]
-        );
-
-        $updateData = array_filter([
-            'default_ticket_filter' => $validated['default_ticket_filter'] ?? null,
-            'default_date_range' => $validated['default_date_range'] ?? null,
-            'show_recommendations' => isset($validated['show_recommendations']) ? (int) $validated['show_recommendations'] : null,
-            'show_activity_feed' => isset($validated['show_activity_feed']) ? (int) $validated['show_activity_feed'] : null,
-            'auto_refresh_enabled' => isset($validated['auto_refresh_enabled']) ? (int) $validated['auto_refresh_enabled'] : null,
-        ], fn($v) => $v !== null);
-
-        if (!empty($updateData)) {
-            $prefs->update($updateData);
-            $prefs->refresh();
-        }
+        $prefs = UserDashboardPreference::updatePreferences($user, $validated);
 
         return response()->json([
             'data' => [

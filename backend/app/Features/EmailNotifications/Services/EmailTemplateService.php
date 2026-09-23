@@ -2,8 +2,10 @@
 
 namespace App\Features\EmailNotifications\Services;
 
+use App\Features\EmailNotifications\Mails\TestEmailMailable;
 use App\Features\EmailNotifications\Models\EmailTemplate;
 use App\Services\MjmlRenderer;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class EmailTemplateService
@@ -13,55 +15,76 @@ class EmailTemplateService
     }
 
     /**
-     * Creates or updates a template. If $mjmlSource is given and MJML
-     * rendering is enabled, compiles it to HTML and stores both; otherwise
-     * treats $bodyOrMjml as raw HTML directly.
+     * Creates or updates a template. When mjml_body is present and MJML
+     * rendering is enabled, compiles it to html_body via the MJML library.
+     * If MJML is disabled or rendering fails, the supplied html_body (or the
+     * existing compiled body) is retained and any compile errors are returned
+     * so the controller can surface them to the admin UI.
+     *
+     * @param  array  $data
+     * @param  EmailTemplate|null  $template
+     * @return array{template: EmailTemplate, warnings: array<int,string>, errors: array<int,string>}
      */
-    public function save(array $data, ?EmailTemplate $template = null): EmailTemplate
+    public function save(array $data, ?EmailTemplate $template = null): array
     {
-        $mjmlSource = $data['mjml_source'] ?? null;
-        $body = $data['body'] ?? '';
+        $mjml = $data['mjml_body'] ?? null;
+        $html = $data['html_body'] ?? null;
 
-        if ($mjmlSource && $this->mjmlRenderer->isEnabled()) {
-            $result = $this->mjmlRenderer->render($mjmlSource);
+        $errors = [];
+        $warnings = [];
 
-            if ($result['html']) {
-                $body = $result['html'];
+        if ($mjml !== null && $mjml !== '') {
+            if ($this->mjmlRenderer->isEnabled()) {
+                $result = $this->mjmlRenderer->render($mjml);
+
+                if (! empty($result['html'])) {
+                    $html = $result['html'];
+                } elseif (! empty($result['errors'])) {
+                    $errors = $result['errors'];
+                    // Keep whatever html was supplied / already stored rather
+                    // than overwriting a working template with nothing.
+                }
+            } else {
+                $warnings[] = 'MJML rendering is disabled (MJML_ENABLED=false). mjml_body was stored without compilation.';
             }
-            // If rendering failed, $result['errors'] is available to surface
-            // to the admin UI - falls back to keeping whatever $body was
-            // passed in (e.g. a previous successful compile) rather than
-            // overwriting a working template with nothing.
         }
 
         $attributes = [
             'name' => $data['name'],
+            'type' => $data['type'],
             'subject' => $data['subject'],
-            'body' => $body,
-            'mjml_source' => $mjmlSource,
+            'html_body' => $html ?? $template?->html_body ?? '',
+            'mjml_body' => $mjml,
+            'variables' => $data['variables'] ?? [],
+            'is_active' => $data['is_active'] ?? ($template ? $template->is_active : true),
         ];
 
-        return $template
+        $template = $template
             ? tap($template)->update($attributes)
             : EmailTemplate::create($attributes);
+
+        return [
+            'template' => $template,
+            'warnings' => $warnings,
+            'errors' => $errors,
+        ];
     }
 
     /**
      * Sends a test email synchronously (not queued) for immediate admin
-     * feedback, per Step 45's requirement.
+     * feedback. Returns false if the mail could not be sent.
      */
     public function sendTest(EmailTemplate $template, string $toEmail): bool
     {
         try {
-            Mail::html($template->body, function ($message) use ($template, $toEmail) {
-                $message->to($toEmail)->subject('[TEST] ' . $template->subject);
-            });
+            Mail::to($toEmail)->send(new TestEmailMailable($template->html_body, $template->subject));
 
             return true;
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('EmailTemplateService::sendTest failed: ' . $e->getMessage());
+            Log::error('EmailTemplateService::sendTest failed: ' . $e->getMessage());
 
             return false;
         }
     }
 }
+

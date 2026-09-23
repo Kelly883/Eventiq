@@ -1,10 +1,11 @@
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="utf-8">
     <title>Test Email</title>
 </head>
 <body>
-    <h1>Test Email</h1>
+{!! $html ?? '' !!}
 </body>
 </html>
