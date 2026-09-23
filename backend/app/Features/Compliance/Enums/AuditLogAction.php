@@ -29,8 +29,8 @@ enum AuditLogAction: string
     case CHECK_IN = 'check_in';
     case PRICING_WINDOW_CREATED = 'pricing_window.created';
     case PRICING_WINDOW_UPDATED = 'pricing_window.updated';
-    case PRICING_WINDOW_DELETED = 'pricing_window.deleted';
-        case PRICING_WINDOW_RESTORED = 'pricing_window.restored';
+        case PRICING_WINDOW_DELETED = 'pricing_window.deleted';
+    case PRICING_WINDOW_RESTORED = 'pricing_window.restored';
     case TICKET_TIER_CREATED = 'ticket_tier.created';
     case TICKET_TIER_UPDATED = 'ticket_tier.updated';
     case TICKET_TIER_DELETED = 'ticket_tier.deleted';
