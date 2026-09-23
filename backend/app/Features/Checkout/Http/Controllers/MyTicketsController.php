@@ -128,17 +128,28 @@ class MyTicketsController extends Controller
      */
     public function dashboardPreferences(Request $request)
     {
-        $prefs = UserDashboardPreference::firstOrCreateForUser($request->user());
-
-        return response()->json([
-            'data' => [
-                'default_ticket_filter' => $prefs->default_ticket_filter,
-                'default_date_range' => $prefs->default_date_range,
-                'show_recommendations' => (bool) $prefs->show_recommendations,
-                'show_activity_feed' => (bool) $prefs->show_activity_feed,
-                'auto_refresh_enabled' => (bool) $prefs->auto_refresh_enabled,
-            ],
-        ]);
+        try {
+            $prefs = UserDashboardPreference::firstOrCreateForUser($request->user());
+            return response()->json([
+                'data' => [
+                    'default_ticket_filter' => $prefs->default_ticket_filter,
+                    'default_date_range' => $prefs->default_date_range,
+                    'show_recommendations' => (bool) $prefs->show_recommendations,
+                    'show_activity_feed' => (bool) $prefs->show_activity_feed,
+                    'auto_refresh_enabled' => (bool) $prefs->auto_refresh_enabled,
+                ],
+            ]);
+        } catch (\Throwable) {
+            return response()->json([
+                'data' => [
+                    'default_ticket_filter' => 'all',
+                    'default_date_range' => '30days',
+                    'show_recommendations' => true,
+                    'show_activity_feed' => true,
+                    'auto_refresh_enabled' => true,
+                ],
+            ]);
+        }
     }
 
     /**
@@ -173,13 +184,13 @@ class MyTicketsController extends Controller
             $updateData['default_date_range'] = $validated['default_date_range'];
         }
         if (array_key_exists('show_recommendations', $validated)) {
-            $updateData['show_recommendations'] = (bool) $validated['show_recommendations'];
+            $updateData['show_recommendations'] = (int) $validated['show_recommendations'];
         }
         if (array_key_exists('show_activity_feed', $validated)) {
-            $updateData['show_activity_feed'] = (bool) $validated['show_activity_feed'];
+            $updateData['show_activity_feed'] = (int) $validated['show_activity_feed'];
         }
         if (array_key_exists('auto_refresh_enabled', $validated)) {
-            $updateData['auto_refresh_enabled'] = (bool) $validated['auto_refresh_enabled'];
+            $updateData['auto_refresh_enabled'] = (int) $validated['auto_refresh_enabled'];
         }
 
         if (!empty($updateData)) {

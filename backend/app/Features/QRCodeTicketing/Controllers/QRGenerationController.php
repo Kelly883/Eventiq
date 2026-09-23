@@ -70,10 +70,11 @@ class QRGenerationController extends Controller
                 ->color(79, 70, 229) // Indigo brand color
                 ->backgroundColor(255, 255, 255)
                 ->margin(1)
+                ->format('png')
                 ->generate($encryptedPayload);
 
             // In real app, write QR image to disk/storage
-            $filename = "qrcodes/ticket_{$ticketId}_qr.svg";
+            $filename = "qr-codes/ticket_{$ticketId}.png";
             Storage::disk('public')->put($filename, $qrSvg);
             $qrUrl = Storage::disk('public')->url($filename);
 
