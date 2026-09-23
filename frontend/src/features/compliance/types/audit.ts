@@ -27,12 +27,15 @@ export type AuditLogAction =
   | 'pricing_window.created'
   | 'pricing_window.updated'
   | 'pricing_window.deleted'
-  | 'pricing_window.restored'
+    | 'pricing_window.restored'
   | 'ticket_tier.created'
   | 'ticket_tier.updated'
-  | 'ticket_tier.deleted';
+  | 'ticket_tier.deleted'
+  | 'email_template.created'
+  | 'email_template.updated'
+  | 'email_template.deleted';
 
-export type AuditLogTargetType = 'user' | 'event' | 'order' | 'payout' | 'refund' | 'payment' | 'setting' | 'ticket' | 'pricing_window';
+export type AuditLogTargetType = 'user' | 'event' | 'order' | 'payout' | 'refund' | 'payment' | 'setting' | 'ticket' | 'pricing_window' | 'email_template';
 
 export type AuditLogStatus = 'success' | 'failure' | 'warning' | 'pending';
 
@@ -139,11 +142,14 @@ export function isAuditLogAction(value: string): value is AuditLogAction {
     'ticket_tier.created',
     'ticket_tier.updated',
     'ticket_tier.deleted',
+    'email_template.created',
+    'email_template.updated',
+    'email_template.deleted',
   ].includes(value);
 }
 
 export function isAuditLogTargetType(value: string): value is AuditLogTargetType {
-  return   ['user', 'event', 'order', 'payout', 'refund', 'payment', 'setting', 'ticket', 'pricing_window', 'email_template'].includes(value);
+  return ['user', 'event', 'order', 'payout', 'refund', 'payment', 'setting', 'ticket', 'pricing_window', 'email_template'].includes(value);
 }
 
 export function isAuditLogStatus(value: string): value is AuditLogStatus {
