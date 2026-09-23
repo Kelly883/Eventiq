@@ -14,6 +14,8 @@ class UserDashboardPreference extends Model
 
     protected $table = 'user_dashboard_preferences';
 
+    public $incrementing = false;
+
     protected $fillable = [
         'user_id',
         'default_ticket_filter',
@@ -42,10 +44,12 @@ class UserDashboardPreference extends Model
      */
     public static function firstOrCreateForUser(User $user): self
     {
-        $existing = static::where('user_id', $user->id)->first();
+        $row = DB::table('user_dashboard_preferences')
+            ->where('user_id', $user->id)
+            ->first();
 
-        if ($existing) {
-            return $existing;
+        if ($row) {
+            return static::find($row->id);
         }
 
         $id = (string) \Illuminate\Support\Str::uuid();
@@ -69,19 +73,21 @@ class UserDashboardPreference extends Model
      */
     public static function updatePreferences(User $user, array $data): self
     {
-        $prefs = static::where('user_id', $user->id)->first();
+        $existing = DB::table('user_dashboard_preferences')
+            ->where('user_id', $user->id)
+            ->first();
 
-        if (!$prefs) {
+        if (!$existing) {
             return static::firstOrCreateForUser($user);
         }
 
         $updateData = [];
         $columns = ['default_ticket_filter', 'default_date_range', 'show_recommendations', 'show_activity_feed', 'auto_refresh_enabled'];
-        
+
         foreach ($columns as $col) {
             if (array_key_exists($col, $data)) {
-                $updateData[$col] = in_array($col, ['show_recommendations', 'show_activity_feed', 'auto_refresh_enabled']) 
-                    ? (int) $data[$col] 
+                $updateData[$col] = in_array($col, ['show_recommendations', 'show_activity_feed', 'auto_refresh_enabled'])
+                    ? (int) $data[$col]
                     : $data[$col];
             }
         }
