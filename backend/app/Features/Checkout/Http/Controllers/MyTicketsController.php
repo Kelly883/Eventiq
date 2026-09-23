@@ -170,9 +170,9 @@ class MyTicketsController extends Controller
             [
                 'default_ticket_filter' => 'all',
                 'default_date_range' => '30days',
-                'show_recommendations' => true,
-                'show_activity_feed' => true,
-                'auto_refresh_enabled' => true,
+                'show_recommendations' => 1,
+                'show_activity_feed' => 1,
+                'auto_refresh_enabled' => 1,
             ]
         );
 
