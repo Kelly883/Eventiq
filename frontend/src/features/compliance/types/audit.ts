@@ -143,7 +143,7 @@ export function isAuditLogAction(value: string): value is AuditLogAction {
 }
 
 export function isAuditLogTargetType(value: string): value is AuditLogTargetType {
-  return ['user', 'event', 'order', 'payout', 'refund', 'payment', 'setting', 'ticket', 'pricing_window'].includes(value);
+  return   ['user', 'event', 'order', 'payout', 'refund', 'payment', 'setting', 'ticket', 'pricing_window', 'email_template'].includes(value);
 }
 
 export function isAuditLogStatus(value: string): value is AuditLogStatus {

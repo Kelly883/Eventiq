@@ -11,6 +11,7 @@ enum AuditLogTargetType: string
     case REFUND = 'refund';
     case PAYMENT = 'payment';
     case SETTING = 'setting';
-    case TICKET = 'ticket';
+        case TICKET = 'ticket';
     case PRICING_WINDOW = 'pricing_window';
+    case EMAIL_TEMPLATE = 'email_template';
 }
