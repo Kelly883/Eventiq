@@ -238,7 +238,7 @@ class TicketCheckInController extends Controller
         $eventId = $validated['event_id'];
         $lastSyncAt = $validated['last_sync_at'] ?? null;
 
-        $event = \App\Models::find($eventId);
+        $event = \App\Models\Event::find($eventId);
         if (!$event) {
             return response()->json(['message' => 'Event not found.'], 404);
         }
