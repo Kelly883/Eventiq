@@ -23,10 +23,8 @@ class DeliveryController extends Controller
             return response()->json(['message' => 'Ticket not found.'], 404);
         }
 
-        // Ownership check
-        if (!($ticket->user_id === $request->user()?->id || $request->user()?->hasRole('admin'))) {
-            return response()->json(['message' => 'You do not have access to this ticket.'], 403);
-        }
+        // Authorization via policy
+        $this->authorize('view', $ticket);
 
         $deliveryEvents = DeliveryEvent::where('ticket_id', $ticket->id)
             ->orderByDesc('created_at')
@@ -76,10 +74,8 @@ class DeliveryController extends Controller
             return response()->json(['message' => 'Ticket not found.'], 404);
         }
 
-        // Ownership check
-        if (!($ticket->user_id === $request->user()?->id || $request->user()?->hasRole('admin'))) {
-            return response()->json(['message' => 'You do not have access to this ticket.'], 403);
-        }
+        // Ownership check via policy
+        $this->authorize('update', $ticket);
 
         $recipient = $request->input('recipient');
         $channel = $request->input('channel');
@@ -88,22 +84,27 @@ class DeliveryController extends Controller
             return response()->json(['message' => 'Invalid email format.'], 400);
         }
 
-        // Check if recipient differs from ticket owner's email
-        $recipientWarning = null;
+        // Validate recipient — must be the ticket owner's email
         if ($channel === 'email' && $recipient !== $ticket->user?->email) {
-            $recipientWarning = 'Recipient differs from ticket owner email.';
+            return response()->json([
+                'message' => 'Recipient email must match the ticket owner email. Contact support for assistance.',
+                'reason' => 'recipient_mismatch',
+            ], 400);
         }
 
-        // Check if ticket is void/blocked
-        if ($ticket->status === 'void') {
+        // Check if ticket is void/blocked (void, purged, checked_in)
+        if (in_array($ticket->status, ['void', 'purged', 'checked_in'], true)) {
             return response()->json([
                 'message' => 'Cannot resend delivery for a blocked ticket. Contact support.',
                 'reason' => 'ticket_blocked',
             ], 403);
         }
 
-        // Check if ticket has associated fraud events
-        $hasFraudEvent = FraudEvent::where('ticket_id', $ticket->id)
+        // Check if ticket has associated fraud events (ticket-level or order-level)
+        $hasFraudEvent = FraudEvent::where(function ($q) use ($ticket) {
+                $q->where('ticket_id', $ticket->id)
+                  ->orWhere('order_id', $ticket->order_id);
+            })
             ->whereIn('status', ['flagged', 'auto_blocked'])
             ->exists();
 
@@ -138,7 +139,7 @@ class DeliveryController extends Controller
 
         $nextRetryAt = now()->addMinutes(5);
 
-        DB::transaction(function () use ($latestEvent, $ticket, $recipient, $channel, $nextRetryAt) {
+        $deliveryEventId = DB::transaction(function () use ($latestEvent, $ticket, $recipient, $channel, $nextRetryAt) {
             if ($latestEvent && in_array($latestEvent->status, ['failed', 'pending'], true)) {
                 $latestEvent->update([
                     'status' => 'pending',
@@ -148,8 +149,9 @@ class DeliveryController extends Controller
                     'attempt_count' => $latestEvent->attempt_count + 1,
                     'error_message' => null,
                 ]);
+                return $latestEvent->id;
             } else {
-                $latestEvent = DeliveryEvent::create([
+                $newEvent = DeliveryEvent::create([
                     'ticket_id' => $ticket->id,
                     'user_id' => $ticket->user_id,
                     'event_id' => $ticket->event_id,
@@ -165,6 +167,7 @@ class DeliveryController extends Controller
                     'last_attempt_at' => now(),
                     'next_retry_at' => $nextRetryAt,
                 ]);
+                return $newEvent->id;
             }
         });
 
@@ -173,16 +176,14 @@ class DeliveryController extends Controller
             'channel' => $channel,
             'recipient' => $recipient,
             'next_retry_at' => $nextRetryAt->toDateTimeString(),
-            'recipient_warning' => $recipientWarning,
         ]);
 
         return response()->json([
             'data' => [
                 'message' => 'Delivery resend initiated.',
-                'delivery_event_id' => $latestEvent->id,
+                'delivery_event_id' => $deliveryEventId,
                 'status' => 'pending',
                 'next_retry_at' => $nextRetryAt->toDateTimeString(),
-                'recipient_warning' => $recipientWarning,
             ],
         ]);
     }

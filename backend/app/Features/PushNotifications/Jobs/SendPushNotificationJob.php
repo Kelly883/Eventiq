@@ -22,7 +22,7 @@ class SendPushNotificationJob implements ShouldQueue
     public int $tries = 3;
 
     public function __construct(
-        public int $userId,
+        public string $userId,
         public string $title,
         public string $body,
         public array $data = [],

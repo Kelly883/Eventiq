@@ -2,7 +2,7 @@
 
 namespace App\Features\EmailNotifications\Services;
 
-use App\Features\EmailNotifications\Mails\TestEmailMailable;
+use App\Mail\TestEmailMailable;
 use App\Features\EmailNotifications\Models\EmailTemplate;
 use App\Services\MjmlRenderer;
 use Illuminate\Support\Facades\Log;
@@ -77,7 +77,11 @@ class EmailTemplateService
     public function sendTest(EmailTemplate $template, string $toEmail): bool
     {
         try {
-            Mail::to($toEmail)->send(new TestEmailMailable($template->html_body, $template->subject));
+            Mail::to($toEmail)->send(new TestEmailMailable(
+                htmlContent: $template->html_body,
+                recipientEmail: $toEmail,
+                subject: $template->subject,
+            ));
 
             return true;
         } catch (\Throwable $e) {

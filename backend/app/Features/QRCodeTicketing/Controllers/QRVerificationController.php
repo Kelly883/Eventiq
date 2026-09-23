@@ -2,6 +2,7 @@
 
 namespace App\Features\QRCodeTicketing\Controllers;
 
+use App\Features\Checkout\Models\Ticket;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -85,6 +86,97 @@ class QRVerificationController extends Controller
                     'event_id' => $payload['event_id'],
                     'generated_at' => $payload['generated_at'] ?? null,
                     'verified_at' => now()->toIso8601String(),
+                ],
+            ]);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            Log::warning('QR Code Decryption Failure: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to decrypt QR code payload. It may be corrupted or forged.',
+            ], 400);
+        } catch (\Exception $e) {
+            Log::error('QR Verification General Failure: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal validation failure.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    /**
+     * Verify a QR code payload for the ticket owner (user-facing).
+     *
+     * POST /api/tickets/verify-qr
+     */
+    public function verifyForUser(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            abort(401, 'Unauthenticated');
+        }
+
+        $validated = $request->validate([
+            'qr_code_data' => ['required', 'string'],
+        ]);
+
+        try {
+            $decryptedRaw = Crypt::decryptString($validated['qr_code_data']);
+            $payload = json_decode($decryptedRaw, true);
+
+            if (!$payload || !isset($payload['ticket_id'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid QR payload format.',
+                ], 422);
+            }
+
+            // Verify HMAC signature
+            $expectedSignature = hash_hmac('sha256', "{$payload['event_id']}-{$payload['ticket_id']}", config('app.key'));
+            if (!hash_equals($expectedSignature, $payload['signature'] ?? '')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'QR Code signature mismatch.',
+                ], 403);
+            }
+
+            $ticket = Ticket::with(['event', 'ticketTier'])->find($payload['ticket_id']);
+
+            if (!$ticket) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ticket not found.',
+                ], 404);
+            }
+
+            // Ownership check — only the ticket owner can verify their own QR
+            if ((string) $ticket->user_id !== (string) $user->id && !$user->hasRole('admin')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have access to this ticket.',
+                ], 403);
+            }
+
+            // Check expiry
+            if ($ticket->qr_code_expires_at && now()->gt($ticket->qr_code_expires_at)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'QR code expired',
+                ], 410);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'QR code verified successfully.',
+                'data' => [
+                    'ticket_id' => $ticket->id,
+                    'ticket_reference' => $ticket->ticket_id,
+                    'status' => $ticket->status,
+                    'event_name' => $ticket->event->title ?? null,
+                    'event_start' => $ticket->event->start_datetime?->toDateTimeString(),
+                    'tier_name' => $ticket->ticketTier->name ?? null,
+                    'checked_in' => (bool) $ticket->checked_in,
+                    'checked_in_at' => $ticket->checked_in_at?->toDateTimeString(),
                 ],
             ]);
         } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {

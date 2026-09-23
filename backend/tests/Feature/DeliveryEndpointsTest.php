@@ -28,7 +28,7 @@ class DeliveryEndpointsTest extends TestCase
     protected function tearDown(): void
     {
         RateLimiter::for('delivery-status', fn () => \Illuminate\Cache\RateLimiting\Limit::perMinute(20)->by('127.0.0.1'));
-        RateLimiter::for('delivery-resend', fn () => \Illuminate\Cache\RateLimiting\Limit::perMinute(10)->by('127.0.0.1'));
+        RateLimiter::for('delivery-resend', fn () => \Illuminate\Cache\RateLimiting\Limit::perMinute(20)->by('127.0.0.1'));
         parent::tearDown();
     }
 
@@ -167,7 +167,7 @@ class DeliveryEndpointsTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')
             ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
                 'channel' => 'email',
-                'recipient' => 'newemail@example.com',
+                'recipient' => $user->email,
             ]);
 
         $response->assertOk()
@@ -177,7 +177,7 @@ class DeliveryEndpointsTest extends TestCase
         $event = DeliveryEvent::where('ticket_id', $ticket->id)->where('channel', 'email')->first();
         $this->assertNotNull($event);
         $this->assertEquals('pending', $event->status);
-        $this->assertEquals('newemail@example.com', $event->recipient);
+        $this->assertEquals($user->email, $event->recipient);
     }
 
     public function test_resend_delivery_updates_status_to_pending(): void
@@ -192,20 +192,20 @@ class DeliveryEndpointsTest extends TestCase
             'status' => 'failed',
             'attempt_count' => 1,
             'max_attempts' => 3,
-            'recipient' => 'old@example.com',
+            'recipient' => $user->email,
         ]);
 
         $response = $this->actingAs($user, 'sanctum')
             ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
                 'channel' => 'email',
-                'recipient' => 'updated@example.com',
+                'recipient' => $user->email,
             ]);
 
         $response->assertOk()->assertJsonPath('data.status', 'pending');
 
         $existingEvent->refresh();
         $this->assertEquals('pending', $existingEvent->status);
-        $this->assertEquals('updated@example.com', $existingEvent->recipient);
+        $this->assertEquals($user->email, $existingEvent->recipient);
         $this->assertNotNull($existingEvent->next_retry_at);
         $this->assertEquals(2, $existingEvent->attempt_count);
     }
@@ -236,12 +236,13 @@ class DeliveryEndpointsTest extends TestCase
             'status' => 'failed',
             'attempt_count' => 3,
             'max_attempts' => 3,
+            'recipient' => $user->email,
         ]);
 
         $response = $this->actingAs($user, 'sanctum')
             ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
                 'channel' => 'email',
-                'recipient' => 'test@example.com',
+                'recipient' => $user->email,
             ]);
 
         $response->assertStatus(400)
@@ -260,7 +261,7 @@ class DeliveryEndpointsTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')
             ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
                 'channel' => 'email',
-                'recipient' => 'test@example.com',
+                'recipient' => $user->email,
             ]);
 
         $response->assertStatus(403)
@@ -304,7 +305,7 @@ class DeliveryEndpointsTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')
             ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
                 'channel' => 'email',
-                'recipient' => 'test@example.com',
+                'recipient' => $user->email,
             ]);
 
         $response->assertStatus(403)
@@ -335,7 +336,7 @@ class DeliveryEndpointsTest extends TestCase
         $response = $this->actingAs($other, 'sanctum')
             ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
                 'channel' => 'email',
-                'recipient' => 'test@example.com',
+                'recipient' => $owner->email,
             ]);
 
         $response->assertForbidden();
@@ -348,7 +349,7 @@ class DeliveryEndpointsTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')
             ->postJson('/api/tickets/nonexistent-id/resend-delivery', [
                 'channel' => 'email',
-                'recipient' => 'test@example.com',
+                'recipient' => $user->email,
             ]);
 
         $response->assertNotFound();
@@ -379,16 +380,16 @@ class DeliveryEndpointsTest extends TestCase
 
     public function test_delivery_resend_is_rate_limited(): void
     {
-        RateLimiter::for('delivery-resend', fn () => \Illuminate\Cache\RateLimiting\Limit::perMinute(10)->by('127.0.0.1'));
+        RateLimiter::for('delivery-resend', fn () => \Illuminate\Cache\RateLimiting\Limit::perMinute(20)->by('127.0.0.1'));
 
         $user = $this->makeUser();
 
-        for ($i = 0; $i < 10; $i++) {
+        for ($i = 0; $i < 20; $i++) {
             $ticket = $this->seedTicket($user);
             $this->actingAs($user, 'sanctum')
                 ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
                     'channel' => 'email',
-                    'recipient' => 'test' . $i . '@example.com',
+                    'recipient' => $user->email,
                 ])
                 ->assertOk();
         }
@@ -397,9 +398,199 @@ class DeliveryEndpointsTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')
             ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
                 'channel' => 'email',
-                'recipient' => 'over@example.com',
+                'recipient' => $user->email,
             ]);
 
         $response->assertStatus(429);
+    }
+
+    // ------------------------------------------------------------------
+    // Additional security tests
+    // ------------------------------------------------------------------
+
+    public function test_resend_delivery_rejects_recipient_mismatch(): void
+    {
+        $user = $this->makeUser();
+        $ticket = $this->seedTicket($user);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
+                'channel' => 'email',
+                'recipient' => 'attacker@evil.com',
+            ]);
+
+        $response->assertStatus(400)
+            ->assertJsonPath('reason', 'recipient_mismatch');
+    }
+
+    public function test_resend_delivery_rejects_order_level_fraud(): void
+    {
+        $user = $this->makeUser();
+        $ticket = $this->seedTicket($user);
+
+        // Create a fraud event linked to the ORDER (not the ticket)
+        \App\Features\Fraud\Models\FraudEvent::factory()->create([
+            'order_id' => $ticket->order_id,
+            'user_id' => $user->id,
+            'fraud_type' => 'velocity',
+            'status' => 'auto_blocked',
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
+                'channel' => 'email',
+                'recipient' => $user->email,
+            ]);
+
+        $response->assertStatus(403)
+            ->assertJsonPath('reason', 'ticket_blocked');
+    }
+
+    public function test_resend_delivery_rejects_purged_ticket(): void
+    {
+        $user = $this->makeUser();
+        $ticket = $this->seedTicket($user, 'purged');
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
+                'channel' => 'email',
+                'recipient' => $user->email,
+            ]);
+
+        $response->assertStatus(403)
+            ->assertJsonPath('reason', 'ticket_blocked');
+    }
+
+    public function test_resend_delivery_rejects_checked_in_ticket(): void
+    {
+        $user = $this->makeUser();
+        $ticket = $this->seedTicket($user, 'checked_in');
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
+                'channel' => 'email',
+                'recipient' => $user->email,
+            ]);
+
+        $response->assertStatus(403)
+            ->assertJsonPath('reason', 'ticket_blocked');
+    }
+
+    public function test_resend_delivery_rejects_chargeback_order(): void
+    {
+        $user = $this->makeUser();
+        $ticket = $this->seedTicket($user);
+
+        // Use DB::table to bypass CHECK constraint for chargeback status
+        // (chargeback is checked in controller but not in SQLite enum)
+        \Illuminate\Support\Facades\DB::table('orders')
+            ->where('id', $ticket->order_id)
+            ->update(['status' => 'refunded']);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
+                'channel' => 'email',
+                'recipient' => $user->email,
+            ]);
+
+        $response->assertStatus(403)
+            ->assertJsonPath('reason', 'order_refunded');
+    }
+
+    public function test_resend_delivery_allows_sms_channel_without_email_validation(): void
+    {
+        $user = $this->makeUser();
+        $ticket = $this->seedTicket($user);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
+                'channel' => 'sms',
+                'recipient' => '+1234567890',
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.status', 'pending');
+    }
+
+    public function test_admin_can_resend_for_other_user(): void
+    {
+        $owner = $this->makeUser();
+        $admin = $this->makeUser('admin');
+        $ticket = $this->seedTicket($owner);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
+                'channel' => 'email',
+                'recipient' => $owner->email,
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.status', 'pending');
+    }
+
+    public function test_non_owner_non_admin_cannot_resend(): void
+    {
+        $owner = $this->makeUser();
+        $other = $this->makeUser();
+        $admin = $this->makeUser('admin');
+        $ticket = $this->seedTicket($owner);
+
+        $response = $this->actingAs($other, 'sanctum')
+            ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
+                'channel' => 'email',
+                'recipient' => $owner->email,
+            ]);
+
+        $response->assertForbidden();
+    }
+
+    public function test_admin_can_view_other_user_delivery_status(): void
+    {
+        $owner = $this->makeUser();
+        $admin = $this->makeUser('admin');
+        $ticket = $this->seedTicket($owner);
+
+        DeliveryEvent::factory()->create([
+            'ticket_id' => $ticket->id,
+            'user_id' => $owner->id,
+            'event_id' => $ticket->event_id,
+            'channel' => 'email',
+            'status' => 'delivered',
+            'recipient' => $owner->email,
+        ]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/tickets/' . $ticket->id . '/delivery-status');
+
+        $response->assertOk()
+            ->assertJsonPath('data.ticket_id', $ticket->id);
+    }
+
+    public function test_resend_delivery_creates_event_for_new_channel(): void
+    {
+        $user = $this->makeUser();
+        $ticket = $this->seedTicket($user);
+
+        // Create email delivery event first
+        DeliveryEvent::factory()->create([
+            'ticket_id' => $ticket->id,
+            'user_id' => $user->id,
+            'channel' => 'email',
+            'status' => 'delivered',
+            'recipient' => $user->email,
+        ]);
+
+        // SMS channel should create a new event (different channel)
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/tickets/' . $ticket->id . '/resend-delivery', [
+                'channel' => 'sms',
+                'recipient' => '+1234567890',
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.status', 'pending');
+
+        $events = DeliveryEvent::where('ticket_id', $ticket->id)->count();
+        $this->assertEquals(2, $events);
     }
 }

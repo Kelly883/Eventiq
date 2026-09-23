@@ -18,20 +18,13 @@ class StoreEmailTemplateRequest extends FormRequest
 
     public function rules(): array
     {
-        $allowedTypes = [
-            'order_confirmation', 'event_reminder', 'ticket_delivery',
-            'check_in_confirmation', 'refund_notification',
-        ];
-
         return [
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'string', 'in:' . implode(',', $allowedTypes)],
+            'type' => ['required', 'string', 'max:50'],
             'subject' => ['required', 'string', 'max:255'],
-            'html_body' => ['required', 'string'],
+            'html_body' => ['nullable', 'string'],
             'mjml_body' => ['nullable', 'string'],
-            'variables' => ['required', 'array'],
-            'variables.*' => ['string'],
-            'is_active' => ['boolean'],
+            'variables' => ['nullable', 'array'],
         ];
     }
 }

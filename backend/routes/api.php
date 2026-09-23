@@ -164,6 +164,9 @@ Route::middleware('bearer')->group(function () {
         Route::patch('/dashboard-preferences', [\App\Features\Checkout\Http\Controllers\MyTicketsController::class, 'updateDashboardPreferences'])->middleware('throttle:dashboard-preferences');
     });
 
+    // My tickets route
+    Route::get('/my-tickets', [\App\Features\Checkout\Http\Controllers\MyTicketsController::class, 'index'])->middleware('throttle:dashboard-metrics');
+
     // Ticket details route
     Route::get('/tickets/{ticketId}/details', [\App\Features\Checkout\Http\Controllers\MyTicketsController::class, 'ticketDetails'])->middleware('throttle:dashboard-metrics');
 });
@@ -187,6 +190,21 @@ Route::middleware('bearer')->group(function () {
     Route::middleware('throttle:30,1')->patch('/notifications/device-tokens/{token}/offline-status', [App\Features\PushNotifications\Controllers\DeviceTokenController::class, 'updateOfflineStatus']);
     Route::middleware('throttle:60,1')->get('/me/tickets/for-offline-sync', [App\Features\OfflineSync\Controllers\OfflineSyncController::class, 'getTicketsForOfflineSync']);
     Route::post('/me/device-token/rotate', [App\Features\PushNotifications\Controllers\DeviceTokenController::class, 'rotate'])->middleware('throttle:5,1');
+});
+
+// Device token routes (user-facing)
+Route::middleware(['bearer', 'throttle:push-device-token'])->group(function () {
+    Route::post('/notifications/device-tokens', [App\Features\PushNotifications\Controllers\DeviceTokenManagementController::class, 'register']);
+    Route::delete('/notifications/device-tokens', [App\Features\PushNotifications\Controllers\DeviceTokenManagementController::class, 'destroy']);
+});
+
+// Push template routes (admin-only)
+Route::middleware(['bearer', 'role:admin', 'throttle:push-templates'])->prefix('admin/push-templates')->group(function () {
+    Route::get('/', [App\Features\PushNotifications\Controllers\PushTemplateManagementController::class, 'index']);
+    Route::post('/', [App\Features\PushNotifications\Controllers\PushTemplateManagementController::class, 'store']);
+    Route::patch('/{template}', [App\Features\PushNotifications\Controllers\PushTemplateManagementController::class, 'update']);
+    Route::delete('/{template}', [App\Features\PushNotifications\Controllers\PushTemplateManagementController::class, 'destroy']);
+    Route::post('/send-test', [App\Features\PushNotifications\Controllers\PushTemplateManagementController::class, 'sendTest']);
 });
 
 // Public API integration routes are protected by API keys.

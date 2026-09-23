@@ -8,9 +8,11 @@ use App\Features\EmailNotifications\Requests\UpdateEmailTemplateRequest;
 use App\Features\EmailNotifications\Resources\EmailTemplateResource;
 use App\Features\EmailNotifications\Services\EmailTemplateService;
 use App\Http\Controllers\Controller;
-use App\Services\Audit\AuditLogger;
+use App\Mail\TestEmailMailable;
+use App\Models\AuditLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class EmailTemplateController extends Controller
 {
@@ -18,118 +20,139 @@ class EmailTemplateController extends Controller
     {
     }
 
-    private function requireAdmin(Request $request): void
-    {
-        $user = $request->user();
-        if (! $user || (! $user->hasRole('admin') && ! $user->hasRole('super-admin'))) {
-            abort(403, 'Only admins can manage email templates.');
-        }
-    }
-
     public function index(Request $request): JsonResponse
     {
-        $this->requireAdmin($request);
-
         $request->validate([
-            'type' => ['nullable', 'string', 'in:order_confirmation,event_reminder,ticket_delivery,check_in_confirmation,refund_notification'],
-            'is_active' => ['nullable', 'string', 'in:true,false'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'filter.type' => ['nullable', 'string', 'max:50'],
+            'filter.is_active' => ['nullable', 'string', 'in:true,false'],
         ]);
 
-        $query = EmailTemplate::latest();
+        $query = EmailTemplate::query()->orderByDesc('created_at');
 
-        if ($request->filled('type')) {
-            $query->where('type', $request->input('type'));
+        if ($request->filled('filter.type')) {
+            $query->where('type', $request->input('filter.type'));
         }
 
-        if ($request->filled('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
+        if ($request->filled('filter.is_active')) {
+            $query->where('is_active', $request->boolean('filter.is_active'));
         }
 
-        $templates = $query->paginate($request->input('per_page', 20));
+        $templates = $query->paginate(20);
 
         return response()->json([
+            'success' => true,
             'data' => EmailTemplateResource::collection($templates),
             'meta' => [
-                'current_page' => $templates->currentPage(),
-                'from' => $templates->firstItem(),
-                'last_page' => $templates->lastPage(),
-                'to' => $templates->lastItem(),
-                'per_page' => $templates->perPage(),
                 'total' => $templates->total(),
+                'per_page' => $templates->perPage(),
+                'current_page' => $templates->currentPage(),
+                'last_page' => $templates->lastPage(),
             ],
+        ]);
+    }
+
+    public function show(string $templateId): JsonResponse
+    {
+        $template = EmailTemplate::query()->find($templateId);
+
+        if (! $template) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email template not found.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => new EmailTemplateResource($template),
         ]);
     }
 
     public function store(StoreEmailTemplateRequest $request): JsonResponse
     {
-        $this->requireAdmin($request);
+        $validated = $request->validated();
 
-        $result = $this->templateService->save($request->validated());
-        $template = $result['template'];
+        if (! empty($validated['mjml_body'])) {
+            $validated['html_body'] = $this->compileMjml($validated['mjml_body']);
+        }
 
-        AuditLogger::log('create', $template, $request->user(), [
-            'ip_address' => $request->ip(),
-        ]);
+        unset($validated['mjml_body']);
+
+        $template = EmailTemplate::query()->create($validated);
 
         return response()->json([
+            'success' => true,
             'data' => new EmailTemplateResource($template),
-            'warnings' => $result['warnings'],
-            'errors' => $result['errors'],
         ], 201);
     }
 
-    public function show(Request $request, $emailTemplate): JsonResponse
+    public function update(UpdateEmailTemplateRequest $request, string $templateId): JsonResponse
     {
-        $this->requireAdmin($request);
+        $template = EmailTemplate::query()->find($templateId);
 
-        $template = EmailTemplate::withTrashed()->findOrFail($emailTemplate);
+        if (! $template) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email template not found.',
+            ], 404);
+        }
 
-        return response()->json(['data' => new EmailTemplateResource($template)]);
-    }
+        $validated = $request->validated();
 
-    public function update(UpdateEmailTemplateRequest $request, $emailTemplate): JsonResponse
-    {
-        $this->requireAdmin($request);
+        if (! empty($validated['mjml_body'])) {
+            $validated['html_body'] = $this->compileMjml($validated['mjml_body']);
+        }
 
-        $template = EmailTemplate::withTrashed()->findOrFail($emailTemplate);
-        $original = $template->getOriginal();
-        $changes = array_keys($request->validated());
-
-        $result = $this->templateService->save($request->validated(), $template);
-        $updated = $result['template'];
+        unset($validated['mjml_body']);
 
         $changedFields = [];
-        foreach ($changes as $field) {
-            if (($original[$field] ?? null) !== ($updated->getOriginal()[$field] ?? null)) {
-                $changedFields[] = $field;
+
+        foreach ($validated as $field => $value) {
+            if ($template->{$field} !== $value) {
+                $changedFields[$field] = [
+                    'old' => $template->{$field},
+                    'new' => $value,
+                ];
             }
         }
-        if (! empty($changedFields)) {
-            $changedFields[] = 'compiled_html_body';
-        }
 
-        AuditLogger::log('update', $updated, $request->user(), [
+        $template->update($validated);
+
+        AuditLog::create([
+            'action' => 'email_template_updated',
+            'target_type' => 'email_template',
+            'target_id' => $template->id,
+            'user_id' => $request->user()?->id,
             'changed_fields' => $changedFields,
-            'ip_address' => $request->ip(),
         ]);
 
         return response()->json([
-            'data' => new EmailTemplateResource($updated),
-            'warnings' => $result['warnings'],
-            'errors' => $result['errors'],
+            'success' => true,
+            'data' => new EmailTemplateResource($template),
         ]);
     }
 
-    public function destroy(Request $request, $emailTemplate): JsonResponse
+    public function destroy(string $templateId): JsonResponse
     {
-        $this->requireAdmin($request);
+        $template = EmailTemplate::query()->find($templateId);
 
-        $template = EmailTemplate::withTrashed()->findOrFail($emailTemplate);
+        if (! $template) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email template not found.',
+            ], 404);
+        }
+
         $template->delete();
 
-        AuditLogger::log('delete', $template, $request->user(), [
-            'ip_address' => $request->ip(),
+        AuditLog::create([
+            'action' => 'email_template_deleted',
+            'target_type' => 'email_template',
+            'target_id' => $template->id,
+            'user_id' => auth()->id(),
+            'changed_fields' => [
+                'deleted_at' => now()->toDateTimeString(),
+            ],
         ]);
 
         return response()->json(null, 204);
@@ -137,35 +160,59 @@ class EmailTemplateController extends Controller
 
     public function sendTest(Request $request): JsonResponse
     {
-        $this->requireAdmin($request);
-
         $validated = $request->validate([
-            'templateId' => ['required', 'string', 'exists:email_templates,id'],
-            'recipientEmail' => ['required', 'string', 'email:strict', 'max:255'],
+            'template_id' => ['required', 'string', 'exists:email_templates,id'],
+            'recipient_email' => ['required', 'string', 'email'],
         ]);
 
-        $template = EmailTemplate::withTrashed()->findOrFail($validated['templateId']);
+        $template = EmailTemplate::query()->find($validated['template_id']);
 
-        $sent = $this->templateService->sendTest($template, $validated['recipientEmail']);
-
-        if (! $sent) {
+        if (! $template) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send test email. Check mail configuration and logs.',
-            ], 500);
+                'message' => 'Email template not found.',
+            ], 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Test email sent',
-        ]);
+        try {
+            Mail::to($validated['recipient_email'])->send(
+                new TestEmailMailable(
+                    htmlContent: $template->html_body,
+                    recipientEmail: $validated['recipient_email'],
+                    subject: $template->subject,
+                )
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test email sent',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send test email: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
-    public function seed(Request $request)
+    private function compileMjml(string $mjml): string
     {
-        $this->requireAdmin($request);
+        // Basic MJML to HTML conversion (mjml/mjml package not installed)
+        $html = $mjml;
+        $html = preg_replace('/<mjml>/', '<html>', $html);
+        $html = preg_replace('/<\/mjml>/', '</html>', $html);
+        $html = preg_replace('/<mj-head>.*?<\/mj-head>/s', '', $html);
+        $html = preg_replace('/<mj-body>/', '<body>', $html);
+        $html = preg_replace('/<\/mj-body>/', '</body>', $html);
+        $html = preg_replace('/<mj-section>/', '<div style="margin:0 auto;max-width:600px;">', $html);
+        $html = preg_replace('/<\/mj-section>/', '</div>', $html);
+        $html = preg_replace('/<mj-column>/', '<div>', $html);
+        $html = preg_replace('/<\/mj-column>/', '</div>', $html);
+        $html = preg_replace('/<mj-text>/', '<div>', $html);
+        $html = preg_replace('/<\/mj-text>/', '</div>', $html);
+        $html = preg_replace('/<mj-image[^>]*src="([^"]+)"[^>]*>/', '<img src="$1" style="max-width:100%;">', $html);
+        $html = preg_replace('/<mj-button[^>]*href="([^"]+)"[^>]*>(.*?)<\/mj-button>/s', '<a href="$1" style="display:inline-block;padding:10px 20px;background:#6366f1;color:#fff;text-decoration:none;border-radius:5px;">$2</a>', $html);
 
-        return EmailTemplateResource::collection($this->templateService->seed());
+        return $html;
     }
 }
-

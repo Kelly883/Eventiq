@@ -5,6 +5,7 @@ namespace App\Features\Checkout\Http\Controllers;
 use App\Features\Checkout\Models\Ticket;
 use App\Features\Delivery\Models\DeliveryEvent;
 use App\Features\Dashboard\Models\UserDashboardPreference;
+use App\Features\Tickets\Policies\TicketPolicy;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +24,6 @@ class MyTicketsController extends Controller
         $filter = $validated['filter'] ?? 'all';
         $search = $validated['search'] ?? null;
         $perPage = $validated['per_page'] ?? 20;
-        $page = $validated['page'] ?? 1;
 
         $query = Ticket::with(['event', 'ticketTier'])
             ->where('user_id', $request->user()->id);
@@ -43,8 +43,7 @@ class MyTicketsController extends Controller
 
         $query->orderBy('created_at', 'desc');
 
-        $total = $query->count();
-        $tickets = $query->skip(($page - 1) * $perPage)->take($perPage)->get();
+        $tickets = $query->paginate($perPage);
 
         return response()->json([
             'data' => $tickets->map(fn (Ticket $t) => [
@@ -59,10 +58,10 @@ class MyTicketsController extends Controller
                 'created_at' => $t->created_at?->toDateTimeString(),
             ]),
             'meta' => [
-                'total' => $total,
-                'per_page' => $perPage,
-                'current_page' => $page,
-                'last_page' => (int) ceil($total / $perPage),
+                'total' => $tickets->total(),
+                'per_page' => $tickets->perPage(),
+                'current_page' => $tickets->currentPage(),
+                'last_page' => $tickets->lastPage(),
                 'filter' => $filter,
                 'search' => $search,
             ],
@@ -73,19 +72,21 @@ class MyTicketsController extends Controller
     {
         $user = $request->user();
 
-        $totalTickets = Ticket::where('user_id', $user->id)->count();
-        $upcomingTickets = Ticket::where('user_id', $user->id)
-            ->whereHas('event', fn ($q) => $q->where('start_datetime', '>=', now()))
-            ->count();
-        $pastTickets = Ticket::where('user_id', $user->id)
-            ->whereHas('event', fn ($q) => $q->where('end_datetime', '<', now()))
-            ->count();
-        $checkedIn = Ticket::where('user_id', $user->id)->where('checked_in', true)->count();
+        // Single query with conditional aggregates for counts
+        $stats = Ticket::where('tickets.user_id', $user->id)
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw('SUM(CASE WHEN tickets.checked_in = 1 THEN 1 ELSE 0 END) as checked_in')
+            ->selectRaw('SUM(CASE WHEN EXISTS (SELECT 1 FROM events WHERE events.id = tickets.event_id AND events.start_datetime >= ?) THEN 1 ELSE 0 END) as upcoming', [now()])
+            ->selectRaw('SUM(CASE WHEN EXISTS (SELECT 1 FROM events WHERE events.id = tickets.event_id AND events.end_datetime < ?) THEN 1 ELSE 0 END) as past', [now()])
+            ->first();
 
-        $nextUpcomingEvent = Ticket::where('user_id', $user->id)
+        // nextUpcomingEvent: order by event start_datetime ASC (first upcoming event)
+        $nextUpcomingEvent = Ticket::where('tickets.user_id', $user->id)
             ->whereHas('event', fn ($q) => $q->where('start_datetime', '>=', now()))
             ->with('event')
-            ->orderBy('created_at', 'desc')
+            ->join('events', 'tickets.event_id', '=', 'events.id')
+            ->orderBy('events.start_datetime', 'asc')
+            ->select('tickets.*')
             ->first();
 
         $recentActivity = Ticket::where('user_id', $user->id)
@@ -103,10 +104,10 @@ class MyTicketsController extends Controller
 
         return response()->json([
             'data' => [
-                'totalTickets' => $totalTickets,
-                'upcomingTickets' => $upcomingTickets,
-                'pastTickets' => $pastTickets,
-                'checkedIn' => $checkedIn,
+                'totalTickets' => (int) $stats->total,
+                'upcomingTickets' => (int) $stats->upcoming,
+                'pastTickets' => (int) $stats->past,
+                'checkedIn' => (int) $stats->checked_in,
                 'nextUpcomingEvent' => $nextUpcomingEvent ? [
                     'id' => $nextUpcomingEvent->event->id,
                     'title' => $nextUpcomingEvent->event->title,
@@ -168,12 +169,11 @@ class MyTicketsController extends Controller
             return response()->json(['message' => 'Ticket not found.'], 404);
         }
 
-        if (!($ticket->user_id === $request->user()?->id || $request->user()?->hasRole('admin'))) {
-            return response()->json(['message' => 'You do not have access to this ticket.'], 403);
-        }
+        $this->authorize('view', $ticket);
 
         $deliveryHistory = DeliveryEvent::where('ticket_id', $ticket->id)
             ->orderByDesc('created_at')
+            ->limit(50)
             ->get()
             ->map(fn (DeliveryEvent $d) => [
                 'id' => $d->id,

@@ -17,9 +17,12 @@ Route::middleware('bearer')->prefix('organizer')->group(function () {
 Route::middleware('bearer')->prefix('venue')->group(function () {
     Route::post('/check-in/qr', [QRVerificationController::class, 'verify']);
     Route::post('/check-in/manual', [VenueCheckInController::class, 'manualCheckIn']);
-    Route::post('/check-in/bulk', [TicketCheckInController::class, 'bulkCheckIn']);
-    Route::post('/check-in/detect-duplicate', [TicketCheckInController::class, 'detectDuplicate']);
-    Route::post('/check-in/offline-sync', [TicketCheckInController::class, 'offlineSync']);
+    Route::post('/check-in/bulk', [TicketCheckInController::class, 'bulkCheckIn'])->middleware('throttle:venue-bulk-check-in');
+    Route::post('/check-in/detect-duplicate', [TicketCheckInController::class, 'detectDuplicate'])->middleware('throttle:venue-detect-duplicate');
+    Route::post('/check-in/offline-sync', [TicketCheckInController::class, 'offlineSync'])->middleware('throttle:venue-offline-sync');
+    Route::get('/check-in/search', [VenueCheckInController::class, 'search'])->middleware('throttle:venue-check-in-search');
+    Route::get('/check-in/stats/{event}', [VenueCheckInController::class, 'stats'])->middleware('throttle:venue-check-in-stats');
+    Route::get('/check-in/export/{event}', [VenueCheckInController::class, 'export'])->middleware('throttle:venue-check-in-export');
     Route::get('/check-in/sync', [TicketCheckInController::class, 'syncCheckIns']);
     Route::get('/events/{event}/check-ins', [CheckInAnalyticsController::class, 'index']);
 });

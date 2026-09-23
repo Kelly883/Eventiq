@@ -176,13 +176,45 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
 
-        // Delivery endpoints — status 20/min, resend 10/min per user
+        // Delivery endpoints — status 20/min, resend 20/min per user
         RateLimiter::for('delivery-status', function ($request) {
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
         RateLimiter::for('delivery-resend', function ($request) {
-            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
+
+        // Venue check-in endpoints
+        RateLimiter::for('venue-check-in-search', function ($request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('venue-check-in-stats', function ($request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('venue-check-in-export', function ($request) {
+            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('venue-bulk-check-in', function ($request) {
+            return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('venue-detect-duplicate', function ($request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('delivery-resend', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+
+        // Email template endpoints — tiered rate limits (list 30/min, detail 20/min,
+        // write 10/min, send-test 5/min) per admin user.
+        RateLimiter::for('email-templates-list', fn($req) => Limit::perMinute(30)->by($req->user()?->id ?: $req->ip()));
+        RateLimiter::for('email-templates-detail', fn($req) => Limit::perMinute(20)->by($req->user()?->id ?: $req->ip()));
+        RateLimiter::for('email-templates-write', fn($req) => Limit::perMinute(10)->by($req->user()?->id ?: $req->ip()));
+        RateLimiter::for('email-templates-send-test', fn($req) => Limit::perMinute(5)->by($req->user()?->id ?: $req->ip()));
+
+        // Push notification endpoints — device tokens 20/min, templates 20/min, send-test 5/min per user.
+        RateLimiter::for('push-device-token', fn($req) => Limit::perMinute(20)->by($req->user()?->id ?: $req->ip()));
+        RateLimiter::for('push-templates', fn($req) => Limit::perMinute(20)->by($req->user()?->id ?: $req->ip()));
+        RateLimiter::for('push-templates-send-test', fn($req) => Limit::perMinute(5)->by($req->user()?->id ?: $req->ip()));
 
         Event::observe(EventObserver::class);
         Ticket::observe(TicketObserver::class);

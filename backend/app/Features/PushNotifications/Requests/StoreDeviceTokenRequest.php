@@ -14,8 +14,8 @@ class StoreDeviceTokenRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'token' => ['required', 'string'],
-            'provider' => ['required', 'string', 'in:fcm'],
+            'token' => ['required', 'string', 'max:255'],
+            'provider' => ['required', 'string', 'in:fcm,apns'],
             'device_type' => ['required', 'string', 'in:web,ios,android'],
             'previous_token' => ['nullable', 'string'],
             'device_name' => ['nullable', 'string', 'max:255'],

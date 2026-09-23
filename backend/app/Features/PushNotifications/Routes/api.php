@@ -15,7 +15,4 @@ Route::middleware('bearer')->group(function () {
     Route::post('/push-notifications/test', [PushNotificationController::class, 'test']);
 });
 
-// Admin push template routes
-Route::middleware(['bearer', 'role:admin'])->prefix('admin')->group(function () {
-    Route::apiResource('push-templates', AdminPushTemplateController::class);
-});
+// Admin push template routes — removed; superseded by PushTemplateManagementController in routes/api.php
