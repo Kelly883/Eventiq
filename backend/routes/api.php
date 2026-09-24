@@ -207,6 +207,9 @@ Route::middleware(['bearer', 'role:admin', 'throttle:push-templates'])->prefix('
     Route::post('/', [App\Features\PushNotifications\Controllers\PushTemplateManagementController::class, 'store']);
     Route::patch('/{template}', [App\Features\PushNotifications\Controllers\PushTemplateManagementController::class, 'update']);
     Route::delete('/{template}', [App\Features\PushNotifications\Controllers\PushTemplateManagementController::class, 'destroy']);
+});
+
+Route::middleware(['bearer', 'role:admin', 'throttle:push-templates-send-test'])->prefix('admin/push-templates')->group(function () {
     Route::post('/send-test', [App\Features\PushNotifications\Controllers\PushTemplateManagementController::class, 'sendTest']);
 });
 

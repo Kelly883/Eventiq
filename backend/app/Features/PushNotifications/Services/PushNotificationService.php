@@ -5,6 +5,7 @@ namespace App\Features\PushNotifications\Services;
 use App\Features\PushNotifications\Models\PushNotificationDevice;
 use App\Features\PushNotifications\Models\PushNotificationHistory;
 use App\Features\OfflineSync\Services\OfflineSyncEngine;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Contract\Messaging;
 use Kreait\Firebase\Messaging\CloudMessage;
@@ -37,11 +38,12 @@ class PushNotificationService
     {
         if (! $this->isConfigured()) {
             Log::warning('PushNotificationService::sendToToken skipped - Firebase not configured.');
-
             return false;
         }
 
-        $device = PushNotificationDevice::where('token', $token)->first();
+        $device = PushNotificationDevice::where('token_hash', hash('sha256', $token))
+            ->orWhere('token', $token)
+            ->first();
 
         try {
             $message = CloudMessage::withTarget('token', $token)
@@ -50,8 +52,9 @@ class PushNotificationService
 
             $this->messaging->send($message);
 
-            PushNotificationDevice::where('token', $token)
-                ->update(['last_used_at' => now()]);
+            if ($device) {
+                $device->update(['last_used_at' => now()]);
+            }
 
             PushNotificationHistory::create([
                 'user_id' => $device->user_id ?? null,
@@ -90,17 +93,21 @@ class PushNotificationService
 
     /**
      * Send a notification to every device registered to a user.
+     * Optimized: loads devices once, sends via loop but with minimal queries.
      *
-     * @return array{sent: int, failed: int}
+     * @return array{sent: int, failed: int, total_devices: int}
      */
     public function sendToUser(string $userId, string $title, string $body, array $data = []): array
     {
-        $tokens = PushNotificationDevice::where('user_id', $userId)->pluck('token');
+        $devices = PushNotificationDevice::where('user_id', $userId)
+            ->whereNull('deleted_at')
+            ->get();
 
         $sent = 0;
         $failed = 0;
 
-        foreach ($tokens as $token) {
+        foreach ($devices as $device) {
+            $token = $device->getDecryptedToken();
             if ($this->sendToToken($token, $title, $body, $data)) {
                 $sent++;
             } else {
@@ -108,7 +115,7 @@ class PushNotificationService
             }
         }
 
-        return ['sent' => $sent, 'failed' => $failed];
+        return ['sent' => $sent, 'failed' => $failed, 'total_devices' => $devices->count()];
     }
 
     /**
@@ -121,19 +128,40 @@ class PushNotificationService
     public function registerDevice(string $userId, string $token, string $provider, string $deviceType, ?string $previousToken = null): PushNotificationDevice
     {
         if ($previousToken && $previousToken !== $token) {
-            PushNotificationDevice::where('token', $previousToken)->delete();
+            PushNotificationDevice::where('token_hash', hash('sha256', $previousToken))
+                ->orWhere('token', $previousToken)
+                ->delete();
             (new OfflineSyncEngine())->purgeDeviceOperations([strtolower($previousToken)]);
         }
 
-        return PushNotificationDevice::updateOrCreate(
-            ['token' => $token],
-            ['user_id' => $userId, 'provider' => $provider, 'device_type' => $deviceType]
-        );
+        $existing = PushNotificationDevice::where('token_hash', hash('sha256', $token))
+            ->orWhere('token', $token)
+            ->first();
+
+        if ($existing) {
+            $existing->update([
+                'user_id' => $userId,
+                'provider' => $provider,
+                'device_type' => $deviceType,
+            ]);
+            return $existing;
+        }
+
+        $device = PushNotificationDevice::create([
+            'token' => $token,
+            'user_id' => $userId,
+            'provider' => $provider,
+            'device_type' => $deviceType,
+        ]);
+
+        return $device;
     }
 
     public function unregisterDevice(string $token): void
     {
-        PushNotificationDevice::where('token', $token)->delete();
+        PushNotificationDevice::where('token_hash', hash('sha256', $token))
+            ->orWhere('token', $token)
+            ->delete();
         (new OfflineSyncEngine())->purgeDeviceOperations([strtolower($token)]);
     }
 }

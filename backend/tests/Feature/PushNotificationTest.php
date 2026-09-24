@@ -348,6 +348,34 @@ class PushNotificationTest extends TestCase
             ->assertJsonPath('message', 'Test notifications queued for 0 device(s).');
     }
 
+    public function test_delete_system_push_template_returns_403(): void
+    {
+        $admin = $this->makeUser('admin');
+        $template = PushNotificationTemplate::factory()->create(['is_system_template' => true]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->deleteJson('/api/admin/push-templates/' . $template->id);
+
+        $response->assertForbidden()
+            ->assertJsonPath('success', false);
+    }
+
+    public function test_device_token_is_encrypted_at_rest(): void
+    {
+        $user = $this->makeUser();
+
+        $this->actingAs($user, 'sanctum')->postJson('/api/notifications/device-tokens', [
+            'token' => 'test-token-encryption',
+            'provider' => 'fcm',
+            'device_type' => 'android',
+        ])->assertStatus(201);
+
+        $device = PushNotificationDevice::first();
+
+        $this->assertNotNull($device->token_hash);
+        $this->assertNotNull($device->token_encrypted);
+    }
+
     // ------------------------------------------------------------------
     // Rate limiting
     // ------------------------------------------------------------------

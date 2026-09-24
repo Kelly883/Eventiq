@@ -22,7 +22,19 @@ class PushTemplateManagementController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $templates = PushNotificationTemplate::latest()->paginate(20);
+        $query = PushNotificationTemplate::latest();
+
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('type', 'like', "%{$search}%")
+                    ->orWhere('title', 'like', "%{$search}%");
+            });
+        }
+
+        $templates = $query->paginate(20);
 
         return PushNotificationTemplateResource::collection($templates);
     }
@@ -56,6 +68,13 @@ class PushTemplateManagementController extends Controller
     public function destroy(string $templateId)
     {
         $template = PushNotificationTemplate::findOrFail($templateId);
+
+        if ($template->is_system_template) {
+            return response()->json([
+                'success' => false,
+                'message' => 'System templates cannot be deleted.',
+            ], 403);
+        }
 
         $template->delete();
 
