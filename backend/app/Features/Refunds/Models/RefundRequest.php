@@ -6,6 +6,7 @@ use App\Features\Checkout\Models\Ticket;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +14,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RefundRequest extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $fillable = [
         'ticket_id',
@@ -36,6 +40,8 @@ class RefundRequest extends Model
         'payment_gateway_response',
         'appeal_count',
         'last_appeal_at',
+        'reference_number',
+        'expected_processing_days',
     ];
 
     protected $casts = [
@@ -116,5 +122,13 @@ class RefundRequest extends Model
     public function scopeByEvent($query, string $eventId)
     {
         return $query->where('event_id', $eventId);
+    }
+
+    /**
+     * Create a new factory instance for the model.
+     */
+    public static function newFactory()
+    {
+        return \Database\Factories\RefundRequestFactory::new();
     }
 }

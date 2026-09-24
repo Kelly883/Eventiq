@@ -32,7 +32,7 @@ class AdminRefundController extends Controller
     /**
      * PUT /api/admin/refunds/{id}/approve
      */
-    public function approve(UpdateRefundRequest $request, int $id)
+    public function approve(UpdateRefundRequest $request, string $id)
     {
         try {
             $refundRequest = $this->refundService->approve(
@@ -51,7 +51,7 @@ class AdminRefundController extends Controller
     /**
      * PUT /api/admin/refunds/{id}/reject
      */
-    public function reject(UpdateRefundRequest $request, int $id)
+    public function reject(UpdateRefundRequest $request, string $id)
     {
         $refundRequest = $this->refundService->reject(
             $id,

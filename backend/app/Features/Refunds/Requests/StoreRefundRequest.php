@@ -14,8 +14,10 @@ class StoreRefundRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'ticket_id' => ['required', 'integer', 'exists:tickets,id'],
+            'ticket_id' => ['required', 'string', 'exists:tickets,id'],
             'reason' => ['required', 'string', 'max:1000'],
+            'refund_method' => ['required', 'string', 'in:original_payment,store_credit,bank_transfer'],
+            'explanation' => ['nullable', 'string', 'max:5000'],
         ];
     }
 }

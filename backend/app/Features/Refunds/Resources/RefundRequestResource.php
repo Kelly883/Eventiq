@@ -9,13 +9,20 @@ class RefundRequestResource extends JsonResource
     public function toArray($request)
     {
         return [
-            'id' => $this->id,
+            'refundRequestId' => $this->id,
             'status' => $this->status,
-            'requested_amount' => $this->requested_amount,
-            'approved_amount' => $this->approved_amount,
+            'originalAmount' => $this->original_amount,
+            'refundAmount' => $this->refund_amount,
+            'refundPercentage' => $this->refund_percentage,
+            'refundMethod' => $this->refund_method,
             'reason' => $this->reason,
-            'admin_notes' => $this->admin_notes,
-            'reviewed_at' => $this->reviewed_at,
+            'expectedProcessingDays' => $this->expected_processing_days,
+            'referenceNumber' => $this->reference_number,
+            'adminNotes' => $this->admin_notes,
+            'rejectionReason' => $this->rejection_reason,
+            'reviewedAt' => $this->reviewed_at,
+            'approvedAt' => $this->approved_at,
+            'completedAt' => $this->completed_at,
             'ticket' => $this->whenLoaded('ticket', fn () => [
                 'id' => $this->ticket->id,
                 'event' => $this->ticket->relationLoaded('event') ? [
@@ -23,8 +30,8 @@ class RefundRequestResource extends JsonResource
                     'title' => $this->ticket->event->title,
                 ] : null,
             ]),
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'createdAt' => $this->created_at,
+            'updatedAt' => $this->updated_at,
         ];
     }
 }
