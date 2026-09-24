@@ -148,6 +148,8 @@ class VenueCheckInController extends Controller
             return response()->json(['success' => false, 'message' => 'You are not authorized to access this event.'], 403);
         }
 
+        $query = addcslashes($query, '%_');
+
         $results = Ticket::where('event_id', $eventId)
             ->where(function ($q) use ($query) {
                 $q->where('ticket_id', $query)
@@ -278,7 +280,8 @@ class VenueCheckInController extends Controller
             $query->where('checked_in_at', '<=', $endTime);
         }
 
-        $tickets = $query->orderBy('checked_in_at', 'desc')->get();
+        // Hard cap at 50K rows to prevent memory exhaustion
+        $tickets = $query->orderBy('checked_in_at', 'desc')->limit(50000)->get();
 
         $data = $tickets->map(fn ($t) => [
             'ticket_id' => $t->id,

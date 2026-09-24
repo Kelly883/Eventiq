@@ -213,7 +213,8 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
         });
         RateLimiter::for('venue-bulk-check-in', function ($request) {
-            return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+            $eventId = $request->input('event_id', 'default');
+            return Limit::perMinute(30)->by(($request->user()?->id ?: $request->ip()) . ':' . $eventId);
         });
         RateLimiter::for('venue-detect-duplicate', function ($request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());

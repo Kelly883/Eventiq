@@ -701,7 +701,7 @@ class TicketCheckInController extends Controller
         $results = [];
 
         foreach ($localCheckIns as $local) {
-            $ticket = Ticket::find($local['ticket_id']);
+            $ticket = Ticket::where('id', $local['ticket_id'])->lockForUpdate()->first();
 
             if (!$ticket || $ticket->event_id != $eventId) {
                 $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'not_found'];
