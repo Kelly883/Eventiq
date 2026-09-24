@@ -3,7 +3,6 @@
 namespace App\Features\QRCodeTicketing\Services;
 
 use App\Features\Checkout\Models\Ticket;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -20,15 +19,17 @@ class QRCodeService
 {
     public function generateForTicket(Ticket $ticket): string
     {
+        $nonce = bin2hex(random_bytes(32));
         $payload = [
             'ticket_id' => $ticket->id,
             'event_id' => $ticket->event_id,
+            'nonce' => $nonce,
             'scanned_count' => 0,
             'generated_at' => now()->toIso8601String(),
-            'signature' => hash_hmac('sha256', "{$ticket->event_id}-{$ticket->id}", config('app.key')),
         ];
+        $payload['signature'] = \App\Features\QRCodeTicketing\Services\QRCodeEncryptionService::sign($payload);
 
-        $encryptedPayload = Crypt::encryptString(json_encode($payload));
+        $encryptedPayload = \App\Features\QRCodeTicketing\Services\QRCodeEncryptionService::encrypt($payload);
 
         try {
             $qrSvg = QrCode::size(300)

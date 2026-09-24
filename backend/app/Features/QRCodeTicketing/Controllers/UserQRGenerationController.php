@@ -41,6 +41,15 @@ class UserQRGenerationController extends Controller
             return response()->json(['message' => 'You can only generate QR codes for your own tickets.'], 403);
         }
 
+        // Per-ticket cooldown: prevent invalidating a recently generated QR
+        if ($ticket->qr_code_generated_at && now()->lt($ticket->qr_code_generated_at->addSeconds((int) env('QR_CODE_REGENERATION_COOLDOWN', 60)))) {
+            $cooldownRemaining = now()->diffInSeconds($ticket->qr_code_generated_at->addSeconds((int) env('QR_CODE_REGENERATION_COOLDOWN', 60)));
+            return response()->json([
+                'message' => "Please wait {$cooldownRemaining} seconds before regenerating this QR code.",
+                'cooldown_seconds' => $cooldownRemaining,
+            ], 429);
+        }
+
         // Check if ticket is valid
         if (!in_array($ticket->status, ['valid', 'checked_in'], true)) {
             return response()->json([
@@ -52,11 +61,14 @@ class UserQRGenerationController extends Controller
             $encryptedPayload = $this->qrCodeService->generateForTicket($ticket);
 
             // Update ticket with QR data
-            $qrCodeExpiresAt = now()->addDays(30);
+            $qrExpiryDays = (int) env('QR_CODE_EXPIRY_DAYS', 30);
+            $qrCodeExpiresAt = now()->addDays($qrExpiryDays);
+            $nonce = bin2hex(random_bytes(32));
             $ticket->update([
                 'qr_code_data' => $encryptedPayload,
                 'qr_code_generated_at' => now(),
                 'qr_code_expires_at' => $qrCodeExpiresAt,
+                'qr_nonce' => $nonce,
             ]);
 
             return response()->json([

@@ -24,6 +24,7 @@ Route::middleware('bearer')->prefix('venue')->group(function () {
     Route::get('/check-in/stats/{event}', [VenueCheckInController::class, 'stats'])->middleware('throttle:venue-check-in-stats');
     Route::get('/check-in/export/{event}', [VenueCheckInController::class, 'export'])->middleware('throttle:venue-check-in-export');
     Route::get('/check-in/sync', [TicketCheckInController::class, 'syncCheckIns']);
+    Route::get('/check-in/pending-sync', [TicketCheckInController::class, 'pendingSync']);
     Route::get('/events/{event}/check-ins', [CheckInAnalyticsController::class, 'index']);
 });
 

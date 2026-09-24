@@ -35,12 +35,6 @@ class UserDashboardPreference extends Model
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Find existing dashboard preferences for a user, or create them
-     * with sensible defaults if none exist.
-     *
-     * Uses DB::table to avoid SQLite datatype mismatch on boolean columns.
-     */
     public static function firstOrCreateForUser(User $user): self
     {
         $existing = static::where('user_id', $user->id)->first();
@@ -48,32 +42,41 @@ class UserDashboardPreference extends Model
             return $existing;
         }
 
-        return static::create([
+        $id = (string) \Illuminate\Support\Str::uuid();
+        \Illuminate\Support\Facades\DB::table('user_dashboard_preferences')->insert([
+            'id' => $id,
             'user_id' => $user->id,
             'default_ticket_filter' => 'all',
             'default_date_range' => '30days',
-            'show_recommendations' => true,
-            'show_activity_feed' => true,
-            'auto_refresh_enabled' => true,
+            'show_recommendations' => 1,
+            'show_activity_feed' => 1,
+            'auto_refresh_enabled' => 1,
+            'created_at' => now()->toDateTimeString(),
+            'updated_at' => now()->toDateTimeString(),
         ]);
+
+        return static::where('id', $id)->first();
     }
 
-    /**
-     * Update preferences using DB::table to avoid SQLite boolean issues.
-     */
     public static function updatePreferences(User $user, array $data): self
     {
         $prefs = static::firstOrCreateForUser($user);
 
         $columns = ['default_ticket_filter', 'default_date_range', 'show_recommendations', 'show_activity_feed', 'auto_refresh_enabled'];
+        $updateData = [];
         foreach ($columns as $col) {
             if (array_key_exists($col, $data)) {
-                $prefs->{$col} = $data[$col];
+                $updateData[$col] = $data[$col];
             }
         }
 
-        $prefs->save();
+        if (!empty($updateData)) {
+            $updateData['updated_at'] = now()->toDateTimeString();
+            \Illuminate\Support\Facades\DB::table('user_dashboard_preferences')
+                ->where('user_id', $user->id)
+                ->update($updateData);
+        }
 
-        return $prefs;
+        return static::where('user_id', $user->id)->first();
     }
 }

@@ -169,6 +169,9 @@ Route::middleware('bearer')->group(function () {
 
     // Ticket details route
     Route::get('/tickets/{ticketId}/details', [\App\Features\Checkout\Http\Controllers\MyTicketsController::class, 'ticketDetails'])->middleware('throttle:dashboard-metrics');
+
+    // Check-in analytics route
+    Route::get('/organizer/events/{eventId}/check-in-analytics', [\App\Features\QRCodeTicketing\Controllers\TicketCheckInController::class, 'checkInAnalytics'])->middleware('throttle:qr-analytics');
 });
 
 // Admin routes

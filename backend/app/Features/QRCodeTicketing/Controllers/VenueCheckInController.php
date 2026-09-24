@@ -130,7 +130,7 @@ class VenueCheckInController extends Controller
         }
 
         $validated = $request->validate([
-            'event_id' => ['required', 'uuid'],
+            'event_id' => ['required', 'string'],
             'query' => ['required', 'string', 'min:2'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
@@ -212,7 +212,7 @@ class VenueCheckInController extends Controller
         $totalCheckedIn = (clone $baseQuery)->where('status', 'checked_in')->count();
         $totalVoid = (clone $baseQuery)->where('status', 'void')->count();
         $totalRemaining = max(0, $totalCapacity - $totalCheckedIn);
-        $checkInRate = $totalCapacity > 0 ? round(($totalCheckedIn / $totalCapacity) * 100, 1) : 0;
+        $checkInRate = $totalCapacity > 0 ? (float) round(($totalCheckedIn / $totalCapacity) * 100, 1) : 0.0;
 
         return response()->json([
             'success' => true,

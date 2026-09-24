@@ -35,7 +35,7 @@ class TicketCheckInController extends Controller
             'qr_code_data' => ['nullable', 'string'],
         ]);
 
-        $ticket = Ticket::with(['event', 'fraudEvents'])->find($ticketId);
+        $ticket = Ticket::with(['event'])->lockForUpdate()->find($ticketId);
 
         if (!$ticket) {
             return response()->json(['message' => 'Ticket not found.'], 404);
@@ -81,23 +81,28 @@ class TicketCheckInController extends Controller
         // Perform check-in
         try {
             DB::transaction(function () use ($ticket, $user) {
+                $now = now();
                 $ticket->update([
                     'status' => 'checked_in',
                     'checked_in' => true,
-                    'checked_in_at' => now(),
+                    'checked_in_at' => $now,
                     'checked_in_by' => $user->id,
+                    'last_qr_scan_at' => $now,
+                    'qr_nonce' => null, // Clear nonce so QR can't be replayed
+                    'sync_status' => 'synced',
                 ]);
 
                 // Increment scan count
-                $ticket->increment('qr_code_scanned_count');
-                $ticket->update(['last_qr_scan_at' => now()]);
+                \Illuminate\Support\Facades\DB::table('tickets')
+                    ->where('id', $ticket->id)
+                    ->increment('qr_code_scanned_count');
 
                 \App\Models\AuditLog::create([
                     'action' => 'check_in',
                     'target_type' => Ticket::class,
                     'target_id' => $ticket->id,
                     'user_id' => $user->id,
-                    'context' => [
+                    'metadata' => [
                         'ticket_id' => $ticket->ticket_id,
                         'event_id' => $ticket->event_id,
                         'method' => 'api',
@@ -192,7 +197,7 @@ class TicketCheckInController extends Controller
                     'target_type' => Ticket::class,
                     'target_id' => $ticket->id,
                     'user_id' => $user->id,
-                    'context' => [
+                    'metadata' => [
                         'reason' => $validated['reason'],
                         'old_status' => $oldStatus,
                         'fraud_event_id' => $validated['fraud_event_id'] ?? null,
@@ -238,7 +243,7 @@ class TicketCheckInController extends Controller
         $eventId = $validated['event_id'];
         $lastSyncAt = $validated['last_sync_at'] ?? null;
 
-        $event = \App\Models\Event::find($eventId);
+        $event = \App\Models\Event::withTrashed()->find($eventId);
         if (!$event) {
             return response()->json(['message' => 'Event not found.'], 404);
         }
@@ -247,6 +252,7 @@ class TicketCheckInController extends Controller
             return response()->json(['message' => 'You are not authorized to access this event.'], 403);
         }
 
+        $perPage = min((int) $request->input('per_page', 100), 500);
         $query = Ticket::where('event_id', $eventId)
             ->where('status', 'checked_in')
             ->with(['event', 'user']);
@@ -255,7 +261,7 @@ class TicketCheckInController extends Controller
             $query->where('checked_in_at', '>', $lastSyncAt);
         }
 
-        $checkIns = $query->orderBy('checked_in_at', 'desc')->get();
+        $checkIns = $query->orderBy('checked_in_at', 'desc')->paginate($perPage);
 
         $totalCapacity = Ticket::where('event_id', $eventId)->count();
         $totalCheckedIn = Ticket::where('event_id', $eventId)->where('status', 'checked_in')->count();
@@ -271,6 +277,12 @@ class TicketCheckInController extends Controller
                     'attendee_name' => $t->attendee_name,
                     'attendee_email' => $t->attendee_email,
                 ]),
+                'pagination' => [
+                    'current_page' => $checkIns->currentPage(),
+                    'last_page' => $checkIns->lastPage(),
+                    'per_page' => $checkIns->perPage(),
+                    'total' => $checkIns->total(),
+                ],
                 'counters' => [
                     'total_capacity' => $totalCapacity,
                     'total_checked_in' => $totalCheckedIn,
@@ -296,7 +308,7 @@ class TicketCheckInController extends Controller
             'end_date' => ['nullable', 'date'],
         ]);
 
-        $event = \App\Models\Event::find($eventId);
+        $event = \App\Models\Event::withTrashed()->find($eventId);
         if (!$event) {
             return response()->json(['message' => 'Event not found.'], 404);
         }
@@ -364,6 +376,81 @@ class TicketCheckInController extends Controller
     }
 
     /**
+     * GET /api/venue/check-in/pending-sync
+     *
+     * Returns tickets that still need to be synced (sync_status != 'synced').
+     * Used by offline devices to discover unsynced tickets.
+     */
+    public function pendingSync(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            abort(401, 'Unauthenticated');
+        }
+
+        if (!$this->checkInPolicy->isVenueStaff($user)) {
+            abort(403, 'Only venue staff can access pending sync.');
+        }
+
+        $validated = $request->validate([
+            'event_id' => ['required', 'string'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max' => 500],
+        ]);
+
+        $eventId = $validated['event_id'];
+        $perPage = $validated['per_page'] ?? 100;
+
+        $event = \App\Models\Event::withTrashed()->find($eventId);
+        if (!$event) {
+            return response()->json(['message' => 'Event not found.'], 404);
+        }
+
+        if (!$this->checkInPolicy->canAccessEvent($user, $event)) {
+            return response()->json(['message' => 'You are not authorized to access this event.'], 403);
+        }
+
+        $query = Ticket::where('event_id', $eventId)
+            ->where('status', 'checked_in')
+            ->where('sync_status', '!=', 'synced')
+            ->with(['user']);
+
+        $pending = $query->orderBy('checked_in_at', 'desc')->paginate($perPage);
+
+        $totalPending = Ticket::where('event_id', $eventId)
+            ->where('status', 'checked_in')
+            ->where('sync_status', '!=', 'synced')
+            ->count();
+
+        $totalCheckedIn = Ticket::where('event_id', $eventId)
+            ->where('status', 'checked_in')
+            ->count();
+
+        return response()->json([
+            'data' => [
+                'tickets' => $pending->map(fn ($t) => [
+                    'id' => $t->id,
+                    'ticket_id' => $t->ticket_id,
+                    'status' => $t->status,
+                    'checked_in_at' => $t->checked_in_at?->toDateTimeString(),
+                    'sync_status' => $t->sync_status,
+                    'attendee_name' => $t->attendee_name,
+                    'attendee_email' => $t->attendee_email,
+                ]),
+                'pagination' => [
+                    'current_page' => $pending->currentPage(),
+                    'last_page' => $pending->lastPage(),
+                    'per_page' => $pending->perPage(),
+                    'total' => $pending->total(),
+                ],
+                'counters' => [
+                    'total_pending' => $totalPending,
+                    'total_checked_in' => $totalCheckedIn,
+                ],
+            ],
+        ]);
+    }
+
+    /**
      * POST /api/venue/check-in/bulk
      */
     public function bulkCheckIn(Request $request)
@@ -399,8 +486,14 @@ class TicketCheckInController extends Controller
         $successCount = 0;
         $failureCount = 0;
 
+        // Deduplicate ticket IDs to avoid double-processing
+        $uniqueTicketIds = array_values(array_unique($ticketIds));
+
+        // Bulk fetch all tickets in a single query to avoid N+1
+        $tickets = Ticket::whereIn('id', $uniqueTicketIds)->get()->keyBy('id');
+
         foreach ($ticketIds as $tid) {
-            $ticket = Ticket::find($tid);
+            $ticket = $tickets->get($tid);
 
             if (!$ticket) {
                 $results[] = ['ticket_id' => $tid, 'success' => false, 'message' => 'Ticket not found'];
@@ -426,22 +519,49 @@ class TicketCheckInController extends Controller
                 continue;
             }
 
-            try {
-                $ticket->update([
+            $results[] = ['ticket_id' => $tid, 'success' => true, 'message' => 'Checked in', 'pending' => true];
+            $successCount++;
+        }
+
+        // Perform all updates in a single transaction
+        $pendingIds = collect($results)->where('pending', true)->pluck('ticket_id')->toArray();
+        if (!empty($pendingIds)) {
+            DB::transaction(function () use ($pendingIds, $user) {
+                $now = now();
+                Ticket::whereIn('id', $pendingIds)->update([
                     'status' => 'checked_in',
                     'checked_in' => true,
-                    'checked_in_at' => now(),
+                    'checked_in_at' => $now,
                     'checked_in_by' => $user->id,
+                    'sync_status' => 'synced',
                 ]);
-                $ticket->increment('qr_code_scanned_count');
 
-                $results[] = ['ticket_id' => $tid, 'success' => true, 'message' => 'Checked in'];
-                $successCount++;
-            } catch (\Throwable $e) {
-                $results[] = ['ticket_id' => $tid, 'success' => false, 'message' => 'Check-in failed'];
-                $failureCount++;
-            }
+                // Increment scan counts via raw update (avoids N+1)
+                \Illuminate\Support\Facades\DB::table('tickets')
+                    ->whereIn('id', $pendingIds)
+                    ->increment('qr_code_scanned_count');
+
+                // Bulk create audit logs
+                $auditLogs = array_map(fn ($id) => [
+                    'id' => (string) \Illuminate\Support\Str::uuid(),
+                    'action' => 'bulk_check_in',
+                    'target_type' => Ticket::class,
+                    'target_id' => $id,
+                    'user_id' => $user->id,
+                    'metadata' => json_encode(['method' => 'bulk_api']),
+                    'ip_address' => request()->ip(),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ], $pendingIds);
+                \App\Models\AuditLog::insert($auditLogs);
+            });
         }
+
+        // Remove pending flag from results
+        $results = array_map(function ($r) {
+            unset($r['pending']);
+            return $r;
+        }, $results);
 
         return response()->json([
             'data' => [
@@ -469,34 +589,33 @@ class TicketCheckInController extends Controller
 
         $validated = $request->validate([
             'event_id' => ['required', 'string'],
-            'qr_code_data' => ['required', 'string'],
+            'qr_code_data' => ['nullable', 'string'],
             'ticket_id' => ['nullable', 'string'],
         ]);
 
         $eventId = $validated['event_id'];
-        $qrCodeData = $validated['qr_code_data'];
+        $qrCodeData = $validated['qr_code_data'] ?? null;
         $ticketId = $validated['ticket_id'] ?? null;
 
-        // Try to decrypt QR code
-        $decrypted = null;
-        try {
-            $decryptedRaw = \Illuminate\Support\Facades\Crypt::decryptString($qrCodeData);
-            $payload = json_decode($decryptedRaw, true);
-            $decrypted = $payload;
-        } catch (\Throwable $e) {
-            // If decryption fails, try using ticket_id directly
-            if (!$ticketId) {
-                return response()->json([
-                    'data' => [
-                        'is_duplicate' => false,
-                        'risk_level' => 'high',
-                        'message' => 'Unable to decrypt QR code and no ticket ID provided.',
-                    ],
-                ]);
+        if (!$ticketId && !$qrCodeData) {
+            return response()->json([
+                'data' => [
+                    'is_duplicate' => false,
+                    'risk_level' => 'high',
+                    'message' => 'Either qr_code_data or ticket_id is required.',
+                ],
+            ], 422);
+        }
+        $resolvedTicketId = $ticketId;
+
+        if ($qrCodeData) {
+            try {
+                $payload = \App\Features\QRCodeTicketing\Services\QRCodeEncryptionService::decrypt($qrCodeData);
+                $resolvedTicketId = $payload ? ($payload['ticket_id'] ?? $ticketId) : $ticketId;
+            } catch (\Throwable $e) {
+                // Decryption failed, fall back to ticket_id
             }
         }
-
-        $resolvedTicketId = $ticketId ?? ($decrypted['ticket_id'] ?? null);
 
         if (!$resolvedTicketId) {
             return response()->json([
@@ -508,7 +627,7 @@ class TicketCheckInController extends Controller
             ]);
         }
 
-        $ticket = Ticket::with(['fraudEvents'])->find($resolvedTicketId);
+        $ticket = \App\Features\CheckIn\Models\Ticket::with(['event'])->find($resolvedTicketId);
 
         if (!$ticket) {
             return response()->json([
@@ -526,7 +645,7 @@ class TicketCheckInController extends Controller
         $previousCheckInBy = $isDuplicate ? $ticket->checked_in_by : null;
 
         // Check fraud events
-        $fraudCount = FraudEvent::where('ticket_id', $ticket->id)->count();
+        $fraudCount = \App\Features\Fraud\Models\FraudEvent::where('ticket_id', $ticket->id)->count();
         $riskLevel = $fraudCount > 0 ? 'high' : ($isDuplicate ? 'medium' : 'low');
 
         return response()->json([
@@ -568,7 +687,7 @@ class TicketCheckInController extends Controller
         $eventId = $validated['event_id'];
         $localCheckIns = $validated['local_check_ins'];
 
-        $event = \App\Models\Event::find($eventId);
+        $event = \App\Models\Event::withTrashed()->find($eventId);
         if (!$event) {
             return response()->json(['message' => 'Event not found.'], 404);
         }
@@ -590,8 +709,12 @@ class TicketCheckInController extends Controller
                 continue;
             }
 
-            // Check if already synced
-            if ($ticket->checked_in && $ticket->checked_in_at && $ticket->checked_in_at->gt(\Carbon\Carbon::parse($local['checked_in_at']))) {
+            // Check if already synced (with 5-minute clock-skew tolerance)
+            $localCheckedInAt = \Carbon\Carbon::parse($local['checked_in_at']);
+            $clockSkewTolerance = now()->subMinutes(5);
+            if ($ticket->checked_in && $ticket->checked_in_at &&
+                $ticket->checked_in_at->gt($localCheckedInAt) &&
+                $ticket->checked_in_at->gt($clockSkewTolerance)) {
                 $results[] = [
                     'ticket_id' => $local['ticket_id'],
                     'status' => 'conflict',
@@ -607,8 +730,8 @@ class TicketCheckInController extends Controller
                     'checked_in' => true,
                     'checked_in_at' => $local['checked_in_at'],
                     'checked_in_by' => $user->id,
+                    'sync_status' => 'synced',
                 ]);
-                $ticket->increment('qr_code_scanned_count');
 
                 $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'synced'];
                 $synced++;

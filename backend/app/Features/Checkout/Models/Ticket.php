@@ -35,9 +35,10 @@ class Ticket extends Model
         });
 
         static::updating(function (Ticket $ticket) {
-            if ($ticket->isDirty('checked_in_at') && $ticket->isCheckedIn()) {
+            $originalCheckedInAt = $ticket->getOriginal('checked_in_at');
+            if ($ticket->isDirty('checked_in_at') && $originalCheckedInAt !== null) {
                 $ticket->forceFill([
-                    'checked_in_at' => $ticket->getOriginal('checked_in_at'),
+                    'checked_in_at' => $originalCheckedInAt,
                 ]);
             }
         });
@@ -62,6 +63,8 @@ class Ticket extends Model
         'checked_in_by',
         'qr_code_scanned_count',
         'last_qr_scan_at',
+        'qr_nonce',
+        'sync_status',
     ];
 
     protected $casts = [

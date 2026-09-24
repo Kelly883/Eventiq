@@ -27,8 +27,8 @@ class TicketFactory extends Factory
             'status' => $this->faker->randomElement(['valid', 'checked_in', 'void', 'purged']),
             'qr_code_data' => $this->faker->uuid(),
             'qr_code_secret' => $this->faker->sha256(),
-            'qr_code_generated_at' => now(),
-            'qr_code_expires_at' => now()->addDays(30),
+            'qr_code_generated_at' => null,
+            'qr_code_expires_at' => null,
             'qr_code_scanned_count' => 0,
         ];
     }

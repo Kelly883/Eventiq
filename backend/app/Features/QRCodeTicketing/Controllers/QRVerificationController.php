@@ -47,9 +47,8 @@ class QRVerificationController extends Controller
         ]);
 
         try {
-            // 3. Decrypt the payload
-            $decryptedRaw = Crypt::decryptString($validated['encrypted_payload']);
-            $payload = json_decode($decryptedRaw, true);
+            // 3. Decrypt the payload using dedicated encryption service
+            $payload = \App\Features\QRCodeTicketing\Services\QRCodeEncryptionService::decrypt($validated['encrypted_payload']);
 
             if (!$payload || !isset($payload['ticket_id']) || !isset($payload['event_id'])) {
                 return response()->json([
@@ -59,11 +58,21 @@ class QRVerificationController extends Controller
             }
 
             // 4. Verify HMAC signature to protect against tampering
-            $expectedSignature = hash_hmac('sha256', "{$payload['event_id']}-{$payload['ticket_id']}", config('app.key'));
-            if (!hash_equals($expectedSignature, $payload['signature'] ?? '')) {
+            $signature = $payload['signature'] ?? '';
+            unset($payload['signature']);
+            if (!\App\Features\QRCodeTicketing\Services\QRCodeEncryptionService::verifySignature($payload, $signature)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'QR Code signature mismatch. Counterfeit attempt suspected.',
+                ], 403);
+            }
+
+            // 5. Verify nonce to prevent replay attacks
+            $ticket = \App\Features\Checkout\Models\Ticket::find($payload['ticket_id']);
+            if ($ticket && isset($payload['nonce']) && $ticket->qr_nonce && hash_equals($ticket->qr_nonce, $payload['nonce'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'QR code has already been used.',
                 ], 403);
             }
 
@@ -78,6 +87,20 @@ class QRVerificationController extends Controller
 
             // At this point the ticket is decrypted, verified authentic,
             // and the venue staff is authorized to handle it.
+            $nonce = $payload['nonce'] ?? null;
+            \App\Models\AuditLog::create([
+                'action' => 'qr_verified',
+                'target_type' => \App\Features\Checkout\Models\Ticket::class,
+                'target_id' => $payload['ticket_id'],
+                'user_id' => $user->id,
+                'metadata' => [
+                    'event_id' => $payload['event_id'],
+                    'nonce' => $nonce,
+                    'method' => 'venue_staff',
+                ],
+                'ip_address' => request()->ip(),
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Ticket decrypted and verified successfully.',
@@ -88,12 +111,6 @@ class QRVerificationController extends Controller
                     'verified_at' => now()->toIso8601String(),
                 ],
             ]);
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            Log::warning('QR Code Decryption Failure: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to decrypt QR code payload. It may be corrupted or forged.',
-            ], 400);
         } catch (\Exception $e) {
             Log::error('QR Verification General Failure: ' . $e->getMessage());
             return response()->json([
@@ -121,8 +138,7 @@ class QRVerificationController extends Controller
         ]);
 
         try {
-            $decryptedRaw = Crypt::decryptString($validated['qr_code_data']);
-            $payload = json_decode($decryptedRaw, true);
+            $payload = \App\Features\QRCodeTicketing\Services\QRCodeEncryptionService::decrypt($validated['qr_code_data']);
 
             if (!$payload || !isset($payload['ticket_id'])) {
                 return response()->json([
@@ -132,8 +148,9 @@ class QRVerificationController extends Controller
             }
 
             // Verify HMAC signature
-            $expectedSignature = hash_hmac('sha256', "{$payload['event_id']}-{$payload['ticket_id']}", config('app.key'));
-            if (!hash_equals($expectedSignature, $payload['signature'] ?? '')) {
+            $signature = $payload['signature'] ?? '';
+            unset($payload['signature']);
+            if (!\App\Features\QRCodeTicketing\Services\QRCodeEncryptionService::verifySignature($payload, $signature)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'QR Code signature mismatch.',
@@ -149,6 +166,22 @@ class QRVerificationController extends Controller
                 ], 404);
             }
 
+            // Defense-in-depth: verify event_id in payload matches ticket's event
+            if (isset($payload['event_id']) && (string) $payload['event_id'] !== (string) $ticket->event_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'QR code event mismatch.',
+                ], 403);
+            }
+
+            // Verify nonce to prevent replay attacks
+            if (isset($payload['nonce']) && $ticket->qr_nonce && hash_equals($ticket->qr_nonce, $payload['nonce'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'QR code has already been used.',
+                ], 403);
+            }
+
             // Ownership check — only the ticket owner can verify their own QR
             if ((string) $ticket->user_id !== (string) $user->id && !$user->hasRole('admin')) {
                 return response()->json([
@@ -161,9 +194,59 @@ class QRVerificationController extends Controller
             if ($ticket->qr_code_expires_at && now()->gt($ticket->qr_code_expires_at)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'QR code expired',
+                    'message' => 'QR code expired'
                 ], 410);
             }
+
+            // Check if already checked in
+            if ($ticket->checked_in || $ticket->status === 'checked_in') {
+                $checkedInAt = $ticket->checked_in_at;
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Already checked in at ' . ($checkedInAt ? $checkedInAt->format('H:i') : 'unknown'),
+                    'data' => [
+                        'ticket_id' => $ticket->id,
+                        'ticket_reference' => $ticket->ticket_id,
+                        'status' => 'checked_in',
+                        'checked_in' => true,
+                        'checked_in_at' => $checkedInAt?->toDateTimeString(),
+                    ],
+                ]);
+            }
+
+            // Check ticket status
+            if ($ticket->status === 'void') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This ticket is invalid',
+                ], 403);
+            }
+
+            // Check for fraud flags
+            $hasFraud = \App\Features\Fraud\Models\FraudEvent::where('ticket_id', $ticket->id)
+                ->whereIn('status', ['flagged', 'auto_blocked'])
+                ->exists();
+
+            if ($hasFraud) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ticket blocked due to fraud investigation.',
+                ], 403);
+            }
+
+            $nonce = $payload['nonce'] ?? null;
+            \App\Models\AuditLog::create([
+                'action' => 'qr_verified',
+                'target_type' => Ticket::class,
+                'target_id' => $ticket->id,
+                'user_id' => $user->id,
+                'metadata' => [
+                    'event_id' => $ticket->event_id,
+                    'nonce' => $nonce,
+                    'method' => 'user',
+                ],
+                'ip_address' => request()->ip(),
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -179,12 +262,6 @@ class QRVerificationController extends Controller
                     'checked_in_at' => $ticket->checked_in_at?->toDateTimeString(),
                 ],
             ]);
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            Log::warning('QR Code Decryption Failure: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to decrypt QR code payload. It may be corrupted or forged.',
-            ], 400);
         } catch (\Exception $e) {
             Log::error('QR Verification General Failure: ' . $e->getMessage());
             return response()->json([
