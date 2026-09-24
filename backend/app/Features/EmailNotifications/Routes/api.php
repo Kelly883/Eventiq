@@ -9,5 +9,8 @@ Route::middleware(['bearer', 'role:admin', 'throttle:email-templates-list'])->pr
     Route::post('/', [EmailTemplateController::class, 'store']);
     Route::patch('/{template}', [EmailTemplateController::class, 'update']);
     Route::delete('/{template}', [EmailTemplateController::class, 'destroy']);
+});
+
+Route::middleware(['bearer', 'role:admin', 'throttle:email-templates-send-test'])->prefix('admin/email-templates')->group(function () {
     Route::post('/send-test', [EmailTemplateController::class, 'sendTest']);
 });

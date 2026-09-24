@@ -10,16 +10,19 @@ class TestEmailMailable extends Mailable
 {
     use Queueable, SerializesModels;
 
+    public string $emailSubject;
+
     public function __construct(
         public string $htmlContent,
         public string $recipientEmail,
-        public ?string $subject = null,
+        ?string $subject = null,
     ) {
+        $this->emailSubject = $subject ?? 'Test Email';
     }
 
     public function build()
     {
-        return $this->subject($this->subject ?? 'Test Email')
+        return $this->subject($this->emailSubject)
             ->html($this->htmlContent);
     }
 }

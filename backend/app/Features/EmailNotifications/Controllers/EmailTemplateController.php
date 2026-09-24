@@ -161,7 +161,7 @@ class EmailTemplateController extends Controller
     public function sendTest(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'template_id' => ['required', 'string', 'exists:email_templates,id'],
+            'template_id' => ['required', 'integer'],
             'recipient_email' => ['required', 'string', 'email'],
         ]);
 
