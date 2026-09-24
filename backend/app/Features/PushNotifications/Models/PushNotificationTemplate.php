@@ -7,7 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class PushNotificationTemplate extends Model
 {
-    use HasFactory;
+    use HasFactory, \Illuminate\Database\Eloquent\Concerns\HasUuids, \Illuminate\Database\Eloquent\SoftDeletes;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $fillable = [
         'name',
@@ -28,6 +31,11 @@ class PushNotificationTemplate extends Model
         'variables' => 'array',
         'badge' => 'integer',
     ];
+
+    public static function newFactory()
+    {
+        return \Database\Factories\PushNotificationTemplateFactory::new();
+    }
 
     public function scopeActive($query)
     {

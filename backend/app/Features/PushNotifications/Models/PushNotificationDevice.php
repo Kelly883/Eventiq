@@ -44,6 +44,14 @@ class PushNotificationDevice extends Model
         'error_count' => 'integer',
     ];
 
+    /**
+     * Create a new factory instance for the model.
+     */
+    public static function newFactory()
+    {
+        return \Database\Factories\PushNotificationDeviceFactory::new();
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
