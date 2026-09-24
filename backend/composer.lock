@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e745a5cd80d898c83a3f2d59606ccd64",
+    "content-hash": "f5a20205f2b60f105e8e9051aea2fd3e",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -5612,6 +5612,51 @@
                 }
             ],
             "time": "2026-05-07T15:30:40+00:00"
+        },
+        {
+            "name": "shyim/mjml-php",
+            "version": "0.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/shyim/mjml-php.git",
+                "reference": "c27cc1be956b898b13f1fc1b9301674c7cc093e3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/shyim/mjml-php/zipball/c27cc1be956b898b13f1fc1b9301674c7cc093e3",
+                "reference": "c27cc1be956b898b13f1fc1b9301674c7cc093e3",
+                "shasum": ""
+            },
+            "require": {
+                "ext-dom": "*",
+                "ext-libxml": "*",
+                "php": ">=8.2",
+                "tijsverkoyen/css-to-inline-styles": "^2.2"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.94",
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^11.0"
+            },
+            "bin": [
+                "bin/mjml-php"
+            ],
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "MjmlPHP\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Native PHP port of MJML - the email template engine",
+            "support": {
+                "issues": "https://github.com/shyim/mjml-php/issues",
+                "source": "https://github.com/shyim/mjml-php/tree/0.2.1"
+            },
+            "time": "2026-09-08T15:13:38+00:00"
         },
         {
             "name": "simplesoftwareio/simple-qrcode",

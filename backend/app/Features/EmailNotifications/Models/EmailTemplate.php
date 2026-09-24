@@ -20,6 +20,7 @@ class EmailTemplate extends Model
         'mjml_body',
         'variables',
         'is_active',
+        'is_system_template',
         'published_at',
         'version',
         'category',
@@ -29,6 +30,7 @@ class EmailTemplate extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_system_template' => 'boolean',
         'published_at' => 'datetime',
         'variables' => 'array',
     ];

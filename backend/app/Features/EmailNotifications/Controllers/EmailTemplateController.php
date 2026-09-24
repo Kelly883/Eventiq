@@ -12,6 +12,7 @@ use App\Mail\TestEmailMailable;
 use App\Models\AuditLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class EmailTemplateController extends Controller
@@ -25,6 +26,7 @@ class EmailTemplateController extends Controller
         $request->validate([
             'filter.type' => ['nullable', 'string', 'max:50'],
             'filter.is_active' => ['nullable', 'string', 'in:true,false'],
+            'filter.search' => ['nullable', 'string', 'max:100'],
         ]);
 
         $query = EmailTemplate::query()->orderByDesc('created_at');
@@ -35,6 +37,15 @@ class EmailTemplateController extends Controller
 
         if ($request->filled('filter.is_active')) {
             $query->where('is_active', $request->boolean('filter.is_active'));
+        }
+
+        if ($request->filled('filter.search')) {
+            $search = $request->input('filter.search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('type', 'LIKE', "%{$search}%")
+                    ->orWhere('subject', 'LIKE', "%{$search}%");
+            });
         }
 
         $templates = $query->paginate(20);
@@ -143,6 +154,13 @@ class EmailTemplateController extends Controller
             ], 404);
         }
 
+        if ($template->is_system_template) {
+            return response()->json([
+                'success' => false,
+                'message' => 'System templates cannot be deleted.',
+            ], 403);
+        }
+
         $template->delete();
 
         AuditLog::create([
@@ -175,7 +193,7 @@ class EmailTemplateController extends Controller
         }
 
         try {
-            Mail::to($validated['recipient_email'])->send(
+            Mail::to($validated['recipient_email'])->queue(
                 new TestEmailMailable(
                     htmlContent: $template->html_body,
                     recipientEmail: $validated['recipient_email'],
@@ -185,7 +203,7 @@ class EmailTemplateController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Test email sent',
+                'message' => 'Test email queued',
             ]);
         } catch (\Throwable $e) {
             return response()->json([
@@ -197,7 +215,19 @@ class EmailTemplateController extends Controller
 
     private function compileMjml(string $mjml): string
     {
-        // Basic MJML to HTML conversion (mjml/mjml package not installed)
+        try {
+            $mjmlService = new \MjmlPHP\Mjml();
+            $result = $mjmlService->toHtml($mjml);
+            return $result->html();
+        } catch (\Throwable $e) {
+            Log::warning('MJML compilation failed: ' . $e->getMessage() . '. Using fallback.');
+            return $this->compileMjmlFallback($mjml);
+        }
+    }
+
+    private function compileMjmlFallback(string $mjml): string
+    {
+        // Basic MJML to HTML conversion fallback
         $html = $mjml;
         $html = preg_replace('/<mjml>/', '<html>', $html);
         $html = preg_replace('/<\/mjml>/', '</html>', $html);

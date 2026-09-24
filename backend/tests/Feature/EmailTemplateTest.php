@@ -144,6 +144,23 @@ class EmailTemplateTest extends TestCase
         }
     }
 
+    public function test_list_search_by_name(): void
+    {
+        $admin = $this->makeUser('admin');
+
+        EmailTemplate::factory()->create(['name' => 'Welcome Email']);
+        EmailTemplate::factory()->create(['name' => 'Order Confirmation']);
+        EmailTemplate::factory()->create(['name' => 'Event Reminder']);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/admin/email-templates?filter[search]=Welcome');
+
+        $response->assertOk();
+        $items = $response->json('data');
+        $this->assertCount(1, $items);
+        $this->assertEquals('Welcome Email', $items[0]['name']);
+    }
+
     // ------------------------------------------------------------------
     // GET /api/admin/email-templates/:templateId (show)
     // ------------------------------------------------------------------
@@ -311,6 +328,18 @@ class EmailTemplateTest extends TestCase
         ]);
     }
 
+    public function test_destroy_system_template_returns_403(): void
+    {
+        $admin = $this->makeUser('admin');
+        $template = EmailTemplate::factory()->create(['is_system_template' => true]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->deleteJson('/api/admin/email-templates/' . $template->id);
+
+        $response->assertForbidden()
+            ->assertJsonPath('success', false);
+    }
+
     public function test_destroy_returns_404_for_nonexistent(): void
     {
         $admin = $this->makeUser('admin');
@@ -341,9 +370,9 @@ class EmailTemplateTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('message', 'Test email sent');
+            ->assertJsonPath('message', 'Test email queued');
 
-        Mail::assertSent(\App\Mail\TestEmailMailable::class);
+        Mail::assertQueued(\App\Mail\TestEmailMailable::class);
     }
 
     public function test_send_test_requires_valid_email(): void
