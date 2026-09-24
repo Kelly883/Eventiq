@@ -207,6 +207,6 @@ class CheckoutControllerTest extends TestCase
 
         $tickets = $response->json('data');
         $this->assertCount(1, $tickets);
-        $this->assertSame($tier->event_id, $tickets[0]['event']['id']);
+        $this->assertSame($tier->event_id, $tickets[0]['event_id']);
     }
 }
