@@ -5,14 +5,19 @@ namespace App\Features\Refunds\Services;
 use App\Features\Checkout\Models\Ticket;
 use App\Features\Compliance\Services\AuditLogService;
 use App\Features\Fraud\Models\FraudEvent;
+use App\Features\Refunds\Enums\RefundMethodEnum;
+use App\Features\Refunds\Enums\RefundReasonEnum;
+use App\Features\Refunds\Jobs\ProcessRefundJob;
 use App\Features\Refunds\Models\RefundPolicy;
 use App\Features\Refunds\Models\RefundRequest;
 use App\Mail\RefundStatusUpdated;
 use App\Mail\RefundRequested;
 use App\Services\PaymentGatewayService;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 
 class RefundService
@@ -23,13 +28,39 @@ class RefundService
     ) {
     }
 
-    public function requestRefund(string $userId, string $ticketId, string $reason, string $refundMethod = 'original_payment', ?string $explanation = null): RefundRequest
+    /**
+     * Request a refund for a ticket.
+     *
+     * Supports guest tickets (user_id can be null) by verifying order email.
+     * Validates payment method for original_payment_method refund method.
+     * Supports idempotency keys for safe retries.
+     */
+    public function requestRefund(
+        string $userId,
+        string $ticketId,
+        string $reason,
+        string $refundMethod = RefundMethodEnum::ORIGINAL_PAYMENT_METHOD->value,
+        ?string $explanation = null,
+        ?string $idempotencyKey = null,
+        ?string $guestEmail = null
+    ): RefundRequest
     {
         $ticket = Ticket::with(['order', 'ticketTier', 'event.organizer.user'])->findOrFail($ticketId);
 
-        // Ownership check
-        if ($ticket->user_id !== $userId) {
+        // Handle guest tickets (user_id can be null in tickets table)
+        $isGuestTicket = $ticket->user_id === null;
+
+        // Ownership check - handle guest tickets
+        if (!$isGuestTicket && $ticket->user_id !== $userId) {
             throw new \RuntimeException('This ticket does not belong to you.', 403);
+        }
+
+        // For guest tickets, verify ownership via order email
+        if ($isGuestTicket && $guestEmail) {
+            $ticketEmail = $ticket->attendee_email ?? $ticket->order->billing_email ?? null;
+            if ($ticketEmail && !strcasecmp($ticketEmail, $guestEmail)) {
+                throw new \RuntimeException('Guest ticket email mismatch.', 403);
+            }
         }
 
         // Ticket status check
@@ -59,7 +90,18 @@ class RefundService
         }
 
         // Duplicate check — use lockForUpdate for race condition protection
-        return DB::transaction(function () use ($userId, $ticketId, $reason, $refundMethod, $explanation, $ticket, $event, $policy) {
+        return DB::transaction(function () use ($userId, $ticketId, $reason, $refundMethod, $explanation, $ticket, $event, $policy, $idempotencyKey, $isGuestTicket) {
+            // Check for existing refund with same idempotency key (for safe retries)
+            if ($idempotencyKey) {
+                $existingIdempotent = RefundRequest::where('idempotency_key', $idempotencyKey)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existingIdempotent) {
+                    return $existingIdempotent;
+                }
+            }
+
             $existing = RefundRequest::where('ticket_id', $ticketId)
                 ->whereIn('status', ['pending', 'approved', 'processing'])
                 ->lockForUpdate()
@@ -76,12 +118,25 @@ class RefundService
                 }
             }
 
+            // Payment method validation for original_payment_method refund method
+            if ($refundMethod === RefundMethodEnum::ORIGINAL_PAYMENT_METHOD->value && $ticket->order) {
+                $userModel = $isGuestTicket ? null : app('App\Models\User')->find($userId);
+                if ($userModel && !$userModel->hasPaymentMethod()) {
+                    throw new \RuntimeException('Cannot issue refund to original payment: no valid payment method on file. Choose ' . RefundMethodEnum::STORE_CREDIT->value . ' or ' . RefundMethodEnum::ALTERNATIVE_PAYMENT_METHOD->value . '.', 422);
+                }
+                if (!$ticket->order->payment_gateway || !$ticket->order->gateway_transaction_id) {
+                    throw new \RuntimeException('Cannot process refund to original payment: no gateway transaction found.', 422);
+                }
+            }
+
             // Calculate refund amount based on policy
             $originalAmount = $ticket->ticketTier->price ?? $ticket->order->total_amount ?? 0;
             $refundPercentage = $policy ? $policy->refund_percentage_before_event : 100.00;
 
-            // If event started, check if different percentage applies
-            if ($event->start_datetime->isPast() && $policy && $policy->refund_percentage_after_event_start) {
+            // If event started, check if different percentage applies.
+            // Only override if the policy has an explicit after-event percentage;
+            // otherwise keep the before-event percentage as the safe default.
+            if ($event->start_datetime->isPast() && $policy && $policy->refund_percentage_after_event_start !== null) {
                 $refundPercentage = $policy->refund_percentage_after_event_start;
             }
 
@@ -99,20 +154,26 @@ class RefundService
             // Get expected processing days
             $expectedProcessingDays = $policy ? $policy->processing_time_business_days : 3;
 
+            // Get policy version for audit trail (policy versioning)
+            $policyVersion = $policy ? $policy->version ?? null : null;
+
             $refundRequest = RefundRequest::create([
                 'ticket_id' => $ticketId,
                 'order_id' => $ticket->order_id,
-                'user_id' => $userId,
+                'user_id' => $isGuestTicket ? null : $userId,
                 'event_id' => $event->id,
                 'original_amount' => $originalAmount,
                 'refund_amount' => $refundAmount,
                 'refund_percentage' => $refundPercentage,
+                'requested_amount' => $refundAmount,
                 'reason' => $reason,
                 'explanation' => $explanation,
                 'refund_method' => $refundMethod,
                 'status' => $status,
                 'reference_number' => 'REF-' . strtoupper(Str::random(10)),
                 'expected_processing_days' => $expectedProcessingDays,
+                'idempotency_key' => $idempotencyKey,
+                'policy_version_id' => $policyVersion,
             ]);
 
             $this->auditLogService->log('refund.requested', 'refund_request', $refundRequest->id, [
@@ -122,14 +183,23 @@ class RefundService
                 'refund_percentage' => $refundPercentage,
                 'status' => $status,
                 'refund_method' => $refundMethod,
-            ], $userId);
+                'is_guest_ticket' => $isGuestTicket,
+            ], $isGuestTicket ? null : $userId);
+
+            // For auto-approved refunds, queue the gateway processing
+            if ($status === 'approved') {
+                ProcessRefundJob::dispatch($refundRequest->id);
+            }
 
             // Send email notification to user
-            try {
-                Mail::to($ticket->attendee_email ?? $ticket->user?->email)
-                    ->queue(new RefundRequested($refundRequest));
-            } catch (\Throwable $e) {
-                Log::warning('Failed to queue refund requested email: ' . $e->getMessage());
+            $recipientEmail = $ticket->attendee_email ?? $ticket->user?->email;
+            if ($recipientEmail) {
+                try {
+                    Mail::to($recipientEmail)
+                        ->queue(new RefundRequested($refundRequest));
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to queue refund requested email: ' . $e->getMessage());
+                }
             }
 
             // Send notification to organizer
@@ -148,8 +218,7 @@ class RefundService
     }
 
     /**
-     * Approve a pending refund request, then actually process it through
-     * the payment gateway.
+     * Approve a pending refund request, then queue processing through the payment gateway.
      */
     public function approve(string $refundRequestId, int $adminUserId, ?float $approvedAmount, ?string $adminNotes = null): RefundRequest
     {
@@ -157,6 +226,7 @@ class RefundService
 
         $previousStatus = $refundRequest->status;
 
+        // Update to approved status
         $refundRequest->update([
             'status' => 'approved',
             'approved_amount' => $approvedAmount ?? $refundRequest->refund_amount,
@@ -167,29 +237,15 @@ class RefundService
             'approved_by' => $adminUserId,
         ]);
 
-        try {
-            $this->paymentGatewayService->processRefund($refundRequest->id);
-            $refundRequest->update(['status' => 'refunded', 'completed_at' => now()]);
+        // Queue the gateway processing asynchronously
+        ProcessRefundJob::dispatch($refundRequest->id);
 
-            $this->auditLogService->log('refund.approved', 'refund_request', $refundRequest->id, [
-                'previous_status' => $previousStatus,
-                'status' => 'refunded',
-                'approved_amount' => $refundRequest->approved_amount,
-            ], $adminUserId);
-
-            // Mark the ticket cancelled once the refund actually succeeds.
-            $refundRequest->ticket()->update(['status' => 'refunded']);
-
-            // Send refund completed email
-            $this->sendStatusEmail($refundRequest);
-        } catch (\Throwable $e) {
-            Log::error("RefundService::approve - gateway refund failed for request {$refundRequestId}: " . $e->getMessage());
-            $refundRequest->update(['status' => 'approved']);
-            $this->auditLogService->log('refund.gateway_failed', 'refund_request', $refundRequest->id, [
-                'error' => $e->getMessage(),
-            ], $adminUserId);
-            throw $e;
-        }
+        $this->auditLogService->log('refund.approved', 'refund_request', $refundRequest->id, [
+            'previous_status' => $previousStatus,
+            'status' => 'approved',
+            'approved_amount' => $refundRequest->approved_amount,
+            'processing_queued' => true,
+        ], $adminUserId);
 
         return $refundRequest->fresh();
     }

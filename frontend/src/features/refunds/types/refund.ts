@@ -7,7 +7,7 @@ export interface RefundRequest {
   readonly originalAmount: number;
   readonly refundAmount: number;
   readonly refundPercentage: number;
-  readonly reason: 'event_cancelled' | 'personal_circumstances' | 'duplicate_purchase' | 'other';
+  readonly reason: 'event_cancelled' | 'personal_circumstances' | 'duplicate_purchase' | 'other' | 'payment_issue' | 'policy_violation';
   readonly explanation?: string;
   readonly refundMethod: 'original_payment_method' | 'store_credit' | 'alternative_payment_method';
   readonly status: 'pending' | 'approved' | 'rejected' | 'processing' | 'completed' | 'failed';

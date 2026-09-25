@@ -6,7 +6,7 @@ Your refund request status has been updated.
 **Reference Number:** {{ $refundRequest->reference_number }}
 **Status:** {{ ucfirst($refundRequest->status) }}
 
-@if($refundRequest->status === 'refunded')
+ @if($refundRequest->status === 'completed')
 Your refund of ${{ number_format($refundRequest->refund_amount, 2) }} has been processed.
 @elseif($refundRequest->status === 'rejected')
 Your refund request has been rejected. Reason: {{ $refundRequest->rejection_reason }}

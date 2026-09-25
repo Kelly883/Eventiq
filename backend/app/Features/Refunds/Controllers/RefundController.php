@@ -2,7 +2,6 @@
 
 namespace App\Features\Refunds\Controllers;
 
-use App\Features\Refunds\Models\RefundRequest;
 use App\Features\Refunds\Requests\StoreRefundRequest;
 use App\Features\Refunds\Resources\RefundRequestResource;
 use App\Features\Refunds\Services\RefundService;
@@ -20,14 +19,19 @@ class RefundController extends Controller
      */
     public function requestRefund(StoreRefundRequest $request): JsonResponse
     {
+        $idempotencyKey = $request->header('X-Idempotency-Key');
+
         try {
             $refundRequest = $this->refundService->requestRefund(
                 $request->user()->id,
                 $request->validated('ticket_id'),
                 $request->validated('reason'),
-                $request->validated('refund_method', 'original_payment'),
-                $request->validated('explanation')
+                $request->validated('refund_method'),
+                $request->validated('explanation'),
+                $idempotencyKey
             );
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['message' => 'Ticket not found.'], 404);
         } catch (\RuntimeException $e) {
             $code = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 422;
             return response()->json(['message' => $e->getMessage()], $code);

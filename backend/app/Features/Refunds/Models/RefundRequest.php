@@ -42,6 +42,9 @@ class RefundRequest extends Model
         'last_appeal_at',
         'reference_number',
         'expected_processing_days',
+        'idempotency_key',
+        'policy_version_id',
+        'requested_amount',
     ];
 
     protected $casts = [

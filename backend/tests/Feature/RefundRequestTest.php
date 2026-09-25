@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Features\Refunds\Models\RefundPolicy;
 use App\Features\Refunds\Models\RefundRequest;
+use App\Features\Payment\Models\PaymentMethod;
 use App\Models\Event;
 use App\Models\Organizer;
 use App\Models\Role;
@@ -11,16 +12,45 @@ use App\Features\Checkout\Models\Ticket;
 use App\Models\TicketTier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class RefundRequestTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config()->set('payment.gateways.paystack.secret_key', 'test-secret-key');
+        config()->set('payment.gateways.paystack.public_key', 'test-public-key');
+        config()->set('payment.gateways.paystack.payment_url', 'https://api.paystack.co');
+
+        Http::fake([
+            'https://api.paystack.co/refund' => Http::response([
+                'status' => true,
+                'data' => [
+                    'id' => 'rf_' . \Illuminate\Support\Str::random(8),
+                    'status' => 'processed',
+                ],
+            ], 200),
+        ]);
+    }
+
     private function makeUser(string $role = 'attendee'): User
     {
         $user = User::factory()->create(['emailVerified' => true]);
         $user->organizer()->firstOrCreate([], ['displayName' => $user->name ?? 'Test User']);
+
+        PaymentMethod::create([
+            'user_id' => $user->id,
+            'gateway' => 'paystack',
+            'gateway_payment_method_id' => 'pm_' . strtolower($user->id),
+            'type' => 'card',
+            'is_default' => true,
+            'last_four' => '4242',
+            'brand' => 'visa',
+        ]);
 
         if ($role === 'admin') {
             $adminRole = Role::firstOrCreate(['name' => 'admin'], ['description' => 'Administrator', 'isSystemRole' => true]);
@@ -32,15 +62,27 @@ class RefundRequestTest extends TestCase
         return $user;
     }
 
-    private function createTicket(User $user, ?Event $event = null, string $status = 'valid'): Ticket
+    private function createTicket(User $user, ?Event $event = null, string $status = 'valid', ?float $ticketPrice = null): Ticket
     {
         $event = $event ?? Event::factory()->create(['start_datetime' => now()->addDays(7)]);
-        $tier = TicketTier::factory()->create(['event_id' => $event->id, 'price' => 100.00]);
+        $tier = TicketTier::factory()->create([
+            'event_id' => $event->id,
+            'price' => $ticketPrice ?? 100.00,
+        ]);
+
+        $order = \App\Features\Checkout\Models\Order::factory()->create([
+            'user_id' => $user->id,
+            'event_id' => $event->id,
+            'status' => 'completed',
+            'payment_gateway' => 'paystack',
+            'gateway_transaction_id' => 'tx_' . \Illuminate\Support\Str::random(16),
+        ]);
 
         return Ticket::factory()->create([
             'user_id' => $user->id,
             'event_id' => $event->id,
             'ticket_tier_id' => $tier->id,
+            'order_id' => $order->id,
             'status' => $status,
         ]);
     }
@@ -63,7 +105,8 @@ class RefundRequestTest extends TestCase
         $user = $this->makeUser();
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/refunds/request', [
-            'reason' => 'Event cancelled',
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
         ]);
 
         $response->assertStatus(422);
@@ -76,6 +119,7 @@ class RefundRequestTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/refunds/request', [
             'ticket_id' => $ticket->id,
+            'refund_method' => 'original_payment_method',
         ]);
 
         $response->assertStatus(422);
@@ -107,8 +151,8 @@ class RefundRequestTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/refunds/request', [
             'ticket_id' => $ticket->id,
-            'reason' => 'Event cancelled',
-            'refund_method' => 'original_payment',
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
         ]);
 
         $response->assertStatus(403);
@@ -126,8 +170,8 @@ class RefundRequestTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/refunds/request', [
             'ticket_id' => $ticket->id,
-            'reason' => 'Event cancelled',
-            'refund_method' => 'original_payment',
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
         ]);
 
         $response->assertStatus(403);
@@ -144,14 +188,14 @@ class RefundRequestTest extends TestCase
 
         $this->actingAs($user, 'sanctum')->postJson('/api/refunds/request', [
             'ticket_id' => $ticket->id,
-            'reason' => 'Event cancelled',
-            'refund_method' => 'original_payment',
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
         ])->assertStatus(201);
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/refunds/request', [
             'ticket_id' => $ticket->id,
-            'reason' => 'Event cancelled',
-            'refund_method' => 'original_payment',
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
         ]);
 
         $response->assertStatus(409);
@@ -168,8 +212,8 @@ class RefundRequestTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/refunds/request', [
             'ticket_id' => $ticket->id,
-            'reason' => 'Event cancelled',
-            'refund_method' => 'original_payment',
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
         ]);
 
         $response->assertStatus(201)
@@ -188,8 +232,8 @@ class RefundRequestTest extends TestCase
         $this->assertDatabaseHas('refund_requests', [
             'ticket_id' => $ticket->id,
             'user_id' => $user->id,
-            'reason' => 'Event cancelled',
-            'refund_method' => 'original_payment',
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
         ]);
     }
 
@@ -197,25 +241,20 @@ class RefundRequestTest extends TestCase
     {
         $user = $this->makeUser();
         $event = Event::factory()->create(['start_datetime' => now()->addDays(7)]);
-        $tier = TicketTier::factory()->create(['event_id' => $event->id, 'price' => 250.00]);
-        $ticket = Ticket::factory()->create([
-            'user_id' => $user->id,
-            'event_id' => $event->id,
-            'ticket_tier_id' => $tier->id,
-            'status' => 'valid',
-        ]);
 
-        // Create policy with 80% refund
+        // Create policy with 80% refund before event
         RefundPolicy::factory()->create([
             'event_id' => $event->id,
             'refund_percentage_before_event' => 80.00,
             'is_active' => true,
         ]);
 
+        $ticket = $this->createTicket($user, $event, 'valid', 250.00);
+
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/refunds/request', [
             'ticket_id' => $ticket->id,
-            'reason' => 'Event cancelled',
-            'refund_method' => 'original_payment',
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
         ]);
 
         $response->assertStatus(201);
@@ -227,12 +266,7 @@ class RefundRequestTest extends TestCase
         $user = $this->makeUser();
         $event = Event::factory()->create(['start_datetime' => now()->addDays(7)]);
         $tier = TicketTier::factory()->create(['event_id' => $event->id, 'price' => 100.00]);
-        $ticket = Ticket::factory()->create([
-            'user_id' => $user->id,
-            'event_id' => $event->id,
-            'ticket_tier_id' => $tier->id,
-            'status' => 'valid',
-        ]);
+        $ticket = $this->createTicket($user, $event);
 
         // Policy that doesn't require approval
         RefundPolicy::factory()->create([
@@ -243,8 +277,8 @@ class RefundRequestTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/refunds/request', [
             'ticket_id' => $ticket->id,
-            'reason' => 'Event cancelled',
-            'refund_method' => 'original_payment',
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
         ]);
 
         $response->assertStatus(201);
@@ -256,12 +290,7 @@ class RefundRequestTest extends TestCase
         $user = $this->makeUser();
         $event = Event::factory()->create(['start_datetime' => now()->addDays(7)]);
         $tier = TicketTier::factory()->create(['event_id' => $event->id, 'price' => 100.00]);
-        $ticket = Ticket::factory()->create([
-            'user_id' => $user->id,
-            'event_id' => $event->id,
-            'ticket_tier_id' => $tier->id,
-            'status' => 'valid',
-        ]);
+        $ticket = $this->createTicket($user, $event);
 
         // Policy that requires approval
         RefundPolicy::factory()->create([
@@ -272,8 +301,8 @@ class RefundRequestTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/refunds/request', [
             'ticket_id' => $ticket->id,
-            'reason' => 'Event cancelled',
-            'refund_method' => 'original_payment',
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
         ]);
 
         $response->assertStatus(201);
@@ -293,8 +322,8 @@ class RefundRequestTest extends TestCase
 
         $this->actingAs($user, 'sanctum')->postJson('/api/refunds/request', [
             'ticket_id' => $ticket->id,
-            'reason' => 'Event cancelled',
-            'refund_method' => 'original_payment',
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
         ])->assertStatus(201);
 
         $this->assertDatabaseHas('audit_logs', [
@@ -315,8 +344,8 @@ class RefundRequestTest extends TestCase
             $this->actingAs($user, 'sanctum')
                 ->postJson('/api/refunds/request', [
                     'ticket_id' => $ticket->id,
-                    'reason' => 'Event cancelled',
-                    'refund_method' => 'original_payment',
+                    'reason' => 'event_cancelled',
+                    'refund_method' => 'original_payment_method',
                 ])
                 ->assertStatus(201);
         }
@@ -325,8 +354,8 @@ class RefundRequestTest extends TestCase
         $this->actingAs($user, 'sanctum')
             ->postJson('/api/refunds/request', [
                 'ticket_id' => $ticket->id,
-                'reason' => 'Event cancelled',
-                'refund_method' => 'original_payment',
+                'reason' => 'event_cancelled',
+                'refund_method' => 'original_payment_method',
             ])
             ->assertStatus(429);
     }
@@ -342,8 +371,8 @@ class RefundRequestTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/refunds/request', [
             'ticket_id' => $ticket->id,
-            'reason' => 'Event cancelled',
-            'refund_method' => 'original_payment',
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
         ]);
 
         $response->assertStatus(403);
@@ -356,8 +385,8 @@ class RefundRequestTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/refunds/request', [
             'ticket_id' => $ticket->id,
-            'reason' => 'Event cancelled',
-            'refund_method' => 'original_payment',
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
         ]);
 
         $response->assertStatus(403);

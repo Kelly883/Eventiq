@@ -19,6 +19,8 @@ use App\Features\EmailNotifications\Policies\EmailTemplatePolicy;
 use App\Features\OrganizerProfile\Models\OrganizerProfile;
 use App\Features\OrganizerProfile\Policies\OrganizerProfilePolicy;
 use App\Features\admin\Policies\AdminPolicy;
+use App\Features\Refunds\Models\RefundRequest;
+use App\Features\Refunds\Policies\RefundRequestPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -35,6 +37,7 @@ class AuthServiceProvider extends ServiceProvider
         Webhook::class => WebhookPolicy::class,
         PricingWindow::class => PricingWindowPolicy::class,
         \App\Features\Checkout\Models\Ticket::class => \App\Features\Tickets\Policies\TicketPolicy::class,
+        RefundRequest::class => RefundRequestPolicy::class,
     ];
 
     public function register(): void

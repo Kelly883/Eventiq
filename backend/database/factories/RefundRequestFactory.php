@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Features\Refunds\Enums\RefundMethodEnum;
+use App\Features\Refunds\Enums\RefundReasonEnum;
 use App\Features\Refunds\Models\RefundRequest;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -20,9 +22,9 @@ class RefundRequestFactory extends Factory
             'original_amount' => $this->faker->randomFloat(2, 10, 500),
             'refund_amount' => $this->faker->randomFloat(2, 10, 500),
             'refund_percentage' => $this->faker->randomFloat(2, 50, 100),
-            'reason' => $this->faker->sentence(),
+            'reason' => $this->faker->randomElement(RefundReasonEnum::cases())->value,
             'explanation' => $this->faker->paragraph(),
-            'refund_method' => $this->faker->randomElement(['original_payment', 'store_credit', 'bank_transfer']),
+            'refund_method' => $this->faker->randomElement(RefundMethodEnum::cases())->value,
             'status' => 'pending',
             'reference_number' => 'REF-' . strtoupper(Str::random(10)),
             'expected_processing_days' => 3,

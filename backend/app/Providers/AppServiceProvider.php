@@ -235,9 +235,13 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('push-templates', fn($req) => Limit::perMinute(20)->by($req->user()?->id ?: $req->ip()));
         RateLimiter::for('push-templates-send-test', fn($req) => Limit::perMinute(5)->by($req->user()?->id ?: $req->ip()));
 
-        // Refund endpoints — refund request 5/min per user.
-        RateLimiter::for('refund-request', fn($req) => Limit::perMinute(5)->by($req->user()?->id ?: $req->ip()));
+        // Refund endpoints — refund request 5/hour per user (reduced from 5/min to prevent abuse).
+        RateLimiter::for('refund-request', fn($req) => Limit::perHour(5)->by($req->user()?->id ?: $req->ip()));
         RateLimiter::for('refund-status', fn($req) => Limit::perMinute(20)->by($req->user()?->id ?: $req->ip()));
+
+        // Payout list endpoint — 20 requests per minute per organiser (or per IP),
+        // returns 429 on the 21st request within the rolling window.
+        RateLimiter::for('payouts-list', fn($req) => Limit::perMinute(20)->by($req->user()?->id ?: $req->ip()));
 
         Event::observe(EventObserver::class);
         Ticket::observe(TicketObserver::class);

@@ -41,7 +41,7 @@ class PaymentGatewayService
      * gateway's refund API, and records the result on the refund request
      * (payment_gateway_refund_id / payment_gateway_response).
      */
-    public function processRefund(int $refundRequestId): array
+    public function processRefund(string $refundRequestId): array
     {
         $refundRequest = RefundRequest::with('ticket.order')->findOrFail($refundRequestId);
         $order = $refundRequest->ticket->order;
@@ -54,7 +54,7 @@ class PaymentGatewayService
             throw new \RuntimeException("Refund request {$refundRequestId}: order has no payment gateway.");
         }
 
-        $amount = (float) ($refundRequest->approved_amount ?? $refundRequest->requested_amount ?? 0);
+        $amount = (float) ($refundRequest->approved_amount ?? $refundRequest->refund_amount ?? $refundRequest->requested_amount ?? 0);
         if ($amount <= 0) {
             throw new \RuntimeException("Refund request {$refundRequestId}: refund amount must be greater than zero.");
         }

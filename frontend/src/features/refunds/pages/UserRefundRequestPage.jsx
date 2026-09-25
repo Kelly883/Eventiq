@@ -19,7 +19,7 @@ const UserRefundRequestPage = () => {
   const [form, setForm] = useState({
     reason: '',
     explanation: '',
-    refundMethod: 'original_payment',
+    refundMethod: 'original_payment_method',
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -110,8 +110,10 @@ const UserRefundRequestPage = () => {
           >
             <option value='' disabled>Select a reason</option>
             <option value='event_cancelled'>Event was cancelled</option>
-            <option value='cannot_attend'>Cannot attend</option>
+            <option value='personal_circumstances'>Personal circumstances</option>
             <option value='duplicate_purchase'>Duplicate purchase</option>
+            <option value='payment_issue'>Payment issue</option>
+            <option value='policy_violation'>Policy violation</option>
             <option value='other'>Other</option>
           </select>
           {errors.reason && <p className='mt-1 text-xs text-red-600'>{errors.reason}</p>}
@@ -141,9 +143,9 @@ const UserRefundRequestPage = () => {
             required
           >
             <option value='' disabled>Select method</option>
-            <option value='original_payment'>Original payment method</option>
+            <option value='original_payment_method'>Original payment method</option>
             <option value='store_credit'>Store credit</option>
-            <option value='bank_transfer'>Bank transfer</option>
+            <option value='alternative_payment_method'>Alternative payment method</option>
           </select>
         </div>
 

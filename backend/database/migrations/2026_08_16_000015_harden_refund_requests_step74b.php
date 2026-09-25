@@ -143,7 +143,7 @@ return new class extends Migration
 
             // Add reason check constraint
             try {
-                DB::statement("ALTER TABLE refund_requests ADD CONSTRAINT chk_refund_requests_reason CHECK (reason IN ('event_cancelled', 'personal_circumstances', 'duplicate_purchase', 'other'))");
+                DB::statement("ALTER TABLE refund_requests ADD CONSTRAINT chk_refund_requests_reason CHECK (reason IN ('event_cancelled', 'personal_circumstances', 'duplicate_purchase', 'other', 'payment_issue', 'policy_violation'))");
             } catch (\Throwable $e) {
                 // Constraint may already exist
             }
@@ -216,7 +216,7 @@ return new class extends Migration
 
         // Add reason check constraint
         try {
-            DB::statement("ALTER TABLE refund_requests ADD CONSTRAINT chk_refund_requests_reason CHECK (reason IN ('event_cancelled', 'personal_circumstances', 'duplicate_purchase', 'other'))");
+            DB::statement("ALTER TABLE refund_requests ADD CONSTRAINT chk_refund_requests_reason CHECK (reason IN ('event_cancelled', 'personal_circumstances', 'duplicate_purchase', 'other', 'payment_issue', 'policy_violation'))");
         } catch (\Throwable $e) {
             // Constraint may already exist
         }

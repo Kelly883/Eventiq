@@ -38,7 +38,7 @@ const UserRefundStatusPage = () => {
       reason: '',
       submittedAt: new Date(),
       processedAt: null,
-      refundMethod: 'original_payment',
+      refundMethod: 'original_payment_method',
       policy: { windowDays: 7, fullRefundBeforeDays: 3 },
     };
 

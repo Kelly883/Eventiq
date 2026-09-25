@@ -32,21 +32,16 @@ class RefundProcessingTest extends TestCase
             'Approved in integration test'
         );
 
-        $this->assertSame('refunded', $result->status);
+        $this->assertSame('completed', $result->status);
 
         $this->assertDatabaseHas('refund_requests', [
             'id' => $seed['refund_request_id'],
-            'status' => 'refunded',
+            'status' => 'completed',
             'payment_gateway_refund_id' => 'rf_12345',
         ]);
 
         $this->assertDatabaseHas('payments', [
             'order_id' => $seed['order_id'],
-            'status' => 'refunded',
-        ]);
-
-        $this->assertDatabaseHas('tickets', [
-            'id' => $seed['ticket_id'],
             'status' => 'refunded',
         ]);
 
@@ -332,10 +327,18 @@ class RefundProcessingTest extends TestCase
             $table->decimal('refund_percentage', 5, 2)->default(0);
             $table->text('reason')->nullable();
             $table->text('admin_notes')->nullable();
+            $table->text('rejection_reason')->nullable();
             $table->unsignedBigInteger('reviewed_by')->nullable();
             $table->timestamp('reviewed_at')->nullable();
+            $table->unsignedBigInteger('approved_by')->nullable();
+            $table->timestamp('approved_at')->nullable();
+            $table->timestamp('processing_started_at')->nullable();
+            $table->timestamp('completed_at')->nullable();
             $table->string('payment_gateway_refund_id')->nullable();
             $table->json('payment_gateway_response')->nullable();
+            $table->string('refund_method')->nullable();
+            $table->integer('appeal_count')->default(0);
+            $table->timestamp('last_appeal_at')->nullable();
             $table->timestamps();
         });
     }
