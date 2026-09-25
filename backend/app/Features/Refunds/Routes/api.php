@@ -11,6 +11,7 @@ Route::middleware(['bearer', 'throttle:refund-request'])->prefix('refunds')->gro
 
 Route::middleware(['bearer', 'throttle:refund-status'])->prefix('refunds')->group(function () {
     Route::get('/status/{id}', [RefundController::class, 'getStatus']);
+    Route::post('/{id}/appeal', [RefundController::class, 'appeal']);
 });
 
 // Admin refund routes

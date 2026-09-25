@@ -49,4 +49,27 @@ class RefundController extends Controller
 
         return new RefundRequestResource($refundRequest);
     }
+
+    /**
+     * POST /api/refunds/{id}/appeal
+     */
+    public function appeal(string $id, \Illuminate\Http\Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+
+        try {
+            $refundRequest = $this->refundService->appeal(
+                $id,
+                $request->user()->id,
+                $validated['reason']
+            );
+        } catch (\RuntimeException $e) {
+            $code = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 422;
+            return response()->json(['message' => $e->getMessage()], $code);
+        }
+
+        return new RefundRequestResource($refundRequest);
+    }
 }
