@@ -6,7 +6,10 @@ use App\Features\Payouts\Controllers\AdminSettlementController;
 
 // Organizer routes
 Route::middleware('bearer')->prefix('organizer')->group(function () {
-    Route::get('/payouts', [OrganizerPayoutController::class, 'index']);
+    // List (paginated) payouts. `/payouts/list` is the spec'd list endpoint;
+    // `/payouts` is kept as a backward-compatible alias. Rate-limited 20/min.
+    Route::get('/payouts', [OrganizerPayoutController::class, 'list'])->middleware('throttle:payouts-list');
+    Route::get('/payouts/list', [OrganizerPayoutController::class, 'list'])->middleware('throttle:payouts-list');
     Route::get('/payouts/summary', [OrganizerPayoutController::class, 'summary']);
     Route::get('/payouts/{payout}', [OrganizerPayoutController::class, 'show']);
     Route::get('/payouts/{payout}/calculation', [OrganizerPayoutController::class, 'calculation']);

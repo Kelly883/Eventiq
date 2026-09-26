@@ -5,6 +5,7 @@ namespace App\Features\Payouts\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Features\Payouts\Models\Payout;
+use App\Features\Payouts\Requests\ListPayoutsRequest;
 use App\Features\Payouts\Resources\PayoutResource;
 use App\Features\Payouts\Resources\PayoutCalculationResource;
 use Illuminate\Support\Facades\Auth;
@@ -12,52 +13,58 @@ use Illuminate\Validation\ValidationException;
 
 class OrganizerPayoutController extends Controller
 {
-    public function index(Request $request)
+    public function list(ListPayoutsRequest $request)
     {
         $user = $request->user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
 
-        // FIX: Use request-based auth check instead of $this->authorize()
-        // BearerTokenAuth only sets request user resolver, not guard user
-        $organizer = $user->organizer;
-        if (!$organizer && !$user->hasRole('admin')) {
-            return response()->json(['message' => 'Forbidden — organizer profile required'], 403);
-        }
-
-        // FIX: Use request user instead of Auth::user()
-        $organizerId = $organizer?->id;
-
-        // Admins can see all payouts; organizers only their own
+        // The ListPayoutsRequest FormRequest already guarantees the caller is an
+        // organiser or admin (401 via bearer, 403 via authorize(), 400 via rules).
         $query = Payout::query();
-        if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
-            if (!$organizerId) {
+
+        // Scoping: organisers only see their own payouts; admins see all.
+        if (! $user->hasRole('admin') && ! $user->hasRole('super-admin')) {
+            $organizerId = $user->organizer ? $user->organizer->id : null;
+
+            if (! $organizerId) {
                 return response()->json(['message' => 'Forbidden — organizer profile required'], 403);
             }
+
             $query->where('organizer_id', $organizerId);
         }
 
-        $query->with(['calculation', 'event', 'settlementPolicy']);
-
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
+        // --- Filtering (every param is validated by ListPayoutsRequest) ---
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
         }
 
-        if ($request->has('start_date')) {
-            $query->whereDate('created_at', '>=', $request->start_date);
+        // IMPORTANT: use a plain range comparison (not whereDate) so the
+        // predicate stays sargable and can leverage an index on created_at.
+        // `whereDate('created_at', ...)` wraps the column in DATE(), which
+        // defeats index usage and forces a full scan on large tables.
+        if ($request->filled('start_date')) {
+            $query->where('created_at', '>=', $request->input('start_date') . ' 00:00:00');
         }
 
-        if ($request->has('end_date')) {
-            $query->whereDate('created_at', '<=', $request->end_date);
+        if ($request->filled('end_date')) {
+            $query->where('created_at', '<=', $request->input('end_date') . ' 23:59:59');
         }
 
-        if ($request->has('event_id')) {
-            $query->where('event_id', $request->event_id);
-        }
+        // --- Sorting (validated; column is whitelisted to avoid injection) ---
+        $sortBy = $request->input('sort_by', 'createdAt');
+        $sortDir = $request->input('sort_dir', 'desc');
+        $columns = [
+            'createdAt' => 'created_at',
+            'payoutAmount' => 'payout_amount',
+        ];
+        $query->orderBy($columns[$sortBy], $sortDir);
 
-        $payouts = $query->orderBy('created_at', 'desc')
-            ->paginate($request->per_page ?? 10);
+        // --- Pagination (default 50, hard cap 100, validated by the request) ---
+        $perPage = $request->filled('limit')
+            ? (int) $request->input('limit')
+            : (int) $request->input('per_page', 50);
+        $page = (int) $request->input('page', 1);
+
+        $payouts = $query->paginate($perPage, ['*'], 'page', $page);
 
         return PayoutResource::collection($payouts);
     }
@@ -77,7 +84,7 @@ class OrganizerPayoutController extends Controller
             }
         }
 
-        $payout->load(['calculation', 'event', 'settlementPolicy']);
+                $payout->load(['organizer']);
 
         return new PayoutResource($payout);
     }
@@ -89,7 +96,6 @@ class OrganizerPayoutController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        // Admins see global summary; organizers see their own
         $query = Payout::query();
         if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
             $organizerId = $user->organizer?->id;
@@ -99,32 +105,23 @@ class OrganizerPayoutController extends Controller
             $query->where('organizer_id', $organizerId);
         }
 
-        $organizerFilter = (!$user->hasRole('admin') && !$user->hasRole('super-admin'))
-            ? $user->organizer?->id
-            : null;
-
         $totalPending = (clone $query)
-            ->when($organizerFilter, fn($q) => $q->where('organizer_id', $organizerFilter))
             ->where('status', Payout::STATUS_PENDING)
-            ->sum('amount');
+            ->sum('payout_amount');
 
         $totalProcessing = (clone $query)
-            ->when($organizerFilter, fn($q) => $q->where('organizer_id', $organizerFilter))
             ->where('status', Payout::STATUS_PROCESSING)
-            ->sum('amount');
+            ->sum('payout_amount');
 
         $totalProcessed = (clone $query)
-            ->when($organizerFilter, fn($q) => $q->where('organizer_id', $organizerFilter))
             ->where('status', Payout::STATUS_COMPLETED)
-            ->sum('amount');
+            ->sum('payout_amount');
 
         $totalEarned = (clone $query)
-            ->when($organizerFilter, fn($q) => $q->where('organizer_id', $organizerFilter))
             ->whereIn('status', [Payout::STATUS_COMPLETED, Payout::STATUS_PENDING, Payout::STATUS_PROCESSING])
-            ->sum('amount');
+            ->sum('payout_amount');
 
         $nextPayout = (clone $query)
-            ->when($organizerFilter, fn($q) => $q->where('organizer_id', $organizerFilter))
             ->where('status', Payout::STATUS_PENDING)
             ->orderBy('created_at', 'asc')
             ->first();
@@ -134,7 +131,7 @@ class OrganizerPayoutController extends Controller
             'total_processing' => (float) $totalProcessing,
             'total_processed' => (float) $totalProcessed,
             'total_earned' => (float) $totalEarned,
-            'next_payout' => $nextPayout ? (float) $nextPayout->amount : 0,
+            'next_payout' => $nextPayout ? (float) $nextPayout->payout_amount : 0,
             'next_payout_date' => $nextPayout?->created_at,
         ]);
     }

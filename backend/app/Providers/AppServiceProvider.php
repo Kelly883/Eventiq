@@ -161,6 +161,15 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('dashboard-activity', function ($request) {
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
+        RateLimiter::for('admin-dashboard', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('admin-activity-feed', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('admin-alerts', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
 
         // Analytics — 20/min per user for all analytics endpoints
         RateLimiter::for('analytics-summary', function ($request) {

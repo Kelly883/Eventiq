@@ -43,6 +43,8 @@ class Event extends Model
         'flag_date',
         'category',
         'version',
+        'created_at',
+        'updated_at',
     ];
 
     protected $casts = [

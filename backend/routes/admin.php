@@ -9,6 +9,9 @@ use App\Features\admin\Controllers\AdminTicketController;
 
 Route::middleware(['auth:sanctum', 'role:admin', 'throttle:admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index']);
+    Route::get('/dashboard/overview', [AdminDashboardController::class, 'overview'])->middleware('throttle:admin-dashboard');
+    Route::get('/dashboard/activity-feed', [AdminDashboardController::class, 'activityFeed'])->middleware('throttle:admin-activity-feed');
+    Route::get('/dashboard/alerts', [AdminDashboardController::class, 'alerts'])->middleware('throttle:admin-alerts');
     Route::get('/users', [AdminUserController::class, 'index']);
     Route::get('/events', [AdminEventController::class, 'index']);
     Route::get('/payments/reconciliation', [AdminPaymentController::class, 'index']);

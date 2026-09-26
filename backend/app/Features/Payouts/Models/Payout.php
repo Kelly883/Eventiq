@@ -4,7 +4,9 @@ namespace App\Features\Payouts\Models;
 
 use App\Models\Organizer;
 use App\Models\User;
+use Database\Factories\PayoutFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,6 +15,20 @@ use Illuminate\Support\Str;
 class Payout extends Model
 {
     use HasFactory;
+
+    /**
+     * Resolve the model factory.
+     *
+     * The Payout model lives under App\Features\Payouts\Models, but its
+     * factory is registered flat at Database\Factories\PayoutFactory.
+     * Without this override Laravel cannot resolve Payout::factory() and
+     * throws "Class Database\Factories\Features\Payouts\Models\PayoutFactory
+     * not found".
+     */
+    protected static function newFactory(): Factory
+    {
+        return PayoutFactory::new();
+    }
 
     public $incrementing = false;
     protected $keyType = 'string';
@@ -66,7 +82,9 @@ class Payout extends Model
         'next_retry_at',
     ];
 
-    protected $casts = [
+        protected $casts = [
+        'settlement_period_start_date' => 'datetime',
+        'settlement_period_end_date' => 'datetime',
         'gross_revenue' => 'decimal:2',
         'refunds_deducted' => 'decimal:2',
         'net_revenue' => 'decimal:2',
