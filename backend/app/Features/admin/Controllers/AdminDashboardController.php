@@ -13,9 +13,61 @@ use App\Models\User;
 use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+trait AlertHelpers
+{
+    private function getActionLabel(string $action): string
+    {
+        return match ($action) {
+            'user_login' => 'User Login',
+            'user_logout' => 'User Logout',
+            'user_suspended' => 'User Suspended',
+            'event_created' => 'Event Created',
+            'event_approved' => 'Event Approved',
+            'event_flagged' => 'Event Flagged',
+            'event_cancelled' => 'Event Cancelled',
+            'payment_processed' => 'Payment Processed',
+            'payment_refunded' => 'Payment Refunded',
+            'refund.requested' => 'Refund Requested',
+            'refund_approved' => 'Refund Approved',
+            'refund_rejected' => 'Refund Rejected',
+            'payout_approved' => 'Payout Approved',
+            'payout_rejected' => 'Payout Rejected',
+            'ticket_checked_in' => 'Ticket Checked In',
+            'ticket_voided' => 'Ticket Voided',
+            'ticket.purged' => 'Ticket Purged',
+            'fraud_flagged' => 'Fraud Flagged',
+            'fraud_approved' => 'Fraud Approved',
+            'admin_setting_changed' => 'Admin Setting Changed',
+            'user_permission_changed' => 'User Permission Changed',
+            'data_export_requested' => 'Data Export Requested',
+            default => ucfirst(str_replace('_', ' ', $action)),
+        };
+    }
+
+    private function getReadableEventType(string $fraudType): string
+    {
+        return match ($fraudType) {
+            'duplicate_ticket_attempt' => 'Duplicate Ticket Attempt',
+            'velocity_check_failed' => 'Velocity Check Failed',
+            'payment_pattern_suspicious' => 'Suspicious Payment Pattern',
+            'device_fingerprint_mismatch' => 'Device Fingerprint Mismatch',
+            'geolocation_anomaly' => 'Geolocation Anomaly',
+            'card_testing' => 'Card Testing',
+            'high_risk_payment_method' => 'High Risk Payment Method',
+            'duplicate_checkin' => 'Duplicate Check-in',
+            'invalid_qr' => 'Invalid QR Code',
+            'manual_override' => 'Manual Override',
+            default => ucfirst(str_replace('_', ' ', $fraudType)),
+        };
+    }
+}
 
 class AdminDashboardController extends Controller
 {
+    use AlertHelpers;
+
     public function __construct(private AuditLogService $auditLogService)
     {
     }
@@ -258,129 +310,213 @@ class AdminDashboardController extends Controller
         $current = (float) $current;
         $previous = (float) $previous;
         $delta = $current - $previous;
-        $pct = $previous > 0 ? round(($delta / $previous) * 100, 2) : ($current > 0 ? 100.0 : 0.0);
+        $isNewMetric = $previous == 0 && $current > 0;
+
+        if ($previous > 0) {
+            $pct = round(($delta / $previous) * 100, 2);
+        } elseif ($current > 0) {
+            $pct = 100.0;
+        } else {
+            $pct = 0.0;
+        }
 
         return [
-            'direction' => $pct > 0.01 ? 'up' : ($pct < -0.01 ? 'down' : 'flat'),
+            'direction' => $isNewMetric ? 'up' : ($pct > 0.01 ? 'up' : ($pct < -0.01 ? 'down' : 'flat')),
             'percentageChange' => $pct,
             'delta' => round($delta, 2),
+            'newMetric' => $isNewMetric,
         ];
     }
 
     private function buildAlerts(?string $severityFilter, int $limit, int $offset): array
     {
-        $alerts = [];
+        $sql = "
+            SELECT 
+                id,
+                type,
+                severity,
+                created_at,
+                fraud_type,
+                risk_level,
+                risk_score,
+                fraud_status,
+                payout_amount,
+                currency,
+                failure_reason,
+                retry_count,
+                organizer_id,
+                action,
+                target_type,
+                target_id,
+                error_code,
+                user_id,
+                description,
+                error_message
+            FROM (
+                SELECT 
+                    id,
+                    'fraud' as type,
+                    CASE risk_level WHEN 'high' THEN 'critical' WHEN 'medium' THEN 'warning' ELSE 'info' END as severity,
+                    created_at,
+                    fraud_type,
+                    risk_level,
+                    risk_score,
+                    status as fraud_status,
+                    NULL as payout_amount,
+                    NULL as currency,
+                    NULL as failure_reason,
+                    NULL as retry_count,
+                    NULL as organizer_id,
+                    NULL as action,
+                    NULL as target_type,
+                    NULL as target_id,
+                    NULL as error_code,
+                    NULL as user_id,
+                    NULL as description,
+                    NULL as error_message
+                FROM fraud_events
+                WHERE status IN ('flagged', 'auto_blocked')
+                
+                UNION ALL
+                
+                SELECT 
+                    id,
+                    'payout_failure' as type,
+                    'critical' as severity,
+                    created_at,
+                    NULL as fraud_type,
+                    NULL as risk_level,
+                    NULL as risk_score,
+                    NULL as fraud_status,
+                    payout_amount,
+                    currency,
+                    failure_reason,
+                    retry_count,
+                    organizer_id,
+                    NULL as action,
+                    NULL as target_type,
+                    NULL as target_id,
+                    NULL as error_code,
+                    NULL as user_id,
+                    NULL as description,
+                    NULL as error_message
+                FROM payouts
+                WHERE status = 'failed'
+                
+                UNION ALL
+                
+                SELECT 
+                    id,
+                    'audit_failure' as type,
+                    CASE status WHEN 'failure' THEN 'critical' WHEN 'warning' THEN 'warning' ELSE 'info' END as severity,
+                    created_at,
+                    NULL as fraud_type,
+                    NULL as risk_level,
+                    NULL as risk_score,
+                    NULL as fraud_status,
+                    NULL as payout_amount,
+                    NULL as currency,
+                    NULL as failure_reason,
+                    NULL as retry_count,
+                    NULL as organizer_id,
+                    action,
+                    target_type,
+                    target_id,
+                    error_code,
+                    user_id,
+                    description,
+                    error_message
+                FROM audit_logs
+                WHERE status IN ('failure', 'warning')
+            ) as alerts
+        ";
 
-        $fraudQuery = FraudEvent::query()
-            ->whereIn('status', ['flagged', 'auto_blocked'])
-            ->orderByDesc('created_at');
+        $bindings = [];
 
-        if ($severityFilter === 'critical') {
-            $fraudQuery->whereIn('risk_level', ['high']);
-        } elseif ($severityFilter === 'warning') {
-            $fraudQuery->whereIn('risk_level', ['medium']);
-        } elseif ($severityFilter === 'info') {
-            $fraudQuery->whereIn('risk_level', ['low']);
+        if ($severityFilter) {
+            $sql .= " WHERE severity = ?";
+            $bindings[] = $severityFilter;
         }
 
-        foreach ($fraudQuery->get() as $fraud) {
-            $severity = match ($fraud->risk_level) {
-                'high' => 'critical',
-                'medium' => 'warning',
-                default => 'info',
-            };
+        $sql .= " ORDER BY 
+            CASE severity WHEN 'critical' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END,
+            created_at DESC
+            LIMIT ? OFFSET ?";
 
-            if ($severityFilter && $severityFilter !== $severity) {
-                continue;
+        $bindings[] = $limit;
+        $bindings[] = $offset;
+
+        $alerts = collect(DB::select($sql, $bindings))->map(function ($alert) {
+            switch ($alert->type) {
+                case 'fraud':
+                    return [
+                        'id' => $alert->id,
+                        'type' => 'fraud',
+                        'severity' => $alert->severity,
+                        'message' => $this->getReadableEventType($alert->fraud_type) . ' — Risk score: ' . number_format((float) $alert->risk_score, 2),
+                        'source' => 'fraud_events',
+                        'createdAt' => $alert->created_at ? \Carbon\Carbon::parse($alert->created_at)->toIso8601String() : null,
+                        'metadata' => [
+                            'riskLevel' => $alert->risk_level,
+                            'riskScore' => (float) $alert->risk_score,
+                            'fraudType' => $alert->fraud_type,
+                            'status' => $alert->fraud_status,
+                        ],
+                    ];
+                case 'payout_failure':
+                    return [
+                        'id' => $alert->id,
+                        'type' => 'payout_failure',
+                        'severity' => 'critical',
+                        'message' => 'Payout ' . $alert->id . ' failed for organizer ' . $alert->organizer_id,
+                        'source' => 'payouts',
+                        'createdAt' => $alert->created_at ? \Carbon\Carbon::parse($alert->created_at)->toIso8601String() : null,
+                        'metadata' => [
+                            'payoutAmount' => (float) $alert->payout_amount,
+                            'currency' => $alert->currency,
+                            'failureReason' => $alert->failure_reason,
+                            'retryCount' => (int) $alert->retry_count,
+                        ],
+                    ];
+                case 'audit_failure':
+                    return [
+                        'id' => $alert->id,
+                        'type' => 'audit_failure',
+                        'severity' => $alert->severity,
+                        'message' => ($alert->description ?: $this->getActionLabel($alert->action)) . ($alert->error_message ? ': ' . $alert->error_message : ''),
+                        'source' => 'audit_logs',
+                        'createdAt' => $alert->created_at ? \Carbon\Carbon::parse($alert->created_at)->toIso8601String() : null,
+                        'metadata' => [
+                            'action' => $alert->action,
+                            'targetType' => $alert->target_type,
+                            'targetId' => $alert->target_id,
+                            'errorCode' => $alert->error_code,
+                            'userId' => $alert->user_id,
+                        ],
+                    ];
             }
-
-            $alerts[] = [
-                'id' => $fraud->id,
-                'type' => 'fraud',
-                'severity' => $severity,
-                'message' => $fraud->getReadableEventType() . ' — Risk score: ' . $fraud->getFormattedRiskScore(),
-                'source' => 'fraud_events',
-                'createdAt' => $fraud->created_at?->toIso8601String(),
-                'metadata' => [
-                    'riskLevel' => $fraud->risk_level,
-                    'riskScore' => (float) $fraud->risk_score,
-                    'fraudType' => $fraud->fraud_type,
-                    'status' => $fraud->status,
-                ],
-            ];
-        }
-
-        $failedPayouts = Payout::where('status', Payout::STATUS_FAILED)
-            ->orderByDesc('created_at')
-            ->get();
-
-        foreach ($failedPayouts as $payout) {
-            if ($severityFilter && $severityFilter !== 'critical') {
-                continue;
-            }
-
-            $alerts[] = [
-                'id' => $payout->id,
-                'type' => 'payout_failure',
-                'severity' => 'critical',
-                'message' => 'Payout ' . $payout->id . ' failed for organizer ' . $payout->organizer_id,
-                'source' => 'payouts',
-                'createdAt' => $payout->created_at?->toIso8601String(),
-                'metadata' => [
-                    'payoutAmount' => (float) $payout->payout_amount,
-                    'currency' => $payout->currency,
-                    'failureReason' => $payout->failure_reason,
-                    'retryCount' => (int) $payout->retry_count,
-                ],
-            ];
-        }
-
-        $auditFailures = AuditLog::whereIn('status', ['failure', 'warning'])
-            ->orderByDesc('created_at')
-            ->get();
-
-        foreach ($auditFailures as $log) {
-            $severity = $log->status === 'failure' ? 'critical' : 'warning';
-
-            if ($severityFilter && $severityFilter !== $severity) {
-                continue;
-            }
-
-            $alerts[] = [
-                'id' => $log->id,
-                'type' => 'audit_failure',
-                'severity' => $severity,
-                'message' => ($log->description ?: $log->getActionLabel()) . ($log->error_message ? ': ' . $log->error_message : ''),
-                'source' => 'audit_logs',
-                'createdAt' => $log->created_at?->toIso8601String(),
-                'metadata' => [
-                    'action' => $log->action,
-                    'targetType' => $log->target_type,
-                    'targetId' => $log->target_id,
-                    'errorCode' => $log->error_code,
-                    'userId' => $log->user_id,
-                ],
-            ];
-        }
-
-        usort($alerts, function ($a, $b) {
-            $severityOrder = ['critical' => 0, 'warning' => 1, 'info' => 2];
-            $aSeverity = $severityOrder[$a['severity']] ?? 9;
-            $bSeverity = $severityOrder[$b['severity']] ?? 9;
-
-            if ($aSeverity !== $bSeverity) {
-                return $aSeverity <=> $bSeverity;
-            }
-
-            return strtotime($b['createdAt'] ?? '') <=> strtotime($a['createdAt'] ?? '');
         });
 
-        $total = count($alerts);
-        $paged = array_slice($alerts, $offset, $limit);
+        $fraudCount = FraudEvent::whereIn('status', ['flagged', 'auto_blocked'])
+            ->when($severityFilter === 'critical', fn($q) => $q->where('risk_level', 'high'))
+            ->when($severityFilter === 'warning', fn($q) => $q->where('risk_level', 'medium'))
+            ->when($severityFilter === 'info', fn($q) => $q->where('risk_level', 'low'))
+            ->count();
+
+        $payoutCount = match ($severityFilter) {
+            'critical' => Payout::where('status', Payout::STATUS_FAILED)->count(),
+            default => 0,
+        };
+
+        $auditCount = AuditLog::whereIn('status', ['failure', 'warning'])
+            ->when($severityFilter === 'critical', fn($q) => $q->where('status', 'failure'))
+            ->when($severityFilter === 'warning', fn($q) => $q->where('status', 'warning'))
+            ->when($severityFilter === 'info', fn($q) => $q->where('status', 'info'))
+            ->count();
 
         return [
-            'total' => $total,
-            'items' => $paged,
+            'total' => $fraudCount + $payoutCount + $auditCount,
+            'items' => $alerts,
         ];
     }
 }
