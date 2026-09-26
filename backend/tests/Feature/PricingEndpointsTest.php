@@ -33,8 +33,8 @@ class PricingEndpointsTest extends TestCase
     {
         parent::setUp();
 
-        $organizerRole = Role::factory()->create(['name' => 'organizer']);
-        $adminRole = Role::factory()->create(['name' => 'admin']);
+        $organizerRole = Role::firstOrCreate(['name' => 'organizer'], ['description' => 'Organizer', 'isSystemRole' => true]);
+        $adminRole = Role::firstOrCreate(['name' => 'admin'], ['description' => 'Administrator', 'isSystemRole' => true]);
 
         $this->organizerUser = User::factory()->create(['role_id' => $organizerRole->id]);
         $this->organizer = Organizer::factory()->create(['user_id' => $this->organizerUser->id]);

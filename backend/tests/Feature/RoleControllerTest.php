@@ -13,7 +13,7 @@ class RoleControllerTest extends TestCase
 
     private function makeAdmin(): User
     {
-        $adminRole = Role::create(['name' => 'admin', 'description' => 'Administrator', 'isSystemRole' => true]);
+        $adminRole = Role::firstOrCreate(['name' => 'admin'], ['description' => 'Administrator', 'isSystemRole' => true]);
         $user = User::factory()->create();
         $user->roles()->attach($adminRole);
         return $user;

@@ -24,7 +24,7 @@ class TicketPurgeTest extends TestCase
 
     public function test_admin_can_purge_ticket_and_preserve_checkins(): void
     {
-        $adminRole = \App\Models\Role::create(['name' => 'admin']);
+        $adminRole = \App\Models\Role::firstOrCreate(['name' => 'admin'], ['description' => 'Administrator', 'isSystemRole' => true]);
         $user = \App\Models\User::factory()->create();
         $user->roles()->attach($adminRole);
         

@@ -42,7 +42,7 @@ class FraudEndpointsTest extends TestCase
         ]);
 
         if ($role === 'admin') {
-            $adminRole = Role::create(['name' => 'admin', 'description' => 'Administrator', 'isSystemRole' => true]);
+            $adminRole = Role::firstOrCreate(['name' => 'admin'], ['description' => 'Administrator', 'isSystemRole' => true]);
             $user->roles()->attach($adminRole);
         }
 

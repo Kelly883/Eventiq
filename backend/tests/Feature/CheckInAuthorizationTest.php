@@ -32,8 +32,8 @@ class CheckInAuthorizationTest extends TestCase
 
     public function test_organizers_remain_scoped_to_their_events_and_admins_can_access_all_events(): void
     {
-        $organizerRole = Role::factory()->create(['name' => 'organizer']);
-        $adminRole = Role::factory()->create(['name' => 'admin']);
+        $organizerRole = Role::firstOrCreate(['name' => 'organizer'], ['description' => 'Organizer', 'isSystemRole' => true]);
+        $adminRole = Role::firstOrCreate(['name' => 'admin'], ['description' => 'Administrator', 'isSystemRole' => true]);
         $organizerUser = User::factory()->create(['role_id' => $organizerRole->id]);
         $admin = User::factory()->create(['role_id' => $adminRole->id]);
         $organizer = Organizer::factory()->for($organizerUser)->create();

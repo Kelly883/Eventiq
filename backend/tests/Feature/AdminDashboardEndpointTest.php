@@ -34,8 +34,8 @@ class AdminDashboardEndpointTest extends TestCase
         RateLimiter::clear('admin-activity-feed');
         RateLimiter::clear('admin-alerts');
 
-        $adminRole = Role::factory()->create(['name' => 'admin']);
-        $regularRole = Role::factory()->create(['name' => 'attendee']);
+        $adminRole = Role::firstOrCreate(['name' => 'admin'], ['description' => 'Administrator', 'isSystemRole' => true]);
+        $regularRole = Role::firstOrCreate(['name' => 'attendee'], ['description' => 'Attendee', 'isSystemRole' => false]);
 
         $this->adminUser = User::factory()->create(['role_id' => $adminRole->id]);
         $this->adminToken = $this->adminUser->createToken('admin-token')->plainTextToken;
