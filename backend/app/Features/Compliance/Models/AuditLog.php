@@ -26,7 +26,7 @@ class AuditLog extends Model
 
     protected $table = 'audit_logs';
 
-    protected $fillable = [
+        protected $fillable = [
         'user_id',
         'action',
         'target_type',
@@ -39,6 +39,13 @@ class AuditLog extends Model
         'status',
         'compliance_classification',
         'metadata',
+                        'ip_address',
+        'user_agent',
+        'source',
+        'error_message',
+        'error_code',
+        'retention_reason',
+        'retention_date',
     ];
 
     protected $casts = [

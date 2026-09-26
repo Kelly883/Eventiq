@@ -2,21 +2,16 @@
 
 namespace App\Features\Compliance\Services;
 
-use App\Models\AuditLog;
+use App\Features\Compliance\Models\AuditLog;
+use App\Features\Compliance\Models\AuditLogTag;
+use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class AuditLogService
 {
-    /**
-     * Records an audit event. Writes to both the audit_logs table (for
-     * querying/filtering in the admin UI) and a dedicated file-based log
-     * channel (config/logging.php's 'audit' channel) - the file copy
-     * survives even if the database is temporarily unavailable, which is
-     * the whole point of having a separate trail per the original
-     * requirement.
-     */
     public function log(string $action, string $targetType, $targetId, array $changes = [], $userId = null, ?string $requestId = null): ?AuditLog
     {
         if (! config('audit.enabled', true)) {
@@ -66,7 +61,11 @@ class AuditLogService
                 'metadata' => $metadata,
             ]);
         } catch (\Throwable $e) {
-            Log::channel('audit')->error('audit_log_db_write_failed', ['error' => $e->getMessage()]);
+            Log::channel('audit')->error('audit_log_db_write_failed', [
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return null;
         }
@@ -85,13 +84,9 @@ class AuditLogService
         return 'web';
     }
 
-    /**
-     * @param array $filters Optional keys: action, target_type, target_id,
-     *   user_id, from (date), to (date), per_page
-     */
     public function filter(array $filters): LengthAwarePaginator
     {
-        $query = AuditLog::query()->with('user')->latest();
+        $query = AuditLog::query()->with('user');
 
         if (! empty($filters['action'])) {
             $query->where('action', $filters['action']);
@@ -109,6 +104,14 @@ class AuditLogService
             $query->where('user_id', $filters['user_id']);
         }
 
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['classification'])) {
+            $query->where('compliance_classification', $filters['classification']);
+        }
+
         if (! empty($filters['from'])) {
             $query->where('created_at', '>=', $filters['from']);
         }
@@ -117,11 +120,90 @@ class AuditLogService
             $query->where('created_at', '<=', $filters['to']);
         }
 
+        $sortBy = $filters['sortBy'] ?? 'createdAt';
+        $sortOrder = $filters['sortOrder'] ?? 'desc';
+
+        $sortColumn = match ($sortBy) {
+            'action' => 'action',
+            'status' => 'status',
+            default => 'created_at',
+        };
+
+        $query->orderBy($sortColumn, $sortOrder === 'desc' ? 'desc' : 'asc');
+
         return $query->paginate($filters['per_page'] ?? 20);
     }
 
     public function find(string $logId): ?AuditLog
     {
         return AuditLog::find($logId);
+    }
+
+    public function bulkTag(array $logIds, string $tag): int
+    {
+        $now = now();
+        $records = [];
+
+        foreach ($logIds as $logId) {
+            $records[] = [
+                'id' => (string) Str::uuid(),
+                'audit_log_id' => $logId,
+                'tag' => $tag,
+                'created_at' => $now,
+            ];
+        }
+
+        if (empty($records)) {
+            return 0;
+        }
+
+        AuditLogTag::insert($records);
+
+        return count($records);
+    }
+
+    public function summary(array $filters = []): array
+    {
+        $query = AuditLog::query();
+
+        if (!empty($filters['from'])) {
+            $query->where('created_at', '>=', $filters['from']);
+        }
+
+        if (!empty($filters['to'])) {
+            $query->where('created_at', '<=', $filters['to']);
+        }
+
+        if (!empty($filters['action'])) {
+            $query->where('action', $filters['action']);
+        }
+
+        if (!empty($filters['target_type'])) {
+            $query->where('target_type', $filters['target_type']);
+        }
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['classification'])) {
+            $query->where('compliance_classification', $filters['classification']);
+        }
+
+        $total = $query->count();
+        $failedCount = (clone $query)->where('status', 'failure')->count();
+        $successCount = (clone $query)->where('status', 'success')->count();
+
+        $oldestRetention = AuditLog::whereNotNull('retention_date')->min('retention_date');
+        $retentionDaysRemaining = $oldestRetention
+            ? now()->diffInDays(Carbon::parse($oldestRetention), false)
+            : 0;
+
+        return [
+            'totalEvents' => $total,
+            'successRate' => $total > 0 ? round(($successCount / $total) * 100, 2) : 0.0,
+            'failedCount' => $failedCount,
+            'retentionDaysRemaining' => max(0, (int) $retentionDaysRemaining),
+        ];
     }
 }

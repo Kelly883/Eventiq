@@ -252,6 +252,11 @@ class AppServiceProvider extends ServiceProvider
         // returns 429 on the 21st request within the rolling window.
         RateLimiter::for('payouts-list', fn($req) => Limit::perMinute(20)->by($req->user()?->id ?: $req->ip()));
 
+        RateLimiter::for('compliance-list', fn($req) => Limit::perMinute(20)->by($req->user()?->id ?: $req->ip()));
+        RateLimiter::for('compliance-export', fn($req) => Limit::perMinute(5)->by($req->user()?->id ?: $req->ip()));
+        RateLimiter::for('compliance-bulk-tag', fn($req) => Limit::perMinute(10)->by($req->user()?->id ?: $req->ip()));
+        RateLimiter::for('compliance-report-generate', fn($req) => Limit::perMinute(5)->by($req->user()?->id ?: $req->ip()));
+
         Event::observe(EventObserver::class);
         Ticket::observe(TicketObserver::class);
         PricingWindow::observe(PricingWindowObserver::class);

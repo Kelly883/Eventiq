@@ -55,8 +55,9 @@ class ComplianceReportController extends Controller
             'filters' => $filters,
         ], $request->user()?->id);
 
-        return response()->json([
+                return response()->json([
             'id' => $generation->id,
+            'jobId' => $generation->id,
             'status' => $generation->status,
         ]);
     }

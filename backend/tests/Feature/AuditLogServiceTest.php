@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Features\Compliance\Enums\AuditLogTargetType;
 use App\Features\Compliance\Services\AuditLogService;
-use App\Models\AuditLog;
+use App\Features\Compliance\Models\AuditLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;

@@ -8,6 +8,25 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class AuditLogResource extends JsonResource
 {
+    private function maskIp(?string $ip): ?string
+    {
+        if (!$ip) {
+            return null;
+        }
+
+        if (str_contains($ip, ':')) {
+            $parts = explode(':', $ip);
+            return $parts[0] . ':xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx';
+        }
+
+        $parts = explode('.', $ip);
+        if (count($parts) === 4) {
+            return $parts[0] . '.xxx.xxx.xxx';
+        }
+
+        return $ip;
+    }
+
     public function toArray($request): array
     {
         $resource = $this->resource instanceof AuditLog
@@ -27,7 +46,7 @@ class AuditLogResource extends JsonResource
             'targetName' => $resource->getTargetName(),
             'description' => $resource->description,
             'source' => $resource->source,
-            'ipAddress' => $resource->ip_address,
+            'ipAddress' => $this->maskIp($resource->ip_address),
             'userAgent' => $resource->user_agent,
             'geolocation' => $resource->geolocation,
             'requestData' => $resource->request_data,
