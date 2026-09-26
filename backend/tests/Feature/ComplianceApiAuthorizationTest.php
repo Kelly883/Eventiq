@@ -330,6 +330,10 @@ class ComplianceApiAuthorizationTest extends TestCase
             'audit_log_id' => $log1->id,
             'tag' => 'reviewed',
         ]);
+        $this->assertDatabaseHas('audit_log_tags', [
+            'audit_log_id' => $log2->id,
+            'tag' => 'reviewed',
+        ]);
     }
 
         public function test_bulk_tag_creates_audit_entry(): void

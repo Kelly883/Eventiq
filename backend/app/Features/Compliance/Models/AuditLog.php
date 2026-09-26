@@ -46,6 +46,8 @@ class AuditLog extends Model
         'error_code',
         'retention_reason',
         'retention_date',
+        'created_at',
+        'updated_at',
     ];
 
     protected $casts = [

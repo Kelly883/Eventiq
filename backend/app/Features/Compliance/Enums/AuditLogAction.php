@@ -37,4 +37,7 @@ enum AuditLogAction: string
     case EMAIL_TEMPLATE_CREATED = 'email_template.created';
     case EMAIL_TEMPLATE_UPDATED = 'email_template.updated';
     case EMAIL_TEMPLATE_DELETED = 'email_template.deleted';
+    case COMPLIANCE_AUDIT_LOG_EXPORT = 'compliance.audit_logs.export';
+    case COMPLIANCE_AUDIT_LOG_BULK_TAG = 'compliance.audit_logs.bulk_tag';
+    case COMPLIANCE_REPORT_QUEUED = 'compliance_report.queued';
 }
