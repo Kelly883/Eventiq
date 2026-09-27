@@ -363,18 +363,18 @@ class TicketCheckInController extends Controller
                 'percentage' => $totalCheckedIn > 0 ? round(($group->count() / $totalCheckedIn) * 100, 1) : 0,
             ]);
 
-        use Illuminate\Support\Facades\DB;
-
-// Average check-in time (minutes from event start) - use DB avg via DB::table for SQLite compatibility
-$eventStart = $event->start_datetime;
-$averageCheckInTime = $totalCheckedIn > 0
-    ? round(DB::table('tickets')
-        ->where('event_id', $eventId)
-        ->where('status', 'checked_in')
-        ->when($startDate, fn ($q) => $q->where('checked_in_at', '>=', $startDate))
-        ->when($endDate, fn ($q) => $q->where('checked_in_at', '<=', $endDate))
-        ->avg(DB::raw("julianday(checked_in_at) - julianday('$eventStart)') * 24 * 60))
-    : 0;
+        // Average check-in time (minutes from event start) - use DB avg via DB::table for SQLite compatibility
+        $eventStart = $event->start_datetime;
+        $averageCheckInTime = $totalCheckedIn > 0
+            ? round(
+                DB::table('tickets')
+                    ->where('event_id', $eventId)
+                    ->where('status', 'checked_in')
+                    ->when($startDate, fn ($q) => $q->where('checked_in_at', '>=', $startDate))
+                    ->when($endDate, fn ($q) => $q->where('checked_in_at', '<=', $endDate))
+                    ->avg(DB::raw("(julianday(checked_in_at) - julianday('$eventStart')) * 24 * 60"))
+            )
+            : 0;
 
         return response()->json([
             'data' => [
