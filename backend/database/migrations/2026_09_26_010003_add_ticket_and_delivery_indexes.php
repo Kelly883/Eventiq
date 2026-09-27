@@ -49,6 +49,11 @@ return new class extends Migration
 
         Schema::table('tickets', function (Blueprint $table) {
             try {
+                $table->dropIndex('tickets_user_id_index');
+            } catch (\Throwable $e) {
+                // Index may not exist
+            }
+            try {
                 $table->dropIndex('tickets_ticket_id_index');
             } catch (\Throwable $e) {
                 // Index may not exist
