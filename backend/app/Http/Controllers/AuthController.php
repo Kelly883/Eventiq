@@ -106,6 +106,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'name' => $user->name,
                 'role' => $user->role,
+                'roles' => $user->roles()->select('name')->get()->toArray(),
             ],
         ]);
     }
