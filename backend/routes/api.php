@@ -170,6 +170,20 @@ Route::middleware('bearer')->group(function () {
     // Ticket details route
     Route::get('/tickets/{ticketId}/details', [\App\Features\Checkout\Http\Controllers\MyTicketsController::class, 'ticketDetails'])->middleware('throttle:dashboard-metrics');
 
+    // Health-check for user-facing ticket/dashboard endpoints
+    Route::get('/health/tickets', function () {
+        return response()->json([
+            'status' => 'ok',
+            'endpoints' => [
+                'GET /api/my-tickets' => 'requires authentication',
+                'GET /api/users/me/dashboard-overview' => 'requires authentication',
+                'GET /api/users/me/dashboard-preferences' => 'requires authentication',
+                'PATCH /api/users/me/dashboard-preferences' => 'requires authentication',
+                'GET /api/tickets/{ticketId}/details' => 'requires authentication',
+            ],
+        ]);
+    });
+
     // Check-in analytics route
     Route::get('/organizer/events/{eventId}/check-in-analytics', [\App\Features\QRCodeTicketing\Controllers\TicketCheckInController::class, 'checkInAnalytics'])->middleware('throttle:qr-analytics');
 });

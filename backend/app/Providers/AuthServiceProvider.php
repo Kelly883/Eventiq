@@ -22,6 +22,7 @@ use App\Features\admin\Policies\AdminPolicy;
 use App\Features\Refunds\Models\RefundRequest;
 use App\Features\Refunds\Policies\RefundRequestPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -47,15 +48,12 @@ class AuthServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Illuminate\Foundation\Support\Providers\AuthServiceProvider normally
-        // calls registerPolicies() from its own register() method, but register()
-        // below overrides that hook with an empty body. Without this explicit
-        // call every entry in $policies is inert and Gate silently falls back to
-        // convention-based auto-discovery, which:
-        //   - denies access whenever the policy is not at the conventional path
-        //     (e.g. App\Features\Tickets\Policies\TicketPolicy), and
-        //   - silently ignores any deliberately stricter mapping in $policies,
-        //     which is a fail-open security hazard.
         $this->registerPolicies();
+
+        Gate::before(function ($user, $ability) {
+            if ($user->hasRole('admin')) {
+                return true;
+            }
+        });
     }
 }

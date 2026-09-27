@@ -76,10 +76,10 @@ class MyTicketsController extends Controller
         $user = $request->user();
 
         $cacheKey = 'dashboard-overview:' . $user->id;
-        $data = Cache::remember($cacheKey, 60, function () use ($user) {
+        $data = Cache::remember($cacheKey, 600, function () use ($user) {
             $stats = Ticket::where('tickets.user_id', $user->id)
                 ->selectRaw('COUNT(*) as total')
-                ->selectRaw('SUM(CASE WHEN tickets.checked_in = 1 THEN 1 ELSE 0 END) as checked_in')
+                ->selectRaw('SUM(CASE WHEN tickets.checked_in THEN 1 ELSE 0 END) as checked_in')
                 ->selectRaw('SUM(CASE WHEN EXISTS (SELECT 1 FROM events WHERE events.id = tickets.event_id AND events.start_datetime > ?) THEN 1 ELSE 0 END) as upcoming', [now()])
                 ->selectRaw('SUM(CASE WHEN EXISTS (SELECT 1 FROM events WHERE events.id = tickets.event_id AND events.end_datetime <= ?) THEN 1 ELSE 0 END) as past', [now()])
                 ->first();
@@ -87,7 +87,7 @@ class MyTicketsController extends Controller
             $nextUpcomingEvent = Ticket::where('tickets.user_id', $user->id)
                 ->whereHas('event', fn ($q) => $q->where('start_datetime', '>', now()))
                 ->with('event')
-                ->join('events', 'tickets.event_id', '=', 'events.id')
+                ->join('events', 'events.id', '=', 'tickets.event_id')
                 ->orderBy('events.start_datetime', 'asc')
                 ->select('tickets.*')
                 ->first();
