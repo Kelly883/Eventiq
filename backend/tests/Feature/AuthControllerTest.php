@@ -114,7 +114,7 @@ class AuthControllerTest extends TestCase
         ]);
 
         $response->assertOk()
-            ->assertJsonStructure(['token', 'user' => ['id', 'email', 'name', 'role']])
+            ->assertJsonStructure(['token', 'user' => ['id', 'email', 'name', 'role', 'roles']])
             ->assertJsonPath('user.email', 'login@example.test');
 
         $user = User::where('email', 'login@example.test')->firstOrFail();
