@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class TicketCheckInController extends Controller
 {
@@ -473,7 +474,7 @@ class TicketCheckInController extends Controller
         $eventId = $validated['event_id'];
         $ticketIds = $validated['ticket_ids'];
 
-        $event = \App\Models\Event::find($eventId);
+        $event = \App\Models\Event::withTrashed()->find($eventId);
         if (!$event) {
             return response()->json(['message' => 'Event not found.'], 404);
         }
@@ -490,7 +491,7 @@ class TicketCheckInController extends Controller
         $uniqueTicketIds = array_values(array_unique($ticketIds));
 
         // Bulk fetch all tickets in a single query to avoid N+1
-        $tickets = Ticket::whereIn('id', $uniqueTicketIds)->get()->keyBy('id');
+        $tickets = Ticket::whereIn('id', $uniqueTicketIds)->lockForUpdate()->get()->keyBy('id');
 
         foreach ($ticketIds as $tid) {
             $ticket = $tickets->get($tid);
@@ -640,6 +641,17 @@ class TicketCheckInController extends Controller
             ]);
         }
 
+        if (!$this->checkInPolicy->canAccessEvent($user, $ticket->event)) {
+            return response()->json([
+                'data' => [
+                    'ticket_id' => $resolvedTicketId,
+                    'is_duplicate' => false,
+                    'risk_level' => 'high',
+                    'message' => 'You are not authorized to access this ticket.',
+                ],
+            ], 403);
+        }
+
         $isDuplicate = $ticket->checked_in || $ticket->status === 'checked_in';
         $previousCheckInAt = $isDuplicate ? $ticket->checked_in_at : null;
         $previousCheckInBy = $isDuplicate ? $ticket->checked_in_by : null;
@@ -678,7 +690,7 @@ class TicketCheckInController extends Controller
 
         $validated = $request->validate([
             'event_id' => ['required', 'string'],
-            'local_check_ins' => ['required', 'array', 'max:500'],
+            'local_check_ins' => ['nullable', 'array', 'max:500'],
             'local_check_ins.*.ticket_id' => ['required', 'string'],
             'local_check_ins.*.checked_in_at' => ['required', 'date'],
             'last_sync_at' => ['nullable', 'date'],
@@ -700,8 +712,11 @@ class TicketCheckInController extends Controller
         $conflicts = 0;
         $results = [];
 
+        $ticketIds = array_values(array_unique(array_map(fn ($local) => $local['ticket_id'], $localCheckIns)));
+        $tickets = Ticket::whereIn('id', $ticketIds)->lockForUpdate()->get()->keyBy('id');
+
         foreach ($localCheckIns as $local) {
-            $ticket = Ticket::where('id', $local['ticket_id'])->lockForUpdate()->first();
+            $ticket = $tickets->get($local['ticket_id']);
 
             if (!$ticket || $ticket->event_id != $eventId) {
                 $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'not_found'];
@@ -709,41 +724,119 @@ class TicketCheckInController extends Controller
                 continue;
             }
 
-            // Check if already synced (with 5-minute clock-skew tolerance)
-            $localCheckedInAt = \Carbon\Carbon::parse($local['checked_in_at']);
-            $clockSkewTolerance = now()->subMinutes(5);
-            if ($ticket->checked_in && $ticket->checked_in_at &&
-                $ticket->checked_in_at->gt($localCheckedInAt) &&
-                $ticket->checked_in_at->gt($clockSkewTolerance)) {
-                $results[] = [
-                    'ticket_id' => $local['ticket_id'],
-                    'status' => 'conflict',
-                    'server_checked_in_at' => $ticket->checked_in_at->toDateTimeString(),
-                ];
+            if (!$this->checkInPolicy->canAccessEvent($user, $ticket->event)) {
+                $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'forbidden'];
                 $conflicts++;
                 continue;
             }
 
-            try {
-                $ticket->update([
-                    'status' => 'checked_in',
-                    'checked_in' => true,
-                    'checked_in_at' => $local['checked_in_at'],
-                    'checked_in_by' => $user->id,
-                    'sync_status' => 'synced',
-                ]);
-
-                $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'synced'];
-                $synced++;
-            } catch (\Throwable $e) {
-                $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'error'];
+            if ($ticket->status === 'void') {
+                $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'conflict', 'message' => 'Ticket is void'];
                 $conflicts++;
+                continue;
+            }
+
+            $hasFraud = FraudEvent::where('ticket_id', $ticket->id)
+                ->whereIn('status', ['flagged', 'auto_blocked'])
+                ->exists();
+
+            if ($hasFraud) {
+                $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'conflict', 'message' => 'Ticket blocked due to fraud'];
+                $conflicts++;
+                continue;
+            }
+
+            $localCheckedInAt = \Carbon\Carbon::parse($local['checked_in_at']);
+            $now = now();
+
+            if ($localCheckedInAt->greaterThan($now)) {
+                $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'conflict', 'message' => 'Future check-in time rejected'];
+                $conflicts++;
+                continue;
+            }
+
+            if ($ticket->checked_in && $ticket->checked_in_at) {
+                $clockSkewTolerance = $now->subMinutes(5);
+                if ($ticket->checked_in_at->gt($localCheckedInAt) && $ticket->checked_in_at->gt($clockSkewTolerance)) {
+                    $results[] = [
+                        'ticket_id' => $local['ticket_id'],
+                        'status' => 'conflict',
+                        'server_checked_in_at' => $ticket->checked_in_at->toDateTimeString(),
+                    ];
+                    $conflicts++;
+                    continue;
+                }
+            }
+
+            if ($ticket->status === 'checked_in' || $ticket->checked_in) {
+                $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'synced', 'message' => 'Already checked in'];
+                $synced++;
+                continue;
+            }
+
+            if ($event->start_datetime && $localCheckedInAt->lt($event->start_datetime)) {
+                $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'conflict', 'message' => 'Check-in time before event start'];
+                $conflicts++;
+                continue;
+            }
+
+            if ($ticket->status !== 'valid') {
+                $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'conflict', 'message' => 'Ticket is not valid'];
+                $conflicts++;
+                continue;
+            }
+
+            $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'pending'];
+        }
+
+        $pendingIds = collect($results)->where('status', 'pending')->pluck('ticket_id')->toArray();
+        if (!empty($pendingIds)) {
+            DB::transaction(function () use ($pendingIds, $user, $localCheckIns) {
+                $now = now();
+                $localMap = [];
+                foreach ($localCheckIns as $local) {
+                    $localMap[$local['ticket_id']] = $local['checked_in_at'];
+                }
+
+                foreach ($pendingIds as $pid) {
+                    Ticket::where('id', $pid)->update([
+                        'status' => 'checked_in',
+                        'checked_in' => true,
+                        'checked_in_at' => $localMap[$pid] ?? $now,
+                        'checked_in_by' => $user->id,
+                        'sync_status' => 'synced',
+                    ]);
+                }
+
+                DB::table('tickets')->whereIn('id', $pendingIds)->increment('qr_code_scanned_count');
+
+                $auditLogs = array_map(fn ($id) => [
+                    'id' => (string) Str::uuid(),
+                    'action' => 'offline_sync_check_in',
+                    'target_type' => Ticket::class,
+                    'target_id' => $id,
+                    'user_id' => $user->id,
+                    'metadata' => json_encode(['method' => 'offline_sync']),
+                    'ip_address' => request()->ip(),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ], $pendingIds);
+                \App\Models\AuditLog::insert($auditLogs);
+            });
+        }
+
+        foreach ($results as $idx => $result) {
+            if ($result['status'] === 'pending') {
+                $results[$idx] = ['ticket_id' => $result['ticket_id'], 'status' => 'synced'];
+                $synced++;
             }
         }
 
-        // Return current server state for cache update
+        // Return recent server state for cache update
         $serverCheckIns = Ticket::where('event_id', $eventId)
             ->where('status', 'checked_in')
+            ->orderBy('checked_in_at', 'desc')
+            ->limit(100)
             ->get()
             ->map(fn ($t) => [
                 'ticket_id' => $t->id,

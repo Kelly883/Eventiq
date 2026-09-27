@@ -34,7 +34,7 @@ class VenueCheckInController extends Controller
             'ticket_id' => ['required', 'string'],
         ]);
 
-        $event = \App\Models\Event::find($validated['event_id']);
+        $event = \App\Models\Event::withTrashed()->find($validated['event_id']);
         if (!$event) {
             return response()->json(['success' => false, 'message' => 'Event not found.'], 404);
         }
@@ -139,7 +139,7 @@ class VenueCheckInController extends Controller
         $query = $validated['query'];
         $limit = $validated['limit'] ?? 10;
 
-        $event = \App\Models\Event::find($eventId);
+        $event = \App\Models\Event::withTrashed()->find($eventId);
         if (!$event) {
             return response()->json(['success' => false, 'message' => 'Event not found.'], 404);
         }
@@ -193,7 +193,7 @@ class VenueCheckInController extends Controller
             abort(403, 'Only venue staff can view check-in stats.');
         }
 
-        $event = \App\Models\Event::find($eventId);
+        $event = \App\Models\Event::withTrashed()->find($eventId);
         if (!$event) {
             return response()->json(['success' => false, 'message' => 'Event not found.'], 404);
         }
@@ -204,15 +204,15 @@ class VenueCheckInController extends Controller
 
         $lastUpdateAt = $request->query('lastUpdateAt');
 
-        $baseQuery = Ticket::where('event_id', $eventId);
+        $totalCapacity = Ticket::where('event_id', $eventId)->count();
 
+        $checkedInQuery = Ticket::where('event_id', $eventId)->where('status', 'checked_in');
         if ($lastUpdateAt) {
-            $baseQuery->where('checked_in_at', '>', $lastUpdateAt);
+            $checkedInQuery->where('checked_in_at', '>', $lastUpdateAt);
         }
+        $totalCheckedIn = $checkedInQuery->count();
 
-        $totalCapacity = (clone $baseQuery)->count();
-        $totalCheckedIn = (clone $baseQuery)->where('status', 'checked_in')->count();
-        $totalVoid = (clone $baseQuery)->where('status', 'void')->count();
+        $totalVoid = Ticket::where('event_id', $eventId)->where('status', 'void')->count();
         $totalRemaining = max(0, $totalCapacity - $totalCheckedIn);
         $checkInRate = $totalCapacity > 0 ? (float) round(($totalCheckedIn / $totalCapacity) * 100, 1) : 0.0;
 
@@ -251,7 +251,7 @@ class VenueCheckInController extends Controller
             'end_time' => ['nullable', 'date'],
         ]);
 
-        $event = \App\Models\Event::find($eventId);
+        $event = \App\Models\Event::withTrashed()->find($eventId);
         if (!$event) {
             return response()->json(['success' => false, 'message' => 'Event not found.'], 404);
         }
@@ -280,8 +280,7 @@ class VenueCheckInController extends Controller
             $query->where('checked_in_at', '<=', $endTime);
         }
 
-        // Hard cap at 50K rows to prevent memory exhaustion
-        $tickets = $query->orderBy('checked_in_at', 'desc')->limit(50000)->get();
+        $tickets = $query->orderBy('checked_in_at', 'desc')->limit(5000)->get();
 
         $data = $tickets->map(fn ($t) => [
             'ticket_id' => $t->id,

@@ -466,6 +466,7 @@ class VenueCheckInEndpointsTest extends TestCase
     {
         $user = $this->makeUser();
         $seed = $this->seedEventWithTickets($user, 3);
+        $seed['event']->update(['start_datetime' => now()->subMinutes(10)->toDateTimeString()]);
 
         $localCheckIns = [
             ['ticket_id' => $seed['tickets'][0]->id, 'checked_in_at' => now()->subMinutes(5)->toDateTimeString()],
@@ -522,6 +523,7 @@ class VenueCheckInEndpointsTest extends TestCase
     {
         $user = $this->makeUser();
         $seed = $this->seedEventWithTickets($user, 3);
+        $seed['event']->update(['start_datetime' => now()->subMinutes(10)->toDateTimeString()]);
 
         // Check in 2 tickets on server
         $this->actingAs($seed['staff'], 'sanctum')
@@ -650,6 +652,7 @@ class VenueCheckInEndpointsTest extends TestCase
     {
         $user = $this->makeUser();
         $seed = $this->seedEventWithTickets($user, 5);
+        $seed['event']->update(['start_datetime' => now()->subMinutes(10)->toDateTimeString()]);
         $staff = $seed['staff'];
 
         // 1. Search for a ticket
@@ -697,6 +700,136 @@ class VenueCheckInEndpointsTest extends TestCase
         $exportResponse = $this->actingAs($staff, 'sanctum')
             ->getJson('/api/venue/check-in/export/' . $seed['event']->id);
         $exportResponse->assertOk();
+    }
+
+    public function test_detect_duplicate_enforces_event_access(): void
+    {
+        $user = $this->makeUser();
+        $seed = $this->seedEventWithTickets($user, 3);
+
+        $otherUser = $this->makeUser('venue_staff');
+        $otherEvent = \App\Models\Event::factory()->create([
+            'organizer_id' => $user->organizer->id,
+            'status' => 'published',
+            'is_public' => true,
+        ]);
+        $otherEvent->venueStaff()->attach($otherUser->id);
+
+        $response = $this->actingAs($otherUser, 'sanctum')
+            ->postJson('/api/venue/check-in/detect-duplicate', [
+                'event_id' => (string) $seed['event']->id,
+                'ticket_id' => $seed['tickets'][0]->id,
+            ]);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_stats_last_update_at_does_not_filter_capacity(): void
+    {
+        $user = $this->makeUser();
+        $seed = $this->seedEventWithTickets($user, 10);
+
+        foreach (array_slice($seed['tickets'], 0, 4) as $ticket) {
+            $this->actingAs($seed['staff'], 'sanctum')
+                ->postJson('/api/tickets/' . $ticket->id . '/check-in', [])
+                ->assertOk();
+        }
+
+        $lastUpdate = now()->subMinutes(2)->toDateTimeString();
+
+        $response = $this->actingAs($seed['staff'], 'sanctum')
+            ->getJson('/api/venue/check-in/stats/' . $seed['event']->id . '?lastUpdateAt=' . $lastUpdate);
+
+        $response->assertOk()
+            ->assertJsonPath('data.total_capacity', 10)
+            ->assertJsonPath('data.total_checked_in', 4);
+    }
+
+    public function test_offline_sync_rejects_future_timestamp(): void
+    {
+        $user = $this->makeUser();
+        $seed = $this->seedEventWithTickets($user, 2);
+
+        $response = $this->actingAs($seed['staff'], 'sanctum')
+            ->postJson('/api/venue/check-in/offline-sync', [
+                'event_id' => (string) $seed['event']->id,
+                'local_check_ins' => [
+                    ['ticket_id' => $seed['tickets'][0]->id, 'checked_in_at' => now()->addDay()->toDateTimeString()],
+                ],
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.conflicts', 1)
+            ->assertJsonPath('data.results.0.status', 'conflict');
+    }
+
+    public function test_offline_sync_rejects_before_event_start(): void
+    {
+        $user = $this->makeUser();
+        $seed = $this->seedEventWithTickets($user, 2);
+        $seed['event']->update(['start_datetime' => now()->addDay()]);
+
+        $response = $this->actingAs($seed['staff'], 'sanctum')
+            ->postJson('/api/venue/check-in/offline-sync', [
+                'event_id' => (string) $seed['event']->id,
+                'local_check_ins' => [
+                    ['ticket_id' => $seed['tickets'][0]->id, 'checked_in_at' => now()->subDay()->toDateTimeString()],
+                ],
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.conflicts', 1)
+            ->assertJsonPath('data.results.0.status', 'conflict');
+    }
+
+    public function test_offline_sync_blocks_fraud_flagged_tickets(): void
+    {
+        $user = $this->makeUser();
+        $seed = $this->seedEventWithTickets($user, 2);
+
+        \App\Features\Fraud\Models\FraudEvent::create([
+            'ticket_id' => $seed['tickets'][0]->id,
+            'event_id' => $seed['event']->id,
+            'user_id' => $seed['tickets'][0]->user_id,
+            'order_id' => $seed['tickets'][0]->order_id,
+            'fraud_type' => 'duplicate_checkin',
+            'risk_score' => 0.85,
+            'risk_level' => 'high',
+            'detection_method' => 'rule_based',
+            'status' => 'flagged',
+            'reason' => 'Test fraud',
+        ]);
+
+        $response = $this->actingAs($seed['staff'], 'sanctum')
+            ->postJson('/api/venue/check-in/offline-sync', [
+                'event_id' => (string) $seed['event']->id,
+                'local_check_ins' => [
+                    ['ticket_id' => $seed['tickets'][0]->id, 'checked_in_at' => now()->toDateTimeString()],
+                ],
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.conflicts', 1)
+            ->assertJsonPath('data.results.0.status', 'conflict');
+    }
+
+    public function test_offline_sync_caps_server_check_ins(): void
+    {
+        $user = $this->makeUser();
+        $seed = $this->seedEventWithTickets($user, 5);
+
+        foreach ($seed['tickets'] as $ticket) {
+            $ticket->update(['status' => 'checked_in', 'checked_in' => true, 'checked_in_at' => now()]);
+        }
+
+        $response = $this->actingAs($seed['staff'], 'sanctum')
+            ->postJson('/api/venue/check-in/offline-sync', [
+                'event_id' => (string) $seed['event']->id,
+                'local_check_ins' => [],
+            ]);
+
+        $response->assertOk();
+        $this->assertLessThanOrEqual(100, count($response->json('data.server_check_ins')));
     }
 
     // ------------------------------------------------------------------

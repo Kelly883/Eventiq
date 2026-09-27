@@ -15,6 +15,9 @@ class QRCodeEncryptionService
     {
         $key = env('QR_ENCRYPTION_KEY');
         if (!$key) {
+            if (app()->isProduction()) {
+                throw new \RuntimeException('QR_ENCRYPTION_KEY is required in production.');
+            }
             $key = config('app.key');
         }
         return base64_decode($key);
