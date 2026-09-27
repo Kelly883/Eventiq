@@ -99,7 +99,7 @@ class AuthController extends Controller
 
         $user->update(['lastLoginAt' => now()]);
 
-        $user->load('roles');
+        $user->load('roles', 'roleRelation');
 
         return response()->json([
             'token' => $plainToken,
@@ -108,7 +108,9 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'name' => $user->name,
                 'role' => $user->role,
+                'role_id' => $user->role_id,
                 'roles' => $user->roles,
+                'roleRelation' => $user->roleRelation,
             ],
         ]);
     }
@@ -268,7 +270,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        return response()->json($user->load('roles'));
+        return response()->json($user->load('roles', 'roleRelation'));
     }
 
     /**

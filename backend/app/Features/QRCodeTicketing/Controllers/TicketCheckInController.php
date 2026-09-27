@@ -324,8 +324,7 @@ class TicketCheckInController extends Controller
         $startDate = $validated['start_date'] ?? null;
         $endDate = $validated['end_date'] ?? null;
 
-        $query = Ticket::where('event_id', $eventId)
-            ->where('status', 'checked_in');
+        $query = Ticket::where('event_id', $eventId)->where('status', 'checked_in');
 
         if ($startDate) {
             $query->where('checked_in_at', '>=', $startDate);
@@ -334,31 +333,48 @@ class TicketCheckInController extends Controller
             $query->where('checked_in_at', '<=', $endDate);
         }
 
-        $checkIns = $query->get();
-
-        $totalCheckedIn = $checkIns->count();
+        $totalCheckedIn = $query->count();
         $totalTickets = Ticket::where('event_id', $eventId)->count();
         $checkInRate = $totalTickets > 0 ? round(($totalCheckedIn / $totalTickets) * 100, 1) : 0;
 
-        // Group by hour for timeline
-        $byHour = $checkIns->groupBy(fn ($t) => $t->checked_in_at->format('H'))
-            ->map(fn ($group) => $group->count())
-            ->sortKeys();
+        // Peak check-in hour - use DB grouping for efficiency
+        $byHour = Ticket::where('event_id', $eventId)
+            ->where('status', 'checked_in')
+            ->when($startDate, fn ($q) => $q->where('checked_in_at', '>=', $startDate))
+            ->when($endDate, fn ($q) => $q->where('checked_in_at', '<=', $endDate))
+            ->selectRaw("strftime('%H', checked_in_at) as hour, COUNT(*) as cnt")
+            ->groupBy('hour')
+            ->orderByRaw('cnt desc')
+            ->limit(1)
+            ->pluck('cnt', 'hour');
 
-        $peakCheckInHour = $byHour->isNotEmpty() ? (int) $byHour->sortDesc()->keys()->first() : 0;
+        $peakCheckInHour = $byHour->isNotEmpty() ? (int) array_keys($byHour)->first() : 0;
 
-        // Group by tier for breakdown
-        $byTier = $checkIns->groupBy('tier')
+        // Group by tier for breakdown - use DB grouping
+        $byTier = Ticket::where('event_id', $eventId)
+            ->where('status', 'checked_in')
+            ->when($startDate, fn ($q) => $q->where('checked_in_at', '>=', $startDate))
+            ->when($endDate, fn ($q) => $q->where('checked_in_at', '<=', $endDate))
+            ->select('tier')
+            ->get()
+            ->groupBy('tier')
             ->map(fn ($group) => [
                 'count' => $group->count(),
                 'percentage' => $totalCheckedIn > 0 ? round(($group->count() / $totalCheckedIn) * 100, 1) : 0,
             ]);
 
-        // Average check-in time (minutes from event start)
-        $eventStart = $event->start_datetime;
-        $averageCheckInTime = $checkIns->isNotEmpty()
-            ? round($checkIns->avg(fn ($t) => $eventStart ? $t->checked_in_at->diffInMinutes($eventStart) : 0))
-            : 0;
+        use Illuminate\Support\Facades\DB;
+
+// Average check-in time (minutes from event start) - use DB avg via DB::table for SQLite compatibility
+$eventStart = $event->start_datetime;
+$averageCheckInTime = $totalCheckedIn > 0
+    ? round(DB::table('tickets')
+        ->where('event_id', $eventId)
+        ->where('status', 'checked_in')
+        ->when($startDate, fn ($q) => $q->where('checked_in_at', '>=', $startDate))
+        ->when($endDate, fn ($q) => $q->where('checked_in_at', '<=', $endDate))
+        ->avg(DB::raw("julianday(checked_in_at) - julianday('$eventStart)') * 24 * 60))
+    : 0;
 
         return response()->json([
             'data' => [
@@ -676,6 +692,11 @@ class TicketCheckInController extends Controller
 
     /**
      * POST /api/venue/check-in/offline-sync
+     *
+     * Server-authoritative sync: the device's checked_in_at is used only for
+     * conflict detection and bounded clock-skew validation. The stored
+     * timestamp is always the server time at sync, which prevents device-clock
+     * tampering from corrupting analytics or bypassing time-based fraud checks.
      */
     public function offlineSync(Request $request)
     {
@@ -697,7 +718,7 @@ class TicketCheckInController extends Controller
         ]);
 
         $eventId = $validated['event_id'];
-        $localCheckIns = $validated['local_check_ins'];
+        $localCheckIns = $validated['local_check_ins'] ?? [];
 
         $event = \App\Models\Event::withTrashed()->find($eventId);
         if (!$event) {
@@ -711,9 +732,13 @@ class TicketCheckInController extends Controller
         $synced = 0;
         $conflicts = 0;
         $results = [];
+        $warnings = [];
 
         $ticketIds = array_values(array_unique(array_map(fn ($local) => $local['ticket_id'], $localCheckIns)));
         $tickets = Ticket::whereIn('id', $ticketIds)->lockForUpdate()->get()->keyBy('id');
+
+        $serverNow = now();
+        $clockSkewTolerance = 10; // minutes
 
         foreach ($localCheckIns as $local) {
             $ticket = $tickets->get($local['ticket_id']);
@@ -747,36 +772,47 @@ class TicketCheckInController extends Controller
             }
 
             $localCheckedInAt = \Carbon\Carbon::parse($local['checked_in_at']);
-            $now = now();
 
-            if ($localCheckedInAt->greaterThan($now)) {
+            if ($localCheckedInAt->greaterThan($serverNow)) {
                 $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'conflict', 'message' => 'Future check-in time rejected'];
                 $conflicts++;
-                continue;
-            }
-
-            if ($ticket->checked_in && $ticket->checked_in_at) {
-                $clockSkewTolerance = $now->subMinutes(5);
-                if ($ticket->checked_in_at->gt($localCheckedInAt) && $ticket->checked_in_at->gt($clockSkewTolerance)) {
-                    $results[] = [
-                        'ticket_id' => $local['ticket_id'],
-                        'status' => 'conflict',
-                        'server_checked_in_at' => $ticket->checked_in_at->toDateTimeString(),
-                    ];
-                    $conflicts++;
-                    continue;
-                }
-            }
-
-            if ($ticket->status === 'checked_in' || $ticket->checked_in) {
-                $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'synced', 'message' => 'Already checked in'];
-                $synced++;
                 continue;
             }
 
             if ($event->start_datetime && $localCheckedInAt->lt($event->start_datetime)) {
                 $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'conflict', 'message' => 'Check-in time before event start'];
                 $conflicts++;
+                continue;
+            }
+
+            $clockSkewMinutes = $localCheckedInAt->diffInMinutes($serverNow, false); // false = signed diff
+
+            if (abs($clockSkewMinutes) > $clockSkewTolerance) {
+                $results[] = [
+                    'ticket_id' => $local['ticket_id'],
+                    'status' => 'conflict',
+                    'message' => 'Device clock skew exceeds tolerance',
+                    'local_checked_in_at' => $localCheckedInAt->toDateTimeString(),
+                    'server_checked_in_at' => $serverNow->toDateTimeString(),
+                    'clock_skew_minutes' => (int) $clockSkewMinutes,
+                ];
+                $conflicts++;
+                continue;
+            }
+
+            if ($ticket->checked_in && $ticket->checked_in_at) {
+                $results[] = [
+                    'ticket_id' => $local['ticket_id'],
+                    'status' => 'conflict',
+                    'server_checked_in_at' => $ticket->checked_in_at->toDateTimeString(),
+                ];
+                $conflicts++;
+                continue;
+            }
+
+            if ($ticket->status === 'checked_in' || $ticket->checked_in) {
+                $results[] = ['ticket_id' => $local['ticket_id'], 'status' => 'synced', 'message' => 'Already checked in'];
+                $synced++;
                 continue;
             }
 
@@ -791,18 +827,12 @@ class TicketCheckInController extends Controller
 
         $pendingIds = collect($results)->where('status', 'pending')->pluck('ticket_id')->toArray();
         if (!empty($pendingIds)) {
-            DB::transaction(function () use ($pendingIds, $user, $localCheckIns) {
-                $now = now();
-                $localMap = [];
-                foreach ($localCheckIns as $local) {
-                    $localMap[$local['ticket_id']] = $local['checked_in_at'];
-                }
-
+            DB::transaction(function () use ($pendingIds, $user, $serverNow) {
                 foreach ($pendingIds as $pid) {
                     Ticket::where('id', $pid)->update([
                         'status' => 'checked_in',
                         'checked_in' => true,
-                        'checked_in_at' => $localMap[$pid] ?? $now,
+                        'checked_in_at' => $serverNow,
                         'checked_in_by' => $user->id,
                         'sync_status' => 'synced',
                     ]);
@@ -816,10 +846,10 @@ class TicketCheckInController extends Controller
                     'target_type' => Ticket::class,
                     'target_id' => $id,
                     'user_id' => $user->id,
-                    'metadata' => json_encode(['method' => 'offline_sync']),
+                    'metadata' => json_encode(['method' => 'offline_sync', 'server_authoritative_timestamp' => $serverNow->toDateTimeString()]),
                     'ip_address' => request()->ip(),
-                    'created_at' => $now,
-                    'updated_at' => $now,
+                    'created_at' => $serverNow,
+                    'updated_at' => $serverNow,
                 ], $pendingIds);
                 \App\Models\AuditLog::insert($auditLogs);
             });
@@ -832,7 +862,6 @@ class TicketCheckInController extends Controller
             }
         }
 
-        // Return recent server state for cache update
         $serverCheckIns = Ticket::where('event_id', $eventId)
             ->where('status', 'checked_in')
             ->orderBy('checked_in_at', 'desc')
@@ -849,6 +878,8 @@ class TicketCheckInController extends Controller
                 'conflicts' => $conflicts,
                 'results' => $results,
                 'server_check_ins' => $serverCheckIns,
+                'server_time' => $serverNow->toDateTimeString(),
+                'clock_skew_tolerance_minutes' => $clockSkewTolerance,
             ],
         ]);
     }

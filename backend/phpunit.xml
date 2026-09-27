@@ -21,5 +21,6 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="LOG_CHANNEL" value="stack"/>
         <env name="LOG_STACK" value="daily,audit"/>
+        <env name="QR_ENCRYPTION_KEY" value="sE/SOhteBrTk3q3c7iCoCkXK2JKFy9IGEbGdd7dcwaM="/>
     </php>
 </phpunit>

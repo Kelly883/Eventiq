@@ -408,7 +408,9 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAdminAccess = useCallback(() => {
-    return Boolean(user?.roles?.some((role) => role.name === 'admin'));
+    const roles = (user?.roles || []).map((r) => r.name);
+    const roleName = user?.roleRelation?.name || user?.role;
+    return roles.includes('admin') || roleName === 'admin';
   }, [user]);
 
   return (

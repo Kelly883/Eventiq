@@ -9,6 +9,7 @@ import { useFCMTokenSync } from './features/push-notifications/hooks/useFCMToken
 import { ProtectedRoute, PublicRoute } from './features/auth/components/RouteGuards';
 import { useAuthContext } from './features/auth/context/AuthContext';
 import { safeRedirectPath, normalizeFromPath } from './features/auth/utils';
+import { getUserRoles } from './lib/authRoles';
 import { api, showToast } from './lib/api';
 import './App.css';
 import './features/homepage/homepage.css';
@@ -189,7 +190,7 @@ function App() {
   // location is now reactive — header visibility updates on route changes
   const { user, logout, sessionExpired, refreshAuth } = useAuthContext();
   const isLoggedIn = Boolean(user);
-  const roles = user?.roles?.map((r) => r.name) || [];
+  const roles = getUserRoles(user);
   const isAuthPage = AUTH_PAGES.some((path) => location.pathname === path);
   const isHomepage = location.pathname === '/';
 

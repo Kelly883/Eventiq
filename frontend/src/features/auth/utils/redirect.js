@@ -15,11 +15,13 @@ export function normalizeFromPath(from) {
   return null;
 }
 
+import { getUserRoles } from '../../../lib/authRoles';
+
 // Given the requested path and the current user's roles, return the safest
 // landing path (user can never be tracked into a route they lack permission for).
 export function safeRedirectPath(from, user, fallback = '/dashboard') {
   const target = normalizeFromPath(from) || fallback;
-  const roles = (user?.roles || []).map((r) => r.name);
+  const roles = getUserRoles(user);
 
   if (target === '/dashboard/organizer' && !roles.includes('organizer')) {
     return '/dashboard';
@@ -35,7 +37,7 @@ export function safeRedirectPath(from, user, fallback = '/dashboard') {
 
 // Role-aware default landing page (used when there's no saved `from`).
 export function defaultRedirect(user) {
-  const roles = (user?.roles || []).map((r) => r.name);
+  const roles = getUserRoles(user);
   if (roles.includes('organizer')) return '/dashboard/organizer';
   if (roles.includes('admin')) return '/admin';
   return '/dashboard';

@@ -249,6 +249,8 @@ class VenueCheckInController extends Controller
             'include_no_shows' => ['nullable', 'boolean'],
             'start_time' => ['nullable', 'date'],
             'end_time' => ['nullable', 'date'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:1000'],
         ]);
 
         $event = \App\Models\Event::withTrashed()->find($eventId);
@@ -264,6 +266,8 @@ class VenueCheckInController extends Controller
         $includeNoShows = $validated['include_no_shows'] ?? false;
         $startTime = $validated['start_time'] ?? null;
         $endTime = $validated['end_time'] ?? null;
+        $page = $validated['page'] ?? 1;
+        $perPage = $validated['per_page'] ?? 20;
 
         $query = Ticket::where('event_id', $eventId)
             ->where(function ($q) use ($includeNoShows) {
@@ -280,6 +284,34 @@ class VenueCheckInController extends Controller
             $query->where('checked_in_at', '<=', $endTime);
         }
 
+        if ($format === 'json') {
+            $tickets = $query->orderBy('checked_in_at', 'desc')->paginate($perPage, ['*'], 'page', $page);
+
+            $records = $tickets->map(fn ($t) => [
+                'ticket_id' => $t->id,
+                'ticket_reference' => $t->ticket_id,
+                'attendee_name' => $t->attendee_name,
+                'attendee_email' => $t->attendee_email,
+                'status' => $t->status,
+                'checked_in_at' => $t->checked_in_at?->toDateTimeString(),
+                'checked_in_by' => $t->checked_in_by,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'event_id' => $eventId,
+                    'format' => 'json',
+                    'exported_at' => now()->toDateTimeString(),
+                    'total_records' => $tickets->total(),
+                    'per_page' => $tickets->perPage(),
+                    'current_page' => $tickets->currentPage(),
+                    'last_page' => $tickets->lastPage(),
+                    'records' => $records,
+                ],
+            ]);
+        }
+
         $tickets = $query->orderBy('checked_in_at', 'desc')->limit(5000)->get();
 
         $data = $tickets->map(fn ($t) => [
@@ -291,19 +323,6 @@ class VenueCheckInController extends Controller
             'checked_in_at' => $t->checked_in_at?->toDateTimeString(),
             'checked_in_by' => $t->checked_in_by,
         ]);
-
-        if ($format === 'json') {
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'event_id' => $eventId,
-                    'format' => 'json',
-                    'exported_at' => now()->toDateTimeString(),
-                    'total_records' => $data->count(),
-                    'records' => $data,
-                ],
-            ]);
-        }
 
         // CSV export
         $filename = 'checkins_' . $eventId . '_' . now()->format('Y-m-d_His') . '.csv';

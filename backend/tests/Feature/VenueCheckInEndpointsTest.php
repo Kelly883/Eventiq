@@ -481,17 +481,22 @@ class VenueCheckInEndpointsTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('data.synced', 2)
-            ->assertJsonPath('data.conflicts', 0);
+            ->assertJsonPath('data.conflicts', 0)
+            ->assertJsonPath('data.server_time', now()->toDateTimeString());
 
         $this->assertEquals('checked_in', $seed['tickets'][0]->fresh()->status);
         $this->assertEquals('checked_in', $seed['tickets'][1]->fresh()->status);
         $this->assertEquals('synced', $seed['tickets'][0]->fresh()->sync_status);
+
+        $syncedAt0 = \Carbon\Carbon::parse($seed['tickets'][0]->fresh()->checked_in_at);
+        $this->assertTrue($syncedAt0->diffInSeconds(now()) <= 5, 'Server-authoritative timestamp should be close to server now');
     }
 
     public function test_offline_sync_handles_conflicts(): void
     {
         $user = $this->makeUser();
         $seed = $this->seedEventWithTickets($user, 3);
+        $seed['event']->update(['start_datetime' => now()->subDays(1)]);
 
         // Manually set server check-in using DB::table to ensure fields are persisted
         $serverCheckInAt = now()->subMinute();
@@ -544,6 +549,26 @@ class VenueCheckInEndpointsTest extends TestCase
         $response->assertOk();
         $serverCheckIns = $response->json('data.server_check_ins');
         $this->assertCount(3, $serverCheckIns);
+    }
+
+    public function test_offline_sync_rejects_excessive_clock_skew(): void
+    {
+        $user = $this->makeUser();
+        $seed = $this->seedEventWithTickets($user, 2);
+        $seed['event']->update(['start_datetime' => now()->subDays(1)]);
+
+        $response = $this->actingAs($seed['staff'], 'sanctum')
+            ->postJson('/api/venue/check-in/offline-sync', [
+                'event_id' => (string) $seed['event']->id,
+                'local_check_ins' => [
+                    ['ticket_id' => $seed['tickets'][0]->id, 'checked_in_at' => now()->subMinutes(10)->toDateTimeString()],
+                ],
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.conflicts', 1)
+            ->assertJsonPath('data.results.0.status', 'conflict')
+            ->assertJsonPath('data.results.0.message', 'Device clock skew exceeds tolerance');
     }
 
     // ------------------------------------------------------------------
@@ -642,6 +667,26 @@ class VenueCheckInEndpointsTest extends TestCase
             ->getJson('/api/venue/check-in/export/' . $seed['event']->id . '?format=json&include_no_shows=1');
 
         $this->assertEquals(5, count($response->json('data.records')));
+    }
+
+    public function test_export_json_supports_pagination(): void
+    {
+        $user = $this->makeUser();
+        $seed = $this->seedEventWithTickets($user, 5);
+
+        foreach ($seed['tickets'] as $ticket) {
+            $ticket->update(['status' => 'checked_in', 'checked_in' => true, 'checked_in_at' => now()]);
+        }
+
+        $response = $this->actingAs($seed['staff'], 'sanctum')
+            ->getJson('/api/venue/check-in/export/' . $seed['event']->id . '?format=json&per_page=2');
+
+        $response->assertOk()
+            ->assertJsonPath('data.total_records', 5)
+            ->assertJsonPath('data.per_page', 2)
+            ->assertJsonPath('data.current_page', 1)
+            ->assertJsonPath('data.last_page', 3);
+        $this->assertCount(2, $response->json('data.records'));
     }
 
     // ------------------------------------------------------------------
@@ -786,6 +831,7 @@ class VenueCheckInEndpointsTest extends TestCase
     {
         $user = $this->makeUser();
         $seed = $this->seedEventWithTickets($user, 2);
+        $seed['event']->update(['start_datetime' => now()->subDays(1)]);
 
         \App\Features\Fraud\Models\FraudEvent::create([
             'ticket_id' => $seed['tickets'][0]->id,

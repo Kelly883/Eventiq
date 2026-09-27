@@ -4,10 +4,12 @@ import { useAuthContext } from '../context/AuthContext';
 import { showToast } from '../../../lib/api';
 import { LoadingSpinner } from '../../common';
 import { normalizeFromPath, safeRedirectPath } from '../utils';
+import { getUserRoles } from '../../../lib/authRoles';
 
 const getUserRole = (user) => {
-  if (user?.roles?.some((r) => r.name === 'organizer')) return 'organizer';
-  if (user?.roles?.some((r) => r.name === 'admin')) return 'admin';
+  const roles = getUserRoles(user);
+  if (roles.includes('organizer')) return 'organizer';
+  if (roles.includes('admin')) return 'admin';
   return null;
 };
 
@@ -48,7 +50,7 @@ export const ProtectedRoute = ({ children, requiredRole = null, requiredRoles = 
 
   // Check multiple roles (OR logic - any one role grants access)
   if (requiredRoles && requiredRoles.length > 0) {
-    const userRoles = user?.roles?.map((r) => r.name) || [];
+    const userRoles = getUserRoles(user);
     const hasRequiredRole = requiredRoles.some((role) => userRoles.includes(role));
     if (!hasRequiredRole) {
       if (deniedPage) return deniedPage;
@@ -103,7 +105,7 @@ export const ProtectedRoute = ({ children, requiredRole = null, requiredRoles = 
     );
   }
 
-  if (requiredRole === 'organizer' && !user?.roles?.some((r) => r.name === 'organizer')) {
+  if (requiredRole === 'organizer' && !getUserRoles(user).includes('organizer')) {
     if (deniedPage) return deniedPage;
     return (
       <ToastRedirect
@@ -142,7 +144,7 @@ export const PublicRoute = ({ children }) => {
       return <Navigate to={safeRedirectPath(returnPath, user)} replace />;
     }
 
-    const roles = user?.roles?.map((r) => r.name) || [];
+    const roles = getUserRoles(user);
     // Venue staff and organizers share the dedicated staff dashboard.
     if (roles.some((r) => ['venue_staff', 'organizer'].includes(r))) {
       return <Navigate to="/venue/dashboard" replace />;
