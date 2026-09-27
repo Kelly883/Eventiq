@@ -348,7 +348,7 @@ class TicketCheckInController extends Controller
             ->limit(1)
             ->pluck('cnt', 'hour');
 
-        $peakCheckInHour = $byHour->isNotEmpty() ? (int) array_keys($byHour)->first() : 0;
+        $peakCheckInHour = $byHour->isNotEmpty() ? (int) $byHour->keys()->first() : 0;
 
         // Group by tier for breakdown - use DB grouping
         $byTier = Ticket::where('event_id', $eventId)
