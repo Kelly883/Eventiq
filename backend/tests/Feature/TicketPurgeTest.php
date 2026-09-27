@@ -84,7 +84,7 @@ class TicketPurgeTest extends TestCase
 
     public function test_purge_requires_admin_role(): void
     {
-        $attendeeRole = \App\Models\Role::create(['name' => 'attendee']);
+        $attendeeRole = \App\Models\Role::firstOrCreate(['name' => 'attendee']);
         $user = \App\Models\User::factory()->create();
         $user->roles()->attach($attendeeRole);
         

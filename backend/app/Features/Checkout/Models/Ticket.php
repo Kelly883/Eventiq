@@ -59,6 +59,7 @@ class Ticket extends Model
         'qr_code_secret',
         'qr_code_generated_at',
         'qr_code_expires_at',
+        'checked_in',
         'checked_in_at',
         'checked_in_by',
         'qr_code_scanned_count',

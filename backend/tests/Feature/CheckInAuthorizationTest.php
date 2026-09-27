@@ -16,7 +16,7 @@ class CheckInAuthorizationTest extends TestCase
 
     public function test_venue_staff_can_only_access_assigned_events(): void
     {
-        $venueStaffRole = Role::factory()->create(['name' => 'venue_staff']);
+        $venueStaffRole = Role::firstOrCreate(['name' => 'venue_staff']);
         $venueStaff = User::factory()->create(['role_id' => $venueStaffRole->id]);
         $assignedEvent = Event::factory()->create();
         $unassignedEvent = Event::factory()->create();

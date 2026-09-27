@@ -14,7 +14,7 @@ class OfflineSyncApiAuthorizationTest extends TestCase
 
     private function makeUserWithRole(string $roleName, array $extra = []): User
     {
-        $role = Role::create(['name' => $roleName, 'description' => ucfirst($roleName)]);
+        $role = Role::firstOrCreate(['name' => $roleName], ['description' => ucfirst($roleName)]);
         $user = User::factory()->create($extra);
         $user->roles()->attach($role);
         return $user;

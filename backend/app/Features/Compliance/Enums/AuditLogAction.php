@@ -40,4 +40,7 @@ enum AuditLogAction: string
     case COMPLIANCE_AUDIT_LOG_EXPORT = 'compliance.audit_logs.export';
     case COMPLIANCE_AUDIT_LOG_BULK_TAG = 'compliance.audit_logs.bulk_tag';
     case COMPLIANCE_REPORT_QUEUED = 'compliance_report.queued';
+    case ADMIN_DASHBOARD_OVERVIEW = 'admin.dashboard.overview';
+    case ADMIN_DASHBOARD_ACTIVITY_FEED = 'admin.dashboard.activity_feed';
+    case ADMIN_DASHBOARD_ALERTS = 'admin.dashboard.alerts';
 }

@@ -22,4 +22,12 @@ class TicketPolicy
     {
         return $user->id === $ticket->user_id || $user->hasRole('admin');
     }
+
+    /**
+     * Determine if the user can view tickets in the "my tickets" listing.
+     */
+    public function index(User $user): bool
+    {
+        return (bool) $user->id;
+    }
 }

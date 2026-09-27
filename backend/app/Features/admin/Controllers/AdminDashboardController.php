@@ -146,7 +146,7 @@ class AdminDashboardController extends Controller
         );
         $trends = $this->buildTrends($metrics, $previousMetrics);
 
-        $this->auditLogService->log('admin.dashboard.overview', 'dashboard', 'overview', ['period' => $period], $request->user()?->id);
+        $this->auditLogService->log('admin.dashboard.overview', 'dashboard', 'overview', ['period' => $period], auth()->id());
 
         return response()->json([
             'success' => true,
@@ -203,7 +203,7 @@ class AdminDashboardController extends Controller
             'createdAt' => $log->created_at?->toIso8601String(),
         ]);
 
-        $this->auditLogService->log('admin.dashboard.activity_feed', 'dashboard', 'activity_feed', $validated, $request->user()?->id);
+        $this->auditLogService->log('admin.dashboard.activity_feed', 'dashboard', 'activity_feed', $validated, auth()->id());
 
         return response()->json([
             'success' => true,
@@ -233,7 +233,7 @@ class AdminDashboardController extends Controller
 
         $alerts = $this->buildAlerts($severityFilter, $limit, $offset);
 
-        $this->auditLogService->log('admin.dashboard.alerts', 'dashboard', 'alerts', ['severity' => $severityFilter], $request->user()?->id);
+        $this->auditLogService->log('admin.dashboard.alerts', 'dashboard', 'alerts', ['severity' => $severityFilter], auth()->id());
 
         return response()->json([
             'success' => true,

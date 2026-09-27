@@ -20,7 +20,7 @@ class DeveloperPortalTest extends TestCase
 
     private function makeOrganizer(): array
     {
-        $organizerRole = Role::factory()->create(['name' => 'organizer']);
+        $organizerRole = Role::firstOrCreate(['name' => 'organizer']);
         $user = User::factory()->create(['role_id' => $organizerRole->id]);
         $organizer = Organizer::factory()->for($user)->create();
 
@@ -29,7 +29,7 @@ class DeveloperPortalTest extends TestCase
 
     private function makeRegularUser(): User
     {
-        $role = Role::factory()->create(['name' => 'attendee']);
+        $role = Role::firstOrCreate(['name' => 'attendee']);
         return User::factory()->create(['role_id' => $role->id]);
     }
 

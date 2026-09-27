@@ -21,7 +21,7 @@ class RoleControllerTest extends TestCase
 
     private function makeRegularUser(): User
     {
-        $role = Role::create(['name' => 'organizer', 'description' => 'Event Organizer']);
+        $role = Role::firstOrCreate(['name' => 'organizer'], ['description' => 'Event Organizer']);
         $user = User::factory()->create();
         $user->roles()->attach($role);
         return $user;
@@ -82,7 +82,7 @@ class RoleControllerTest extends TestCase
 
     public function test_admin_can_update_role(): void
     {
-        $role = Role::factory()->create(['name' => 'editor', 'description' => 'Original desc']);
+        $role = Role::firstOrCreate(['name' => 'editor'], ['description' => 'Original desc']);
 
         $response = $this->actingAs($this->makeAdmin(), 'sanctum')
             ->putJson("/api/admin/roles/{$role->id}", [
@@ -95,7 +95,7 @@ class RoleControllerTest extends TestCase
 
     public function test_admin_cannot_update_system_role(): void
     {
-        $systemRole = Role::create(['name' => 'system', 'isSystemRole' => true]);
+        $systemRole = Role::firstOrCreate(['name' => 'system'], ['isSystemRole' => true]);
 
         $response = $this->actingAs($this->makeAdmin(), 'sanctum')
             ->putJson("/api/admin/roles/{$systemRole->id}", [
@@ -118,7 +118,7 @@ class RoleControllerTest extends TestCase
 
     public function test_admin_cannot_delete_system_role(): void
     {
-        $systemRole = Role::create(['name' => 'system', 'isSystemRole' => true]);
+        $systemRole = Role::firstOrCreate(['name' => 'system'], ['isSystemRole' => true]);
 
         $response = $this->actingAs($this->makeAdmin(), 'sanctum')
             ->deleteJson("/api/admin/roles/{$systemRole->id}");
@@ -161,7 +161,7 @@ class RoleControllerTest extends TestCase
 
     public function test_system_role_is_read_only(): void
     {
-        $systemRole = Role::create(['name' => 'system', 'isSystemRole' => true]);
+        $systemRole = Role::firstOrCreate(['name' => 'system'], ['isSystemRole' => true]);
 
         $this->assertFalse($systemRole->canAssignRole());
         $this->assertTrue($systemRole->isSystemRole);

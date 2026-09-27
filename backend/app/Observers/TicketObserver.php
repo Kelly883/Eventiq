@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Features\Checkout\Models\Ticket;
 use App\Models\Organizer;
 use App\Models\Event;
+use Illuminate\Support\Facades\Cache;
 
 class TicketObserver
 {
@@ -23,6 +24,13 @@ class TicketObserver
 
         if ($organizerId) {
             Organizer::where('id', $organizerId)->decrement('totalTicketsSold');
+        }
+    }
+
+    public function updated(Ticket $ticket): void
+    {
+        if ($ticket->isDirty('checked_in')) {
+            Cache::forget('dashboard-overview:' . $ticket->user_id);
         }
     }
 }

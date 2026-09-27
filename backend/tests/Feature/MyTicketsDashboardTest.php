@@ -11,6 +11,7 @@ use App\Models\Role;
 use App\Models\TicketTier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -593,6 +594,48 @@ class MyTicketsDashboardTest extends TestCase
         $this->actingAs($user, 'sanctum')
             ->getJson('/api/tickets/' . $ticket->id . '/details')
             ->assertStatus(429);
+    }
+
+    // ------------------------------------------------------------------
+    // Cache invalidation
+    // ------------------------------------------------------------------
+
+    public function test_dashboard_overview_cache_invalidated_on_check_in(): void
+    {
+        $user = $this->makeUser();
+        $ticket = $this->seedTicket($user);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/users/me/dashboard-overview')
+            ->assertOk();
+
+        $this->assertTrue(Cache::has('dashboard-overview:' . $user->id));
+
+        $ticket->update(['checked_in' => true]);
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/users/me/dashboard-overview')
+            ->assertOk()
+            ->assertJsonPath('data.checkedIn', 1);
+    }
+
+    public function test_dashboard_preferences_update_invalidates_dashboard_cache(): void
+    {
+        $user = $this->makeUser();
+
+        $this->actingAs($user, 'sanctum')
+            ->getJson('/api/users/me/dashboard-overview')
+            ->assertOk();
+
+        $this->assertTrue(Cache::has('dashboard-overview:' . $user->id));
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/users/me/dashboard-preferences', [
+                'default_ticket_filter' => 'upcoming',
+            ])
+            ->assertOk();
+
+        $this->assertFalse(Cache::has('dashboard-overview:' . $user->id));
     }
 
     // ------------------------------------------------------------------

@@ -8,12 +8,15 @@ use App\Features\Dashboard\Models\UserDashboardPreference;
 use App\Features\Tickets\Policies\TicketPolicy;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class MyTicketsController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('index', Ticket::class);
+
         $validated = $request->validate([
             'filter' => ['nullable', 'string', 'in:upcoming,past,all'],
             'search' => ['nullable', 'string', 'max:255'],
@@ -29,15 +32,15 @@ class MyTicketsController extends Controller
             ->where('user_id', $request->user()->id);
 
         if ($filter === 'upcoming') {
-            $query->whereHas('event', fn ($q) => $q->where('start_datetime', '>=', now()));
+            $query->whereHas('event', fn ($q) => $q->where('start_datetime', '>', now()));
         } elseif ($filter === 'past') {
-            $query->whereHas('event', fn ($q) => $q->where('end_datetime', '<', now()));
+            $query->whereHas('event', fn ($q) => $q->where('end_datetime', '<=', now()));
         }
 
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('ticket_id', 'like', "%{$search}%")
-                    ->orWhereHas('event', fn ($eq) => $eq->where('title', 'like', "%{$search}%"));
+                $q->where('ticket_id', 'like', "{$search}%")
+                    ->orWhereHas('event', fn ($eq) => $eq->where('title', 'like', "{$search}%"));
             });
         }
 
@@ -72,38 +75,37 @@ class MyTicketsController extends Controller
     {
         $user = $request->user();
 
-        // Single query with conditional aggregates for counts
-        $stats = Ticket::where('tickets.user_id', $user->id)
-            ->selectRaw('COUNT(*) as total')
-            ->selectRaw('SUM(CASE WHEN tickets.checked_in = 1 THEN 1 ELSE 0 END) as checked_in')
-            ->selectRaw('SUM(CASE WHEN EXISTS (SELECT 1 FROM events WHERE events.id = tickets.event_id AND events.start_datetime >= ?) THEN 1 ELSE 0 END) as upcoming', [now()])
-            ->selectRaw('SUM(CASE WHEN EXISTS (SELECT 1 FROM events WHERE events.id = tickets.event_id AND events.end_datetime < ?) THEN 1 ELSE 0 END) as past', [now()])
-            ->first();
+        $cacheKey = 'dashboard-overview:' . $user->id;
+        $data = Cache::remember($cacheKey, 60, function () use ($user) {
+            $stats = Ticket::where('tickets.user_id', $user->id)
+                ->selectRaw('COUNT(*) as total')
+                ->selectRaw('SUM(CASE WHEN tickets.checked_in = 1 THEN 1 ELSE 0 END) as checked_in')
+                ->selectRaw('SUM(CASE WHEN EXISTS (SELECT 1 FROM events WHERE events.id = tickets.event_id AND events.start_datetime > ?) THEN 1 ELSE 0 END) as upcoming', [now()])
+                ->selectRaw('SUM(CASE WHEN EXISTS (SELECT 1 FROM events WHERE events.id = tickets.event_id AND events.end_datetime <= ?) THEN 1 ELSE 0 END) as past', [now()])
+                ->first();
 
-        // nextUpcomingEvent: order by event start_datetime ASC (first upcoming event)
-        $nextUpcomingEvent = Ticket::where('tickets.user_id', $user->id)
-            ->whereHas('event', fn ($q) => $q->where('start_datetime', '>=', now()))
-            ->with('event')
-            ->join('events', 'tickets.event_id', '=', 'events.id')
-            ->orderBy('events.start_datetime', 'asc')
-            ->select('tickets.*')
-            ->first();
+            $nextUpcomingEvent = Ticket::where('tickets.user_id', $user->id)
+                ->whereHas('event', fn ($q) => $q->where('start_datetime', '>', now()))
+                ->with('event')
+                ->join('events', 'tickets.event_id', '=', 'events.id')
+                ->orderBy('events.start_datetime', 'asc')
+                ->select('tickets.*')
+                ->first();
 
-        $recentActivity = Ticket::where('user_id', $user->id)
-            ->with('event')
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get()
-            ->map(fn ($t) => [
-                'id' => $t->id,
-                'event_name' => $t->event->title ?? null,
-                'ticket_id' => $t->ticket_id,
-                'status' => $t->status,
-                'purchased_at' => $t->created_at?->toDateTimeString(),
-            ]);
+            $recentActivity = Ticket::where('user_id', $user->id)
+                ->with('event')
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(fn ($t) => [
+                    'id' => $t->id,
+                    'event_name' => $t->event->title ?? null,
+                    'ticket_id' => $t->ticket_id,
+                    'status' => $t->status,
+                    'purchased_at' => $t->created_at?->toDateTimeString(),
+                ]);
 
-        return response()->json([
-            'data' => [
+            return [
                 'totalTickets' => (int) $stats->total,
                 'upcomingTickets' => (int) $stats->upcoming,
                 'pastTickets' => (int) $stats->past,
@@ -115,7 +117,11 @@ class MyTicketsController extends Controller
                     'venue' => $nextUpcomingEvent->event->venue_name,
                 ] : null,
                 'recentActivity' => $recentActivity,
-            ],
+            ];
+        });
+
+        return response()->json([
+            'data' => $data,
         ]);
     }
 
@@ -125,8 +131,8 @@ class MyTicketsController extends Controller
 
         return response()->json([
             'data' => [
-                'default_ticket_filter' => $prefs->default_ticket_filter,
-                'default_date_range' => $prefs->default_date_range,
+                'default_ticket_filter' => $prefs->default_ticket_filter ?: 'all',
+                'default_date_range' => $prefs->default_date_range ?: '30days',
                 'show_recommendations' => (bool) $prefs->show_recommendations,
                 'show_activity_feed' => (bool) $prefs->show_activity_feed,
                 'auto_refresh_enabled' => (bool) $prefs->auto_refresh_enabled,
@@ -148,10 +154,12 @@ class MyTicketsController extends Controller
 
         $prefs = UserDashboardPreference::updatePreferences($user, $validated);
 
+        Cache::forget('dashboard-overview:' . $user->id);
+
         return response()->json([
             'data' => [
-                'default_ticket_filter' => $prefs->default_ticket_filter,
-                'default_date_range' => $prefs->default_date_range,
+                'default_ticket_filter' => $prefs->default_ticket_filter ?: 'all',
+                'default_date_range' => $prefs->default_date_range ?: '30days',
                 'show_recommendations' => (bool) $prefs->show_recommendations,
                 'show_activity_feed' => (bool) $prefs->show_activity_feed,
                 'auto_refresh_enabled' => (bool) $prefs->auto_refresh_enabled,

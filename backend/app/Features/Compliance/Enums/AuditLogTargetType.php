@@ -15,4 +15,7 @@ enum AuditLogTargetType: string
     case TICKET = 'ticket';
     case PRICING_WINDOW = 'pricing_window';
     case EMAIL_TEMPLATE = 'email_template';
+    case AUDIT_LOG = 'audit_log';
+    case COMPLIANCE_REPORT_GENERATION = 'compliance_report_generation';
+    case DASHBOARD = 'dashboard';
 }

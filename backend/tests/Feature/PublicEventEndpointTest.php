@@ -25,7 +25,7 @@ class PublicEventEndpointTest extends TestCase
     {
         parent::setUp();
 
-        $organizerRole = Role::factory()->create(['name' => 'organizer']);
+        $organizerRole = Role::firstOrCreate(['name' => 'organizer']);
 
         $this->organizerUser = User::factory()->create(['role_id' => $organizerRole->id]);
         $this->organizer = Organizer::factory()->create(['user_id' => $this->organizerUser->id]);
