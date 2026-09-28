@@ -54,7 +54,7 @@ class RefundRequestTest extends TestCase
             'end_datetime' => now()->addDays(8)->toDateTimeString(),
         ]);
 
-        $tier = \App\Features\TicketTier\Models\TicketTier::factory()->create([
+        $tier = AppModels.TicketTier.factory.create([
             'event_id' => $event->id,
             'status' => 'published',
             'quantity' => 100,
