@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 trait AlertHelpers
@@ -139,11 +140,22 @@ class AdminDashboardController extends Controller
         $period = $validated['period'] ?? '30d';
         [$startDate, $endDate] = $this->resolvePeriod($period);
 
-        $metrics = $this->computeMetrics($startDate, $endDate);
-        $previousMetrics = $this->computeMetrics(
-            $startDate->clone()->subSeconds(abs($endDate->diffInSeconds($startDate))),
-            $startDate->clone()->subSecond()
+        $cacheKey = 'admin.dashboard.overview.' . $period;
+        $metrics = Cache::remember($cacheKey, 120, function () use ($startDate, $endDate) {
+            return $this->computeMetrics($startDate, $endDate);
+        });
+
+        $previousMetrics = Cache::remember(
+            'admin.dashboard.overview.previous.' . $period,
+            120,
+            function () use ($startDate, $endDate) {
+                $periodLength = $startDate->diffInSeconds($endDate);
+                $prevStart = (clone $startDate)->subSeconds($periodLength);
+                $prevEnd = (clone $startDate)->subSecond();
+                return $this->computeMetrics($prevStart, $prevEnd);
+            }
         );
+
         $trends = $this->buildTrends($metrics, $previousMetrics);
 
         $this->auditLogService->log('admin.dashboard.overview', 'dashboard', 'overview', ['period' => $period], auth()->id());
@@ -265,7 +277,7 @@ class AdminDashboardController extends Controller
             ->whereBetween('created_at', [$start, $end])
             ->sum('amount');
 
-        $eventsQuery = Event::whereBetween('created_at', [$start, $end]);
+        $eventsQuery = Event::whereBetween('created_at', [$start, $end])->whereNull('deleted_at');
         $eventsCreated = $eventsQuery->count();
 
         $usersRegistered = User::whereBetween('created_at', [$start, $end])->count();
@@ -428,6 +440,7 @@ class AdminDashboardController extends Controller
                     error_message
                 FROM audit_logs
                 WHERE status IN ('failure', 'warning')
+                  AND deleted_at IS NULL
             ) as alerts
         ";
 
@@ -497,25 +510,50 @@ class AdminDashboardController extends Controller
             }
         });
 
-        $fraudCount = FraudEvent::whereIn('status', ['flagged', 'auto_blocked'])
-            ->when($severityFilter === 'critical', fn($q) => $q->where('risk_level', 'high'))
-            ->when($severityFilter === 'warning', fn($q) => $q->where('risk_level', 'medium'))
-            ->when($severityFilter === 'info', fn($q) => $q->where('risk_level', 'low'))
-            ->count();
+        $countSql = "
+            SELECT COUNT(*) as total FROM (
+                SELECT 1 FROM fraud_events WHERE status IN ('flagged', 'auto_blocked')
+                UNION ALL
+                SELECT 1 FROM payouts WHERE status = 'failed'
+                UNION ALL
+                SELECT 1 FROM audit_logs WHERE status IN ('failure', 'warning') AND deleted_at IS NULL
+            ) as count_alerts
+        ";
 
-        $payoutCount = match ($severityFilter) {
-            'critical' => Payout::where('status', Payout::STATUS_FAILED)->count(),
-            default => 0,
-        };
+        $countBindings = [];
+        if ($severityFilter) {
+            // Re-run the count with the same severity filter logic
+            $countSql = "
+                SELECT COUNT(*) as total FROM (
+                    SELECT 
+                        CASE risk_level WHEN 'high' THEN 'critical' WHEN 'medium' THEN 'warning' ELSE 'info' END as severity
+                    FROM fraud_events
+                    WHERE status IN ('flagged', 'auto_blocked')
+                    
+                    UNION ALL
+                    
+                    SELECT 'critical' as severity
+                    FROM payouts
+                    WHERE status = 'failed'
+                    
+                    UNION ALL
+                    
+                    SELECT 
+                        CASE status WHEN 'failure' THEN 'critical' WHEN 'warning' THEN 'warning' ELSE 'info' END as severity
+                    FROM audit_logs
+                    WHERE status IN ('failure', 'warning')
+                      AND deleted_at IS NULL
+                ) as count_alerts
+                WHERE severity = ?
+            ";
+            $countBindings[] = $severityFilter;
+        }
 
-        $auditCount = AuditLog::whereIn('status', ['failure', 'warning'])
-            ->when($severityFilter === 'critical', fn($q) => $q->where('status', 'failure'))
-            ->when($severityFilter === 'warning', fn($q) => $q->where('status', 'warning'))
-            ->when($severityFilter === 'info', fn($q) => $q->where('status', 'info'))
-            ->count();
+        $countResult = DB::select($countSql, $countBindings);
+        $total = $countResult[0]->total ?? 0;
 
         return [
-            'total' => $fraudCount + $payoutCount + $auditCount,
+            'total' => (int) $total,
             'items' => $alerts,
         ];
     }
