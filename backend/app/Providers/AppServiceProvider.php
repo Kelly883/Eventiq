@@ -261,6 +261,11 @@ class AppServiceProvider extends ServiceProvider
         Ticket::observe(TicketObserver::class);
         PricingWindow::observe(PricingWindowObserver::class);
         \App\Models\AnalyticsSalesTimeline::observe(\App\Observers\AnalyticsSalesTimelineObserver::class);
+        \App\Features\Fraud\Models\FraudEvent::observe(\App\Observers\FraudEventObserver::class);
+        \App\Features\Payouts\Models\Payout::observe(\App\Observers\PayoutObserver::class);
+        \App\Models\AuditLog::observe(\App\Observers\AuditLogObserver::class);
+        \App\Features\Checkout\Models\Payment::observe(\App\Observers\PaymentObserver::class);
+        \App\Models\User::observe(\App\Observers\UserObserver::class);
 
         // Startup health check: verify critical tables exist to catch missing
         // migrations early instead of failing with 500s on first request.

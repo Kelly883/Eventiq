@@ -2,9 +2,10 @@
 
 namespace App\Observers;
 
-use App\Models\Event;
 use App\Models\AnalyticsEventsMetric;
+use App\Models\Event;
 use App\Models\EventsCalendarSummary;
+use App\Services\AdminDashboardCacheService;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 
@@ -33,8 +34,7 @@ class EventObserver
             EventsCalendarSummary::refreshForDate($event->start_datetime->format('Y-m-d'));
         }
 
-        // totalEventsCreated is now handled by IncrementTotalEventsCreated job (dispatched from EventController@store)
-        // to avoid double-count and allow ShouldBeUnique deduplication. Observer no longer increments directly.
+        AdminDashboardCacheService::invalidateOverview();
     }
 
     public function updated(Event $event): void
@@ -52,6 +52,8 @@ class EventObserver
                 Carbon::parse($event->getOriginal('start_datetime'))->format('Y-m-d')
             );
         }
+
+        AdminDashboardCacheService::invalidateOverview();
     }
 
     public function deleted(Event $event): void
@@ -60,7 +62,7 @@ class EventObserver
             EventsCalendarSummary::refreshForDate($event->start_datetime->format('Y-m-d'));
         }
 
-        // totalEventsCreated handled by DecrementTotalEventsCreated job
+        AdminDashboardCacheService::invalidateOverview();
     }
 
     public function restored(Event $event): void
@@ -69,6 +71,6 @@ class EventObserver
             EventsCalendarSummary::refreshForDate($event->start_datetime->format('Y-m-d'));
         }
 
-        // totalEventsCreated handled by IncrementTotalEventsCreated job on restore if needed
+        AdminDashboardCacheService::invalidateOverview();
     }
 }
