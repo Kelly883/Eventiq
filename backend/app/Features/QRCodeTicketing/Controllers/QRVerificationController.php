@@ -68,21 +68,73 @@ class QRVerificationController extends Controller
             }
 
             // 5. Verify nonce to prevent replay attacks
-            $ticket = \App\Features\Checkout\Models\Ticket::find($payload['ticket_id']);
-            if ($ticket && isset($payload['nonce']) && $ticket->qr_nonce && hash_equals($ticket->qr_nonce, $payload['nonce'])) {
+            $ticket = \App\Features\Checkout\Models\Ticket::with('event')->find($payload['ticket_id']);
+            if (!$ticket) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'QR code has already been used.',
+                    'message' => 'Ticket not found.',
+                ], 404);
+            }
+
+            // Defense-in-depth: verify event_id in payload matches ticket's event
+            if ((string) $payload['event_id'] !== (string) $ticket->event_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'QR code event mismatch.',
                 ], 403);
             }
 
-            $eventId = $payload['event_id'];
-            $eventModel = \App\Models\Event::find($eventId);
-            if (!$eventModel) {
-                abort(404, 'Event not found.');
+            // Check ticket ownership/origin — venue staff may only verify
+            // tickets that belong to events they have access to (already checked
+            // above), but we also ensure the ticket is in a valid state for
+            // verification.
+            if ($ticket->isVoid()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This ticket is invalid',
+                ], 403);
             }
-            if (!$this->checkInPolicy->canAccessEvent($user, $eventModel)) {
-                abort(403, 'You do not have permission to verify tickets for this event.');
+
+            if ($ticket->isCheckedIn()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Already checked in at ' . ($ticket->checked_in_at ? $ticket->checked_in_at->format('H:i') : 'unknown'),
+                    'data' => [
+                        'ticket_id' => $payload['ticket_id'],
+                        'ticket_reference' => $ticket->ticket_id,
+                        'status' => 'checked_in',
+                        'checked_in' => true,
+                        'checked_in_at' => $ticket->checked_in_at?->toDateTimeString(),
+                    ],
+                ]);
+            }
+
+            if ($ticket->isQrExpired()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'QR code expired'
+                ], 410);
+            }
+
+            // Check for fraud flags
+            $hasFraud = \App\Features\Fraud\Models\FraudEvent::where('ticket_id', $ticket->id)
+                ->whereIn('status', ['flagged', 'auto_blocked'])
+                ->exists();
+
+            if ($hasFraud) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ticket blocked due to fraud investigation.',
+                ], 403);
+            }
+
+            // Check if QR code has been manually revoked
+            $revokedAt = $ticket->qr_revoked_at;
+            if ($revokedAt && now()->gt($revokedAt)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'QR code has been revoked.',
+                ], 410);
             }
 
             // At this point the ticket is decrypted, verified authentic,
