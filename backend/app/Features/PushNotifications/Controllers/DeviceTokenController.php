@@ -48,22 +48,17 @@ class DeviceTokenController extends Controller
 
     public function updateOfflineStatus(Request $request, string $token): \Illuminate\Http\JsonResponse
     {
-        \Log::info('updateOfflineStatus request', [
-            'content' => $request->getContent(),
-            'all' => $request->all(),
-            'has_offline_enabled' => $request->has('offline_enabled'),
-            'input_offline_enabled' => $request->input('offline_enabled'),
-        ]);
         $data = $request->validate([
             'offline_enabled' => ['required', 'boolean'],
         ]);
 
-        $device = $this->pushNotificationService->registerDevice(
-            $request->user()->id,
-            $token,
-            $request->input('provider', 'web'),
-            $request->input('device_type', 'web')
-        );
+        $device = PushNotificationDevice::where('token_hash', hash('sha256', $token))
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if (!$device) {
+            return response()->json(['message' => 'Device not found'], 404);
+        }
 
         $device->update([
             'offline_enabled' => $data['offline_enabled'],

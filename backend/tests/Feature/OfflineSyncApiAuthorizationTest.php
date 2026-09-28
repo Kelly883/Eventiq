@@ -69,7 +69,7 @@ class OfflineSyncApiAuthorizationTest extends TestCase
         $response->assertOk()
             ->assertJsonStructure(['data', 'pagination']);
 
-        $this->assertTrue($device->fresh()->last_used_at !== null);
+        $this->assertTrue($device->fresh()->last_sync_at !== null);
     }
 
     public function test_unauthenticated_user_cannot_fetch_offline_sync_tickets(): void
@@ -79,15 +79,29 @@ class OfflineSyncApiAuthorizationTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    public function test_offline_sync_works_without_device_token_header(): void
+    public function test_offline_sync_requires_device_token_header(): void
     {
         $user = $this->makeUserWithRole('organizer');
 
         $response = $this->actingAs($user, 'sanctum')
             ->getJson('/api/me/tickets/for-offline-sync');
 
-        $response->assertOk()
-            ->assertJsonStructure(['data', 'pagination']);
+        $response->assertStatus(400)
+            ->assertJson(['message' => 'X-Device-Token header is required.']);
+    }
+
+    public function test_offline_sync_returns_404_for_device_not_belonging_to_user(): void
+    {
+        $user = $this->makeUserWithRole('organizer');
+        $otherUser = $this->makeUserWithRole('organizer');
+        $otherDevice = $this->makeDevice($otherUser);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson('/api/me/tickets/for-offline-sync', [
+                'X-Device-Token' => $otherDevice->token,
+            ]);
+
+        $response->assertStatus(404);
     }
 
     public function test_logout_deletes_user_device_tokens(): void

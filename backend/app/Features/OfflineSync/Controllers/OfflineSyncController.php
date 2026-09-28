@@ -136,13 +136,23 @@ class OfflineSyncController
         $cursor = $request->query('cursor');
 
         $deviceToken = $request->header('X-Device-Token');
-        if ($deviceToken) {
-            PushNotificationDevice::where('token_hash', hash('sha256', strtolower($deviceToken)))
-                ->where('user_id', $user->id)
-                ->update(['last_used_at' => now()]);
+        if (!$deviceToken) {
+            return response()->json(['message' => 'X-Device-Token header is required.'], 400);
         }
 
-        $eventsQuery = \App\Models\Event::whereHas('organizer', fn ($q) => $q->where('user_id', $user->id));
+        $deviceToken = strtolower($deviceToken);
+        $device = PushNotificationDevice::where('token_hash', hash('sha256', $deviceToken))
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$device) {
+            return response()->json(['message' => 'Device not found'], 404);
+        }
+
+        $device->update(['last_sync_at' => now()]);
+
+        $eventsQuery = \App\Models\Event::whereHas('organizer', fn ($q) => $q->where('user_id', $user->id))
+            ->upcoming();
 
         $eventIds = $eventsQuery->pluck('id')->all();
 
@@ -160,8 +170,14 @@ class OfflineSyncController
         $tickets = $ticketsQuery->orderBy('id')->limit($perPage)->get();
         $nextCursor = $tickets->last()?->id;
 
+        $grouped = [];
+        foreach ($tickets as $ticket) {
+            $eventId = (string) $ticket->event_id;
+            $grouped[$eventId][] = new OfflineTicketResource($ticket);
+        }
+
         return response()->json([
-            'data' => OfflineTicketResource::collection($tickets)->toArray($request),
+            'data' => $grouped,
             'pagination' => [
                 'per_page' => $perPage,
                 'next_cursor' => $nextCursor,
