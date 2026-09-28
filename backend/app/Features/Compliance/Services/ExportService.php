@@ -2,6 +2,8 @@
 
 namespace App\Features\Compliance\Services;
 
+use Illuminate\Support\Facades\DB;
+
 class ExportService
 {
     private function maskIp(?string $ip): ?string
@@ -111,5 +113,46 @@ class ExportService
         }
 
         return $string;
+    }
+
+    public function streamExport($query, string $format): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $filename = 'audit-logs-' . now()->format('Y-m-d-H-i-s') . ($format === 'csv' ? '.csv' : '.json');
+
+        return response()->stream(function () use ($query, $format) {
+            if ($format === 'json') {
+                echo "[\n";
+                $first = true;
+                $query->orderBy('created_at')->chunk(1000, function ($rows) use (&$first) {
+                    foreach ($rows as $row) {
+                        if (!$first) {
+                            echo ",\n";
+                        }
+                        echo json_encode($this->sanitizeRecord($row->toArray()), JSON_PRETTY_PRINT);
+                        $first = false;
+                    }
+                });
+                echo "\n]\n";
+
+                return;
+            }
+
+            $buffer = fopen('php://temp', 'r+');
+            $firstChunk = true;
+
+            $query->orderBy('created_at')->chunk(1000, function ($rows) use ($buffer, &$firstChunk) {
+                $rows = $rows->map(fn($row) => $this->sanitizeRecord($row->toArray()))->all();
+                $csv = $this->buildCsv($rows, $firstChunk);
+                fwrite($buffer, $csv);
+                $firstChunk = false;
+            });
+
+            rewind($buffer);
+            fpassthru($buffer);
+            fclose($buffer);
+        }, 200, [
+            'Content-Type' => $format === 'csv' ? 'text/csv; charset=utf-8' : 'application/json',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 }

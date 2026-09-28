@@ -41,6 +41,21 @@ class ComplianceReportController extends Controller
         $reportCode = $validated['reportCode'];
         $filters = $validated['filters'] ?? [];
 
+        $existing = ComplianceReportGeneration::where('report_code', $reportCode)
+            ->where('status', 'queued')
+            ->where('filters', $filters)
+            ->where('requested_by', $request->user()?->id)
+            ->latest()
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'id' => $existing->id,
+                'jobId' => $existing->id,
+                'status' => $existing->status,
+            ]);
+        }
+
         $generation = ComplianceReportGeneration::create([
             'report_code' => $reportCode,
             'status' => 'queued',
@@ -55,7 +70,7 @@ class ComplianceReportController extends Controller
             'filters' => $filters,
         ], $request->user()?->id);
 
-                return response()->json([
+        return response()->json([
             'id' => $generation->id,
             'jobId' => $generation->id,
             'status' => $generation->status,

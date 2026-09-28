@@ -11,6 +11,16 @@ use Illuminate\Http\Request;
 
 class AuditLogController extends Controller
 {
+    private const ALLOWED_TAGS = [
+        'reviewed',
+        'flagged',
+        'resolved',
+        'false_positive',
+        'needs_investigation',
+        'compliance_required',
+        'retained',
+    ];
+
     public function __construct(
         private AuditLogService $auditLogService,
         private ExportService $exportService
@@ -71,6 +81,8 @@ class AuditLogController extends Controller
             return response()->json(['message' => 'Audit log not found'], 404);
         }
 
+        $this->auditLogService->log('compliance.audit_logs.viewed', 'audit_log', $logId, [], $request->user()?->id);
+
         return response()->json([
             'data' => new AuditLogResource($log),
         ]);
@@ -93,7 +105,9 @@ class AuditLogController extends Controller
         $filters = $this->mapFilters($request->validated());
         $format = $filters['format'] ?? 'json';
 
-        $query = \App\Features\Compliance\Models\AuditLog::query()->with('user');
+        $query = \App\Features\Compliance\Models\AuditLog::query()
+            ->with('user')
+            ->whereNull('deleted_at');
 
         if (!empty($filters['action'])) {
             $query->where('action', $filters['action']);
@@ -149,7 +163,7 @@ class AuditLogController extends Controller
         $request->validate([
             'logIds' => ['required', 'array'],
             'logIds.*' => ['uuid', 'exists:audit_logs,id'],
-            'tag' => ['required', 'string', 'max:255'],
+            'tag' => ['required', 'string', 'max:255', 'in:' . implode(',', self::ALLOWED_TAGS)],
         ]);
 
         $user = $request->user();
@@ -160,7 +174,7 @@ class AuditLogController extends Controller
         $validated = $request->validate([
             'logIds' => ['required', 'array'],
             'logIds.*' => ['uuid', 'exists:audit_logs,id'],
-            'tag' => ['required', 'string', 'max:255'],
+            'tag' => ['required', 'string', 'max:255', 'in:' . implode(',', self::ALLOWED_TAGS)],
         ]);
 
         $updated = $this->auditLogService->bulkTag($validated['logIds'], $validated['tag']);

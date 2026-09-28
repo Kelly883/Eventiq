@@ -190,9 +190,15 @@ class AuditLogService
             $query->where('compliance_classification', $filters['classification']);
         }
 
-        $total = $query->count();
-        $failedCount = (clone $query)->where('status', 'failure')->count();
-        $successCount = (clone $query)->where('status', 'success')->count();
+        $summary = $query->selectRaw('
+            COUNT(*) as total,
+            SUM(CASE WHEN status = "failure" THEN 1 ELSE 0 END) as failedCount,
+            SUM(CASE WHEN status = "success" THEN 1 ELSE 0 END) as successCount
+        ')->first();
+
+        $total = (int) ($summary->total ?? 0);
+        $failedCount = (int) ($summary->failedCount ?? 0);
+        $successCount = (int) ($summary->successCount ?? 0);
 
         $oldestRetention = AuditLog::whereNotNull('retention_date')->min('retention_date');
         $retentionDaysRemaining = $oldestRetention
