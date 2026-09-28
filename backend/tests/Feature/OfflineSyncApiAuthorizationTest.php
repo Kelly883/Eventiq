@@ -37,12 +37,12 @@ class OfflineSyncApiAuthorizationTest extends TestCase
         $device = $this->makeDevice($user);
 
         $response = $this->actingAs($user, 'sanctum')
-            ->patchJson("/api/notifications/device-tokens/{$device->token}/offline-status", [
+            ->patchJson("/api/notifications/device-tokens/{$device->getDecryptedToken()}/offline-status", [
                 'offline_enabled' => false,
             ]);
 
         $response->assertOk()
-            ->assertJsonStructure(['token', 'offline_enabled']);
+            ->assertJsonStructure(['offline_enabled']);
 
         $this->assertFalse($device->fresh()->offline_enabled);
     }

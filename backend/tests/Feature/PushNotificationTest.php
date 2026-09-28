@@ -110,7 +110,7 @@ class PushNotificationTest extends TestCase
             ->assertJsonPath('success', true);
 
         $this->assertDatabaseHas('push_notification_devices', [
-            'token' => 'test-token-123',
+            'token_hash' => hash('sha256', 'test-token-123'),
             'user_id' => $user->id,
             'provider' => 'fcm',
             'device_type' => 'android',
@@ -135,7 +135,7 @@ class PushNotificationTest extends TestCase
 
         $this->assertDatabaseCount('push_notification_devices', 1);
         $this->assertDatabaseHas('push_notification_devices', [
-            'token' => 'duplicate-token',
+            'token_hash' => hash('sha256', 'duplicate-token'),
             'device_type' => 'ios',
         ]);
     }
@@ -176,7 +176,7 @@ class PushNotificationTest extends TestCase
         $device = PushNotificationDevice::factory()->create(['user_id' => $user->id]);
 
         $response = $this->actingAs($user, 'sanctum')->deleteJson('/api/notifications/device-tokens', [
-            'token' => $device->token,
+            'token' => $device->getDecryptedToken(),
         ]);
 
         $response->assertStatus(204);
@@ -190,7 +190,7 @@ class PushNotificationTest extends TestCase
         $device = PushNotificationDevice::factory()->create(['user_id' => $otherUser->id]);
 
         $response = $this->actingAs($user, 'sanctum')->deleteJson('/api/notifications/device-tokens', [
-            'token' => $device->token,
+            'token' => $device->getDecryptedToken(),
         ]);
 
         $response->assertNotFound();

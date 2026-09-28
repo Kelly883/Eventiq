@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class PushNotificationDevice extends Model
@@ -38,7 +37,7 @@ class PushNotificationDevice extends Model
         'last_used_at',
     ];
 
-    protected $hidden = ['token'];
+    private ?string $plaintext_token = null;
 
     protected $casts = [
         'device_type' => 'string',
@@ -48,9 +47,6 @@ class PushNotificationDevice extends Model
         'error_count' => 'integer',
     ];
 
-    /**
-     * Create a new factory instance for the model.
-     */
     public static function newFactory()
     {
         return \Database\Factories\PushNotificationDeviceFactory::new();
@@ -98,45 +94,43 @@ class PushNotificationDevice extends Model
         ]);
     }
 
-    /**
-     * Get the decrypted token for Firebase use.
-     */
     public function getDecryptedToken(): string
     {
         if (!empty($this->token_encrypted)) {
             return Crypt::decryptString($this->token_encrypted);
         }
 
-        return $this->token;
+        throw new \RuntimeException('Device token is not encrypted.');
     }
 
-    /**
-     * Set the token — stores both plaintext (for compatibility) and encrypted.
-     */
     public function setTokenAttribute($value): void
     {
-        $this->attributes['token'] = $value;
-        $this->attributes['token_hash'] = Hash::make($value);
+        $this->plaintext_token = $value;
+        $this->attributes['token_hash'] = hash('sha256', $value);
         $this->attributes['token_encrypted'] = Crypt::encryptString($value);
+    }
+
+    public function getTokenAttribute($value)
+    {
+        return $this->plaintext_token ?? $value;
     }
 
     protected static function booted(): void
     {
         static::creating(function ($model) {
-            // Generate token hash for lookups
-            if (empty($model->token_hash) && !empty($model->token)) {
-                $model->token_hash = hash('sha256', $model->token);
+            if (empty($model->token_hash) && !empty($model->plaintext_token)) {
+                $model->token_hash = hash('sha256', $model->plaintext_token);
             }
-            // Encrypt token for storage
-            if (empty($model->token_encrypted) && !empty($model->token)) {
-                $model->token_encrypted = Crypt::encryptString($model->token);
+
+            if (empty($model->token_encrypted) && !empty($model->plaintext_token)) {
+                $model->token_encrypted = Crypt::encryptString($model->plaintext_token);
             }
 
             Validator::validate([
-                'token' => $model->token,
+                'token_hash' => $model->token_hash,
                 'user_id' => $model->user_id,
             ], [
-                'token' => ['required', 'string', 'max:255', 'unique:push_notification_devices,token'],
+                'token_hash' => ['required', 'string', 'size:64', 'unique:push_notification_devices,token_hash'],
                 'user_id' => ['required', 'string', 'exists:users,id'],
             ]);
         });
@@ -146,7 +140,6 @@ class PushNotificationDevice extends Model
                 throw new \RuntimeException('created_at is immutable and cannot be changed.');
             }
 
-            // Re-hash and re-encrypt if token changed
             if ($model->isDirty('token')) {
                 $model->token_hash = hash('sha256', $model->token);
                 $model->token_encrypted = Crypt::encryptString($model->token);

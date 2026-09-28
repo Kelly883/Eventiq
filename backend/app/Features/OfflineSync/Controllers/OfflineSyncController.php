@@ -137,7 +137,7 @@ class OfflineSyncController
 
         $deviceToken = $request->header('X-Device-Token');
         if ($deviceToken) {
-            PushNotificationDevice::where('token', strtolower($deviceToken))
+            PushNotificationDevice::where('token_hash', hash('sha256', strtolower($deviceToken)))
                 ->where('user_id', $user->id)
                 ->update(['last_used_at' => now()]);
         }

@@ -44,7 +44,7 @@ class DeviceTokenManagementController extends Controller
     {
         $validated = $request->validated();
 
-        $device = PushNotificationDevice::where('token', $validated['token'])
+        $device = PushNotificationDevice::where('token_hash', hash('sha256', $validated['token']))
             ->where('user_id', $request->user()->id)
             ->first();
 

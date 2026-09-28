@@ -71,7 +71,6 @@ class DeviceTokenController extends Controller
         $device->markAsUsed();
 
         return response()->json([
-            'token' => $device->token,
             'offline_enabled' => $device->offline_enabled,
         ]);
     }
@@ -82,7 +81,7 @@ class DeviceTokenController extends Controller
 
         if ($currentToken) {
             $currentToken = strtolower($currentToken);
-            PushNotificationDevice::where('token', $currentToken)
+            PushNotificationDevice::where('token_hash', hash('sha256', $currentToken))
                 ->where('user_id', $request->user()->id)
                 ->delete();
 

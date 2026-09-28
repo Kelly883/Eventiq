@@ -5,21 +5,14 @@ namespace App\Features\PushNotifications\Services;
 use App\Features\PushNotifications\Models\PushNotificationDevice;
 use App\Features\PushNotifications\Models\PushNotificationHistory;
 use App\Features\OfflineSync\Services\OfflineSyncEngine;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Contract\Messaging;
 use Kreait\Firebase\Messaging\CloudMessage;
 use Kreait\Firebase\Messaging\Notification as FirebaseNotification;
 
-/**
- * Wraps the Firebase Admin SDK (kreait/firebase-php) for sending push
- * notifications to registered device tokens.
- */
 class PushNotificationService
 {
-    // Nullable: FirebaseServiceProvider binds null (not a Messaging
-    // instance) when credentials aren't configured, rather than throwing
-    // at boot. Every method here checks isConfigured() before use.
     public function __construct(private ?Messaging $messaging)
     {
     }
@@ -29,11 +22,6 @@ class PushNotificationService
         return $this->messaging !== null;
     }
 
-    /**
-     * Send a notification to a single device token.
-     *
-     * @return bool Whether the send succeeded.
-     */
     public function sendToToken(string $token, string $title, string $body, array $data = []): bool
     {
         if (! $this->isConfigured()) {
@@ -42,7 +30,6 @@ class PushNotificationService
         }
 
         $device = PushNotificationDevice::where('token_hash', hash('sha256', $token))
-            ->orWhere('token', $token)
             ->first();
 
         try {
@@ -91,12 +78,6 @@ class PushNotificationService
         }
     }
 
-    /**
-     * Send a notification to every device registered to a user.
-     * Optimized: loads devices once, sends via loop but with minimal queries.
-     *
-     * @return array{sent: int, failed: int, total_devices: int}
-     */
     public function sendToUser(string $userId, string $title, string $body, array $data = []): array
     {
         $devices = PushNotificationDevice::where('user_id', $userId)
@@ -118,24 +99,17 @@ class PushNotificationService
         return ['sent' => $sent, 'failed' => $failed, 'total_devices' => $devices->count()];
     }
 
-    /**
-     * Register or refresh a device token for a user. If $previousToken is
-     * given (the frontend detected its token rotated), deletes that stale
-     * row rather than leaving a dead token accumulating in the table -
-     * otherwise sendToUser() would keep trying (and failing) to send to
-     * tokens that no longer exist.
-     */
     public function registerDevice(string $userId, string $token, string $provider, string $deviceType, ?string $previousToken = null): PushNotificationDevice
     {
         if ($previousToken && $previousToken !== $token) {
             PushNotificationDevice::where('token_hash', hash('sha256', $previousToken))
-                ->orWhere('token', $previousToken)
                 ->delete();
             (new OfflineSyncEngine())->purgeDeviceOperations([strtolower($previousToken)]);
         }
 
-        $existing = PushNotificationDevice::where('token_hash', hash('sha256', $token))
-            ->orWhere('token', $token)
+        $tokenHash = hash('sha256', $token);
+
+        $existing = PushNotificationDevice::where('token_hash', $tokenHash)
             ->first();
 
         if ($existing) {
@@ -147,20 +121,34 @@ class PushNotificationService
             return $existing;
         }
 
-        $device = PushNotificationDevice::create([
-            'token' => $token,
-            'user_id' => $userId,
-            'provider' => $provider,
-            'device_type' => $deviceType,
-        ]);
+        try {
+            $device = PushNotificationDevice::create([
+                'user_id' => $userId,
+                'provider' => $provider,
+                'device_type' => $deviceType,
+                'token' => $token,
+            ]);
 
-        return $device;
+            return $device;
+        } catch (UniqueConstraintViolationException $e) {
+            $device = PushNotificationDevice::where('token_hash', $tokenHash)
+                ->first();
+
+            if ($device) {
+                $device->update([
+                    'user_id' => $userId,
+                    'provider' => $provider,
+                    'device_type' => $deviceType,
+                ]);
+            }
+
+            return $device;
+        }
     }
 
     public function unregisterDevice(string $token): void
     {
         PushNotificationDevice::where('token_hash', hash('sha256', $token))
-            ->orWhere('token', $token)
             ->delete();
         (new OfflineSyncEngine())->purgeDeviceOperations([strtolower($token)]);
     }
