@@ -39,9 +39,10 @@ export type AuditLogAction =
   | 'compliance_report.queued'
   | 'admin.dashboard.overview'
   | 'admin.dashboard.activity_feed'
-  | 'admin.dashboard.alerts';
+  | 'admin.dashboard.alerts'
+  | 'update';
 
-export type AuditLogTargetType = 'user' | 'event' | 'order' | 'payout' | 'refund' | 'refund_request' | 'payment' | 'setting' | 'ticket' | 'pricing_window' | 'email_template' | 'audit_log' | 'compliance_report_generation' | 'dashboard';
+export type AuditLogTargetType = 'user' | 'event' | 'order' | 'payout' | 'refund' | 'refund_request' | 'payment' | 'setting' | 'ticket' | 'pricing_window' | 'email_template' | 'audit_log' | 'compliance_report_generation' | 'dashboard' | 'accessibility_preference' | 'language_preference';
 
 export type AuditLogStatus = 'success' | 'failure' | 'warning' | 'pending';
 
@@ -157,11 +158,12 @@ export function isAuditLogAction(value: string): value is AuditLogAction {
     'admin.dashboard.overview',
     'admin.dashboard.activity_feed',
     'admin.dashboard.alerts',
+    'update',
   ].includes(value);
 }
 
 export function isAuditLogTargetType(value: string): value is AuditLogTargetType {
-  return ['user', 'event', 'order', 'payout', 'refund', 'refund_request', 'payment', 'setting', 'ticket', 'pricing_window', 'email_template', 'audit_log', 'compliance_report_generation', 'dashboard'].includes(value);
+  return ['user', 'event', 'order', 'payout', 'refund', 'refund_request', 'payment', 'setting', 'ticket', 'pricing_window', 'email_template', 'audit_log', 'compliance_report_generation', 'dashboard', 'accessibility_preference', 'language_preference'].includes(value);
 }
 
 export function isAuditLogStatus(value: string): value is AuditLogStatus {
