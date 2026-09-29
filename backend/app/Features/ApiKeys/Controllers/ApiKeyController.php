@@ -28,7 +28,7 @@ class ApiKeyController extends Controller
             return response()->json(['message' => 'Not an organizer account.'], 403);
         }
 
-        $perPage = min((int) $request->query('per_page', 20), 100);
+        $perPage = $this->perPage($request);
 
         $keys = ApiKey::where('organizer_id', $organizer->id)
             ->latest()

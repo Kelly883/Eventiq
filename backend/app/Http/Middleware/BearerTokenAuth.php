@@ -57,6 +57,14 @@ class BearerTokenAuth
                 }
 
                 $request->setUserResolver(fn () => $sanctumUser);
+
+                // Gate/policies resolve the user from the auth manager's default
+                // guard (not the request resolver), so register the user there too.
+                // Without this every $this->authorize() behind this middleware
+                // silently denies (403) for non-admins in real HTTP requests,
+                // while tests pass because actingAs() switches the default guard.
+                Auth::setUser($sanctumUser);
+
                 return $next($request);
             }
         } catch (\Throwable $e) {
@@ -112,6 +120,10 @@ class BearerTokenAuth
 
                 $request->setUserResolver(fn () => $user);
                 $request->attributes->set('auth_session', $session);
+
+                // See note above: Gate/policies read the user from the auth
+                // manager, not from the request resolver.
+                Auth::setUser($user);
 
                 return $next($request);
             }
