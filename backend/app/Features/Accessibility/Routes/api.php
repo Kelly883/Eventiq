@@ -4,6 +4,6 @@ use App\Features\Accessibility\Http\Controllers\AccessibilityPreferenceControlle
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('bearer')->group(function () {
-    Route::get('/users/me/accessibility-preferences', [AccessibilityPreferenceController::class, 'show']);
-    Route::patch('/users/me/accessibility-preferences/update', [AccessibilityPreferenceController::class, 'update']);
+    Route::middleware('throttle:user-preference-read')->get('/users/me/accessibility-preferences', [AccessibilityPreferenceController::class, 'show']);
+    Route::middleware('throttle:accessibility-preference-update')->patch('/users/me/accessibility-preferences/update', [AccessibilityPreferenceController::class, 'update']);
 });

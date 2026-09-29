@@ -18,4 +18,6 @@ enum AuditLogTargetType: string
     case AUDIT_LOG = 'audit_log';
     case COMPLIANCE_REPORT_GENERATION = 'compliance_report_generation';
     case DASHBOARD = 'dashboard';
+    case ACCESSIBILITY_PREFERENCE = 'accessibility_preference';
+    case LANGUAGE_PREFERENCE = 'language_preference';
 }

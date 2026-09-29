@@ -62,6 +62,8 @@ class LanguagePreference extends Model
             if ($validator->fails()) {
                 throw new \InvalidArgumentException($validator->errors()->first());
             }
+
+            $model->rtl_enabled = in_array($model->language, static::RTL_LANGUAGES, true);
         });
     }
 

@@ -43,4 +43,5 @@ enum AuditLogAction: string
     case ADMIN_DASHBOARD_OVERVIEW = 'admin.dashboard.overview';
     case ADMIN_DASHBOARD_ACTIVITY_FEED = 'admin.dashboard.activity_feed';
     case ADMIN_DASHBOARD_ALERTS = 'admin.dashboard.alerts';
+    case UPDATE = 'update';
 }

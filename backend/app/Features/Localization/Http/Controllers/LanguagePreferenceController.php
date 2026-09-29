@@ -7,12 +7,10 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
 
 class LanguagePreferenceController extends Controller
 {
-    /**
-     * Display the user's language and locale preferences.
-     */
     public function show(Request $request): JsonResponse
     {
         $userId = $request->user()?->id;
@@ -38,30 +36,35 @@ class LanguagePreferenceController extends Controller
         );
     }
 
-    /**
-     * Update the user's language and locale preferences.
-     */
     public function update(Request $request): JsonResponse
     {
         $userId = $request->user()?->id;
         if (!$userId) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
+
         $key = 'language-update:' . $userId;
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return response()->json(['message' => 'Too many attempts. Please try again later.'], 429);
         }
         RateLimiter::hit($key, 60);
 
-        $validated = $request->validate([
-            'language' => 'sometimes|string|size:2|in:en,es,fr,de,it,pt,ru,ar,he,ur,zh,ja,ko,hi,bn,tr,pl,nl,sv,da,fi,no,cs,el,th,vi,id,ms,fil',
-            'region' => 'sometimes|string|size:2',
-            'dateFormat' => 'sometimes|in:MM/DD/YYYY,DD/MM/YYYY,YYYY-MM-DD',
-            'timeFormat' => 'sometimes|in:12-hour,24-hour',
-            'currency' => 'sometimes|string|size:3|in:USD,EUR,GBP,JPY,CAD,AUD,CHF,CNY,INR,MXN,BRL,RUB,KRW,SEK,NOK,DKK,PLN,CZK,HUF,TRY,ZAR,SGD,HKD,NZD',
-            'numberFormat' => 'sometimes|in:comma,period',
-            'rtlEnabled' => 'sometimes|boolean',
-        ]);
+        try {
+            $validated = $request->validate([
+                'language' => 'sometimes|string|size:2|in:en,es,fr,de,it,pt,ru,ar,he,ur,zh,ja,ko,hi,bn,tr,pl,nl,sv,da,fi,no,cs,el,th,vi,id,ms,fil',
+                'region' => 'sometimes|string|size:2',
+                'dateFormat' => 'sometimes|in:MM/DD/YYYY,DD/MM/YYYY,YYYY-MM-DD',
+                'timeFormat' => 'sometimes|in:12-hour,24-hour',
+                'currency' => 'sometimes|string|size:3|in:USD,EUR,GBP,JPY,CAD,AUD,CHF,CNY,INR,MXN,BRL,RUB,KRW,SEK,NOK,DKK,PLN,CZK,HUF,TRY,ZAR,SGD,HKD,NZD',
+                'numberFormat' => 'sometimes|in:comma,period',
+                'rtlEnabled' => 'sometimes|boolean',
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 400);
+        }
 
         $pref = LanguagePreference::firstOrCreate(
             ['user_id' => $userId],
@@ -87,6 +90,17 @@ class LanguagePreferenceController extends Controller
         ]);
 
         $pref->save();
+
+        \App\Services\Audit\AuditLogger::log(
+            'update',
+            $request->user(),
+            'language_preference',
+            $pref->id,
+            'Updated language preferences',
+            [],
+            $validated,
+            $request
+        );
 
         return response()->json(
             array_merge($pref->toArray(), ['message' => 'Language preferences updated']),

@@ -257,6 +257,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('compliance-bulk-tag', fn($req) => Limit::perMinute(10)->by($req->user()?->id ?: $req->ip()));
         RateLimiter::for('compliance-report-generate', fn($req) => Limit::perMinute(5)->by($req->user()?->id ?: $req->ip()));
 
+        RateLimiter::for('user-preference-read', fn($req) => Limit::perMinute(20)->by($req->user()?->id ?: $req->ip()));
+        RateLimiter::for('accessibility-preference-update', fn($req) => Limit::perMinute(10)->by($req->user()?->id ?: $req->ip()));
+        RateLimiter::for('language-preference-update', fn($req) => Limit::perMinute(5)->by($req->user()?->id ?: $req->ip()));
+
         Event::observe(EventObserver::class);
         Ticket::observe(TicketObserver::class);
         PricingWindow::observe(PricingWindowObserver::class);

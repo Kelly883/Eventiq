@@ -42,7 +42,7 @@ class UserPreferenceTest extends TestCase
             ->assertStatus(401);
     }
 
-    public function test_accessibility_defaults_returned_when_no_preferences_stored(): void
+    public function test_accessibility_defaults_created_when_no_preferences_stored(): void
     {
         $user = $this->makeUser();
 
@@ -59,7 +59,7 @@ class UserPreferenceTest extends TestCase
             ->assertJsonPath('wordSpacing', 0)
             ->assertJsonPath('colorBlindnessMode', 'none');
 
-        $this->assertDatabaseCount('accessibility_preferences', 0);
+        $this->assertDatabaseHas('accessibility_preferences', ['user_id' => $user->id]);
     }
 
     public function test_accessibility_preferences_persist_using_camel_case_contract(): void
@@ -97,6 +97,16 @@ class UserPreferenceTest extends TestCase
         $this->assertSame(18, $stored->toArray()['fontSize']);
     }
 
+    public function test_accessibility_preferences_reject_invalid_font_size(): void
+    {
+        $user = $this->makeUser();
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/users/me/accessibility-preferences/update', ['fontSize' => 100])
+            ->assertStatus(400)
+            ->assertJsonPath('errors.fontSize.0', 'The font size field must not be greater than 24.');
+    }
+
     public function test_language_defaults_created_and_returned(): void
     {
         $user = $this->makeUser();
@@ -127,12 +137,11 @@ class UserPreferenceTest extends TestCase
                 'timeFormat' => '24-hour',
                 'currency' => 'EUR',
                 'numberFormat' => 'comma',
-                'rtlEnabled' => true,
             ])
             ->assertOk()
             ->assertJsonPath('language', 'fr')
             ->assertJsonPath('dateFormat', 'DD/MM/YYYY')
-            ->assertJsonPath('rtlEnabled', true);
+            ->assertJsonPath('rtlEnabled', false);
 
         $this->actingAs($user, 'sanctum')
             ->getJson('/api/users/me/language-preferences')
@@ -143,7 +152,7 @@ class UserPreferenceTest extends TestCase
             ->assertJsonPath('timeFormat', '24-hour')
             ->assertJsonPath('currency', 'EUR')
             ->assertJsonPath('numberFormat', 'comma')
-            ->assertJsonPath('rtlEnabled', true);
+            ->assertJsonPath('rtlEnabled', false);
 
         $pref = LanguagePreference::where('user_id', $user->id)->first();
         $this->assertNotNull($pref);
@@ -157,7 +166,75 @@ class UserPreferenceTest extends TestCase
 
         $this->actingAs($user, 'sanctum')
             ->patchJson('/api/users/me/language-preferences/update', ['language' => 'zz'])
-            ->assertUnprocessable()
-            ->assertInvalid(['language']);
+            ->assertStatus(400)
+            ->assertJsonPath('errors.language.0', 'The selected language is invalid.');
+    }
+
+    public function test_rtl_enabled_auto_set_for_rtl_languages(): void
+    {
+        $user = $this->makeUser();
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/users/me/language-preferences/update', ['language' => 'ar'])
+            ->assertOk()
+            ->assertJsonPath('rtlEnabled', true);
+    }
+
+    public function test_accessibility_update_is_rate_limited(): void
+    {
+        $user = $this->makeUser();
+
+        for ($i = 0; $i < 10; $i++) {
+            $this->actingAs($user, 'sanctum')
+                ->patchJson('/api/users/me/accessibility-preferences/update', ['fontSize' => 16])
+                ->assertOk();
+        }
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/users/me/accessibility-preferences/update', ['fontSize' => 18])
+            ->assertStatus(429);
+    }
+
+    public function test_language_update_is_rate_limited(): void
+    {
+        $user = $this->makeUser();
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->actingAs($user, 'sanctum')
+                ->patchJson('/api/users/me/language-preferences/update', ['language' => 'en'])
+                ->assertOk();
+        }
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/users/me/language-preferences/update', ['language' => 'fr'])
+            ->assertStatus(429);
+    }
+
+    public function test_audit_log_created_on_accessibility_update(): void
+    {
+        $user = $this->makeUser();
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/users/me/accessibility-preferences/update', ['fontSize' => 20]);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'user_id' => $user->id,
+            'action' => 'update',
+            'target_type' => 'accessibility_preference',
+        ]);
+    }
+
+    public function test_audit_log_created_on_language_update(): void
+    {
+        $user = $this->makeUser();
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson('/api/users/me/language-preferences/update', ['language' => 'es']);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'user_id' => $user->id,
+            'action' => 'update',
+            'target_type' => 'language_preference',
+        ]);
     }
 }
