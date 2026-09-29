@@ -8,8 +8,8 @@ import { getUserRoles } from '../../../lib/authRoles';
 
 const getUserRole = (user) => {
   const roles = getUserRoles(user);
-  if (roles.includes('organizer')) return 'organizer';
   if (roles.includes('admin')) return 'admin';
+  if (roles.includes('organizer')) return 'organizer';
   return null;
 };
 
@@ -145,17 +145,14 @@ export const PublicRoute = ({ children }) => {
     }
 
     const roles = getUserRoles(user);
-    // Venue staff and organizers share the dedicated staff dashboard.
+    if (roles.includes('admin')) {
+      return <Navigate to="/admin" replace />;
+    }
     if (roles.some((r) => ['venue_staff', 'organizer'].includes(r))) {
       return <Navigate to="/venue/dashboard" replace />;
     }
-    // Fallback for logged-in users without a dedicated dashboard
-    const role = getUserRole(user);
-    if (role === 'organizer') {
+    if (roles.includes('organizer')) {
       return <Navigate to="/dashboard/organizer" replace />;
-    }
-    if (role === 'admin') {
-      return <Navigate to="/admin" replace />;
     }
     return <Navigate to="/dashboard" replace />;
   }
