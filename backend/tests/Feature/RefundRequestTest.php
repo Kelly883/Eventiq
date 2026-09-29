@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Features\Refunds\Enums\RefundMethodEnum;
 use App\Features\Refunds\Enums\RefundReasonEnum;
 use App\Features\Refunds\Models\RefundPolicy;
-use App\Models\Order;
+use App\Features\Checkout\Models\Order;
 use App\Models\Payment;
 use App\Models\Ticket;
 use App\Models\TicketTier;
