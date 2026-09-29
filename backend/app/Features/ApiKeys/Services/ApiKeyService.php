@@ -23,19 +23,25 @@ class ApiKeyService
      *   stored, so it can never be retrieved again after this call
      *   returns. Same UX as GitHub/Stripe personal access tokens.
      */
-    public function generate(Organizer $organizer, string $name, array $scopes = [], ?\DateTimeInterface $expiresAt = null): array
+    public function generate(Organizer $organizer, string $name, array $scopes = [], ?\DateTimeInterface $expiresAt = null, ?int $rateLimit = null, ?string $rateLimitPeriod = null): array
     {
         $prefix = Str::random(8);
         $secret = Str::random(40);
         $rawKey = "{$prefix}|{$secret}";
+
+        $rateLimit ??= 100;
+        $rateLimitPeriod ??= 'minute';
 
         $apiKey = ApiKey::create([
             'organizer_id' => $organizer->id,
             'name' => $name,
             'key_prefix' => $prefix,
             'hashed_key' => Hash::make($rawKey),
+            'key_hash_index' => hash('sha256', $rawKey),
             'scopes' => $scopes,
             'expires_at' => $expiresAt,
+            'rate_limit' => $rateLimit,
+            'rate_limit_period' => $rateLimitPeriod,
         ]);
 
         return ['model' => $apiKey, 'raw_key' => $rawKey];

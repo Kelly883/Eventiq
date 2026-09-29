@@ -38,7 +38,7 @@ export function safeRedirectPath(from, user, fallback = '/dashboard') {
 // Role-aware default landing page (used when there's no saved `from`).
 export function defaultRedirect(user) {
   const roles = getUserRoles(user);
-  if (roles.includes('organizer')) return '/dashboard/organizer';
   if (roles.includes('admin')) return '/admin';
+  if (roles.includes('organizer')) return '/dashboard/organizer';
   return '/dashboard';
 }

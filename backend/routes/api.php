@@ -228,15 +228,17 @@ Route::middleware(['bearer', 'role:admin', 'throttle:push-templates-send-test'])
 });
 
 // Public API integration routes are protected by API keys.
-Route::middleware('api.key')->prefix('v1')->group(function () {
+Route::middleware(['api.key', 'throttle:public-api'])->prefix('v1')->group(function () {
     Route::get('/events', function (\Illuminate\Http\Request $request) {
         abort_unless(in_array('events:read', $request->attributes->get('api_key_scopes', []), true), 403);
+
+        $perPage = min((int) $request->query('per_page', 20), 100);
 
         return \App\Http\Resources\EventResource::collection(
             \App\Models\Event::query()
                 ->where('organizer_id', $request->attributes->get('organizer')->id)
                 ->latest()
-                ->paginate(20)
+                ->paginate($perPage)
         );
     });
 });

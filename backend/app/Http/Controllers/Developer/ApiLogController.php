@@ -17,10 +17,12 @@ class ApiLogController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
+        $perPage = min((int) $request->query('per_page', 20), 100);
+
         $logs = AuditLog::where('user_id', $userId)
             ->where('action', 'api_call')
             ->latest()
-            ->paginate(20);
+            ->paginate($perPage);
 
         return response()->json([
             'data' => $logs->map(fn ($log) => [
@@ -34,7 +36,18 @@ class ApiLogController extends Controller
                 'ipAddress' => $log->ip_address,
                 'createdAt' => $log->created_at?->toIso8601String(),
             ]),
-            'message' => 'API logs loaded',
+            'meta' => [
+                'current_page' => $logs->currentPage(),
+                'last_page' => $logs->lastPage(),
+                'per_page' => $logs->perPage(),
+                'total' => $logs->total(),
+            ],
+            'links' => [
+                'first' => $logs->url(1),
+                'last' => $logs->url($logs->lastPage()),
+                'prev' => $logs->previousPageUrl(),
+                'next' => $logs->nextPageUrl(),
+            ],
         ], 200);
     }
 }

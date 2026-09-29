@@ -20,13 +20,26 @@ class WebhookController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
+        $perPage = min((int) $request->query('per_page', 20), 100);
+
         $webhooks = Webhook::where('organizer_id', $userId)
             ->latest()
-            ->paginate(20);
+            ->paginate($perPage);
 
         return response()->json([
             'data' => WebhookResource::collection($webhooks),
-            'message' => 'Webhooks loaded',
+            'meta' => [
+                'current_page' => $webhooks->currentPage(),
+                'last_page' => $webhooks->lastPage(),
+                'per_page' => $webhooks->perPage(),
+                'total' => $webhooks->total(),
+            ],
+            'links' => [
+                'first' => $webhooks->url(1),
+                'last' => $webhooks->url($webhooks->lastPage()),
+                'prev' => $webhooks->previousPageUrl(),
+                'next' => $webhooks->nextPageUrl(),
+            ],
         ], 200);
     }
 

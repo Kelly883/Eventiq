@@ -257,6 +257,24 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('compliance-bulk-tag', fn($req) => Limit::perMinute(10)->by($req->user()?->id ?: $req->ip()));
         RateLimiter::for('compliance-report-generate', fn($req) => Limit::perMinute(5)->by($req->user()?->id ?: $req->ip()));
 
+        // Developer portal — 60/min general, create 20/min, delete 20/min
+        RateLimiter::for('developer-portal', function ($request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('developer-portal-create', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('developer-portal-delete', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+
+        // Public API surface (v1/events + graphql) — 100/min per API key
+        RateLimiter::for('public-api', function ($request) {
+            $apiKey = $request->attributes->get('api_key');
+
+            return Limit::perMinute(100)->by($apiKey?->id ?: $request->ip());
+        });
+
         RateLimiter::for('user-preference-read', fn($req) => Limit::perMinute(20)->by($req->user()?->id ?: $req->ip()));
         RateLimiter::for('accessibility-preference-update', fn($req) => Limit::perMinute(10)->by($req->user()?->id ?: $req->ip()));
         RateLimiter::for('language-preference-update', fn($req) => Limit::perMinute(5)->by($req->user()?->id ?: $req->ip()));

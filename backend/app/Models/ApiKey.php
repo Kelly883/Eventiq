@@ -80,7 +80,7 @@ class ApiKey extends Model
             return false;
         }
 
-        return $requestCount >= $this->rate_limit;
+        return $requestCount > $this->rate_limit;
     }
 
     public function isExpired(): bool

@@ -12,7 +12,7 @@ return [
     'route' => [
         'prefix' => 'graphql',
         'controller' => Rebing\GraphQL\GraphQLController::class.'@query',
-        'middleware' => ['api.key'],
+        'middleware' => ['api.key', 'throttle:public-api'],
         'group_attributes' => [],
     ],
 
