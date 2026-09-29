@@ -22,6 +22,7 @@ class PushNotificationDevice extends Model
         'token',
         'token_hash',
         'token_encrypted',
+        'device_secret',
         'provider',
         'device_type',
         'offline_enabled',
@@ -92,6 +93,22 @@ class PushNotificationDevice extends Model
             'last_error' => $error,
             'error_count' => $this->error_count + 1,
         ]);
+    }
+
+    public function generateDeviceSecret(): string
+    {
+        $secret = bin2hex(random_bytes(32));
+        $this->update(['device_secret' => hash('sha256', $secret)]);
+        return $secret;
+    }
+
+    public function verifyDeviceSecret(string $secret): bool
+    {
+        if (empty($this->device_secret)) {
+            return false;
+        }
+
+        return hash_equals($this->device_secret, hash('sha256', $secret));
     }
 
     public function getDecryptedToken(): string

@@ -140,16 +140,22 @@ class OfflineSyncController
             return response()->json(['message' => 'X-Device-Token header is required.'], 400);
         }
 
+        $deviceSecret = $request->header('X-Device-Secret');
+        if (!$deviceSecret) {
+            return response()->json(['message' => 'X-Device-Secret header is required.'], 400);
+        }
+
         $deviceToken = strtolower($deviceToken);
         $device = PushNotificationDevice::where('token_hash', hash('sha256', $deviceToken))
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$device) {
-            return response()->json(['message' => 'Device not found'], 404);
+        if (!$device || !$device->verifyDeviceSecret($deviceSecret)) {
+            return response()->json(['message' => 'Device not found or invalid secret'], 404);
         }
 
         $device->update(['last_sync_at' => now()]);
+        $serverSyncAt = now()->toIso8601String();
 
         $eventsQuery = \App\Models\Event::whereHas('organizer', fn ($q) => $q->where('user_id', $user->id))
             ->upcoming();
@@ -171,9 +177,26 @@ class OfflineSyncController
         $nextCursor = $tickets->last()?->id;
 
         $grouped = [];
+        $eventPagination = [];
         foreach ($tickets as $ticket) {
             $eventId = (string) $ticket->event_id;
             $grouped[$eventId][] = new OfflineTicketResource($ticket);
+            $eventPagination[$eventId] = [
+                'event_id' => $eventId,
+                'count' => ($eventPagination[$eventId]['count'] ?? 0) + 1,
+                'has_more' => false,
+            ];
+        }
+
+        $ticketIds = $tickets->pluck('id')->all();
+        $conflictIds = [];
+        if ($lastSyncAt && !empty($ticketIds)) {
+            $serverUpdatedIds = \App\Features\Checkout\Models\Ticket::whereIn('id', $ticketIds)
+                ->where('updated_at', '>', $lastSyncAt)
+                ->pluck('id')
+                ->map(fn ($id) => (string) $id)
+                ->all();
+            $conflictIds = $serverUpdatedIds;
         }
 
         return response()->json([
@@ -182,6 +205,12 @@ class OfflineSyncController
                 'per_page' => $perPage,
                 'next_cursor' => $nextCursor,
                 'has_more' => $tickets->count() === $perPage,
+                'events' => array_values($eventPagination),
+            ],
+            'meta' => [
+                'last_sync_at' => $serverSyncAt,
+                'sync_version' => (int) $request->query('sync_version', 0) + 1,
+                'conflict_ticket_ids' => $conflictIds,
             ],
         ]);
     }
