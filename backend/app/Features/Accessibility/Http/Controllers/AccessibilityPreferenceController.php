@@ -64,7 +64,7 @@ class AccessibilityPreferenceController extends Controller
                 'screenReaderOptimized' => 'sometimes|boolean',
                 'focusIndicatorEnhanced' => 'sometimes|boolean',
                 'motionReduced' => 'sometimes|boolean',
-                'lineHeight' => 'sometimes|numeric|min:1|max:2',
+ 'lineHeight' => 'sometimes|numeric|between:1.0,2.0',
                 'letterSpacing' => 'sometimes|numeric|min:0|max:0.2',
                 'wordSpacing' => 'sometimes|numeric|min:0|max:0.2',
                 'colorBlindnessMode' => 'sometimes|in:none,protanopia,deuteranopia,tritanopia',

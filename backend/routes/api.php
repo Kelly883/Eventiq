@@ -232,9 +232,11 @@ Route::middleware('api.key')->prefix('v1')->group(function () {
     Route::get('/events', function (\Illuminate\Http\Request $request) {
         abort_unless(in_array('events:read', $request->attributes->get('api_key_scopes', []), true), 403);
 
-        return \App\Models\Event::query()
-            ->where('organizer_id', $request->attributes->get('organizer')->id)
-            ->latest()
-            ->get();
+        return \App\Http\Resources\EventResource::collection(
+            \App\Models\Event::query()
+                ->where('organizer_id', $request->attributes->get('organizer')->id)
+                ->latest()
+                ->paginate(20)
+        );
     });
 });

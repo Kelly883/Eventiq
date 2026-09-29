@@ -65,6 +65,9 @@ class LanguagePreference extends Model
 
             $model->rtl_enabled = in_array($model->language, static::RTL_LANGUAGES, true);
         });
+        static::updating(function ($model) {
+            $model->rtl_enabled = in_array($model->language, ['ar', 'he', 'ur'], true);
+        });
     }
 
     public static function getOrCreateForUser(string $userId): static

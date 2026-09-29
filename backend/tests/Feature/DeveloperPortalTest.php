@@ -148,7 +148,7 @@ class DeveloperPortalTest extends TestCase
 
         $this->actingAs($user, 'sanctum')
             ->deleteJson('/api/developer/api-keys/' . $key->id)
-            ->assertOk();
+            ->assertNoContent();
 
         $this->assertNotNull($key->fresh()->revoked_at);
     }
@@ -227,7 +227,7 @@ class DeveloperPortalTest extends TestCase
 
         $this->actingAs($user, 'sanctum')
             ->deleteJson('/api/developer/webhooks/' . $webhook->id)
-            ->assertOk();
+            ->assertNoContent();
 
         $this->assertDatabaseMissing('webhooks', ['id' => $webhook->id]);
     }
@@ -242,7 +242,7 @@ class DeveloperPortalTest extends TestCase
 
         AuditLog::create([
             'user_id' => $user->id,
-            'action' => 'webhook_created',
+            'action' => 'api_call',
             'target_type' => Webhook::class,
             'target_id' => Str::uuid()->toString(),
             'status' => 'success',
@@ -255,7 +255,7 @@ class DeveloperPortalTest extends TestCase
             ->getJson('/api/developer/api-logs')
             ->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.action', 'webhook_created')
+            ->assertJsonPath('data.0.action', 'api_call')
             ->assertJsonPath('data.0.path', '/api/developer/webhooks');
     }
 
