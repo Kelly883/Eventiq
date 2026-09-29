@@ -2,12 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Features\Refunds\Enums\RefundMethodEnum;
-use App\Features\Refunds\Enums\RefundReasonEnum;
-use App\Features\Refunds\Models\RefundPolicy;
 use App\Features\Checkout\Models\Order;
-use App\Models\Payment;
-use App\Models\Ticket;
+use App\Features\Checkout\Models\Ticket;
+use App\Features\Payment\Models\PaymentMethod;
+use App\Models\Role;
 use App\Models\TicketTier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,8 +31,20 @@ class RefundRequestTest extends TestCase
     private function makeUser(string $role = 'attendee'): User
     {
         $user = User::factory()->create(['emailVerified' => true]);
+
+        // original_payment_method refunds require a payment method on file.
+        PaymentMethod::create([
+            'user_id' => $user->id,
+            'gateway' => 'paystack',
+            'gateway_payment_method_id' => 'pm_' . strtolower($user->id),
+            'type' => 'card',
+            'is_default' => true,
+            'last_four' => '4242',
+            'brand' => 'visa',
+        ]);
+
         if ($role === 'admin') {
-            $adminRole = \App\Models\Role::firstOrCreate(['name' => 'admin'], ['description' => 'Administrator', 'isSystemRole' => true]);
+            $adminRole = Role::firstOrCreate(['name' => 'admin'], ['description' => 'Administrator', 'isSystemRole' => true]);
             if (!$user->roles()->where('name', 'admin')->exists()) {
                 $user->roles()->attach($adminRole);
             }
@@ -44,7 +54,7 @@ class RefundRequestTest extends TestCase
 
     private function makeTicket(User $user, ?string $eventStartDate = null): Ticket
     {
-        $organizer = $user->organizer ?? $user->organizer()->create(['displayName' => $user->name]);
+        $organizer = $user->organizer()->firstOrCreate([], ['displayName' => $user->name]);
 
         $event = \App\Models\Event::factory()->create([
             'organizer_id' => $organizer->id,
@@ -70,9 +80,11 @@ class RefundRequestTest extends TestCase
             'status' => 'completed',
             'payment_gateway' => 'paystack',
             'payment_intent_id' => 'pi_' . \Illuminate\Support\Str::uuid(),
+            // original_payment_method refunds require a gateway transaction.
+            'gateway_transaction_id' => 'tx_' . \Illuminate\Support\Str::uuid(),
         ]);
 
-        return \App\Models\Ticket::factory()->create([
+        return Ticket::factory()->create([
             'user_id' => $user->id,
             'event_id' => $event->id,
             'ticket_tier_id' => $tier->id,
@@ -99,12 +111,14 @@ class RefundRequestTest extends TestCase
     public function test_request_refund_requires_admin_or_owner(): void
     {
         $user = $this->makeUser();
-        $ticket = $this->makeTicket($user);
+        $other = $this->makeUser();
+        $ticket = $this->makeTicket($other);
 
+        // Neither the admin role nor ticket ownership -> forbidden.
         $this->actingAs($user, 'sanctum')
             ->postJson('/api/refunds/request', [
                 'ticket_id' => $ticket->id,
-                'reason' => 'test',
+                'reason' => 'event_cancelled',
                 'refund_method' => 'original_payment_method',
             ])
             ->assertForbidden();
@@ -127,11 +141,18 @@ class RefundRequestTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonPath('data.status', 'pending')
-            ->assertJsonPath('data.refund_amount', (float) ($ticket->ticketTier->price * 100 / 100))
-            ->assertJsonPath('data.refund_percentage', 100.00)
-            ->assertJsonPath('data.reference_number')
-            ->assertJsonPath('data.expected_processing_days')
-            ->assertJsonPath('data.refund_request_id');
+            ->assertJsonPath('data.originalAmount', '5000.00')
+            ->assertJsonPath('data.refundAmount', '5000.00')
+            ->assertJsonPath('data.refundPercentage', '100.00')
+            ->assertJsonPath('data.expectedProcessingDays', 3);
+
+        $this->assertDatabaseHas('refund_requests', [
+            'ticket_id' => $ticket->id,
+            'user_id' => $admin->id,
+            'reason' => 'event_cancelled',
+            'refund_method' => 'original_payment_method',
+            'status' => 'pending',
+        ]);
     }
 
     public function test_request_refund_invalid_reason(): void
@@ -145,7 +166,9 @@ class RefundRequestTest extends TestCase
             'refund_method' => 'original_payment_method',
         ]);
 
-        $response->assertStatus(400);
+        // FormRequest validation failures return 422, not 400.
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors('reason');
     }
 
     public function test_request_refund_invalid_method(): void
@@ -159,7 +182,8 @@ class RefundRequestTest extends TestCase
             'refund_method' => 'invalid_method',
         ]);
 
-        $response->assertStatus(400);
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors('refund_method');
     }
 
     public function test_request_refund_ticket_not_owned(): void
@@ -204,7 +228,7 @@ class RefundRequestTest extends TestCase
             'ticket_id' => $ticket->id,
             'reason' => 'event_cancelled',
             'refund_method' => 'original_payment_method',
-        ]);
+        ])->assertStatus(201);
 
         // Second refund request for same ticket
         $response = $this->actingAs($admin, 'sanctum')->postJson('/api/refunds/request', [
@@ -221,23 +245,26 @@ class RefundRequestTest extends TestCase
         $admin = $this->makeUser('admin');
         $ticket = $this->makeTicket($admin);
 
-        $response1 = $this->actingAs($admin, 'sanctum')->postJson('/api/refunds/request', [
+        $payload = [
             'ticket_id' => $ticket->id,
             'reason' => 'event_cancelled',
             'refund_method' => 'original_payment_method',
-            'idempotency_key' => 'unique-key-123',
-        ]);
+        ];
 
-        $response2 = $this->actingAs($admin, 'sanctum')->postJson('/api/refunds/request', [
-            'ticket_id' => $ticket->id,
-            'reason' => 'event_cancelled',
-            'refund_method' => 'original_payment_method',
-            'idempotency_key' => 'unique-key-123',
-        ]);
+        $response1 = $this->actingAs($admin, 'sanctum')
+            ->withHeader('X-Idempotency-Key', 'unique-key-123')
+            ->postJson('/api/refunds/request', $payload);
+        $response1->assertStatus(201);
+
+        $response2 = $this->actingAs($admin, 'sanctum')
+            ->withHeader('X-Idempotency-Key', 'unique-key-123')
+            ->postJson('/api/refunds/request', $payload);
 
         // Second request should return the same refund request
         $response2->assertStatus(201)
-            ->assertJsonPath('data.refund_request_id', $response1->json('data.refund_request_id'));
+            ->assertJsonPath('data.refundRequestId', $response1->json('data.refundRequestId'));
+
+        $this->assertDatabaseCount('refund_requests', 1);
     }
 
     public function test_request_refund_response_structure(): void
@@ -252,12 +279,19 @@ class RefundRequestTest extends TestCase
         ]);
 
         $response->assertStatus(201)
-            ->assertJsonPath('data.refund_request_id')
-            ->assertJsonPath('data.status')
-            ->assertJsonPath('data.refund_amount')
-            ->assertJsonPath('data.expected_processing_days')
-            ->assertJsonPath('data.reference_number')
-            ->assertJsonPath('data.refund_percentage');
+            ->assertJsonStructure([
+                'data' => [
+                    'refundRequestId',
+                    'status',
+                    'originalAmount',
+                    'refundAmount',
+                    'refundPercentage',
+                    'refundMethod',
+                    'reason',
+                    'expectedProcessingDays',
+                    'referenceNumber',
+                ],
+            ]);
     }
 
     // ------------------------------------------------------------------
@@ -269,17 +303,22 @@ class RefundRequestTest extends TestCase
         RateLimiter::for('refund-request', fn () => \Illuminate\Cache\RateLimiting\Limit::perMinute(3)->by('127.0.0.1'));
 
         $admin = $this->makeUser('admin');
-        $ticket = $this->makeTicket($admin);
 
+        // Each request needs its own ticket so the duplicate guard does not
+        // interfere with the throttling assertions.
         for ($i = 0; $i < 3; $i++) {
+            $ticket = $this->makeTicket($admin);
+
             $this->actingAs($admin, 'sanctum')
                 ->postJson('/api/refunds/request', [
                     'ticket_id' => $ticket->id,
                     'reason' => 'event_cancelled',
                     'refund_method' => 'original_payment_method',
                 ])
-                ->assertOk();
+                ->assertCreated();
         }
+
+        $ticket = $this->makeTicket($admin);
 
         $this->actingAs($admin, 'sanctum')
             ->postJson('/api/refunds/request', [

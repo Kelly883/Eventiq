@@ -44,7 +44,7 @@ class PayoutCalculationItem extends Model
 
     public function order(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Order::class);
+        return $this->belongsTo(\App\Features\Checkout\Models\Order::class);
     }
 
     public function refundRequest(): BelongsTo

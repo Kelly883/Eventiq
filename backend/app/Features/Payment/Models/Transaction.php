@@ -4,8 +4,8 @@ namespace App\Features\Payment\Models;
 
 use App\Features\Payment\Enums\PaymentGateway;
 use App\Features\Payment\Enums\PaymentStatus;
+use App\Features\Checkout\Models\Order;
 use App\Models\Event;
-use App\Models\Order;
 use App\Models\Organizer;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

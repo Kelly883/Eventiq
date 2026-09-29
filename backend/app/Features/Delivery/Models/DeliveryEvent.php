@@ -3,8 +3,8 @@
 namespace App\Features\Delivery\Models;
 
 use App\Models\Event;
-use App\Models\Order;
-use App\Models\Ticket;
+use App\Features\Checkout\Models\Order;
+use App\Features\Checkout\Models\Ticket;
 use App\Models\User;
 use App\Features\Fraud\Models\FraudEvent;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

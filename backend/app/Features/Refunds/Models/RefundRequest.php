@@ -2,9 +2,9 @@
 
 namespace App\Features\Refunds\Models;
 
+use App\Features\Checkout\Models\Order;
 use App\Features\Checkout\Models\Ticket;
 use App\Models\Event;
-use App\Models\Order;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

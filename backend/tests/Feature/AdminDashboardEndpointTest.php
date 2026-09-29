@@ -7,7 +7,6 @@ use App\Features\Payouts\Models\Payout;
 use App\Models\AuditLog;
 use App\Models\Event;
 use App\Models\Organizer;
-use App\Models\Payment;
 use App\Models\Role;
 use App\Models\User;
 use Carbon\Carbon;

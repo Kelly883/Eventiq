@@ -4,7 +4,6 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
-use App\Models\Ticket;
 use App\Models\Event;
 
 class InventoryLockService
