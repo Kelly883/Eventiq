@@ -8,6 +8,7 @@ export const AUTH_ENDPOINTS = {
   RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
   LOGOUT: `${API_BASE_URL}/auth/logout`,
   ME: `${API_BASE_URL}/auth/me`,
+  ADMIN_SETUP: `${API_BASE_URL}/auth/admin-setup`,
 };
 
 export const ROLES_PERMISSIONS_ENDPOINTS = {

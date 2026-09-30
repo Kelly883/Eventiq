@@ -88,6 +88,8 @@ Route::post('/auth/register', [AuthController::class, 'register'])->middleware('
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
 Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:forgot-password');
 Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth');
+Route::post('/auth/admin-setup', [App\Http\Controllers\AdminSetupController::class, 'store'])->middleware('throttle:admin-setup');
+Route::get('/auth/admin-setup', [App\Http\Controllers\AdminSetupController::class, 'index']);
 
 // Protected routes — support both Sanctum sessions and Bearer tokens.
 Route::middleware('bearer')->group(function () {

@@ -48,6 +48,7 @@ const ComplianceReportsPage = lazy(() => import('./features/compliance/pages/Com
 const UserPermissionsPage = lazy(() => import('./features/roles/pages/UserPermissionsPage'));
 const LoginPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.RegisterPage })));
+const AdminRegisterPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.AdminRegisterPage })));
 const ForgotPasswordPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('./features/auth/pages').then(m => ({ default: m.ResetPasswordPage })));
 const OrganizerPublicProfilePage = lazy(() => import('./features/organizer-profile/pages/OrganizerPublicProfilePage'));
@@ -94,7 +95,7 @@ const HelpPage = lazy(() => import('./features/static-pages/pages/HelpPage'));
 const RefundPolicyPage = lazy(() => import('./features/static-pages/pages/RefundPolicyPage'));
 const TermsPage = lazy(() => import('./features/static-pages/pages/TermsPage'));
 
-const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password', '/access-denied'];
+const AUTH_PAGES = ['/login', '/register', '/admin-register', '/forgot-password', '/reset-password', '/access-denied'];
 
 /**
  * renders the "profile not set up yet" state for the logged-in organizer
@@ -486,6 +487,7 @@ function App() {
             <Route path="/venue-scan" element={<Navigate to="/venue/events" replace />} />
             <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+            <Route path="/admin-register" element={<PublicRoute><AdminRegisterPage /></PublicRoute>} />
             <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
             <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
             <Route path="/access-denied" element={<AccessDeniedPage />} />

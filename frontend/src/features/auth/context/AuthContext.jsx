@@ -360,6 +360,17 @@ export const AuthProvider = ({ children }) => {
     return res.data;
   }, []);
 
+  const adminSetup = useCallback(async (name, email, password, passwordConfirmation) => {
+    await refreshCsrf();
+    const res = await api.post('/auth/admin-setup', {
+      name,
+      email,
+      password,
+      password_confirmation: passwordConfirmation,
+    });
+    return res.data;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       const deviceToken = typeof window !== 'undefined' && window.EventiqDevice?.getDeviceToken
@@ -414,7 +425,7 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: Boolean(user) && !sessionExpired, loading, checkAdminAccess, login, register, logout, forgotPassword, resetPassword, refreshAuth, sessionExpired, setSessionExpired, organizerId }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: Boolean(user) && !sessionExpired, loading, checkAdminAccess, login, register, logout, forgotPassword, resetPassword, refreshAuth, sessionExpired, setSessionExpired, organizerId, adminSetup }}>
       {children}
     </AuthContext.Provider>
   );

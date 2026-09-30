@@ -38,6 +38,11 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Admin setup: 5 attempts per hour per IP (one-time bootstrap, abuse prevention)
+        RateLimiter::for('admin-setup', function ($request) {
+            return Limit::perHour(5)->by($request->ip());
+        });
+
         // Login: 5 attempts per 15 minutes per IP + 10 per 15m per email.
         // The per-email limit prevents distributed brute-force (botnet rotating
         // IPs against a single account). Both must pass (array).
