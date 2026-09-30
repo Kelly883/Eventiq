@@ -175,6 +175,12 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('analytics-summary', function ($request) {
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
+        RateLimiter::for('event-patch', function ($request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
+        RateLimiter::for('payout-list', function ($request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
         RateLimiter::for('analytics-sales-velocity', function ($request) {
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });

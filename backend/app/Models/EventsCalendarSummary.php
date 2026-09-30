@@ -36,7 +36,8 @@ class EventsCalendarSummary extends Model
      */
     public function scopeInDateRange($query, string $startDate, string $endDate)
     {
-        return $query->whereBetween('event_date', [$startDate, $endDate]);
+        return $query->whereDate('event_date', '>=', $startDate)
+                     ->whereDate('event_date', '<=', $endDate);
     }
 
     /**

@@ -10,6 +10,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\TicketTier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class AnalyticsEndpointTest extends TestCase
@@ -278,7 +279,7 @@ class AnalyticsEndpointTest extends TestCase
         );
 
         // Pre-load the limiter with 20 hits, then verify the 21st is rejected.
-        $key = 'analytics-summary|' . $this->user->getKey();
+        $key = 'analytics-summary|' . $this->organizerUser->getKey();
         for ($i = 0; $i < 20; $i++) {
             RateLimiter::hit($key, 60);
         }
