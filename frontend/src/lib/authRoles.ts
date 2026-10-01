@@ -2,14 +2,18 @@ export function getUserRoles(user: any): string[] {
   if (!user) return [];
   const roles = new Set<string>();
 
+  const addRole = (value: unknown) => {
+    if (typeof value !== 'string') return;
+    roles.add(value.toLowerCase());
+  };
   if (user.role && typeof user.role === 'string') {
-    roles.add(user.role);
+    addRole(user.role);
   }
   if (user.roleRelation?.name) {
-    roles.add(user.roleRelation.name);
+    addRole(user.roleRelation.name);
   }
   (user.roles || []).forEach((r: any) => {
-    if (r?.name) roles.add(r.name);
+    if (r?.name) addRole(r.name);
   });
 
   return Array.from(roles);

@@ -2,20 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BrandLogo from '../common/components/BrandLogo';
 import { useAuthContext } from '../auth/context/AuthContext';
+import { getUserRoles } from '../lib/authRoles';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { user } = useAuthContext();
   const isLoggedIn = Boolean(user);
-  const roles = user?.roles?.map((r) => r.name) || [];
+  const roles = getUserRoles(user);
 
   // Mirrors PublicRoute's logged-in routing so the marketing header never
   // advertises "Sign in / Create account" to users who already have a session
   // (PublicRoute would just bounce them to a dashboard).
   const dashboardTarget = roles.some((r) => ['venue_staff', 'organizer'].includes(r))
     ? '/venue/dashboard'
-    : roles.some((r) => r.name === 'admin')
+    : roles.includes('admin')
       ? '/admin'
       : '/dashboard';
 

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDashboardPreferences } from '../hooks/useDashboardPreferences';
 import EventDetailWidget from '../components/EventDetailWidget';
 import { useAuthContext } from '../../auth/context/AuthContext';
+import { getUserRoles } from '../../../lib/authRoles';
 
 const OrganizerDashboardPage = () => {
   const {
@@ -18,7 +19,7 @@ const OrganizerDashboardPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuthContext();
-  const roles = user?.roles?.map((r) => r.name) || [];
+  const roles = getUserRoles(user);
 
   // Deep linking: expand event from query param ?eventId=xyz
   // Works for any event ID, not just the hardcoded three

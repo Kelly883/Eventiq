@@ -1,16 +1,18 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { showToast } from '../../../lib/api';
+import { getUserRoles } from '../../../lib/authRoles';
 import { useAuthContext } from '../../../features/auth/context/AuthContext';
 
 const AccessDeniedPage = ({ title = 'Access Denied', message = 'You do not have permission to access this page.' }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthContext();
+  const roles = getUserRoles(user);
 
   const getRoleBasedFallback = () => {
-    if (user?.roles?.some((r) => r.name === 'admin')) return '/admin';
-    if (user?.roles?.some((r) => r.name === 'organizer')) return '/dashboard/organizer';
+    if (roles.includes('admin')) return '/admin';
+    if (roles.includes('organizer')) return '/dashboard/organizer';
     if (user) return '/dashboard';
     return '/login';
   };
@@ -19,7 +21,7 @@ const AccessDeniedPage = ({ title = 'Access Denied', message = 'You do not have 
     const from = location.state?.from;
     // Primary: role-based fallback — always safe, works for bookmarked/direct access.
     // Secondary: if the user came from an admin path and is still an admin, go there.
-    if (from && user?.roles?.some((r) => r.name === 'admin')) {
+    if (from && roles.includes('admin')) {
       const fromPath = new URL(from, window.location.origin).pathname;
       if (fromPath.startsWith('/admin')) {
         navigate(fromPath, { replace: true });

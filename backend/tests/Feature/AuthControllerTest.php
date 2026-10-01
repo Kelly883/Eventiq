@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\PasswordResetToken;
+use App\Models\Role;
 use App\Models\Session;
 use App\Models\User;
 use App\Notifications\ResetPassword as ResetPasswordNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -125,6 +127,88 @@ class AuthControllerTest extends TestCase
             $session->expiresAt->between(now()->addDays(6)->endOfDay(), now()->addDays(7)->endOfDay()),
             'Session expiry should be approximately 7 days from now'
         );
+    }
+
+    public function test_login_repairs_legacy_admin_role_data(): void
+    {
+        // Legacy rows (seeders / render-admin migration) can set `role` +
+        // `role_id` without ever attaching the role_user pivot — the frontend
+        // guard that reads user.roles then bounces the admin to /dashboard.
+        $adminRole = Role::firstOrCreate(
+            ['name' => 'admin'],
+            ['description' => 'Administrator', 'isSystemRole' => true]
+        );
+        $user = $this->makeUser([
+            'email' => 'legacy-admin@example.test',
+            'role' => 'admin',
+            'role_id' => $adminRole->id,
+        ]);
+        // Simulate the legacy row: role_id set, pivot row missing.
+        DB::table('role_user')->where('user_id', $user->id)->delete();
+        DB::table('users')->where('id', $user->id)->update(['role_id' => null]);
+
+        $response = $this->postJson('/api/auth/login', [
+            'email' => 'legacy-admin@example.test',
+            'password' => self::PASSWORD,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('user.role', 'admin')
+            ->assertJsonPath('user.role_id', $adminRole->id)
+            ->assertJsonPath('user.roles.0.name', 'admin')
+            ->assertJsonPath('user.roleRelation.name', 'admin');
+
+        // Pivot row must be backfilled in the database, not just the payload.
+        $this->assertDatabaseHas('role_user', [
+            'user_id' => $user->id,
+            'role_id' => $adminRole->id,
+        ]);
+        $this->assertNotNull(
+            User::where('email', 'legacy-admin@example.test')->firstOrFail()->role_id
+        );
+    }
+
+    public function test_me_returns_repaired_role_data(): void
+    {
+        $organizerRole = Role::firstOrCreate(
+            ['name' => 'organizer'],
+            ['description' => 'Organizer', 'isSystemRole' => true]
+        );
+        $user = $this->makeUser([
+            'email' => 'legacy-organizer@example.test',
+            'role' => 'organizer',
+        ]);
+        DB::table('users')->where('id', $user->id)->update(['role_id' => null]);
+        DB::table('role_user')->where('user_id', $user->id)->delete();
+
+        $token = $user->createToken('test')->plainTextToken;
+
+        $this->withToken($token)
+            ->getJson('/api/auth/me')
+            ->assertOk()
+            ->assertJsonPath('role', 'organizer')
+            ->assertJsonPath('roles.0.name', 'organizer')
+            ->assertJsonPath('roleRelation.name', 'organizer');
+
+        $this->assertDatabaseHas('role_user', [
+            'user_id' => $user->id,
+            'role_id' => $organizerRole->id,
+        ]);
+    }
+
+    public function test_login_keeps_attendee_payload_shape(): void
+    {
+        // Regression: users with no role row must not gain a phantom role.
+        $this->makeUser(['email' => 'plain@example.test', 'role' => 'attendee']);
+
+        $response = $this->postJson('/api/auth/login', [
+            'email' => 'plain@example.test',
+            'password' => self::PASSWORD,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('user.role', 'attendee')
+            ->assertJsonPath('user.roles', []);
     }
 
     public function test_login_updates_last_login_at(): void

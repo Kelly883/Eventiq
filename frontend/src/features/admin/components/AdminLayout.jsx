@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../auth/context/AuthContext';
+import { getUserRoles } from '../../../lib/authRoles';
 
 const adminNavItems = [
   { to: '/admin', label: 'Dashboard', icon: '📊', description: 'Platform overview & delivery status', group: 'management' },
@@ -45,7 +46,7 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, sessionExpired } = useAuthContext();
 
-  const isAdmin = user?.roles?.some((r) => r.name === 'admin');
+  const isAdmin = getUserRoles(user).includes('admin');
 
   if (!isAdmin) {
     return (
@@ -101,7 +102,7 @@ const AdminLayout = () => {
   // away from admin-only pages immediately — not just on next navigation.
   useEffect(() => {
     const handleRoleChange = () => {
-      const isAdmin = user?.roles?.some((r) => r.name === 'admin');
+      const isAdmin = getUserRoles(user).includes('admin');
       if (!isAdmin) {
         navigate('/access-denied', { replace: true, state: { deniedByRole: 'admin', attemptedPath: location.pathname, message: 'Your administrator access has been revoked.', messageType: 'warning' } });
       }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuthContext } from '../../auth/context/AuthContext';
 import { api, showToast } from '../../../lib/api';
+import { getUserRoles } from '../../../lib/authRoles';
 
 const ACCESS_OPTIONS = [
   { value: 'admin-access', label: 'Admin access' },
@@ -26,9 +27,9 @@ const UserPermissionsPage = () => {
     if (location.state?.message) {
       showToast('Notice', location.state.message, location.state.messageType || 'warning');
     }
-  }, [location.state?.message, location.state.messageType]);
+  }, [location.state?.message, location.state?.messageType]);
 
-  const userRoles = user?.roles?.map((r) => r.name) || [];
+  const userRoles = getUserRoles(user);
   const isAdmin = userRoles.includes('admin');
 
   const handleAccessRequest = async (e) => {

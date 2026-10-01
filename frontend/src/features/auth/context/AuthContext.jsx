@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api, refreshCsrf, showToast } from '../../../lib/api';
+import { getUserRoles } from '../../../lib/authRoles';
 import { clearStoredDeviceToken } from '../../offline/services/deviceToken';
 
 const AuthContext = createContext(null);
@@ -419,9 +420,11 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAdminAccess = useCallback(() => {
-    const roles = (user?.roles || []).map((r) => r.name);
-    const roleName = user?.roleRelation?.name || user?.role;
-    return roles.includes('admin') || roleName === 'admin';
+    // Tolerant check via getUserRoles() — accepts legacy `role` string,
+    // `roleRelation.name`, and the `roles` pivot (lowercased, deduped).
+    // Matches defaultRedirect()/safeRedirectPath() used at login time, so
+    // an admin whose pivot row was missing can't get bounced to /dashboard.
+    return getUserRoles(user).includes('admin');
   }, [user]);
 
   return (

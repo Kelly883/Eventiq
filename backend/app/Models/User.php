@@ -59,6 +59,23 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    public function __construct(array $attributes = [])
+    {
+        parent::__construct($attributes);
+
+        // Opportunistic self-heal: legacy `role` string set without role_id
+        // (old seeders / setup flows) → backfill role_id on save so
+        // roleRelation() and roles() stay consistent.
+        $this->saving(function (): void {
+            if (empty($this->role_id) && ! empty($this->role)) {
+                $roleId = Role::where('name', $this->role)->value('id');
+                if ($roleId) {
+                    $this->role_id = $roleId;
+                }
+            }
+        });
+    }
+
     /**
      * Override: the auth column is `passwordHash`, not `password`.
      */
@@ -97,6 +114,67 @@ class User extends Authenticatable
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class);
+    }
+
+    /**
+     * Backfill role_id (legacy `role` string → roles.id) and the role_user
+     * pivot row when either is missing, then (re)load the role relations so
+     * `roles` / `roleRelation` are always complete in API payloads.
+     *
+     * Several creation paths (seeders, the render-admin migration,
+     * AdminSetupController) historically set only `role` / `role_id` without
+     * attaching the pivot row — or vice versa — which left role checks that
+     * read `user.roles` (frontend guards, AdminPolicy via hasRole()) blind.
+     * Idempotent: no-ops when the row is already consistent.
+     *
+     * Canonical order: primary `role_id` first, then remaining pivot rows
+     * by name — so the first element of `roles` matches `roleRelation`.
+     *
+     * @return $this
+     */
+    public function refreshRoles(): self
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('roles')
+            || ! \Illuminate\Support\Facades\Schema::hasTable('role_user')) {
+            return $this->load('roles', 'roleRelation');
+        }
+
+        // 1) Repair role_id from the legacy `role` string.
+        if (empty($this->role_id) && ! empty($this->role)) {
+            $primary = Role::where('name', $this->role)->first();
+            if ($primary) {
+                $this->role_id = $primary->id;
+                $this->save();
+            }
+        }
+
+        // 2) Ensure the pivot row for the primary role exists.
+        $primaryId = $this->role_id
+            ?? $this->roles()->where('name', $this->role)->value('roles.id')
+            ?? null;
+
+        if ($primaryId) {
+            $this->roles()->syncWithoutDetaching([$primaryId]);
+        } elseif (! empty($this->role) && $primary = Role::where('name', $this->role)->first()) {
+            $this->roles()->syncWithoutDetaching([$primary->id]);
+        }
+
+        // 3) Reload relations in canonical order (primary first).
+        $this->load(['roles' => fn ($q) => $q->orderBy('name'), 'roleRelation']);
+
+        $loaded = $this->relationLoaded('roles') ? $this->roles->keyBy('id') : collect();
+        if ($this->role_id && $loaded->has($this->role_id)) {
+            $primaryRole = $loaded->get($this->role_id);
+            $this->setRelation(
+                'roles',
+                $this->roles->sortBy([
+                    fn ($a) => $a->id === $this->role_id ? 0 : 1,
+                    fn ($a, $b) => [$a->name ?? '', $b->name ?? ''] <=> [$b->name ?? '', $a->name ?? ''],
+                ])->values()
+            );
+        }
+
+        return $this;
     }
 
     public function roleRelation(): BelongsTo

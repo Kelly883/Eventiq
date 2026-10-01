@@ -99,7 +99,10 @@ class AuthController extends Controller
 
         $user->update(['lastLoginAt' => now()]);
 
-        $user->load('roles', 'roleRelation');
+        // Repair + load complete role data (role, role_id, roles pivot,
+        // roleRelation) so the frontend never has to guess which shape
+        // arrived — legacy rows may lack role_id or the role_user pivot.
+        $user->refreshRoles();
 
         return response()->json([
             'token' => $plainToken,
@@ -270,7 +273,8 @@ class AuthController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        return response()->json($user->load('roles', 'roleRelation'));
+        // Same contract as login(): repaired + complete role data.
+        return response()->json($user->refreshRoles());
     }
 
     /**

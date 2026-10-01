@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { useAuthContext } from '../../auth/context/AuthContext';
+import { getUserRoles } from '../../../lib/authRoles';
 
 const settingsNavItems = [
   { to: '/settings/permissions', label: 'Permissions', icon: '🛡️', description: 'View and request access roles' },
@@ -14,7 +15,7 @@ const settingsNavItems = [
 const SettingsLayout = () => {
   const location = useLocation();
   const { user } = useAuthContext();
-  const isAdmin = user?.roles?.some((r) => r.name === 'admin');
+  const isAdmin = getUserRoles(user).includes('admin');
 
   const activeItem = settingsNavItems.find(
     (item) => item.to === location.pathname

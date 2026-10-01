@@ -6,6 +6,7 @@ import MobileNav from './dashboard/MobileNav';
 import AccountDropdown from './dashboard/AccountDropdown';
 import BottomNav from './dashboard/BottomNav';
 import BrandLogo from '../../common/components/BrandLogo';
+import { getUserRoles } from '../../../lib/authRoles';
 import '../dashboard.css';
 
 const DashboardLayout = () => {
@@ -13,7 +14,7 @@ const DashboardLayout = () => {
   const { user, logout } = useAuthContext();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  const roles = user?.roles?.map((r) => r.name) || [];
+  const roles = getUserRoles(user);
   const isOrganizer = roles.includes('organizer');
   const isAdmin = roles.includes('admin');
   const isVenueStaff = roles.includes('venue_staff');

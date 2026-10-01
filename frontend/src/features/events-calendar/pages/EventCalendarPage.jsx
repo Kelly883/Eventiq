@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../../features/auth/context/AuthContext';
 import { api } from '../../../lib/api';
+import { getUserRoles } from '../../../lib/authRoles';
 import CalendarGrid from '../components/calendar/CalendarGrid';
 import CalendarDayDetailModal from '../pages/CalendarDayDetailModal';
 import '../../../styles/shared-pages.css';
@@ -47,7 +48,7 @@ const EventCalendarPage = () => {
   }, []);
 
   // Check if user is organizer for Create Event button
-  const isOrganizer = user && user.roles && user.roles.some((r) => r.name === 'organizer');
+  const isOrganizer = getUserRoles(user).includes('organizer');
 
   // Handle event selection - navigate to event detail page
   const handleSelectEvent = (event) => {
