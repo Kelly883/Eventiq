@@ -1,0 +1,373 @@
+/* =========================================================================
+   EventIQ Reusable Auth Form Components
+   Used by: LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   FormField
+   ------------------------------------------------------------------------- */
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-field__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink, #333333);
+}
+
+.auth-field__required {
+  color: var(--coral, #cc3838);
+}
+
+.auth-field__input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink, #333333);
+  background: #ffffff;
+  border: 1px solid var(--line, #e3e4e6);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.auth-field__input::placeholder {
+  color: #aaaaaa;
+}
+
+.auth-field__input:focus {
+  border-color: var(--coral, #cc3838);
+  box-shadow: 0 0 0 3px rgba(204, 56, 56, 0.1);
+}
+
+.auth-field__input:disabled {
+  background: #f7f8fa;
+  cursor: not-allowed;
+}
+
+.auth-field__input--error {
+  border-color: var(--coral, #cc3838);
+}
+
+.auth-field__error {
+  margin: 0;
+  color: var(--coral, #cc3838);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* -------------------------------------------------------------------------
+   PasswordVisibilityToggle
+   ------------------------------------------------------------------------- */
+.auth-password-field {
+  position: relative;
+}
+
+.auth-password-field .auth-field__input {
+  padding-right: 48px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0 8px 8px 0;
+  background: transparent;
+  color: var(--muted, #555555);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.auth-password-toggle:hover:not(:disabled) {
+  color: var(--coral-dark, #b83535);
+}
+
+.auth-password-toggle:focus-visible {
+  outline: 2px solid var(--coral, #cc3838);
+  outline-offset: 2px;
+}
+
+.auth-password-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* -------------------------------------------------------------------------
+   PasswordStrengthMeter
+   ------------------------------------------------------------------------- */
+.auth-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.auth-strength__bar {
+  flex: 1;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.auth-strength__fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+.auth-strength__label {
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 48px;
+  text-align: right;
+}
+
+/* -------------------------------------------------------------------------
+   SubmitButton
+   ------------------------------------------------------------------------- */
+.auth-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--coral, #cc3838);
+  padding: 12px 24px;
+  color: #ffffff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -1px rgb(0 0 0 / 6%);
+  transition: background-color 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+}
+
+.auth-submit:hover:not(:disabled) {
+  background: var(--coral-dark, #b83535);
+}
+
+.auth-submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.auth-submit:focus-visible {
+  outline: 2px solid var(--coral, #cc3838);
+  outline-offset: 3px;
+}
+
+.auth-submit--success {
+  background: var(--success, #16a34a);
+}
+
+.auth-submit--success:hover:not(:disabled) {
+  background: #15a616;
+}
+
+.auth-submit--success:disabled {
+  cursor: not-allowed;
+  background: #bbf7d0;
+  opacity: 0.85;
+}
+
+.auth-submit:disabled {
+  cursor: not-allowed;
+  background: var(--coral-dark, #b83535);
+  opacity: 0.85;
+}
+
+.auth-submit__spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgb(255 255 255 / 45%);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: auth-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.auth-submit__text--loading {
+  opacity: 0.9;
+}
+
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* -------------------------------------------------------------------------
+   AuthCard
+   ------------------------------------------------------------------------- */
+.auth-card {
+  width: 100%;
+  max-width: 448px;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid var(--line, #e3e4e6);
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 16px 40px rgb(51 51 51 / 9%), 0 1px 3px rgb(0 0 0 / 10%);
+}
+
+.auth-card--gradient {
+  position: relative;
+  isolation: isolate;
+  background: #ffffff;
+  border-color: var(--line, #e3e4e6);
+}
+
+.auth-card--gradient::before,
+.auth-card--gradient::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  border-radius: 999px;
+  filter: blur(64px);
+  pointer-events: none;
+}
+
+.auth-card--gradient::before {
+  top: -72px;
+  left: -72px;
+  width: 220px;
+  height: 220px;
+  background: rgb(204 56 56 / 25%);
+}
+
+.auth-card--gradient::after {
+  right: -72px;
+  bottom: -96px;
+  width: 260px;
+  height: 260px;
+  background: rgb(78 205 196 / 25%);
+}
+
+/* Light mode defaults */
+@media (prefers-color-scheme: light) {
+  .auth-card--gradient::before {
+    background: rgb(204 56 56 / 20%);
+  }
+  .auth-card--gradient::after {
+    background: rgb(78 205 196 / 20%);
+  }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .auth-card--gradient::before {
+    background: rgb(204 56 56 / 30%);
+  }
+  .auth-card--gradient::after {
+    background: rgb(78 205 196 / 30%);
+  }
+}
+
+.auth-card__header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.auth-card__title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ink, #333333);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.auth-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* -------------------------------------------------------------------------
+   Shared helpers consumed by composed auth pages
+   ------------------------------------------------------------------------- */
+.auth-page__alert {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.auth-page__alert--error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.auth-page__alert--success {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.auth-page__text-link {
+  display: inline;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--coral, #cc3838);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.auth-page__text-link:hover {
+  color: var(--coral-dark, #b83535);
+  text-decoration: underline;
+}
+
+.auth-page__text-link:focus-visible {
+  outline: 2px solid var(--coral, #cc3838);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* -------------------------------------------------------------------------
+   Responsive / motion
+   ------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 24px;
+  }
+
+  .auth-card__title {
+    font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-field__input,
+  .auth-submit,
+  .auth-strength__fill {
+    transition: none;
+  }
+
+  .auth-submit__spinner {
+    animation: none;
+  }
+}
