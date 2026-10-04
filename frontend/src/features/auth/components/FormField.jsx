@@ -1,5 +1,14 @@
-import React from 'react';
+import React, { useId } from 'react';
 import './AuthComponents.css';
+
+const AUTOCOMPLETE_MAP = {
+  email: 'email',
+  password: 'new-password',
+  currentPassword: 'current-password',
+  tel: 'tel',
+  name: 'name',
+  username: 'username',
+};
 
 const FormField = ({
   label,
@@ -8,21 +17,37 @@ const FormField = ({
   onChange,
   onBlur,
   error = null,
+  helperText = '',
   placeholder = '',
   disabled = false,
   id,
   name,
-  autoComplete,
+  autoComplete: autoCompleteProp,
   inputMode,
   pattern,
+  maxLength,
+  minLength,
   required = false,
   ariaInvalid = false,
   ariaDescribedBy,
   isInvalid,
   errorMessageId,
+  helperTextId,
 }) => {
-  const inputId = id || name;
+  const generatedId = useId();
+  const inputId = id || name || generatedId;
   const errorId = errorMessageId || `${inputId}-error`;
+  const helperId = helperTextId || `${inputId}-helper`;
+  const autoComplete = autoCompleteProp
+    ? AUTOCOMPLETE_MAP[autoCompleteProp] || autoCompleteProp
+    : undefined;
+
+  const describedBy = [
+    error ? errorId : undefined,
+    helperText ? helperId : ariaDescribedBy,
+  ]
+    .filter(Boolean)
+    .join(' ') || undefined;
 
   return (
     <div className="auth-field">
@@ -43,13 +68,30 @@ const FormField = ({
         autoComplete={autoComplete}
         inputMode={inputMode}
         pattern={pattern}
+        maxLength={maxLength}
+        minLength={minLength}
         aria-invalid={ariaInvalid || Boolean(error) || isInvalid}
-        aria-describedby={errorMessageId || (error ? errorId : ariaDescribedBy || undefined)}
+        aria-describedby={describedBy}
         className={`auth-field__input ${error ? 'auth-field__input--error' : ''}`}
       />
+      {helperText && (
+        <p id={helperId} className="auth-field__helper">
+          {helperText}
+        </p>
+      )}
       {error && (
         <p id={errorId} role="alert" aria-live="assertive" className="auth-field__error">
           {error}
+        </p>
+      )}
+      {minLength !== undefined && !error && (
+        <p
+          id={`${inputId}-minlength-error`}
+          role="alert"
+          aria-live="polite"
+          className="auth-field__helper auth-field__minlength-error"
+        >
+          minimum {minLength} character{'s' !== minLength || ''}
         </p>
       )}
     </div>

@@ -2,13 +2,16 @@ import React from 'react';
 import './AuthComponents.css';
 
 const SubmitButton = ({ loading = false, disabled = false, children, type = 'submit', className = '', variant = 'primary', ...props }) => {
+  const variantClass = variant === 'success' ? 'auth-submit--success' : variant === 'danger' ? 'auth-submit--danger' : '';
+  const baseDisabled = disabled || loading;
   return (
     <button
       type={type}
-      disabled={disabled || loading}
-      className={`auth-submit ${className} ${variant === 'success' ? 'auth-submit--success' : ''}`.trim()}
+      disabled={baseDisabled}
+      className={`auth-submit ${className} ${variantClass}`.trim()}
       {...props}
       data-testid="submit-button"
+      aria-busy={loading || undefined}
     >
       {loading && (
         <span className="auth-submit__spinner" aria-hidden="true" />

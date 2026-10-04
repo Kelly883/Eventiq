@@ -2,16 +2,26 @@ import React from 'react';
 import './AuthComponents.css';
 
 const PasswordVisibilityToggle = ({ onClick, visible, disabled = false }) => {
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClick();
+    }
+  };
+
   return (
-    <div className="auth-password-field" aria-live="polite" aria-atomic="true">
+    <div className="auth-password-field">
       <button
         type="button"
         onClick={onClick}
+        onKeyDown={handleKeyDown}
         disabled={disabled}
+        title={visible ? 'Hide password' : 'Show password'}
         aria-label={visible ? 'Hide password' : 'Show password'}
         aria-pressed={visible}
         className="auth-password-toggle"
         data-testid="password-visibility-toggle"
+        aria-describedby={visible ? 'password-visible' : 'password-hidden'}
       >
         {visible ? (
           <svg
@@ -47,11 +57,13 @@ const PasswordVisibilityToggle = ({ onClick, visible, disabled = false }) => {
           </svg>
         )}
       </button>
-      {visible && (
-        <span className="auth-password-visibility-status" aria-live="polite">
-          {visible ? 'Password visible' : 'Password hidden'}
-        </span>
-      )}
+      <span
+        id={visible ? 'password-visible' : 'password-hidden'}
+        className="auth-password-visibility-status"
+        aria-live="polite"
+      >
+        {visible ? 'Password visible' : 'Password hidden'}
+      </span>
     </div>
   );
 };

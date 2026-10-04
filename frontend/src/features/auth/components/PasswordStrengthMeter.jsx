@@ -21,20 +21,40 @@ const PasswordStrengthMeter = ({ password = '' }) => {
     return { level: 1, label: 'Weak', color: 'var(--strength-weak, #dc2626)' };
   }, [password]);
 
-  const { level, label, color } = getStrength();
+  const { level, label, color } = getStrength;
   const percentage = password ? (level / 3) * 100 : 0;
+
+  const strengthDescriptions = {
+    Weak: 'Too short. Add uppercase, numbers, or symbols',
+    Medium: '6+ characters, 2+ character types',
+    Strong: '8+ characters, 3+ character types (uppercase, numbers, symbols)',
+  };
 
   return (
     <div className="auth-strength" aria-live="polite" data-testid="password-strength-meter">
-      <div className="auth-strength__bar" role="progressbar" aria-valuenow={level} aria-valuemin="0" aria-valuemax="3" aria-label={`Password strength: ${label}`}>
+      <div
+        className="auth-strength__bar"
+        role="progressbar"
+        aria-valuenow={password ? level : 0}
+        aria-valuemin="0"
+        aria-valuemax="3"
+        aria-valuetext={password ? `Password strength: ${label}` : 'No password entered'}
+        aria-label={`Password strength: ${label || 'empty'}`
+        }
+        aria-describedby={password ? `${password}-strength-desc` : undefined}
+      >
         <div
           className="auth-strength__fill"
           style={{ width: `${percentage}%`, backgroundColor: color }}
         />
       </div>
       {label && (
-        <span className="auth-strength__label" style={{ color }}>
-          {label}
+        <span
+          className="auth-strength__label"
+          style={{ color }}
+          id={`${password}-strength-desc`}
+        >
+          {strengthDescriptions[label]}
         </span>
       )}
     </div>
