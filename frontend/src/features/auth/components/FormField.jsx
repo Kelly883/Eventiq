@@ -40,7 +40,9 @@ const FormField = ({
   const helperId = helperTextId || `${inputId}-helper`;
   const autoComplete = autoCompleteProp
     ? AUTOCOMPLETE_MAP[autoCompleteProp] || autoCompleteProp
-    : undefined;
+    : type === 'email' ? 'email' : undefined;
+
+  const resolvedInputMode = inputMode || (type === 'email' ? 'email' : undefined);
 
   const describedBy = [
     error ? errorId : undefined,
@@ -48,6 +50,8 @@ const FormField = ({
   ]
     .filter(Boolean)
     .join(' ') || undefined;
+
+  const success = !error && !isInvalid && Boolean(value) && onBlur;
 
   return (
     <div className="auth-field">
@@ -66,13 +70,13 @@ const FormField = ({
         disabled={disabled}
         required={required}
         autoComplete={autoComplete}
-        inputMode={inputMode}
+        inputMode={resolvedInputMode}
         pattern={pattern}
         maxLength={maxLength}
         minLength={minLength}
         aria-invalid={ariaInvalid || Boolean(error) || isInvalid}
         aria-describedby={describedBy}
-        className={`auth-field__input ${error ? 'auth-field__input--error' : ''}`}
+        className={`auth-field__input ${error ? 'auth-field__input--error' : ''} ${success ? 'auth-field__input--success' : ''}`}
       />
       {helperText && (
         <p id={helperId} className="auth-field__helper">
@@ -84,14 +88,19 @@ const FormField = ({
           {error}
         </p>
       )}
-      {minLength !== undefined && !error && (
+      {!error && minLength !== undefined && (
         <p
           id={`${inputId}-minlength-error`}
           role="alert"
           aria-live="polite"
           className="auth-field__helper auth-field__minlength-error"
         >
-          minimum {minLength} character{'s' !== minLength || ''}
+          minimum {minLength} character{minLength !== 1 ? 's' : ''}
+        </p>
+      )}
+      {maxLength !== undefined && (
+        <p className="auth-field__helper" aria-live="polite">
+          {value?.length ?? 0} / {maxLength}
         </p>
       )}
     </div>

@@ -43,7 +43,7 @@
 
 .auth-field__input:focus {
   border-color: var(--coral, #cc3838);
-  box-shadow: 0 0 0 3px rgba(204, 56, 56, 0.1);
+  box-shadow: 0 0 0 3px rgba(204, 56, 56, 0.25);
 }
 
 .auth-field__input:disabled {
@@ -53,6 +53,14 @@
 
 .auth-field__input--error {
   border-color: var(--coral, #cc3838);
+}
+
+.auth-field__input--success {
+  border-color: var(--success, #16a34a);
+}
+
+.auth-field__input--success:focus {
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
 }
 
 .auth-field__error {

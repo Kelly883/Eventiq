@@ -1,10 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import AuthCard from './AuthCard';
-import FormField from './FormField';
-import PasswordVisibilityToggle from './PasswordVisibilityToggle';
-import PasswordStrengthMeter from './PasswordStrengthMeter';
-import SubmitButton from './SubmitButton';
-import './AuthComponents.css';
+import AuthCard from '../components/AuthCard';
+import FormField from '../components/FormField';
+import PasswordVisibilityToggle from '../components/PasswordVisibilityToggle';
+import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
+import PasswordField from '../components/PasswordField';
+import SubmitButton from '../components/SubmitButton';
+import '../components/AuthComponents.css';
 
 const ComponentTestPage = () => {
   const [formValue, setFormValue] = useState('');
@@ -66,9 +67,11 @@ const ComponentTestPage = () => {
           value={formValue}
           onChange={handleFormChange}
           error={formError}
+          helperText="Type 1-2 chars to see the error state"
           placeholder="Type 1-2 chars to show error..."
           id="test-form-field"
           name="testInput"
+          autoComplete="email"
         />
 
         {/* Password field with visibility toggle */}
@@ -81,6 +84,7 @@ const ComponentTestPage = () => {
             placeholder="Type a password..."
             id="test-password"
             name="testPassword"
+            autoComplete="password"
           />
           <PasswordVisibilityToggle
             visible={showPassword}
@@ -91,13 +95,35 @@ const ComponentTestPage = () => {
         {/* Password strength meter */}
         <PasswordStrengthMeter password={password} />
 
-        {/* Submit button */}
+        {/* Compound PasswordField */}
+        <PasswordField
+          label="Account Password"
+          value={password}
+          onChange={handlePasswordChange}
+          error={password.length > 0 && password.length < 6 ? 'Password too short' : null}
+          helperText="Use 8+ chars with mixed case, numbers, and symbols"
+          placeholder="Type a stronger password..."
+          name="accountPassword"
+          autoComplete="new-password"
+        />
+
+        {/* Submit buttons with variants */}
         <SubmitButton
           loading={submitLoading}
           disabled={submitDisabled}
           onClick={handleSubmitClick}
+          variant="primary"
         >
           {submitLoading ? 'Submitting…' : 'Submit'}
+        </SubmitButton>
+
+        <SubmitButton
+          loading={false}
+          disabled={submitDisabled}
+          onClick={() => addLog('Danger button clicked')}
+          variant="danger"
+        >
+          Delete Account
         </SubmitButton>
 
         <button
@@ -139,6 +165,13 @@ const ComponentTestPage = () => {
             <div key={i}>{log}</div>
           ))}
         </div>
+
+        {/* Gradient AuthCard (for visual/a11y test) */}
+        <AuthCard title="Gradient Card" gradient>
+          <p style={{ fontSize: 13, color: '#555' }}>
+            This card uses the <code>gradient</code> prop.
+          </p>
+        </AuthCard>
       </AuthCard>
     </div>
   );

@@ -1,7 +1,11 @@
 import React from 'react';
 import './AuthComponents.css';
 
-const PasswordVisibilityToggle = ({ onClick, visible, disabled = false }) => {
+/**
+ * PasswordVisibilityToggle is an icon button that toggles password input
+ * between plain text and masked dots.
+ */
+const PasswordVisibilityToggle = ({ onClick, visible, disabled = false, dataTestId }) => {
   const handleKeyDown = (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -20,8 +24,7 @@ const PasswordVisibilityToggle = ({ onClick, visible, disabled = false }) => {
         aria-label={visible ? 'Hide password' : 'Show password'}
         aria-pressed={visible}
         className="auth-password-toggle"
-        data-testid="password-visibility-toggle"
-        aria-describedby={visible ? 'password-visible' : 'password-hidden'}
+        data-testid={dataTestId || 'password-visibility-toggle'}
       >
         {visible ? (
           <svg
@@ -66,6 +69,11 @@ const PasswordVisibilityToggle = ({ onClick, visible, disabled = false }) => {
       </span>
     </div>
   );
+};
+
+PasswordVisibilityToggle.defaultProps = {
+  disabled: false,
+  dataTestId: undefined,
 };
 
 export default PasswordVisibilityToggle;

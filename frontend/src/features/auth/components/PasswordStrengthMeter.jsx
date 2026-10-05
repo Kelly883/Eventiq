@@ -1,7 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useId } from 'react';
 import './AuthComponents.css';
 
-const PasswordStrengthMeter = ({ password = '' }) => {
+/**
+ * PasswordStrengthMeter evaluates password strength based on length and
+ * character variety, then renders a progress bar and descriptive label.
+ */
+const PasswordStrengthMeter = ({ password = '', dataTestId }) => {
+  const descId = useId();
   const getStrength = useMemo(() => {
     if (!password) return { level: 0, label: '', color: 'transparent' };
 
@@ -31,18 +36,18 @@ const PasswordStrengthMeter = ({ password = '' }) => {
   };
 
   return (
-    <div className="auth-strength" aria-live="polite" data-testid="password-strength-meter">
-      <div
-        className="auth-strength__bar"
-        role="progressbar"
-        aria-valuenow={password ? level : 0}
-        aria-valuemin="0"
-        aria-valuemax="3"
-        aria-valuetext={password ? `Password strength: ${label}` : 'No password entered'}
-        aria-label={`Password strength: ${label || 'empty'}`
-        }
-        aria-describedby={password ? `${password}-strength-desc` : undefined}
-      >
+    <div className="auth-strength" aria-live="polite" data-testid={dataTestId || 'password-strength-meter'}>
+      {password && (
+        <div
+          className="auth-strength__bar"
+          role="progressbar"
+          aria-valuenow={level}
+          aria-valuemin="0"
+          aria-valuemax="3"
+          aria-valuetext={`Password strength: ${label}`}
+          aria-label={`Password strength: ${label}`}
+          aria-describedby={descId}
+        >
         <div
           className="auth-strength__fill"
           style={{ width: `${percentage}%`, backgroundColor: color }}
@@ -52,13 +57,18 @@ const PasswordStrengthMeter = ({ password = '' }) => {
         <span
           className="auth-strength__label"
           style={{ color }}
-          id={`${password}-strength-desc`}
+          id={descId}
         >
           {strengthDescriptions[label]}
         </span>
       )}
     </div>
   );
+};
+
+PasswordStrengthMeter.defaultProps = {
+  password: '',
+  dataTestId: undefined,
 };
 
 export default PasswordStrengthMeter;
