@@ -48,11 +48,12 @@ const PasswordStrengthMeter = ({ password = '', dataTestId }) => {
           aria-label={`Password strength: ${label}`}
           aria-describedby={descId}
         >
-        <div
-          className="auth-strength__fill"
-          style={{ width: `${percentage}%`, backgroundColor: color }}
-        />
-      </div>
+          <div
+            className="auth-strength__fill"
+            style={{ width: `${percentage}%`, backgroundColor: color }}
+          />
+        </div>
+      )}
       {label && (
         <span
           className="auth-strength__label"
