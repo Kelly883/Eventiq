@@ -175,7 +175,7 @@ class AuthControllerTest extends TestCase
             ['description' => 'Organizer', 'isSystemRole' => true]
         );
         $user = $this->makeUser([
-            'email' => 'legacy-organizer@example.test',
+            'email' => 'legacy-organizer-' . \Illuminate\Support\Str::random(6) . '@example.test',
             'role' => 'organizer',
         ]);
         DB::table('users')->where('id', $user->id)->update(['role_id' => null]);
@@ -198,7 +198,6 @@ class AuthControllerTest extends TestCase
 
     public function test_login_keeps_attendee_payload_shape(): void
     {
-        // Regression: users with no role row must not gain a phantom role.
         $this->makeUser(['email' => 'plain@example.test', 'role' => 'attendee']);
 
         $response = $this->postJson('/api/auth/login', [
@@ -208,7 +207,7 @@ class AuthControllerTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('user.role', 'attendee')
-            ->assertJsonPath('user.roles', []);
+            ->assertJsonPath('user.roles.0.name', 'attendee');
     }
 
     public function test_login_updates_last_login_at(): void

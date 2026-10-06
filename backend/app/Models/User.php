@@ -141,11 +141,12 @@ class User extends Authenticatable
 
         // 1) Repair role_id from the legacy `role` string.
         if (empty($this->role_id) && ! empty($this->role)) {
-            $primary = Role::where('name', $this->role)->first();
-            if ($primary) {
-                $this->role_id = $primary->id;
-                $this->save();
-            }
+            $primary = Role::firstOrCreate(
+                ['name' => $this->role],
+                ['description' => $this->role, 'isSystemRole' => true]
+            );
+            $this->role_id = $primary->id;
+            $this->save();
         }
 
         // 2) Ensure the pivot row for the primary role exists.

@@ -273,8 +273,17 @@ class AuthController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        // Same contract as login(): repaired + complete role data.
-        return response()->json($user->refreshRoles());
+        $user->refreshRoles();
+
+        return response()->json([
+            'id' => $user->id,
+            'email' => $user->email,
+            'name' => $user->name,
+            'role' => $user->role,
+            'role_id' => $user->role_id,
+            'roles' => $user->roles,
+            'roleRelation' => $user->roleRelation,
+        ]);
     }
 
     /**
