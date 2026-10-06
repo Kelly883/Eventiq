@@ -19,7 +19,7 @@ const AuthCard = ({ children, title, gradient = false, loading = false, dataTest
       )}
       <div className="auth-card__body">
         {loading ? (
-          <div className="auth-card__skeleton" aria-label="Loading content">
+          <div className="auth-card__skeleton" role="status" aria-live="polite" aria-label="Loading content">
             <div className="auth-card__skeleton-line auth-card__skeleton-line--title" />
             <div className="auth-card__skeleton-line" />
             <div className="auth-card__skeleton-line" />

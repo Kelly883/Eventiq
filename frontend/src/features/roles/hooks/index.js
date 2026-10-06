@@ -1,4 +1,4 @@
-export { useRoleList } from './useRoleList.js';
-export { usePermissionUpdate } from './usePermissionUpdate.js';
-export { useAuditLog } from './useAuditLog.js';
-export { usePermissionRequests } from './usePermissionRequests.js';
+export { useRoleList } from './useRoleList.ts';
+export { usePermissionUpdate } from './usePermissionUpdate.ts';
+export { useAuditLog } from './useAuditLog.ts';
+export { usePermissionRequests } from './usePermissionRequests.ts';

@@ -5,12 +5,15 @@ import './RolesComponents.css';
 interface AuditLogViewerProps {
   logs: AuditLogEntry[];
   isLoading?: boolean;
-  onLoadMore?: () => void;
+  page?: number;
+  pageSize?: number;
+  totalCount?: number;
+  onPageChange?: (page: number) => void;
   error?: string;
   onRetry?: () => void;
 }
 
-const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ logs = [], isLoading = false, onLoadMore, error, onRetry }) => {
+const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ logs = [], isLoading = false, page = 0, pageSize = 20, totalCount, onPageChange, error, onRetry }) => {
   const [isOpen, setIsOpen] = useState(true);
 
   if (isLoading) {
@@ -34,6 +37,13 @@ const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ logs = [], isLoading = 
     );
   }
 
+  const totalPages = totalCount !== undefined ? Math.max(1, Math.ceil(totalCount / pageSize)) : Math.max(1, Math.ceil(logs.length / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const start = safePage * pageSize;
+  const paginatedLogs = logs.slice(start, start + pageSize);
+  const hasNext = safePage < totalPages - 1;
+  const hasPrev = safePage > 0;
+
   return (
     <div className="audit-log-viewer" data-testid="audit-log-viewer">
       <button
@@ -44,7 +54,7 @@ const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ logs = [], isLoading = 
         data-testid="audit-log-header"
       >
         <span className="audit-log-viewer__title">Audit Log</span>
-        <span className="audit-log-viewer__count">{logs.length}</span>
+        <span className="audit-log-viewer__count">{totalCount ?? logs.length}</span>
         <span className="audit-log-viewer__chevron" aria-hidden="true">
           {isOpen ? '▾' : '▸'}
         </span>
@@ -70,7 +80,7 @@ const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ logs = [], isLoading = 
                     </tr>
                   </thead>
                   <tbody>
-                    {logs.map((log) => (
+                    {paginatedLogs.map((log) => (
                       <tr key={log.id} data-testid={`audit-log-row-${log.id}`}>
                         <td data-testid={`audit-log-timestamp-${log.id}`}>
                           {log.createdAt ? new Date(log.createdAt).toLocaleString() : '—'}
@@ -100,15 +110,30 @@ const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ logs = [], isLoading = 
                   </tbody>
                 </table>
               </div>
-              {onLoadMore && logs.length >= 20 && (
-                <button
-                  type="button"
-                  className="audit-log-viewer__load-more"
-                  onClick={onLoadMore}
-                  data-testid="audit-log-load-more"
-                >
-                  Load More
-                </button>
+              {totalPages > 1 && onPageChange && (
+                <div className="audit-log-viewer__pagination" data-testid="audit-log-pagination">
+                  <button
+                    type="button"
+                    onClick={() => onPageChange(safePage - 1)}
+                    disabled={!hasPrev}
+                    className="audit-log-viewer__page-btn"
+                    data-testid="audit-log-prev"
+                  >
+                    Previous
+                  </button>
+                  <span className="audit-log-viewer__page-info" data-testid="audit-log-page-info">
+                    Page {safePage + 1} of {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onPageChange(safePage + 1)}
+                    disabled={!hasNext}
+                    className="audit-log-viewer__page-btn"
+                    data-testid="audit-log-next"
+                  >
+                    Next
+                  </button>
+                </div>
               )}
             </>
           )}

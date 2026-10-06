@@ -55,6 +55,8 @@ interface RoleTableProps {
   sortDirection?: SortDirection;
   error?: string;
   onRetry?: () => void;
+  pageSize?: number;
+  ariaLabel?: string;
 }
 
 const RoleTable: React.FC<RoleTableProps> = ({
@@ -68,9 +70,12 @@ const RoleTable: React.FC<RoleTableProps> = ({
   sortDirection,
   error,
   onRetry,
+  pageSize = 20,
+  ariaLabel = 'User roles and permissions',
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const expandableRefs = useRef<Record<string, HTMLDivElement>>({});
+  const [currentPage, setCurrentPage] = useState(0);
 
   const allSelected = users.length > 0 && selectedUserIds.length === users.length;
   const someSelected = selectedUserIds.length > 0 && !allSelected;
@@ -109,6 +114,23 @@ const RoleTable: React.FC<RoleTableProps> = ({
       return 0;
     });
   }, [users, sortKey, sortDirection, onSort]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedUsers.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages - 1);
+  const paginatedUsers = useMemo(() => {
+    const start = safePage * pageSize;
+    return sortedUsers.slice(start, start + pageSize);
+  }, [sortedUsers, safePage, pageSize]);
+
+  useEffect(() => {
+    if (safePage !== currentPage) {
+      setCurrentPage(safePage);
+    }
+  }, [safePage, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [sortedUsers.length]);
 
   const handleToggleExpand = useCallback((userId: string) => {
     setExpandedId((prev) => (prev === userId ? null : userId));
@@ -163,7 +185,7 @@ const RoleTable: React.FC<RoleTableProps> = ({
 
   return (
     <div className="role-table-wrapper">
-      <table className="role-table" data-testid="role-table">
+      <table className="role-table" data-testid="role-table" aria-label={ariaLabel}>
         <caption className="role-table__caption">User roles and permissions</caption>
         <thead>
           <tr>
@@ -230,7 +252,7 @@ const RoleTable: React.FC<RoleTableProps> = ({
           </tr>
         </thead>
         <tbody>
-          {sortedUsers.map((user) => {
+          {paginatedUsers.map((user) => {
             const isSelected = selectedUserIds.includes(user.id);
             const isExpanded = expandedId === user.id;
 
@@ -267,18 +289,18 @@ const RoleTable: React.FC<RoleTableProps> = ({
                     {user.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}
                   </td>
                   <td className="role-table__td role-table__td--actions" data-testid={`user-actions-${user.id}`}>
-      <button
-        type="button"
-        onClick={() => handleToggleExpand(user.id)}
-        onKeyDown={(e) => handleExpandKeyDown(e, user.id)}
-        aria-expanded={isExpanded}
-        aria-controls={`expand-${user.id}`}
-        aria-label={isExpanded ? `Collapse ${user.email}` : `Expand ${user.email}`}
-        className="role-table__expand-btn"
-        id={`expand-btn-${user.id}`}
-      >
-        {isExpanded ? '−' : '+'}
-      </button>
+        <button
+          type="button"
+          onClick={() => handleToggleExpand(user.id)}
+          onKeyDown={(e) => handleExpandKeyDown(e, user.id)}
+          aria-expanded={isExpanded}
+          aria-controls={`expand-${user.id}`}
+          aria-label={isExpanded ? `Collapse ${user.email}` : `Expand ${user.email}`}
+          className="role-table__expand-btn"
+          id={`expand-btn-${user.id}`}
+        >
+          {isExpanded ? '−' : '+'}
+        </button>
                   </td>
                 </tr>
                 {isExpanded && (
@@ -317,6 +339,31 @@ const RoleTable: React.FC<RoleTableProps> = ({
           })}
         </tbody>
       </table>
+      {totalPages > 1 && (
+        <div className="role-table__pagination" data-testid="role-table-pagination">
+          <button
+            type="button"
+            onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+            disabled={safePage === 0}
+            className="role-table__page-btn"
+            data-testid="role-table-prev"
+          >
+            Previous
+          </button>
+          <span className="role-table__page-info" data-testid="role-table-page-info">
+            Page {safePage + 1} of {totalPages} ({sortedUsers.length} total)
+          </span>
+          <button
+            type="button"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={safePage >= totalPages - 1}
+            className="role-table__page-btn"
+            data-testid="role-table-next"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };

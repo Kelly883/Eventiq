@@ -75,6 +75,7 @@ const FormField = ({
         maxLength={maxLength}
         minLength={minLength}
         aria-invalid={ariaInvalid || Boolean(error) || isInvalid}
+        aria-errormessage={error ? errorId : undefined}
         aria-describedby={describedBy}
         className={`auth-field__input ${error ? 'auth-field__input--error' : ''} ${success ? 'auth-field__input--success' : ''}`}
       />

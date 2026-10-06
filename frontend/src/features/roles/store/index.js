@@ -1,1 +1,1 @@
-export { useRoleStore } from './useRoleStore.js';
+export { useRoleStore } from './useRoleStore.ts';

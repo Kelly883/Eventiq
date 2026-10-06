@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import './AuthComponents.css';
 
 /**
@@ -6,12 +6,15 @@ import './AuthComponents.css';
  * between plain text and masked dots.
  */
 const PasswordVisibilityToggle = ({ onClick, visible, disabled = false, dataTestId }) => {
+  const generatedId = useId();
   const handleKeyDown = (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       onClick();
     }
   };
+
+  const statusId = `${generatedId}-password-visibility-status`;
 
   return (
     <div className="auth-password-field">
@@ -23,6 +26,7 @@ const PasswordVisibilityToggle = ({ onClick, visible, disabled = false, dataTest
         title={visible ? 'Hide password' : 'Show password'}
         aria-label={visible ? 'Hide password' : 'Show password'}
         aria-pressed={visible}
+        aria-describedby={statusId}
         className="auth-password-toggle"
         data-testid={dataTestId || 'password-visibility-toggle'}
       >
@@ -61,7 +65,7 @@ const PasswordVisibilityToggle = ({ onClick, visible, disabled = false, dataTest
         )}
       </button>
       <span
-        id={visible ? 'password-visible' : 'password-hidden'}
+        id={statusId}
         className="auth-password-visibility-status"
         aria-live="polite"
       >

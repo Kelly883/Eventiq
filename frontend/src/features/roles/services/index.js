@@ -1,1 +1,1 @@
-export { roleService, permissionService } from './roleService.js';
+export * from './roleService.ts';
