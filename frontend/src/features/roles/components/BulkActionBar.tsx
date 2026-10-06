@@ -121,9 +121,10 @@ const BulkActionBar: React.FC<BulkActionBarProps> = ({
             placeholder="Reason (optional)"
             className="bulk-action-bar__reason"
             maxLength={500}
+            aria-describedby="bulk-action-reason-count"
             data-testid="bulk-action-reason"
           />
-          <span className="bulk-action-bar__char-count" aria-live="off">
+          <span id="bulk-action-reason-count" className="bulk-action-bar__char-count" aria-live="off">
             {reason.length}/500
           </span>
           <button

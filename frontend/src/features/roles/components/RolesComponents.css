@@ -786,7 +786,7 @@
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
-  borderWidth: 0;
+  border-width: 0;
 }
 
 /* -------------------------------------------------------------------------
@@ -814,6 +814,40 @@
   overflow: hidden;
 }
 
+.permission-modal--loading {
+  opacity: 0.7;
+}
+
+.permission-modal--error {
+  padding: 16px 18px;
+}
+
+.permission-modal__error-message {
+  margin: 0;
+  color: #991b1b;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.permission-modal__retry {
+  margin-top: 10px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #991b1b;
+  border-radius: 6px;
+  background: transparent;
+  color: #991b1b;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.permission-modal__retry:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
 .permission-modal__header {
   display: flex;
   align-items: center;
@@ -821,6 +855,42 @@
   gap: 12px;
   padding: 18px 20px;
   border-bottom: 1px solid #f3f4f6;
+}
+
+.permission-modal__skeleton-title {
+  height: 20px;
+  width: 180px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+  animation: roles-shimmer 1.4s infinite;
+}
+
+.permission-modal__skeleton-close {
+  height: 32px;
+  width: 32px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  border-radius: 8px;
+  animation: roles-shimmer 1.4s infinite;
+}
+
+.permission-modal__skeleton-field {
+  height: 44px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  border-radius: 8px;
+  animation: roles-shimmer 1.4s infinite;
+}
+
+.permission-modal__skeleton-actions {
+  height: 40px;
+  width: 160px;
+  margin-left: auto;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  border-radius: 8px;
+  animation: roles-shimmer 1.4s infinite;
 }
 
 .permission-modal__title {
@@ -949,6 +1019,10 @@
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .permission-modal__submit:hover:not(:disabled) {
@@ -958,6 +1032,20 @@
 .permission-modal__submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.permission-modal__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgb(255 255 255 / 45%);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: auth-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.permission-modal__submit-text--loading {
+  opacity: 0.9;
 }
 
 /* -------------------------------------------------------------------------
