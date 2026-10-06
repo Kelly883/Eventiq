@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BrandLogo from '../common/components/BrandLogo';
 import { useAuthContext } from '../auth/context/AuthContext';
-import { getUserRoles } from '../lib/authRoles';
+import { getUserRoles } from '../../lib/authRoles';
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
