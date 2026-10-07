@@ -92,8 +92,9 @@ const TrustSafetyPage = lazy(() => import('./features/static-pages/pages/TrustSa
 const AboutPage = lazy(() => import('./features/static-pages/pages/AboutPage'));
 const ContactPage = lazy(() => import('./features/static-pages/pages/ContactPage'));
 const HelpPage = lazy(() => import('./features/static-pages/pages/HelpPage'));
-const RefundPolicyPage = lazy(() => import('./features/static-pages/pages/RefundPolicyPage'));
-const TermsPage = lazy(() => import('./features/static-pages/pages/TermsPage'));
+  const RefundPolicyPage = lazy(() => import('./features/static-pages/pages/RefundPolicyPage'));
+  const TermsPage = lazy(() => import('./features/static-pages/pages/TermsPage'));
+  const ComponentTestPage = lazy(() => import('./features/auth/pages/ComponentTestPage'));
 
 const AUTH_PAGES = ['/login', '/register', '/admin-register', '/forgot-password', '/reset-password', '/access-denied'];
 
@@ -494,10 +495,11 @@ function App() {
             <Route path="/trust" element={<TrustSafetyPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactPage />} />
-            <Route path="/help" element={<HelpPage />} />
-            <Route path="/refund-policy" element={<RefundPolicyPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+             <Route path="/help" element={<HelpPage />} />
+              <Route path="/refund-policy" element={<RefundPolicyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              {import.meta.env.DEV && <Route path="/auth-components" element={<ComponentTestPage />} />}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             </Suspense>
           </ErrorBoundary>
