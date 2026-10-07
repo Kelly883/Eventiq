@@ -316,6 +316,13 @@
   gap: 16px;
 }
 
+.avatar-upload__crop-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
 .avatar-upload__crop {
   display: flex;
   align-items: center;
@@ -353,6 +360,11 @@
   background: #f9fafb;
 }
 
+.avatar-upload__crop-cancel:focus-visible {
+  outline: 2px solid #cc3838;
+  outline-offset: 2px;
+}
+
 .avatar-upload__crop-cancel:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -374,6 +386,11 @@
 
 .avatar-upload__crop-confirm:hover:not(:disabled) {
   background: #374151;
+}
+
+.avatar-upload__crop-confirm:focus-visible {
+  outline: 2px solid #cc3838;
+  outline-offset: 2px;
 }
 
 .avatar-upload__crop-confirm:disabled {

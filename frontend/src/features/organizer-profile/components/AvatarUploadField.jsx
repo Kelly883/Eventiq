@@ -22,6 +22,8 @@ const AvatarUploadField = ({ currentAvatarUrl, onUpload, isLoading = false }) =>
   const [crop, setCrop] = useState(null);
   const imgRef = useRef(null);
   const canvasRef = useRef(null);
+  const cropModalRef = useRef(null);
+  const previousActiveElement = useRef(null);
 
   useEffect(() => {
     return () => {
@@ -33,6 +35,54 @@ const AvatarUploadField = ({ currentAvatarUrl, onUpload, isLoading = false }) =>
       }
     };
   }, [preview, currentAvatarUrl, cropModalSrc]);
+
+  useEffect(() => {
+    if (!cropModalSrc) return;
+
+    previousActiveElement.current = document.activeElement;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handleCancelCrop();
+        return;
+      }
+
+      if (e.key !== 'Tab') return;
+
+      const modal = cropModalRef.current;
+      if (!modal) return;
+
+      const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+      const focusableElements = Array.from(modal.querySelectorAll<HTMLElement>(focusableSelector));
+      if (focusableElements.length === 0) return;
+
+      const firstFocusable = focusableElements[0];
+      const lastFocusable = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstFocusable) {
+          e.preventDefault();
+          lastFocusable?.focus();
+        }
+      } else {
+        if (document.activeElement === lastFocusable) {
+          e.preventDefault();
+          firstFocusable?.focus();
+        }
+      }
+    };
+
+    const firstButton = cropModalRef.current?.querySelector<HTMLElement>('button');
+    firstButton?.focus();
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previousActiveElement.current?.focus();
+    };
+  }, [cropModalSrc]);
 
   const processFile = useCallback((file) => {
     setError('');
@@ -201,8 +251,9 @@ const AvatarUploadField = ({ currentAvatarUrl, onUpload, isLoading = false }) =>
       )}
 
       {cropModalSrc && (
-        <div className="avatar-upload__crop-modal" role="dialog" aria-modal="true" aria-label="Crop avatar">
-          <div className="avatar-upload__crop-content">
+        <div className="avatar-upload__crop-modal" role="dialog" aria-modal="true" aria-labelledby="avatar-crop-title" aria-label="Crop avatar">
+          <div className="avatar-upload__crop-content" ref={cropModalRef}>
+            <h2 id="avatar-crop-title" className="avatar-upload__crop-title">Crop your avatar</h2>
             <ReactCrop
               crop={crop}
               onChange={setCrop}
