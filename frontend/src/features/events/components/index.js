@@ -1,4 +1,9 @@
 export { default as EventForm } from './EventForm.jsx';
 export { default as TicketTierForm } from './TicketTierForm.jsx';
+export { default as TicketTierCard } from './TicketTierCard.jsx';
 export { default as BannerUpload } from './BannerUpload.jsx';
 export { default as EventCard } from './EventCard.jsx';
+export { default as RichTextEditor } from './RichTextEditor.jsx';
+export { default as DeleteConfirmationModal } from './DeleteConfirmationModal.jsx';
+export { default as RichTextEditor } from './RichTextEditor.jsx';
+export { default as DeleteConfirmationModal } from './DeleteConfirmationModal.jsx';

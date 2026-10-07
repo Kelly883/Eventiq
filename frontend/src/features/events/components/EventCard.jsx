@@ -37,6 +37,10 @@ const EventCard = ({ event }) => {
   const location = event.city || event.location || '';
   const price = event.ticket_price != null ? Number(event.ticket_price) : null;
   const ticketsRemaining = event.tickets_remaining ?? event.ticketsRemaining;
+  const status = event.status || 'published';
+
+  const statusClass = status === 'draft' ? 'event-status--draft' : status === 'archived' ? 'event-status--archived' : 'event-status--published';
+  const statusLabel = status === 'draft' ? 'Draft' : status === 'archived' ? 'Archived' : 'Published';
 
   return (
     <article className="event-card">
@@ -44,6 +48,7 @@ const EventCard = ({ event }) => {
         <div className="event-image-container">
           <div className="event-image" style={{ backgroundImage: `url(${imageUrl})` }} />
           {event.category && <span className="event-badge category">{event.category}</span>}
+          <span className={`event-status ${statusClass}`}>{statusLabel}</span>
         </div>
         <div className="event-details">
           <h3 className="event-title">{event.title || event.name || 'Untitled Event'}</h3>
