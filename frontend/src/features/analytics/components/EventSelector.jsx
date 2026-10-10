@@ -4,12 +4,8 @@ import { api } from '../../../lib/api';
 
 const RECENT_EVENTS_KEY = 'eventiq_recent_events';
 const MAX_RECENT_EVENTS = 3;
+const MAX_SELECTED_EVENTS = 3;
 
-/*
- * Buckets the various backend event statuses into the three states the
- * selector renders. The API's EventResource maps 'published' -> 'live' and
- * 'archived' -> 'past', so both spellings must be understood here.
- */
 const normalizeStatus = (status) => {
   const s = String(status || '').toLowerCase();
   if (['active', 'live', 'published', 'ongoing', 'running'].includes(s)) return 'active';
@@ -25,7 +21,6 @@ const normalizeEvent = (e) => ({
   status: normalizeStatus(e.status),
 });
 
-/* Active events first, then upcoming, then unknown, ended last; date asc inside. */
 const sortEvents = (list) => {
   const weight = { active: 0, upcoming: 1, unknown: 2, ended: 3 };
   return [...list].sort((a, b) => {
@@ -51,13 +46,7 @@ const addRecentEvent = (eventId) => {
   localStorage.setItem(RECENT_EVENTS_KEY, JSON.stringify(updated));
 };
 
-/*
- * Event selector fed by the real /events API (previously hardcoded mock
- * events — staff could never see their actual events). Fully controlled via
- * the `selectedEventId` prop; selection is reported through `onSelect` when
- * provided, otherwise the current page's ?eventId= query param is updated.
- */
-const EventSelector = ({ compact = false, showLabel = true, selectedEventId: controlledEventId, onSelect }) => {
+const EventSelector = ({ compact = false, showLabel = true, selectedEventIds: controlledSelectedEventIds, onSelect }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [events, setEvents] = useState([]);
@@ -66,6 +55,12 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventId: con
   const [isOpen, setIsOpen] = useState(false);
   const [recentEventIds, setRecentEventIds] = useState([]);
   const [reloadKey, setReloadKey] = useState(0);
+  const [selectedEventIds, setSelectedEventIds] = useState(() => {
+    if (controlledSelectedEventIds != null && controlledSelectedEventIds !== '') {
+      return controlledSelectedEventIds.split(',').filter(Boolean).map(Number) || [];
+    }
+    return [];
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -91,31 +86,33 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventId: con
     return () => { cancelled = true; };
   }, [reloadKey]);
 
-  const selectedEventId = controlledEventId != null && controlledEventId !== '' ? String(controlledEventId) : null;
-  const selectedEvent = events.find((e) => String(e.id) === selectedEventId) || null;
-  const recentEvents = recentEventIds
-    .map((id) => events.find((e) => String(e.id) === id))
-    .filter(Boolean)
-    .filter((e) => String(e.id) !== selectedEventId);
+  const selectedEventIdsState = controlledSelectedEventIds != null && controlledSelectedEventIds !== '' ? controlledSelectedEventIds.split(',').filter(Boolean).map(Number) : selectedEventIds;
+  const selectedEvents = events.filter((e) => selectedEventIdsState.includes(e.id));
+  const remainingEvents = events.filter((e) => !selectedEventIdsState.includes(e.id));
 
   const handleSelect = (eventId) => {
-    setIsOpen(false);
-    if (eventId != null && eventId !== '') {
-      addRecentEvent(eventId);
-      setRecentEventIds(getRecentEvents().map(String));
+    if (selectedEventIdsState.length >= MAX_SELECTED_EVENTS && !selectedEventIdsState.includes(eventId)) {
+      return; // Max 3 events selected, ignore new selection
     }
 
+    let newSelectedIds;
+    if (selectedEventIdsState.includes(eventId)) {
+      newSelectedIds = selectedEventIdsState.filter((id) => id !== eventId);
+    } else {
+      newSelectedIds = [...selectedEventIdsState, eventId];
+    }
+
+    setSelectedEventIds(newSelectedIds);
+    addRecentEvent(eventId);
+
     if (onSelect) {
-      onSelect(eventId);
+      onSelect(newSelectedIds.join(','));
       return;
     }
 
-    // Default behaviour: keep the caller on the same /check-in page and
-    // update its ?eventId= query parameter (the check-in desk).
     const base = location.pathname.split('?')[0];
     const params = new URLSearchParams(location.search);
-    if (eventId != null && eventId !== '') params.set('eventId', String(eventId));
-    else params.delete('eventId');
+    params.set('eventIds', newSelectedIds.join(','));
     navigate(`${base}?${params.toString()}`);
   };
 
@@ -143,20 +140,25 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventId: con
     ? 'Loading events…'
     : error
       ? 'Events unavailable'
-      : selectedEvent?.name || 'Select Event';
+      : selectedEvents.length > 0 ? `${selectedEvents.length} events selected` : 'Select Event';
 
   if (compact) {
+    const disabled = selectedEventIdsState.length >= MAX_SELECTED_EVENTS;
+
     return (
       <div className="relative">
         <button
           type="button"
-          aria-label="Select event"
+          aria-label="Select events"
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           onClick={() => setIsOpen((open) => !open)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-colors ${
+            disabled ? 'opacity-50 cursor-not-allowed' : ''
+          }"
+          disabled={disabled}
         >
-          <span className={`w-2 h-2 rounded-full ${selectedEvent ? getStatusColor(selectedEvent.status) : 'bg-slate-300'}`} />
+          <span className={`w-2 h-2 rounded-full ${selectedEvents.length > 0 ? getStatusColor(selectedEvents[0].status) : 'bg-slate-300'}`} />
           <span className="text-sm font-medium text-slate-700 truncate max-w-[150px]">
             {buttonLabel}
           </span>
@@ -192,21 +194,26 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventId: con
                         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2">Recent</span>
                       </div>
                       <div>
-                        {recentEvents.map((event) => (
-                          <button
-                            key={`recent-${event.id}`}
-                            type="button"
-                            onClick={() => handleSelect(event.id)}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left ${
-                              String(event.id) === selectedEventId ? 'bg-indigo-50' : ''
-                            }`}
-                          >
-                            <span className="text-sm">🕐</span>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-slate-800 truncate">{event.name}</div>
-                            </div>
-                          </button>
-                        ))}
+                        {recentEvents.map((eventId) => {
+                          const event = events.find((e) => String(e.id) === eventId);
+                          if (!event) return null;
+                          return (
+                            <button
+                              key={`recent-${event.id}`}
+                              type="button"
+                              onClick={() => handleSelect(event.id)}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left ${
+                                String(event.id) === String(selectedEventIdsState[0]) ? 'bg-indigo-50' : ''
+                              }`}
+                            >
+                              <span className="text-sm">🕐</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-slate-800 truncate">{event.name}</div>
+                                <div className="text-xs text-slate-500">{event.date}</div>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                       <div className="border-t border-slate-100" />
                     </>
@@ -215,34 +222,37 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventId: con
                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2">All Events</span>
                   </div>
                   <div className="max-h-64 overflow-y-auto">
-                    {events.length === 0 && (
+                    {remainingEvents.length === 0 && (
                       <div className="p-4 text-sm text-slate-500">No events available.</div>
                     )}
-                    {events.map((event) => (
-                      <button
-                        key={event.id}
-                        type="button"
-                        role="option"
-                        aria-selected={String(event.id) === selectedEventId}
-                        onClick={() => handleSelect(event.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left ${
-                          String(event.id) === selectedEventId ? 'bg-indigo-50' : ''
-                        }`}
-                      >
-                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getStatusColor(event.status)}`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-slate-800 truncate">{event.name}</div>
-                          <div className="text-xs text-slate-500">{event.date}</div>
-                        </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          event.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
-                          event.status === 'upcoming' ? 'bg-amber-100 text-amber-700' :
-                          'bg-slate-100 text-slate-600'
-                        }`}>
-                          {getStatusLabel(event.status)}
-                        </span>
-                      </button>
-                    ))}
+                    {remainingEvents.map((event) => {
+                      const isSelected = selectedEventIdsState.includes(event.id);
+                      const disabled = selectedEventIdsState.length >= MAX_SELECTED_EVENTS && !isSelected;
+                      return (
+                        <button
+                          key={event.id}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => handleSelect(event.id)}
+                          className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left ${
+                            isSelected ? 'bg-indigo-50' : ''
+                          }`}
+                          disabled={disabled}
+                        >
+                          <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getStatusColor(event.status)}`} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-slate-800 truncate">{event.name}</div>
+                            <div className="text-xs text-slate-500">{event.date}</div>
+                          </div>
+                          {disabled && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-500">
+                              Max 3 events
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -257,15 +267,19 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventId: con
     <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
       {showLabel && (
         <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-3">
-          Current Event
+          Current Events
         </label>
       )}
       <div className="flex items-center gap-3">
         <div className="flex-1">
           <select
-            aria-label="Select event"
-            value={selectedEventId || ''}
-            onChange={(e) => handleSelect(e.target.value)}
+            aria-label="Select events"
+            value={selectedEventIdsState.length > 0 ? selectedEventIdsState.join(',') : ''}
+            onChange={(e) => {
+              const ids = e.target.value.split(',').filter(Boolean).map(Number);
+              setSelectedEventIds(ids);
+              if (onSelect) onSelect(e.target.value);
+            }}
             disabled={loading || Boolean(error)}
             className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-400"
           >
@@ -273,12 +287,20 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventId: con
             {!loading && error && <option value="">Failed to load events</option>}
             {!loading && !error && (
               <>
-                <option value="">Select an event...</option>
-                {events.map((event) => (
-                  <option key={event.id} value={String(event.id)}>
-                    {event.name} ({event.date})
-                  </option>
-                ))}
+                <option value="">Select events...</option>
+                {events.map((event) => {
+                  const isSelected = selectedEventIdsState.includes(event.id);
+                  const disabled = selectedEventIdsState.length >= MAX_SELECTED_EVENTS && !isSelected;
+                  return (
+                    <option
+                      key={event.id}
+                      value={event.id}
+                      disabled={disabled}
+                    >
+                      {event.name} ({event.date}) {disabled && '—'}
+                    </option>
+                  );
+                })}
               </>
             )}
           </select>
@@ -292,13 +314,13 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventId: con
             Retry
           </button>
         )}
-        {selectedEvent && !error && (
+        {selectedEvents.length > 0 && !error && (
           <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-            selectedEvent.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
-            selectedEvent.status === 'upcoming' ? 'bg-amber-100 text-amber-700' :
+            selectedEvents[0].status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+            selectedEvents[0].status === 'upcoming' ? 'bg-amber-100 text-amber-700' :
             'bg-slate-100 text-slate-600'
           }`}>
-            {getStatusLabel(selectedEvent.status)}
+            {selectedEvents.length === 1 ? getStatusLabel(selectedEvents[0].status) : `${selectedEvents.length} events selected`}
           </span>
         )}
       </div>
