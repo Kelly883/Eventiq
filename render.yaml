@@ -43,25 +43,16 @@ services:
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
-        fromDatabase:
-          name: eventiq-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: eventiq-db
-          property: port
-      - key: DB_DATABASE
-        fromDatabase:
-          name: eventiq-db
-          property: database
-      - key: DB_USERNAME
-        fromDatabase:
-          name: eventiq-db
-          property: user
+        - key: DB_HOST
+          value: your-neon-hostname.neon.tech
+        - key: DB_PORT
+         value: "5432"
+       - key: DB_DATABASE
+        value: neondb
+       - key: DB_USERNAME
+       value: neondb_owner
       - key: DB_PASSWORD
-        fromDatabase:
-          name: eventiq-db
-          property: password
+      sync: false
       # CORS + Sanctum stateful domains MUST include the deployed SPA origin or
       # the browser blocks every cross-origin request and the app reports
       # "Network error" on register/login. These were previously `sync: false`
