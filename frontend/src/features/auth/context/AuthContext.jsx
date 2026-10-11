@@ -137,6 +137,35 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const logout = useCallback(async () => {
+    try {
+      const deviceToken = typeof window !== 'undefined' && window.EventiqDevice?.getDeviceToken
+        ? window.EventiqDevice.getDeviceToken()
+        : null;
+      if (deviceToken) {
+        await api.patch(`/notifications/device-tokens/${deviceToken}/offline-status`, {
+          offline_enabled: false,
+        });
+      }
+    } catch {
+      // logout must not fail because device-token cleanup did
+    }
+
+    try {
+      await clearStoredDeviceToken();
+    } catch {
+      // ignore local cleanup failures
+    }
+
+    await api.post('/auth/logout');
+    localStorage.removeItem(REMEMBER_ME_KEY);
+    sessionStorage.removeItem('auth_token');
+    setUser(null);
+    setSessionExpired(false);
+    setOrganizerId(null);
+    broadcastAuthEvent('session-ended');
+  }, []);
+
   useEffect(() => {
     fetchCurrentUser()
       .catch((error) => {
@@ -226,7 +255,7 @@ export const AuthProvider = ({ children }) => {
       window.removeEventListener('scroll', handleUserActivity, true);
       window.removeEventListener('touchstart', handleUserActivity);
     };
-  }, [fetchCurrentUser]);
+  }, [fetchCurrentUser, user, logout]);
 
   // Listen for session/role changes across tabs (full cross-tab sync)
   useEffect(() => {
@@ -282,19 +311,19 @@ export const AuthProvider = ({ children }) => {
     };
 
     const handleRoleChange = () => {
-        fetchCurrentUser();
-      };
+      fetchCurrentUser();
+    };
 
-      const handleSessionExpired = () => {
-        // Fired by api.ts when a 401 refresh fails — shows modal.
-        setUser(null);
-        window.dispatchEvent(new CustomEvent('session-expired'));
-        emitRedirectToLogin({ source: 'session-expired' });
-      };
+    const handleSessionExpired = () => {
+      // Fired by api.ts when a 401 refresh fails — shows modal.
+      setUser(null);
+      window.dispatchEvent(new CustomEvent('session-expired'));
+      emitRedirectToLogin({ source: 'session-expired' });
+    };
 
-      window.addEventListener('role-change', handleRoleChange);
-      window.addEventListener('session-expired', handleSessionExpired);
-        window.addEventListener('storage', handleStorageEvent);
+    window.addEventListener('role-change', handleRoleChange);
+    window.addEventListener('session-expired', handleSessionExpired);
+    window.addEventListener('storage', handleStorageEvent);
 
     if ('BroadcastChannel' in window) {
       const channel = new BroadcastChannel('auth-sync');
@@ -310,7 +339,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       window.removeEventListener('storage', handleStorageEvent);
       window.removeEventListener('role-change', handleRoleChange);
-        window.removeEventListener('session-expired', handleSessionExpired);
+      window.removeEventListener('session-expired', handleSessionExpired);
     };
   }, [fetchCurrentUser]);
 
@@ -370,35 +399,6 @@ export const AuthProvider = ({ children }) => {
       password_confirmation: passwordConfirmation,
     });
     return res.data;
-  }, []);
-
-  const logout = useCallback(async () => {
-    try {
-      const deviceToken = typeof window !== 'undefined' && window.EventiqDevice?.getDeviceToken
-        ? window.EventiqDevice.getDeviceToken()
-        : null;
-      if (deviceToken) {
-        await api.patch(`/notifications/device-tokens/${deviceToken}/offline-status`, {
-          offline_enabled: false,
-        });
-      }
-    } catch {
-      // logout must not fail because device-token cleanup did
-    }
-
-    try {
-      await clearStoredDeviceToken();
-    } catch {
-      // ignore local cleanup failures
-    }
-
-    await api.post('/auth/logout');
-    localStorage.removeItem(REMEMBER_ME_KEY);
-    sessionStorage.removeItem('auth_token');
-    setUser(null);
-    setSessionExpired(false);
-    setOrganizerId(null);
-    broadcastAuthEvent('session-ended');
   }, []);
 
   const forgotPassword = useCallback(async (email) => {
