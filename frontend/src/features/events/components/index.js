@@ -5,5 +5,3 @@ export { default as BannerUpload } from './BannerUpload.jsx';
 export { default as EventCard } from './EventCard.jsx';
 export { default as RichTextEditor } from './RichTextEditor.jsx';
 export { default as DeleteConfirmationModal } from './DeleteConfirmationModal.jsx';
-export { default as RichTextEditor } from './RichTextEditor.jsx';
-export { default as DeleteConfirmationModal } from './DeleteConfirmationModal.jsx';
