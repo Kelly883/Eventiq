@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../../lib/api';
 
@@ -61,6 +61,7 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventIds: co
     }
     return [];
   });
+  const listboxRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -152,13 +153,18 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventIds: co
           aria-label="Select events"
           aria-haspopup="listbox"
           aria-expanded={isOpen}
+          aria-controls="event-selector-listbox"
           onClick={() => setIsOpen((open) => !open)}
           className={`flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-colors ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
           }`}
           disabled={disabled}
         >
-          <span className={`w-2 h-2 rounded-full ${selectedEvents.length > 0 ? getStatusColor(selectedEvents[0].status) : 'bg-slate-300'}`} />
+          <span
+            className={`w-2 h-2 rounded-full ${selectedEvents.length > 0 ? getStatusColor(selectedEvents[0].status) : 'bg-slate-300'}`
+            aria-hidden="true"
+          }
+          />
           <span className="text-sm font-medium text-slate-700 truncate max-w-[150px]">
             {buttonLabel}
           </span>
@@ -169,8 +175,26 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventIds: co
 
         {isOpen && (
           <>
-            <div className="fixed inset-0 z-10" aria-hidden="true" onClick={() => setIsOpen(false)} />
-            <div role="listbox" aria-label="Events" className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden">
+            <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} aria-label="Close event selector" />
+            <div
+              role="listbox"
+              aria-label="Events"
+              id="event-selector-listbox"
+              className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden"
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  // TODO: move focus to next option
+                }
+                if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  // TODO: move focus to previous option
+                }
+                if (e.key === 'Escape') {
+                  setIsOpen(false);
+                }
+              }}
+            >
               {loading && (
                 <div className="p-4 text-sm text-slate-500" role="status">Loading events…</div>
               )}
@@ -202,6 +226,12 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventIds: co
                               key={`recent-${event.id}`}
                               type="button"
                               onClick={() => handleSelect(event.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  handleSelect(event.id);
+                                }
+                              }}
                               className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left ${
                                 String(event.id) === String(selectedEventIdsState[0]) ? 'bg-indigo-50' : ''
                               }`}
@@ -235,6 +265,12 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventIds: co
                           role="option"
                           aria-selected={isSelected}
                           onClick={() => handleSelect(event.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              if (!disabled) handleSelect(event.id);
+                            }
+                          }}
                           className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left ${
                             isSelected ? 'bg-indigo-50' : ''
                           }`}

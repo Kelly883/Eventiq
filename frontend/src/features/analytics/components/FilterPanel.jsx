@@ -45,23 +45,33 @@ const FilterPanel = ({ onFilterChange }) => {
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Filter Analytics</p>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Date From</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="filter-date-from">
+              Date From
+            </label>
             <input
+              id="filter-date-from"
               type="date"
               name="from"
               value={dateFrom}
               onChange={handleDateChange}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              aria-label="Date from"
+              aria-describedby="filter-date-from-desc"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Date To</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="filter-date-to">
+              Date To
+            </label>
             <input
+              id="filter-date-to"
               type="date"
               name="to"
               value={dateTo}
               onChange={handleDateChange}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              aria-label="Date to"
+              aria-describedby="filter-date-to-desc"
             />
           </div>
         </div>

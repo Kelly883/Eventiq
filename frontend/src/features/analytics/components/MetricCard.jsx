@@ -15,14 +15,28 @@ const TrendIndicator = ({ direction, percentage }) => {
   );
 };
 
-const MetricCard = ({ value, label, trendDirection, trendPercentage }) => {
+const MetricCard = ({
+  value,
+  label,
+  trendDirection,
+  trendPercentage,
+  loading,
+}) => {
   return (
-    <div className="bg-white border border-slate-100 rounded-xl p-6 shadow-sm flex flex-col items-start gap-3">
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
+    <div
+      className="bg-white border border-slate-100 rounded-xl p-6 shadow-sm flex flex-col items-start gap-3"
+    >
+      {loading ? (
+        <div className="h-6 w-full rounded bg-slate-100 animate-pulse" aria-hidden="true" />
+      ) : (
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
+      )}
       <h3 className="text-2xl font-bold text-slate-800">{value}</h3>
       <TrendIndicator direction={trendDirection} percentage={trendPercentage} />
     </div>
   );
 };
+
+MetricCard.displayName = 'MetricCard';
 
 export default MetricCard;
