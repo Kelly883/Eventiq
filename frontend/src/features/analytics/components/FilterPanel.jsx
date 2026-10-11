@@ -11,7 +11,7 @@ const tiers = [
 const FilterPanel = ({ onFilterChange }) => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [selected tiers, setSelectedTiers] = useState('all');
+  const [selectedTiers, setSelectedTiers] = useState('all');
 
   const handleDateChange = (e) => {
     const { value, name } = e.target;
@@ -22,12 +22,12 @@ const FilterPanel = ({ onFilterChange }) => {
 
   const handleTierChange = (e) => {
     const value = e.target.value;
-    if (selected tiers === 'all') {
+    if (selectedTiers === 'all') {
       setSelectedTiers(value);
-    } else if (selected tiers === value) {
+    } else if (selectedTiers === value) {
       setSelectedTiers('all');
     } else {
-      setSelectedTiers(selected tiers + ',' + value);
+      setSelectedTiers(selectedTiers + ',' + value);
     }
     onFilterChange({ dateFrom, dateTo, selectedTiers });
   };
@@ -74,19 +74,19 @@ const FilterPanel = ({ onFilterChange }) => {
             <label
               key={tier.value}
               className={`flex items-center gap-2 px-3 py-1.5 rounded border ${
-                selected tiers === 'all'
+                selectedTiers === 'all'
                   ? 'border-slate-300'
-                  : selected tiers.split(',').includes(tier.value)
+                  : selectedTiers.split(',').includes(tier.value)
                   ? 'border-emerald-500 text-emerald-600'
                   : 'border-slate-300 hover:border-slate-400'
               }`}
-              onClick={() => handleTierChange(event)}
+              onClick={() => handleTierChange({ target: { value: tier.value } })}
             >
               <span
                 className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                  selected tiers === 'all'
+                  selectedTiers === 'all'
                     ? 'bg-slate-300'
-                    : selected tiers.split(',').includes(tier.value)
+                    : selectedTiers.split(',').includes(tier.value)
                     ? 'bg-emerald-500'
                     : 'bg-slate-100'
                 }`}
@@ -95,7 +95,7 @@ const FilterPanel = ({ onFilterChange }) => {
             </label>
           ))}
         </div>
-        {selected tiers !== 'all' && (
+        {selectedTiers !== 'all' && (
           <button
             type="button"
             onClick={clearFilters}
