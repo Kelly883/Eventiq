@@ -153,9 +153,9 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventIds: co
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           onClick={() => setIsOpen((open) => !open)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-colors ${
+          className={`flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-colors ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
-          }"
+          }`}
           disabled={disabled}
         >
           <span className={`w-2 h-2 rounded-full ${selectedEvents.length > 0 ? getStatusColor(selectedEvents[0].status) : 'bg-slate-300'}`} />
@@ -188,13 +188,13 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventIds: co
               )}
               {!loading && !error && (
                 <>
-                  {recentEvents.length > 0 && (
+                  {recentEventIds.length > 0 && (
                     <>
                       <div className="p-2 border-b border-slate-100">
                         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2">Recent</span>
                       </div>
                       <div>
-                        {recentEvents.map((eventId) => {
+                        {recentEventIds.map((eventId) => {
                           const event = events.find((e) => String(e.id) === eventId);
                           if (!event) return null;
                           return (
@@ -281,7 +281,7 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventIds: co
               if (onSelect) onSelect(e.target.value);
             }}
             disabled={loading || Boolean(error)}
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-400"
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-slate-50 disabled:text-slate-500"
           >
             {loading && <option value="">Loading events…</option>}
             {!loading && error && <option value="">Failed to load events</option>}
