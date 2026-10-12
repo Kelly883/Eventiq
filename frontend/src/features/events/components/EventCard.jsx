@@ -1,11 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-// Renders one event from the anonymous EventPublicResource shape
-// (backend/app/Http/Resources/EventPublicResource.php): title, start_date,
-// venue / location, category, image_url, ticket_price, tickets_remaining.
-// Also tolerates a couple of legacy/alternate field names via fallback
-// chains, so this card stays safe to reuse if that contract shifts again.
 const fallbackImage =
   'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&h=400&fit=crop';
 
@@ -31,22 +26,35 @@ function formatTime(dateString) {
   });
 }
 
-const EventCard = ({ event }) => {
+const EventCard = ({ event, onExpand }) => {
   const imageUrl = event.banner_image_url || event.image_url || event.image || fallbackImage;
   const venue = event.venue_name || event.venue?.name || event.venue || 'Venue TBA';
   const location = event.city || event.location || '';
   const price = event.ticket_price != null ? Number(event.ticket_price) : null;
   const ticketsRemaining = event.tickets_remaining ?? event.ticketsRemaining;
+  const totalCapacity = event.total_capacity || 5000;
   const status = event.status || 'published';
 
   const statusClass = status === 'draft' ? 'event-status--draft' : status === 'archived' ? 'event-status--archived' : 'event-status--published';
   const statusLabel = status === 'draft' ? 'Draft' : status === 'archived' ? 'Archived' : 'Published';
 
+  const progressPercent = ticketsRemaining != null ? Math.max(0, Math.min(100, ((totalCapacity - ticketsRemaining) / totalCapacity) * 100)) : 100;
+
   return (
-    <article className="event-card">
+    <article
+      className="event-card"
+      onClick={() => onExpand && onExpand(event.id)}
+      role="article"
+      aria-label={event.title || event.name || 'Event card'}
+    >
       <Link to={`/events/${event.id}`} className="event-card-link">
         <div className="event-image-container">
-          <div className="event-image" style={{ backgroundImage: `url(${imageUrl})` }} />
+          <div
+            className="event-image"
+            style={{ backgroundImage: `url(${imageUrl})` }}
+            aria-label={event.title || event.name || 'Event preview'}
+            role="img"
+          />
           {event.category && <span className="event-badge category">{event.category}</span>}
           <span className={`event-status ${statusClass}`}>{statusLabel}</span>
         </div>
@@ -80,12 +88,28 @@ const EventCard = ({ event }) => {
             <span className={`availability ${ticketsRemaining === 0 ? 'sold-out' : ticketsRemaining != null && ticketsRemaining <= 30 ? 'low' : 'available'}`}>
               {ticketsRemaining === 0 ? 'Sold out' : ticketsRemaining != null ? `${ticketsRemaining} tickets remaining` : 'Tickets available'}
             </span>
+            {ticketsRemaining != null && ticketsRemaining > 0 && (
+              <div className="event-progress">
+                <span className="event-progress-label">Sales</span>
+                <div className="event-progress-bar">
+                  <div
+                    className="event-progress-fill"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <span className="event-progress-percentage">
+                  {Math.round(progressPercent)}%
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </Link>
-      <Link to={`/events/${event.id}`} className="btn-view-event">
-        View Event
-      </Link>
+      {onExpand && (
+        <Link to={`/events/${event.id}`} className="btn-view-event">
+          View Event
+        </Link>
+      )}
     </article>
   );
 };

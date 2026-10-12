@@ -150,10 +150,7 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventIds: co
       <div className="relative">
         <button
           type="button"
-          aria-label="Select events"
-          aria-haspopup="listbox"
-          aria-expanded={isOpen}
-          aria-controls="event-selector-listbox"
+          
           onClick={() => setIsOpen((open) => !open)}
           className={`flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-colors ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
@@ -162,28 +159,27 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventIds: co
         >
           <span
             className={`w-2 h-2 rounded-full ${selectedEvents.length > 0 ? getStatusColor(selectedEvents[0].status) : 'bg-slate-300'}`
-            aria-hidden="true"
           }
           />
           <span className="text-sm font-medium text-slate-700 truncate max-w-[150px]">
             {buttonLabel}
           </span>
-          <svg aria-hidden="true" className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <svg className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
         </button>
 
         {isOpen && (
           <>
-            <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} aria-label="Close event selector" />
+            <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
             <div
               role="listbox"
-              aria-label="Events"
               id="event-selector-listbox"
               className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden"
               onKeyDown={(e) => {
                 if (e.key === 'ArrowDown') {
                   e.preventDefault();
+                  const nextIndex = Math.min(listboxRef.current?.children?.length || 0, 0) + 1;
                   // TODO: move focus to next option
                 }
                 if (e.key === 'ArrowUp') {
@@ -263,7 +259,6 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventIds: co
                           key={event.id}
                           type="button"
                           role="option"
-                          aria-selected={isSelected}
                           onClick={() => handleSelect(event.id)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
@@ -309,7 +304,6 @@ const EventSelector = ({ compact = false, showLabel = true, selectedEventIds: co
       <div className="flex items-center gap-3">
         <div className="flex-1">
           <select
-            aria-label="Select events"
             value={selectedEventIdsState.length > 0 ? selectedEventIdsState.join(',') : ''}
             onChange={(e) => {
               const ids = e.target.value.split(',').filter(Boolean).map(Number);

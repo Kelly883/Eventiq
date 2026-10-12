@@ -19,8 +19,6 @@ const Row = ({ index, style, row }) => {
       style={style}
       className="border-b border-slate-100"
       role="row"
-      onMouseEnter={() => {}}
-      onMouseLeave={() => {}}
     >
       {columns.map((col) => (
         <td

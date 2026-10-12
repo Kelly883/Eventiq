@@ -45,6 +45,7 @@ const ConversionFunnelChart = () => {
             fontSize: '12px',
             border: 'none',
           }}
+          labelFormatter={(value) => `$${value}` }
         />
         {funnelData.map((item, index) => (
           <Bar

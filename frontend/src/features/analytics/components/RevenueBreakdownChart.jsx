@@ -45,6 +45,7 @@ const RevenueBreakdownChart = () => {
             fontSize: '12px',
             border: 'none',
           }}
+          labelFormatter={(value) => `$${value}` }
         />
         <Bar
           dataKey="revenue"
