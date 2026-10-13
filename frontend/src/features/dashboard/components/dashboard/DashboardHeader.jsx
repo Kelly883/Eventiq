@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { LiveIndicator } from '../LiveIndicator';
-import { api } from '../../../lib/api';
+import LiveIndicator from '../../../analytics/components/LiveIndicator';
+import { api } from '../../../../lib/api';
 
 const DashboardHeader = ({ user, onFilterChange, onDateRangeChange, onCreateEvent }) => {
   const firstName = user?.name?.split(' ')[0] || 'there';

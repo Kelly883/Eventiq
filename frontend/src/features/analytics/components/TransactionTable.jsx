@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FixedList as List, VariableSizeList as VariableList } from 'react-window';
+import { List } from 'react-window';
 
 const rowHeight = 50;
 
@@ -66,7 +66,7 @@ const TransactionTable = ({ rowCount = 10000 }) => {
       className="w-full overflow-auto border border-slate-100 rounded-lg bg-white shadow-sm"
       style={{ maxHeight: 'calc(100vh - 200px)' }}
     >
-      <VariableList
+      <List
         height={600}
         width='100%'
         itemCount={sortedRows.length}
@@ -85,7 +85,7 @@ const TransactionTable = ({ rowCount = 10000 }) => {
             row={sortedRows[visibleIndex]}
           />
         )}
-      </VariableList>
+      </List>
     </div>
   );
 };
