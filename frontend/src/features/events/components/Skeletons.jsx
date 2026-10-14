@@ -57,21 +57,17 @@ const Skeleton = ({
   if (variant === 'title') {
     return (
       <div
-        className={`skeleton-title ${className || ''}`
-        style={getStyle()}
-      } />
+        className={`skeleton-title ${className || ''}`}
+        style={{ ...getStyle(), marginBottom: '8px', width: 'calc(100% - 40px)' }}
+      />
     );
   }
 
   if (variant === 'title-lg') {
     return (
       <div
-        className={`skeleton-title skeleton-title-lg ${className || ''}`
-        style={{
-          ...getStyle(),
-          marginBottom: '8px',
-          width: 'calc(100% - 40px)',
-        }}
+        className={`skeleton-title skeleton-title-lg ${className || ''}`}
+        style={{ ...getStyle(), marginBottom: '16px', width: 'calc(100% - 40px)' }}
       />
     );
   }
@@ -79,8 +75,8 @@ const Skeleton = ({
   if (variant === 'text-sm') {
     return (
       <div
-        className={`skeleton-text skeleton-text-sm ${className || ''}`
-        style={getStyle()}
+        className={`skeleton-text skeleton-text-sm ${className || ''}`}
+        style={{ ...getStyle() }}
       />
     );
   }
@@ -89,7 +85,7 @@ const Skeleton = ({
     return (
       <div
         className={`skeleton-text skeleton-text-xs ${className || ''}`}
-        style={getStyle()}
+        style={{ ...getStyle() }}
       />
     );
   }
@@ -98,7 +94,6 @@ const Skeleton = ({
     return (
       <div
         className={`skeleton ${className || ''}`}
-        style={getStyle()}
         style={{
           ...getStyle(),
           borderRadius: '50%',
@@ -109,10 +104,7 @@ const Skeleton = ({
 
   if (variant === 'rect') {
     return (
-      <div
-        className={`skeleton ${className || ''}`}
-        style={getStyle()}
-      />
+      <div className={`skeleton ${className || ''}`} style={{ ...getStyle() }} />
     );
   }
 
@@ -120,7 +112,7 @@ const Skeleton = ({
     return (
       <div
         className={`p-4 bg-white border border-slate-100 rounded-lg shadow-sm ${className}`}
-        style={getStyle()}
+        style={{ ...getStyle() }}
       />
     );
   }
@@ -129,12 +121,11 @@ const Skeleton = ({
     return (
       <div
         className={`skeleton-image skeleton-image-lg ${className || ''}`}
-        style={getStyle()}
         style={{
           ...getStyle(),
           borderRadius: '8px',
           height: '120px',
-          width: 'full',
+          width: '100%',
         }}
       />
     );
@@ -144,53 +135,26 @@ const Skeleton = ({
     return (
       <div
         className={`skeleton-image ${className || ''}`}
-        style={getStyle()}
         style={{
           ...getStyle(),
           borderRadius: '8px',
           height: '80px',
-          width: 'full',
+          width: '100%',
         }}
       />
     );
   }
 
-  if (variant === 'title') {
+  if (variant === 'title-lg2') {
     return (
       <div
-        className={`skeleton-title ${className || ''}`}
-        style={getStyle()}
-      />
-    );
-  }
-
-  if (variant === 'title-lg') {
-    return (
-      <div
-        className={`skeleton-title skeleton-title-lg ${className || ''}`}
+        className={`skeleton-title skeleton-title-lg2 ${className || ''}`}
         style={{
           ...getStyle(),
-          marginBottom: '8px',
-          width: 'calc(100% - 40px)',
+          marginBottom: '16px',
+          width: 'calc(100% - 56px)',
+          fontSize: '1rem',
         }}
-      />
-    );
-  }
-
-  if (variant === 'text-sm') {
-    return (
-      <div
-        className={`skeleton-text skeleton-text-sm ${className || ''}`}
-        style={getStyle()}
-      />
-    );
-  }
-
-  if (variant === 'text-xs') {
-    return (
-      <div
-        className={`skeleton-text skeleton-text-xs ${className || ''}`}
-        style={getStyle()}
       />
     );
   }
@@ -200,7 +164,7 @@ const Skeleton = ({
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className={`${baseClass} ${
+          className={`${skeletonBase} ${
             variant === 'circle' ? 'rounded-full' : ''
           } ${className}`}
           style={getStyle()}
@@ -262,7 +226,13 @@ const SkeletonText = ({
   const combinedClass = (sizeMap[size] || sizeMap.text) + ' ' + (className || '');
 
   return (
-    <div className={combinedClass} style={{ ...(width ? { width } : {}), ...(height ? { height } : {}) }} />
+    <div
+      className={combinedClass}
+      style={{
+        ...(width ? { width } : {}),
+        ...(height ? { height } : {}),
+      }}
+    />
   );
 };
 
