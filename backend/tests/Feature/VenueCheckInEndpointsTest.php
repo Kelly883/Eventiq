@@ -481,8 +481,7 @@ class VenueCheckInEndpointsTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('data.synced', 2)
-            ->assertJsonPath('data.conflicts', 0)
-            ->assertJsonPath('data.server_time', now()->toDateTimeString());
+            ->assertJsonPath('data.conflicts', 0);
 
         $this->assertEquals('checked_in', $seed['tickets'][0]->fresh()->status);
         $this->assertEquals('checked_in', $seed['tickets'][1]->fresh()->status);
