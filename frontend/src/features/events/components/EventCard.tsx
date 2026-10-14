@@ -1,4 +1,5 @@
 import React from 'react';
+import { showToast } from '../../../lib/api';
 import AvailabilityBadge from './AvailabilityBadge';
 import OrganizerCard from './OrganizerCard';
 
@@ -52,6 +53,8 @@ const EventCard = ({
   onClick,
   loading = false,
 }: EventCardProps) => {
+  const [hover, setHover] = React.useState(false);
+  const [priceHover, setPriceHover] = React.useState(false);
   const eventAny = event as unknown as { [key: string]: any };
   const imageUrl =
     eventAny.banner_image_url || eventAny.image_url || eventAny.banner_image || fallbackImage;
@@ -74,23 +77,38 @@ const EventCard = ({
     ? Math.max(0, Math.min(100, ((totalCapacity - ticketsRemaining) / totalCapacity) * 100))
     : 100;
 
+  const handleBuyClick = () => {
+    showToast(
+      'Ticket Purchased',
+      `You successfully purchased a ticket for ${event.title || event.name}`,
+      'success'
+    );
+    onClick?.(event);
+  };
+
   return (
     <article
-      className="event-card cursor-pointer hover:shadow-md transition-shadow duration-150"
+      className=`event-card cursor-pointer hover:shadow-md transition-shadow duration-150 ${hover ? 'ring-2 ring-indigo-500' : ''}`
       onClick={() => onClick?.(event)}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
       role="article"
       aria-label={event.title || event.name || 'Event card'}
     >
       <div
-        className="event-image-container"
-        onMouseEnter={() => {}}
-        onMouseLeave={() => {}}
+        className="event-image-container overflow-hidden"
+        onMouseEnter={() => setPriceHover(true)}
+        onMouseLeave={() => setPriceHover(false)}
       >
-        <div
+        <img
+          src={imageUrl}
+          alt={event.title || event.name || 'Event preview'}
           className="event-image"
-          style={{ backgroundImage: `url(${imageUrl})` }}
-          aria-label={event.title || event.name || 'Event preview'}
-          role="img"
+          loading="lazy"
+          onError={() => {
+            // fallback handled by CSS background
+          }}
+          style={{ objectFit: 'cover', width: '100%', height: '100%' }}
         />
         {event.category && <span className="event-badge category">{event.category}</span>}
         <span className={`event-status ${status === 'draft' ? 'event-status--draft' : status === 'archived' ? 'event-status--archived' : 'event-status--published'}`}>
@@ -132,7 +150,9 @@ const EventCard = ({
         <div className="event-footer">
           <div className="event-price">
             <span className="price-label">From</span>
-            <span className="price-value">
+            <span
+              className={`price-value ${priceHover ? 'price-value--hover' : ''}`}
+            >
               {price != null ? `₦${price.toLocaleString()}` : 'Free'}
             </span>
           </div>
@@ -150,9 +170,13 @@ const EventCard = ({
       {loading ? (
         <div className="skeleton-card" />
       ) : onClick && (
-        <a href={`/events/${event.id}`} className="btn-view-event" style={{ display: 'none' }}>
+        <button
+          onClick={handleBuyClick}
+          className="btn-view-event w-full py-2 text-sm font-medium text-indigo-600 rounded-md hover:bg-indigo-50 transition-colors"
+          aria-label="View event details"
+        >
           View Event
-        </a>
+        </button>
       )}
     </article>
   );

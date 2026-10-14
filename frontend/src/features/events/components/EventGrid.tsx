@@ -28,10 +28,21 @@ const EventGrid = ({
   const columnCount = getColumnCount();
 
   if (isLoading) {
+    // Improved skeleton matching EventCard silhouette
     return (
       <div className="event-grid" style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}>
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="event-card skeleton" style={{ marginBottom: '1rem' }} />
+          <div
+            key={i}
+            className="event-card skeleton-lg"
+            style={{ marginBottom: '1rem' }}
+            aria-hidden="true"
+          >
+            <div className="skeleton-image-lg" />
+            <div className="skeleton-title-lg" />
+            <div className="skeleton-text-sm" />
+            <div className="skeleton-text-xs" />
+          </div>
         ))}
       </div>
     );
