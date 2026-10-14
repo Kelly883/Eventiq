@@ -1,4 +1,6 @@
 import React from 'react';
+import AvailabilityBadge from './AvailabilityBadge';
+import OrganizerCard from './OrganizerCard';
 
 export interface EventCardProps {
   event: import('../types/shared').Event;
@@ -45,7 +47,7 @@ const getAvailabilityText = (ticketsAvailable: number | null, ticketsTotal: numb
   return 'Tickets available';
 };
 
-export const EventCard = ({
+const EventCard = ({
   event,
   onClick,
   loading = false,
@@ -74,12 +76,16 @@ export const EventCard = ({
 
   return (
     <article
-      className="event-card cursor-pointer"
+      className="event-card cursor-pointer hover:shadow-md transition-shadow duration-150"
       onClick={() => onClick?.(event)}
       role="article"
       aria-label={event.title || event.name || 'Event card'}
     >
-      <div className="event-image-container">
+      <div
+        className="event-image-container"
+        onMouseEnter={() => {}}
+        onMouseLeave={() => {}}
+      >
         <div
           className="event-image"
           style={{ backgroundImage: `url(${imageUrl})` }}
@@ -99,6 +105,8 @@ export const EventCard = ({
             '-webkitLineClamp': '2',
             '-webkitBoxOrient': 'max-line',
             overflow: 'hidden',
+            marginBottom: '8px',
+            WebkitFontSmoothing: 'antialiased',
           }}
         >
           {event.title || event.name || 'Untitled Event'}
@@ -150,4 +158,4 @@ export const EventCard = ({
   );
 };
 
-export default EventCard;
+export default React.memo(EventCard);

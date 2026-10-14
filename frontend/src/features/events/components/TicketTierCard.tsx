@@ -18,13 +18,15 @@ const TicketTierCard = ({ tier, onSelect, loading }: TicketTierCardProps) => {
   const isSoldOut = tier.is_sold_out || (availableCount <= 0);
 
   return (
-    <div className="ticket-tier-card" style={{ flexShrink: 0 }}>
+    <div className="ticket-tier-card" style={{ flexShrink: 0 }} role="button" tabIndex={0} aria-label={`${name} ticket tier, ₦${price.toLocaleString()}`}>
       <div className="ticket-tier-card__info">
         <span className="ticket-tier-card__name">{name}</span>
         <span className="ticket-tier-card__price">₦{price.toLocaleString()}</span>
       </div>
       <div className="ticket-tier-card__availability">
-        {availableCount != null && <AvailabilityBadge ticketsAvailable={availableCount} ticketsTotal={quantity} />}
+        {availableCount != null && (
+          <AvailabilityBadge ticketsAvailable={availableCount} ticketsTotal={quantity} />
+        )}
       </div>
       <div className="ticket-tier-card__select">
         {loading ? (

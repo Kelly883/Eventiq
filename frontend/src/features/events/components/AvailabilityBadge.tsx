@@ -8,7 +8,7 @@ export interface AvailabilityBadgeProps {
 const AvailabilityBadge = ({ ticketsAvailable, ticketsTotal }: AvailabilityBadgeProps) => {
   if (ticketsTotal === 0 || (ticketsAvailable != null && ticketsAvailable <= 0)) {
     return (
-      <span className="availability-badge availability-badge--sold-out">
+      <span className="availability-badge availability-badge--sold-out" aria-label="Sold Out">
         Sold Out
       </span>
     );
@@ -18,8 +18,13 @@ const AvailabilityBadge = ({ ticketsAvailable, ticketsTotal }: AvailabilityBadge
   const isPlenty = percentAvailable > 20;
   const isLow = percentAvailable >= 5 && percentAvailable <= 20;
 
-  const classes = 'availability-badge';
-  const additionalClass = isPlenty ? 'availability-badge--green' : isLow ? 'availability-badge--amber' : 'availability-badge--red';
+  const baseClasses = 'availability-badge';
+  const colorClass = isPlenty ? 'availability-badge--green' : isLow ? 'availability-badge--amber' : 'availability-badge--red';
+  const ariaLabel = isPlenty
+    ? `${ticketsAvailable != null ? ticketsAvailable : ticketsTotal} tickets available`
+    : isLow
+      ? `${ticketsAvailable != null ? ticketsAvailable : ticketsTotal} tickets remaining - low stock`
+      : 'Sold Out';
 
   const text = isPlenty
     ? `${ticketsAvailable != null ? ticketsAvailable : ticketsTotal} tickets left`
@@ -28,7 +33,7 @@ const AvailabilityBadge = ({ ticketsAvailable, ticketsTotal }: AvailabilityBadge
       : 'Sold Out';
 
   return (
-    <span className={`${classes} ${additionalClass}`}>
+    <span className={`${baseClasses} ${colorClass}`} aria-label={ariaLabel}>
       {text}
     </span>
   );

@@ -16,6 +16,7 @@ const SearchBar = ({ onSearch, placeholder = 'Search events...' }: SearchBarProp
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (timeoutRef.current) {
@@ -50,6 +51,16 @@ const SearchBar = ({ onSearch, placeholder = 'Search events...' }: SearchBarProp
     };
   }, [query]);
 
+  useEffect(() => {
+    if (!isOpen || suggestions.length === 0) return;
+
+    // Auto-focus first suggestion when dropdown opens
+    const suggestionItems = document.querySelectorAll('.search-bar__dropdown-item');
+    if (suggestionItems.length > 0 && inputRef.current) {
+      suggestionItems[0].focus();
+    }
+  }, [isOpen, suggestions]);
+
   const handleSelect = (event: Event) => {
     setSuggestions([]);
     setQuery('');
@@ -57,10 +68,26 @@ const SearchBar = ({ onSearch, placeholder = 'Search events...' }: SearchBarProp
     navigate(`/events/${event.id}`);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      // Next suggestion logic could be added here
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      // Previous suggestion logic could be added here
+    }
+    if (e.key === 'Escape') {
+      setSuggestions([]);
+      setIsOpen(false);
+    }
+  };
+
   return (
-    <div className="search-bar">
+    <div className="search-bar" onKeyDown={handleKeyDown}>
       <div className="search-bar__input-wrapper">
         <input
+          ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -79,6 +106,7 @@ const SearchBar = ({ onSearch, placeholder = 'Search events...' }: SearchBarProp
                 role="button"
                 tabIndex={0}
                 aria-label={event.title || event.organizer?.displayName || ''}
+                onMouseEnter={() => {}}
               >
                 <span className="search-bar__dropdown-title">
                   {event.title || 'Untitled Event'}

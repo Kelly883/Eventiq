@@ -44,39 +44,35 @@ const DateButton = ({
   </button>
 );
 
-const renderCategoryOptions = (
-  options: Array<{ label: string; value: string }>,
-  selectedValues: Set<string>,
-  onSelect: (value: string) => void,
-) => {
-  const elements: React.ReactNode[] = [];
-
-  options.forEach((opt) => {
-    const isSelected = selectedValues.has(opt.value);
-    elements.push(
-      <div
-        key={opt.value}
-        className={`category-chip ${isSelected ? 'category-chip--selected' : ''}`}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-        onClick={() => onSelect(opt.value)}
-        role="button"
-        aria-checked={isSelected}
+const CategoryChip = ({
+  label,
+  value,
+  isSelected,
+  onSelect,
+}: {
+  label: string;
+  value: string;
+  isSelected: boolean;
+  onSelect: () => void;
+}) => (
+  <div
+    className={`category-chip ${isSelected ? 'category-chip--selected' : ''}`}
+    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+    onClick={() => onSelect()}
+    role="button"
+    aria-checked={isSelected}
+  >
+    {label}
+    {isSelected && (
+      <span
+        className="category-chip__remove"
+        aria-label={`Remove ${label}`}
       >
-        {opt.label}
-        {isSelected && (
-          <span
-            className="category-chip__remove"
-            aria-label={`Remove ${opt.label}`}
-          >
-            ×
-          </span>
-        </div>
-      );
-    });
-  });
-
-  return elements;
-};
+        ×
+      </span>
+    )}
+  </div>
+);
 
 export const FilterSidebar = ({
   currentFilters,
@@ -110,18 +106,24 @@ export const FilterSidebar = ({
     }
   }, [categories.length]);
 
-  const categoryValues = new Set(
+  const [categoryValues, setCategoryValues] = useState<
+    Set<string>
+  >(new Set(
     (currentFilters.category ? currentFilters.category.split(',') : []) as string[],
-  );
+  ));
   const minPrice = currentFilters.minPrice ?? 0;
   const maxPrice = currentFilters.maxPrice ?? 100000;
 
   const handleCategoryChange = (value: string) => {
-    if (categoryValues.has(value)) {
-      categoryValues.delete(value);
-    } else {
-      categoryValues.add(value);
-    }
+    setCategoryValues((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) {
+        next.delete(value);
+      } else {
+        next.add(value);
+      }
+      return next;
+    });
     onChange({
       ...currentFilters,
       category: Array.from(categoryValues).length > 0 ? Array.from(categoryValues).join(',') : undefined,
@@ -144,27 +146,25 @@ export const FilterSidebar = ({
     onChange({ ...currentFilters, location });
   };
 
-  if (isMobile) {
+  if (typeof window !== 'undefined' && window.innerWidth < 768) {
     return (
-      <div className="filter-drawer">
+      <div className="filter-drawer" role="dialog" aria-modal="true" aria-label="Filters">
         <div className="filter-drawer__header">
           <h3 className="filter-drawer__title">Filters</h3>
           <button
             className="filter-drawer__close"
-            onClick={() => setIsMobile(!isMobile)}
+            onClick={() => setIsMobile(!window.innerWidth < 768)}
             aria-label="Close filters"
           >
             ×
           </button>
         </div>
         <div className="filter-drawer__content">
-          <div
-            className="category-select"
+          <div className="category-select"
             onClick={() => {}}
             role="button"
             aria-haspopup="listbox"
-            aria-expanded={categoryValues.size > 0}
-          >
+            aria-expanded={categoryValues.size > 0}>
             <span className="category-select__trigger">
               {currentFilters.category
                 ? categories
@@ -177,40 +177,30 @@ export const FilterSidebar = ({
             </svg>
           </div>
           <div className="filter-drawer__date-buttons">
-            {renderCategoryOptions(
-              categories.map((c) => ({ label: c.name, value: c.slug })),
-              categoryValues,
-              handleCategoryChange,
-            )}
-          </div>
-          <div className="filter-drawer__section">
-            <h4 className="filter-drawer__section-title">Date</h4>
-            <div className="filter-drawer__date-buttons">
-              <DateButton
-                label="Upcoming"
-                value="upcoming"
-                isSelected={currentFilters.dateRange === 'upcoming'}
-                onClick={() => handleDateChange('upcoming')}
-              />
-              <DateButton
-                label="This Week"
-                value="this week"
-                isSelected={currentFilters.dateRange === 'this week'}
-                onClick={() => handleDateChange('this week')}
-              />
-              <DateButton
-                label="This Month"
-                value="this month"
-                isSelected={currentFilters.dateRange === 'this month'}
-                onClick={() => handleDateChange('this month')}
-              />
-              <DateButton
-                label="Custom Range"
-                value="custom"
-                isSelected={currentFilters.dateRange === 'custom'}
-                onClick={() => handleDateChange('custom')}
-              />
-            </div>
+            <CategoryChip
+              label="Upcoming"
+              value="upcoming"
+              isSelected={currentFilters.dateRange === 'upcoming'}
+              onSelect={() => handleDateChange('upcoming')}
+            />
+            <CategoryChip
+              label="This Week"
+              value="this week"
+              isSelected={currentFilters.dateRange === 'this week'}
+              onSelect={() => handleDateChange('this week')}
+            />
+            <CategoryChip
+              label="This Month"
+              value="this month"
+              isSelected={currentFilters.dateRange === 'this month'}
+              onSelect={() => handleDateChange('this month')}
+            />
+            <CategoryChip
+              label="Custom Range"
+              value="custom"
+              isSelected={currentFilters.dateRange === 'custom'}
+              onSelect={() => handleDateChange('custom')}
+            />
           </div>
           <div className="filter-drawer__section">
             <h4 className="filter-drawer__section-title">Price</h4>
@@ -254,12 +244,12 @@ export const FilterSidebar = ({
   }
 
   return (
-    <aside className="filter-sidebar">
+    <aside className="filter-sidebar" role="navigation" aria-label="Event filters">
       <div className="filter-sidebar__header">
         <h3 className="filter-sidebar__title">Filters</h3>
         <button
           className="filter-sidebar__toggle"
-          onClick={() => setIsMobile(!isMobile)}
+          onClick={() => setIsMobile(!window.innerWidth < 768)}
           aria-label="Toggle filters drawer"
         >
           ☰
@@ -271,8 +261,7 @@ export const FilterSidebar = ({
           onClick={() => {}}
           role="button"
           aria-haspopup="listbox"
-          aria-expanded={categoryValues.size > 0}
-        >
+          aria-expanded={categoryValues.size > 0}>
           <span className="category-select__trigger">
             {currentFilters.category
               ? categories
@@ -285,40 +274,30 @@ export const FilterSidebar = ({
           </svg>
         </div>
         <div className="filter-sidebar__date-buttons">
-          {renderCategoryOptions(
-            categories.map((c) => ({ label: c.name, value: c.slug })),
-            categoryValues,
-            handleCategoryChange,
-          )}
-        </div>
-        <div className="filter-sidebar__section">
-          <h4 className="filter-sidebar__section-title">Date</h4>
-          <div className="filter-sidebar__date-buttons">
-            <DateButton
-              label="Upcoming"
-              value="upcoming"
-              isSelected={currentFilters.dateRange === 'upcoming'}
-              onClick={() => handleDateChange('upcoming')}
-            />
-            <DateButton
-              label="This Week"
-              value="this week"
-              isSelected={currentFilters.dateRange === 'this week'}
-              onClick={() => handleDateChange('this week')}
-            />
-            <DateButton
-              label="This Month"
-              value="this month"
-              isSelected={currentFilters.dateRange === 'this month'}
-              onClick={() => handleDateChange('this month')}
-            />
-            <DateButton
-              label="Custom Range"
-              value="custom"
-              isSelected={currentFilters.dateRange === 'custom'}
-              onClick={() => handleDateChange('custom')}
-            />
-          </div>
+          <CategoryChip
+            label="Upcoming"
+            value="upcoming"
+            isSelected={currentFilters.dateRange === 'upcoming'}
+            onSelect={() => handleDateChange('upcoming')}
+          />
+          <CategoryChip
+            label="This Week"
+            value="this week"
+            isSelected={currentFilters.dateRange === 'this week'}
+            onSelect={() => handleDateChange('this week')}
+          />
+          <CategoryChip
+            label="This Month"
+            value="this month"
+            isSelected={currentFilters.dateRange === 'this month'}
+            onSelect={() => handleDateChange('this month')}
+          />
+          <CategoryChip
+            label="Custom Range"
+            value="custom"
+            isSelected={currentFilters.dateRange === 'custom'}
+            onSelect={() => handleDateChange('custom')}
+          />
         </div>
         <div className="filter-sidebar__section">
           <h4 className="filter-sidebar__section-title">Price</h4>
