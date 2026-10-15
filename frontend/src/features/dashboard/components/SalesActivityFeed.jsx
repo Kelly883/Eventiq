@@ -9,6 +9,7 @@ const SalesActivityFeed = () => {
   const [activities, setActivities] = useState([]);
   const [filters, setFilters] = useState({ event: '', tier: '', dateFrom: '', dateTo: '' });
   const [isExporting, setIsExporting] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const timeoutRef = useRef(null);
 
   const fetchActivities = useCallback(async () => {
@@ -21,6 +22,7 @@ const SalesActivityFeed = () => {
         );
         return merged.slice(0, 50);
       });
+      setLastRefresh(new Date());
     } catch (err) {
       toast.error('Failed to fetch activity feed');
       console.error('Failed to fetch activity feed:', err);
@@ -101,6 +103,13 @@ const SalesActivityFeed = () => {
           >
             {isExporting ? 'Exporting…' : 'Export Activity'}
           </button>
+          {lastRefresh && (
+            <span className="text-xs text-slate-400 ml-4">
+              Refreshed {Math.floor(
+                (new Date().getTime() - lastRefresh.getTime()) / 1000
+              )} seconds ago
+            </span>
+          )}
         </div>
       </div>
 

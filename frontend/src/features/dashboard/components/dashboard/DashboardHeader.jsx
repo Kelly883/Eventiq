@@ -1,6 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import LiveIndicator from '../../../analytics/components/LiveIndicator';
 import { api } from '../../../../lib/api';
+
+const debounce = (func: Function, wait: number) => {
+  let timeout: NodeJS.Timeout;
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
 
 const DashboardHeader = ({ user, onFilterChange, onDateRangeChange, onCreateEvent }) => {
   const firstName = user?.name?.split(' ')[0] || 'there';
@@ -17,15 +29,21 @@ const DashboardHeader = ({ user, onFilterChange, onDateRangeChange, onCreateEven
     to: new Date(),
   });
 
-  const handleFilterChange = (filter) => {
-    setSelectedFilter(filter);
-    if (onFilterChange) onFilterChange(filter);
-  };
+  const debouncedFilterChange = useCallback(
+    debounce((filter: string) => {
+      setSelectedFilter(filter);
+      if (onFilterChange) onFilterChange(filter);
+    }, 300),
+    [onFilterChange]
+  );
 
-  const handleDateRangeChange = (range) => {
-    setDateRange(range);
-    if (onDateRangeChange) onDateRangeChange(range);
-  };
+  const debouncedDateRangeChange = useCallback(
+    debounce((range: { from: Date; to: Date }) => {
+      setDateRange(range);
+      if (onDateRangeChange) onDateRangeChange(range);
+    }, 300),
+    [onDateRangeChange]
+  );
 
   const handleCreateEvent = () => {
     if (onCreateEvent) onCreateEvent();
@@ -65,7 +83,7 @@ const DashboardHeader = ({ user, onFilterChange, onDateRangeChange, onCreateEven
           <div className="relative">
             <select
               value={selectedFilter}
-              onChange={(e) => handleFilterChange(e.target.value)}
+              onChange={(e) => debouncedFilterChange(e.target.value)}
               className="w-24 px-2 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
               <option value="all">All Events</option>
@@ -80,19 +98,23 @@ const DashboardHeader = ({ user, onFilterChange, onDateRangeChange, onCreateEven
             </svg>
           </div>
 
-          <div className="relative ml-2">
-            <select
-              className="w-40 px-2 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              <option value="">Date Range</option>
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="90d">Last 90 days</option>
-            </select>
-            <svg className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
+<div className="relative ml-2">
+              <select
+                className="w-40 px-2 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                onChange={(e) => debouncedDateRangeChange({
+                  from: new Date(e.target.value || ''),
+                  to: new Date(),
+                })}
+              >
+                <option value="">Date Range</option>
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+              </select>
+              <svg className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
         </div>
       </div>
     </div>

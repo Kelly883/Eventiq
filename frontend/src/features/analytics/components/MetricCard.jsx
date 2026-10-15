@@ -16,6 +16,9 @@ const TrendIndicator = ({ direction, percentage }) => {
   );
 };
 
+const defaultValue = '—';
+const defaultLabel = 'Metric';
+
 const MetricCard = ({
   value,
   label,
@@ -34,9 +37,14 @@ const MetricCard = ({
           aria-hidden="true"
         />
       ) : (
-        <p id="metric-card-label" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
+        <p
+          id="metric-card-label"
+          className="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+        >
+          {label || defaultLabel}
+        </p>
       )}
-      <h3 className="text-2xl font-bold text-slate-800">{value}</h3>
+      <h3 className="text-2xl font-bold text-slate-800">{value || defaultValue}</h3>
       <TrendIndicator direction={trendDirection} percentage={trendPercentage} />
     </div>
   );

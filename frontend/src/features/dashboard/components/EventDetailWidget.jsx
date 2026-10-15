@@ -6,15 +6,19 @@ const EventDetailWidget = ({ eventId, onViewAnalytics, onManageInventory, onEdit
   const { eventId: routeEventId } = useParams();
   const resolvedEventId = eventId || routeEventId;
   const [event, setEvent] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!resolvedEventId) return;
+    setIsLoading(true);
     const loadEvent = async () => {
       try {
         const response = await api.get(`/events/${resolvedEventId}`);
         setEvent(response.data);
       } catch (err) {
         console.error('Failed to load event detail:', err);
+      } finally {
+        setIsLoading(false);
       }
     };
     loadEvent();
@@ -26,11 +30,20 @@ const EventDetailWidget = ({ eventId, onViewAnalytics, onManageInventory, onEdit
     );
   }
 
+  if (isLoading) {
+    return (
+      <div role="status" className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm mb-6 animate-spin">
+        <span className="inline-block bg-slate-100 rounded-full animate-pulse" style={width: '2rem', height: '2rem'} aria-hidden="true" />
+        <span className="text-slate-500">Loading event details...</span>
+      </div>
+    );
+  }
+
   if (!event) {
     return (
       <div role="status" className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm mb-6">
         <h2 className="text-lg font-bold text-slate-800 mb-2">Event Details</h2>
-        <p className="text-sm text-slate-500">Failed to load event details. The event may have been deleted or archived.</p>
+        <p className="text-sm text-slate-500">The event may have been deleted, archived, or unavailable.</p>
       </div>
     );
   }

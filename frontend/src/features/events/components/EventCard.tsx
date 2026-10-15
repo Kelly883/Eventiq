@@ -55,6 +55,7 @@ const EventCard = ({
 }: EventCardProps) => {
   const [hover, setHover] = React.useState(false);
   const [priceHover, setPriceHover] = React.useState(false);
+  const eventImageRef = React.useRef<HTMLImageElement>(null);
   const eventAny = event as unknown as { [key: string]: any };
   const imageUrl =
     eventAny.banner_image_url || eventAny.image_url || eventAny.banner_image || fallbackImage;
@@ -80,7 +81,7 @@ const EventCard = ({
   const handleBuyClick = () => {
     showToast(
       'Ticket Purchased',
-      `You successfully purchased a ticket for ${event.title || event.name}`,
+      `You successfully purchased a ticket for ${event.title || event.name || 'event'}`,
       'success'
     );
     onClick?.(event);
@@ -88,12 +89,12 @@ const EventCard = ({
 
   return (
     <article
-      className=`event-card cursor-pointer hover:shadow-md transition-shadow duration-150 ${hover ? 'ring-2 ring-indigo-500' : ''}`
+      className="event-card cursor-pointer hover:shadow-md transition-shadow duration-150"
       onClick={() => onClick?.(event)}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       role="article"
-      aria-label={event.title || event.name || 'Event card'}
+      aria-label={event.title || event.name || 'Event'}
     >
       <div
         className="event-image-container overflow-hidden"
@@ -101,12 +102,16 @@ const EventCard = ({
         onMouseLeave={() => setPriceHover(false)}
       >
         <img
+          ref={eventImageRef}
           src={imageUrl}
           alt={event.title || event.name || 'Event preview'}
           className="event-image"
           loading="lazy"
           onError={() => {
-            // fallback handled by CSS background
+            ;(eventImageRef.current as HTMLImageElement).src =
+              fallbackImage;
+            ;(eventImageRef.current as HTMLImageElement).alt =
+              event.title || event.name || 'Event preview';
           }}
           style={{ objectFit: 'cover', width: '100%', height: '100%' }}
         />
@@ -117,14 +122,10 @@ const EventCard = ({
       </div>
       <div className="event-details">
         <h3
-          className="event-title"
+          className="event-title line-clamp-2"
           style={{
-            display: '-webkit-box',
-            '-webkitLineClamp': '2',
-            '-webkitBoxOrient': 'max-line',
             overflow: 'hidden',
             marginBottom: '8px',
-            WebkitFontSmoothing: 'antialiased',
           }}
         >
           {event.title || event.name || 'Untitled Event'}
