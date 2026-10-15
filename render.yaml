@@ -42,17 +42,12 @@ services:
         value: cookie
       - key: DB_CONNECTION
         value: pgsql
-      - key: DB_HOST
-        - key: DB_HOST
-          value: your-neon-hostname.neon.tech
-        - key: DB_PORT
-         value: "5432"
-       - key: DB_DATABASE
-        value: neondb
-       - key: DB_USERNAME
-       value: neondb_owner
-      - key: DB_PASSWORD
-      sync: false
+      # Database lives on Neon (migrated off the Render Postgres). config/
+      # database.php 'pgsql.url' consumes this single connection string, e.g.
+      # postgresql://neondb_owner:<password>@<host>.neon.tech/neondb?sslmode=require
+      # Set the actual value in the Render dashboard - never commit credentials.
+      - key: DB_URL
+        sync: false
       # CORS + Sanctum stateful domains MUST include the deployed SPA origin or
       # the browser blocks every cross-origin request and the app reports
       # "Network error" on register/login. These were previously `sync: false`
@@ -167,26 +162,10 @@ services:
         value: cookie
       - key: DB_CONNECTION
         value: pgsql
-      - key: DB_HOST
-        fromDatabase:
-          name: eventiq-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: eventiq-db
-          property: port
-      - key: DB_DATABASE
-        fromDatabase:
-          name: eventiq-db
-          property: database
-      - key: DB_USERNAME
-        fromDatabase:
-          name: eventiq-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: eventiq-db
-          property: password
+      # Database lives on Neon (migrated off the Render Postgres). Same
+      # connection string as the API service - set it in the dashboard.
+      - key: DB_URL
+        sync: false
       - key: CACHE_STORE
         value: redis
       - key: REDIS_URL
@@ -261,26 +240,10 @@ services:
         value: cookie
       - key: DB_CONNECTION
         value: pgsql
-      - key: DB_HOST
-        fromDatabase:
-          name: eventiq-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: eventiq-db
-          property: port
-      - key: DB_DATABASE
-        fromDatabase:
-          name: eventiq-db
-          property: database
-      - key: DB_USERNAME
-        fromDatabase:
-          name: eventiq-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: eventiq-db
-          property: password
+      # Database lives on Neon (migrated off the Render Postgres). Same
+      # connection string as the API service - set it in the dashboard.
+      - key: DB_URL
+        sync: false
       - key: CACHE_STORE
         value: redis
       - key: REDIS_URL
@@ -340,8 +303,6 @@ services:
       - key: VITE_API_BASE_URL
         value: https://eventiq-qvh2.onrender.com
 
-databases:
-  - name: eventiq-db
-    plan: starter
-    databaseName: eventiq
-    user: eventiq
+# NOTE: the old Render Postgres resource (eventiq-db) has been migrated to
+# Neon and is no longer declared here. Delete it manually from the Render
+# dashboard (blueprint removal does not auto-delete it) to stop charges.
