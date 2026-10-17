@@ -97,10 +97,10 @@ const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ logs = [], isLoading = 
                           </span>
                         </td>
                         <td className="audit-log-viewer__muted" data-testid={`audit-log-old-${log.id}`}>
-                          {log.oldValue ?? '—'}
+                          {log.oldValue == null ? '—' : String(log.oldValue)}
                         </td>
                         <td className="audit-log-viewer__muted" data-testid={`audit-log-new-${log.id}`}>
-                          {log.newValue ?? '—'}
+                          {log.newValue == null ? '—' : String(log.newValue)}
                         </td>
                         <td className="audit-log-viewer__muted" data-testid={`audit-log-reason-${log.id}`}>
                           {log.reason ?? '—'}

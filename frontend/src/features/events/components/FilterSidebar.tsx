@@ -1,10 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../../lib/api';
-
-export interface FilterOptions {
-  categories: Array<{ id: number; slug: string; name: string; events_count: number }>;
-  priceRange: { min: number; max: number };
-}
+import type { DiscoveryCategory, PriceRange } from '../types/shared';
 
 export interface FilterSidebarProps {
   currentFilters: {
@@ -21,7 +17,8 @@ export interface FilterSidebarProps {
     maxPrice?: number;
     location?: string;
   }) => void;
-  availableCategories?: FilterOptions['categories'];
+  availableCategories?: DiscoveryCategory[];
+  priceRange?: PriceRange;
 }
 
 const DateButton = ({
@@ -57,7 +54,6 @@ const CategoryChip = ({
 }) => (
   <div
     className={`category-chip ${isSelected ? 'category-chip--selected' : ''}`}
-    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
     onClick={() => onSelect()}
     role="button"
     aria-checked={isSelected}
@@ -77,11 +73,14 @@ const CategoryChip = ({
 export const FilterSidebar = ({
   currentFilters,
   onChange,
-  availableCategories,
+  availableCategories = [],
+  priceRange,
 }: FilterSidebarProps) => {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 768 : false,
   );
+  const [categories, setCategories] = useState<DiscoveryCategory[]>(availableCategories);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -93,249 +92,219 @@ export const FilterSidebar = ({
     }
   }, []);
 
-  const [categories, setCategories] = useState<
-    FilterOptions['categories']
-  >(availableCategories ?? []);
-
   useEffect(() => {
-    if (categories.length === 0) {
-      fetch('/api/events/public/filters')
-        .then((res) => res.json())
-        .then((data) => setCategories(data.data?.categories ?? []))
-        .catch(() => []);
+    if (categories.length === 0 && !availableCategories?.length) {
+      api
+        .get('/events/public/filters')
+        .then((res) => {
+          const cats = res.data?.data?.categories ?? [];
+          setCategories(
+            cats.map((c: DiscoveryCategory | string) =>
+              typeof c === 'string' ? { id: c, slug: c, name: c } : c,
+            ),
+          );
+        })
+        .catch(() => setCategories([]));
     }
-  }, [categories.length]);
+  }, [availableCategories?.length]);
 
-  const [categoryValues, setCategoryValues] = useState<
-    Set<string>
-  >(new Set(
-    (currentFilters.category ? currentFilters.category.split(',') : []) as string[],
-  ));
-  const minPrice = currentFilters.minPrice ?? 0;
-  const maxPrice = currentFilters.maxPrice ?? 100000;
+  const [categoryValues, setCategoryValues] = useState<Set<string>>(
+    new Set(
+      currentFilters.category
+        ? currentFilters.category.split(',').filter(Boolean)
+        : [],
+    ),
+  );
 
-  const handleCategoryChange = (value: string) => {
-    setCategoryValues((prev) => {
-      const next = new Set(prev);
-      if (next.has(value)) {
-        next.delete(value);
-      } else {
-        next.add(value);
-      }
-      return next;
-    });
-    onChange({
-      ...currentFilters,
-      category: Array.from(categoryValues).length > 0 ? Array.from(categoryValues).join(',') : undefined,
-    });
+  const minPriceDefault = priceRange?.min ?? 0;
+  const maxPriceDefault = priceRange?.max ?? 100000;
+  const minPrice = currentFilters.minPrice ?? minPriceDefault;
+  const maxPrice = currentFilters.maxPrice ?? maxPriceDefault;
+
+  const handleCategoryChange = useCallback(
+    (value: string) => {
+      setCategoryValues((prev) => {
+        const next = new Set(prev);
+        if (next.has(value)) {
+          next.delete(value);
+        } else {
+          next.add(value);
+        }
+        return next;
+      });
+      setCategoryValues((prev) => {
+        const next = new Set(prev);
+        if (next.has(value)) next.delete(value);
+        else next.add(value);
+        const cat = Array.from(next).length > 0 ? Array.from(next).join(',') : undefined;
+        onChange({ ...currentFilters, category: cat });
+        return next;
+      });
+    },
+    [currentFilters, onChange],
+  );
+
+  const handleDateChange = useCallback(
+    (dateRange: string) => {
+      onChange({ ...currentFilters, dateRange });
+    },
+    [currentFilters, onChange],
+  );
+
+  const handleMinPriceChange = useCallback(
+    (value: number) => {
+      onChange({ ...currentFilters, minPrice: value });
+    },
+    [currentFilters, onChange],
+  );
+
+  const handleMaxPriceChange = useCallback(
+    (value: number) => {
+      onChange({ ...currentFilters, maxPrice: value });
+    },
+    [currentFilters, onChange],
+  );
+
+  const handleLocationChange = useCallback(
+    (location: string) => {
+      onChange({ ...currentFilters, location: location || undefined });
+    },
+    [currentFilters, onChange],
+  );
+
+  const handleToggleDrawer = () => {
+    setIsDrawerOpen((prev) => !prev);
   };
 
-  const handleDateChange = (dateRange: string) => {
-    onChange({ ...currentFilters, dateRange });
-  };
+  const selectedCategoryName = currentFilters.category
+    ? categories.find((c) => c.slug === currentFilters.category)?.name ||
+      currentFilters.category
+    : 'All Categories';
 
-  const handleMinPriceChange = (value: number) => {
-    onChange({ ...currentFilters, minPrice: value });
-  };
-
-  const handleMaxPriceChange = (value: number) => {
-    onChange({ ...currentFilters, maxPrice: value });
-  };
-
-  const handleLocationChange = (location: string) => {
-    onChange({ ...currentFilters, location });
-  };
-
-  if (typeof window !== 'undefined' && window.innerWidth < 768) {
-    return (
-      <div className="filter-drawer" role="dialog" aria-modal="true" aria-label="Filters">
-        <div className="filter-drawer__header">
-          <h3 className="filter-drawer__title">Filters</h3>
-          <button
-            className="filter-drawer__close"
-            onClick={() => setIsMobile(!window.innerWidth < 768)}
-            aria-label="Close filters"
-          >
-            ×
-          </button>
-        </div>
-        <div className="filter-drawer__content">
-          <div className="category-select"
-            onClick={() => {}}
-            role="button"
-            aria-haspopup="listbox"
-            aria-expanded={categoryValues.size > 0}>
-            <span className="category-select__trigger">
-              {currentFilters.category
-                ? categories
-                    .find((c) => c.slug === currentFilters.category)
-                    ?.name || currentFilters.category
-                : 'All Categories'}
-            </span>
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </div>
-          <div className="filter-drawer__date-buttons">
-            <CategoryChip
-              label="Upcoming"
-              value="upcoming"
-              isSelected={currentFilters.dateRange === 'upcoming'}
-              onSelect={() => handleDateChange('upcoming')}
-            />
-            <CategoryChip
-              label="This Week"
-              value="this week"
-              isSelected={currentFilters.dateRange === 'this week'}
-              onSelect={() => handleDateChange('this week')}
-            />
-            <CategoryChip
-              label="This Month"
-              value="this month"
-              isSelected={currentFilters.dateRange === 'this month'}
-              onSelect={() => handleDateChange('this month')}
-            />
-            <CategoryChip
-              label="Custom Range"
-              value="custom"
-              isSelected={currentFilters.dateRange === 'custom'}
-              onSelect={() => handleDateChange('custom')}
-            />
-          </div>
-          <div className="filter-drawer__section">
-            <h4 className="filter-drawer__section-title">Price</h4>
-            <div className="price-inputs">
-              <input
-                type="number"
-                min={0}
-                max={100000}
-                step={500}
-                value={minPrice}
-                onChange={(e) => handleMinPriceChange(Number(e.target.value))}
-                className="price-input__field"
-                placeholder="Min"
-              />
-              <span className="price-input__separator">-</span>
-              <input
-                type="number"
-                min={0}
-                max={100000}
-                step={500}
-                value={maxPrice}
-                onChange={(e) => handleMaxPriceChange(Number(e.target.value))}
-                className="price-input__field"
-                placeholder="Max"
-              />
-            </div>
-          </div>
-          <div className="filter-drawer__section">
-            <h4 className="filter-drawer__section-title">Location</h4>
-            <input
-              type="text"
-              value={currentFilters.location || ''}
-              onChange={(e) => handleLocationChange(e.target.value)}
-              placeholder="Venue or city"
-              className="filter-drawer__location-input"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <aside className="filter-sidebar" role="navigation" aria-label="Event filters">
-      <div className="filter-sidebar__header">
-        <h3 className="filter-sidebar__title">Filters</h3>
-        <button
-          className="filter-sidebar__toggle"
-          onClick={() => setIsMobile(!window.innerWidth < 768)}
-          aria-label="Toggle filters drawer"
-        >
-          ☰
-        </button>
-      </div>
-      <div className="filter-sidebar__content">
-        <div
-          className="category-select"
-          onClick={() => {}}
-          role="button"
-          aria-haspopup="listbox"
-          aria-expanded={categoryValues.size > 0}>
-          <span className="category-select__trigger">
-            {currentFilters.category
-              ? categories
-                  .find((c) => c.slug === currentFilters.category)
-                  ?.name || currentFilters.category
-              : 'All Categories'}
-          </span>
+  const drawerContent = (
+    <div className="filter-sidebar__content">
+      <div className="filter-sidebar__section">
+        <h4 className="filter-sidebar__section-title">Category</h4>
+        <div className="category-select" onClick={() => {}} role="button" aria-haspopup="listbox" aria-expanded={categoryValues.size > 0}>
+          <span className="category-select__trigger">{selectedCategoryName}</span>
           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M6 9l6 6 6-6" />
           </svg>
         </div>
+      </div>
+      <div className="filter-sidebar__section">
+        <h4 className="filter-sidebar__section-title">Date Range</h4>
         <div className="filter-sidebar__date-buttons">
-          <CategoryChip
+          <DateButton
             label="Upcoming"
             value="upcoming"
             isSelected={currentFilters.dateRange === 'upcoming'}
-            onSelect={() => handleDateChange('upcoming')}
+            onClick={() => handleDateChange('upcoming')}
           />
-          <CategoryChip
+          <DateButton
             label="This Week"
             value="this week"
             isSelected={currentFilters.dateRange === 'this week'}
-            onSelect={() => handleDateChange('this week')}
+            onClick={() => handleDateChange('this week')}
           />
-          <CategoryChip
+          <DateButton
             label="This Month"
             value="this month"
             isSelected={currentFilters.dateRange === 'this month'}
-            onSelect={() => handleDateChange('this month')}
+            onClick={() => handleDateChange('this month')}
           />
-          <CategoryChip
+          <DateButton
             label="Custom Range"
             value="custom"
             isSelected={currentFilters.dateRange === 'custom'}
-            onSelect={() => handleDateChange('custom')}
+            onClick={() => handleDateChange('custom')}
           />
         </div>
-        <div className="filter-sidebar__section">
-          <h4 className="filter-sidebar__section-title">Price</h4>
-          <div className="price-inputs">
-            <input
-              type="number"
-              min={0}
-              max={100000}
-              step={500}
-              value={minPrice}
-              onChange={(e) => handleMinPriceChange(Number(e.target.value))}
-              className="price-input__field"
-              placeholder="Min"
-            />
-            <span className="price-input__separator">-</span>
-            <input
-              type="number"
-              min={0}
-              max={100000}
-              step={500}
-              value={maxPrice}
-              onChange={(e) => handleMaxPriceChange(Number(e.target.value))}
-              className="price-input__field"
-              placeholder="Max"
-            />
-          </div>
-          <div className="filter-sidebar__section">
-            <h4 className="filter-sidebar__section-title">Location</h4>
-            <input
-              type="text"
-              value={currentFilters.location || ''}
-              onChange={(e) => handleLocationChange(e.target.value)}
-              placeholder="Venue or city"
-              className="filter-sidebar__location-input"
-            />
-          </div>
+      </div>
+      <div className="filter-sidebar__section">
+        <h4 className="filter-sidebar__section-title">Price</h4>
+        <div className="price-inputs">
+          <input
+            type="number"
+            min={minPriceDefault}
+            max={maxPriceDefault}
+            step={500}
+            value={minPrice}
+            onChange={(e) => handleMinPriceChange(Number(e.target.value))}
+            className="price-input__field"
+            placeholder="Min"
+          />
+          <span className="price-input__separator">-</span>
+          <input
+            type="number"
+            min={minPriceDefault}
+            max={maxPriceDefault}
+            step={500}
+            value={maxPrice}
+            onChange={(e) => handleMaxPriceChange(Number(e.target.value))}
+            className="price-input__field"
+            placeholder="Max"
+          />
         </div>
       </div>
+      <div className="filter-sidebar__section">
+        <h4 className="filter-sidebar__section-title">Location</h4>
+        <input
+          type="text"
+          value={currentFilters.location || ''}
+          onChange={(e) => handleLocationChange(e.target.value)}
+          placeholder="Venue or city"
+          className="filter-sidebar__location-input"
+        />
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <button
+          className="filter-sidebar__toggle"
+          onClick={handleToggleDrawer}
+          aria-label="Toggle filters"
+          aria-expanded={isDrawerOpen}
+        >
+          ☰
+        </button>
+        {isDrawerOpen && (
+          <div
+            className="filter-sidebar open"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filters"
+          >
+            <div className="filter-sidebar__header">
+              <h3 className="filter-sidebar__title">Filters</h3>
+              <button
+                className="filter-sidebar__toggle"
+                onClick={handleToggleDrawer}
+                aria-label="Close filters"
+              >
+                ✕
+              </button>
+            </div>
+            {drawerContent}
+          </div>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <aside
+      className="filter-sidebar"
+      role="navigation"
+      aria-label="Event filters"
+    >
+      <div className="filter-sidebar__header">
+        <h3 className="filter-sidebar__title">Filters</h3>
+      </div>
+      {drawerContent}
     </aside>
   );
 };

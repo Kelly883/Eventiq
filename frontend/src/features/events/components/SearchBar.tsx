@@ -1,21 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../../lib/api';
 import { useNavigate } from 'react-router-dom';
-import type { Event } from '../types/shared';
+import type { SearchSuggestion } from '../types/shared';
 
 export interface SearchBarProps {
-  onSearch?: (event: Event) => void;
+  onSearch?: (suggestion: SearchSuggestion) => void;
   placeholder?: string;
 }
 
 const DEBOUNCE_MS = 300;
 
-const SearchBar = ({ onSearch, placeholder = 'Search events...' }: SearchBarProps) => {
+const SearchBar = ({
+  onSearch,
+  placeholder = 'Search events…',
+}: SearchBarProps) => {
   const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<Event[]>([]);
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -24,19 +27,21 @@ const SearchBar = ({ onSearch, placeholder = 'Search events...' }: SearchBarProp
     }
 
     timeoutRef.current = setTimeout(async () => {
-      if (query.length < 2) {
+      const trimmed = query.trim();
+      if (trimmed.length < 2) {
         setSuggestions([]);
         setIsOpen(false);
         return;
       }
 
       try {
-        const res = await api.get('/events/search', {
-          params: { q: query },
+        const res = await api.get('/events/public/search', {
+          params: { q: trimmed },
         });
-        const data = res.data.data || [];
-        setSuggestions(Array.isArray(data) ? data : []);
-        setIsOpen(true);
+        const data = res.data?.data ?? [];
+        const list = Array.isArray(data) ? data : [];
+        setSuggestions(list);
+        setIsOpen(list.length > 0);
       } catch (err) {
         console.error('Search failed', err);
         setSuggestions([]);
@@ -52,35 +57,32 @@ const SearchBar = ({ onSearch, placeholder = 'Search events...' }: SearchBarProp
   }, [query]);
 
   useEffect(() => {
-    if (!isOpen || suggestions.length === 0) return;
+    if (!isOpen || suggestions.length === 0 || !inputRef.current) return;
 
-    // Auto-focus first suggestion when dropdown opens
-    const suggestionItems = document.querySelectorAll('.search-bar__dropdown-item');
-    if (suggestionItems.length > 0 && inputRef.current) {
-      suggestionItems[0].focus();
-    }
+    const firstItem = document.querySelector(
+      '.search-bar__dropdown-item',
+    ) as HTMLElement | null;
+    firstItem?.focus();
   }, [isOpen, suggestions]);
 
-  const handleSelect = (event: Event) => {
+  const handleSelect = (suggestion: SearchSuggestion) => {
     setSuggestions([]);
     setQuery('');
-    onSearch?.(event);
-    navigate(`/events/${event.id}`);
+    setIsOpen(false);
+    onSearch?.(suggestion);
+    navigate(`/events/${suggestion.id}`);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      // Next suggestion logic could be added here
-    }
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      // Previous suggestion logic could be added here
-    }
     if (e.key === 'Escape') {
       setSuggestions([]);
       setIsOpen(false);
     }
+  };
+
+  const handleBlur = () => {
+    // Delay close so click on suggestion can fire
+    setTimeout(() => setIsOpen(false), 150);
   };
 
   return (
@@ -95,24 +97,30 @@ const SearchBar = ({ onSearch, placeholder = 'Search events...' }: SearchBarProp
           className="search-bar__input"
           minLength={2}
           aria-label="Search events"
+          onBlur={handleBlur}
         />
         {isOpen && suggestions.length > 0 && (
-          <div className="search-bar__dropdown">
-            {suggestions.map((event) => (
+          <div className="search-bar__dropdown" role="listbox" aria-label="Search suggestions">
+            {suggestions.map((suggestion) => (
               <div
-                key={event.id}
+                key={suggestion.id}
                 className="search-bar__dropdown-item"
-                onClick={() => handleSelect(event)}
-                role="button"
+                onClick={() => handleSelect(suggestion)}
+                onMouseDown={(e) => e.preventDefault()}
+                role="option"
                 tabIndex={0}
-                aria-label={event.title || event.organizer?.displayName || ''}
-                onMouseEnter={() => {}}
+                aria-label={suggestion.title}
               >
                 <span className="search-bar__dropdown-title">
-                  {event.title || 'Untitled Event'}
+                  {suggestion.title || 'Untitled Event'}
                 </span>
                 <span className="search-bar__dropdown-meta">
-                  {event.organizer?.displayName || ''}
+                  {suggestion.start_datetime
+                    ? new Date(suggestion.start_datetime).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                      })
+                    : ''}
                 </span>
               </div>
             ))}

@@ -133,3 +133,158 @@ export interface Event {
   readonly created_at: string;
   readonly updated_at: string;
 }
+
+/* ---------------------------------------------------------------------------
+ * Public discovery payload shapes (App\Features\Public\Resources\EventResource
+ * and App\Http\Resources\EventPublicResource).
+ *
+ * The two public event endpoints deliberately expose DIFFERENT field names
+ * (snake_case EventResource vs. camelCase EventPublicResource aliases like
+ * start_date/venue/image_url) — the discovery UI is written against the
+ * union so a card renders correctly no matter which endpoint the page calls.
+ * ------------------------------------------------------------------------- */
+
+/** Organizer as embedded by Features\Public EventResource: { name, avatar }. */
+export interface PublicOrganizerSummary {
+  readonly name?: string | null;
+  readonly avatar?: string | null;
+}
+
+/** Ticket tier as embedded by Features\Public EventResource. */
+export interface PublicTicketTier {
+  readonly id: number;
+  readonly name: string;
+  readonly price: number;
+  readonly currency?: string | null;
+  readonly quantity?: number | null;
+  readonly sold_count?: number | null;
+  readonly is_active?: boolean;
+  readonly status?: string | null;
+  /** Present on Features\Public ticket-tiers endpoint. */
+  readonly available_count?: number | null;
+  /** Present on EventPublicResource ticket_tiers. */
+  readonly is_available?: boolean;
+}
+
+/** Full public event shape (Features\Public EventResource). */
+export interface PublicEvent {
+  readonly id: number;
+  readonly title: string;
+  readonly slug?: string | null;
+  readonly description?: string | null;
+  readonly start_datetime?: string | null;
+  readonly end_datetime?: string | null;
+  readonly status?: string | null;
+  readonly category?: string | null;
+  readonly organizer?: PublicOrganizerSummary | null;
+  readonly ticket_tiers?: PublicTicketTier[];
+  readonly ticket_availability?: number | null;
+  readonly popularity_score?: number | null;
+  /* EventPublicResource aliases */
+  readonly name?: string | null;
+  readonly start_date?: string | null;
+  readonly end_date?: string | null;
+  readonly venue?: string | null;
+  readonly venue_name?: string | null;
+  readonly location?: string | null;
+  readonly image_url?: string | null;
+  readonly banner_image_url?: string | null;
+  readonly ticket_price?: number | null;
+  readonly tickets_remaining?: number | null;
+}
+
+/** Category option returned by GET /events/public/filters. */
+export interface DiscoveryCategory {
+  readonly id?: string | number;
+  readonly slug?: string;
+  readonly name: string;
+  readonly events_count?: number;
+}
+
+/** Price range returned by GET /events/public/filters. */
+export interface PriceRange {
+  readonly min: number;
+  readonly max: number;
+}
+
+/** Filters payload returned by GET /events/public/filters. */
+export interface DiscoveryFiltersPayload {
+  readonly categories: Array<string | DiscoveryCategory>;
+  readonly price_range?: PriceRange;
+}
+
+/** One autocomplete hit from GET /events/public/search. */
+export interface SearchSuggestion {
+  readonly id: number;
+  readonly title: string;
+  readonly slug?: string | null;
+  readonly category?: string | null;
+  readonly start_datetime?: string | null;
+  readonly banner_image_url?: string | null;
+}
+
+/** Pricing info from GET /events/public/{event}/pricing (or /events/{id}/pricing). */
+export interface PricingWindowSummary {
+  readonly window_id?: string | number;
+  readonly window_name?: string | null;
+  readonly price: number;
+  readonly start_date_time?: string | null;
+  readonly end_date_time?: string | null;
+  readonly available_quantity?: number | null;
+}
+
+export interface EventPricingInfo {
+  readonly event_id?: string | number;
+  readonly current_pricing?: PricingWindowSummary | null;
+  readonly next_pricing?: PricingWindowSummary | null;
+  readonly ticket_tiers?: PublicTicketTier[];
+}
+
+/** Props shared by the reusable discovery presentational components. */
+export interface PricingWindowProps {
+  readonly currentPrice?: number | null;
+  readonly nextPrice?: number | null;
+  readonly nextPriceChangeAt?: string | null;
+  readonly currency?: string;
+}
+
+export interface OrganizerCardData {
+  readonly id?: number | string;
+  readonly name?: string | null;
+  readonly displayName?: string | null;
+  readonly bio?: string | null;
+  readonly avatar?: string | null;
+  readonly avatarUrl?: string | null;
+  readonly publicUrl?: string | null;
+  readonly website?: string | null;
+}
+
+/** Reusable component data types (loose, for discovery UI). */
+export interface SharedOrganizer {
+  readonly id?: number | string;
+  readonly name?: string | null;
+  readonly displayName?: string | null;
+  readonly avatar?: string | null;
+  readonly avatarUrl?: string | null;
+  readonly bio?: string | null;
+  readonly publicUrl?: string | null;
+  readonly website?: string | null;
+}
+
+export interface SharedTicketTier {
+  readonly id?: number | string;
+  readonly name?: string | null;
+  readonly price?: number | string | null;
+  readonly currency?: string | null;
+  readonly quantity?: number | null;
+  readonly sold_count?: number | null;
+  readonly available_count?: number | null;
+  readonly is_active?: boolean | null;
+  readonly status?: string | null;
+}
+
+export interface PricingWindowData {
+  readonly currentPrice?: number | string | null;
+  readonly nextPrice?: number | string | null;
+  readonly nextPriceChangeAt?: string | Date | null;
+}

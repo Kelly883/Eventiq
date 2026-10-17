@@ -1,25 +1,29 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import type { PricingWindowData } from '../types/shared';
 
 export interface PricingWindowProps {
-  pricing: {
-    currentPrice: number;
-    nextPrice: number;
-    nextPriceChangeAt: string | null;
-  };
+  pricing: PricingWindowData;
+  currency?: string;
 }
 
-const formatCountdown = (dateString: string | null): string => {
+function formatCountdown(dateString: string | Date | null | undefined): string {
   if (!dateString) return '';
 
-  const changeTime = new Date(dateString).getTime();
+  const changeTime =
+    dateString instanceof Date
+      ? dateString.getTime()
+      : new Date(dateString).getTime();
   const now = new Date().getTime();
   const diff = changeTime - now;
 
   if (diff <= 0) return 'Now';
 
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const days = Math.floor(hours / 24);
-  const remainingHours = hours % 24;
+  const totalSeconds = Math.floor(diff / 1000);
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const totalHours = Math.floor(totalMinutes / 60);
+  const days = Math.floor(totalHours / 24);
+  const remainingHours = totalHours % 24;
+  const remainingMinutes = totalMinutes % 60;
 
   if (days > 0) {
     return `in ${days} ${days === 1 ? 'day' : 'days'}`;
@@ -27,28 +31,77 @@ const formatCountdown = (dateString: string | null): string => {
   if (remainingHours > 0) {
     return `in ${remainingHours} ${remainingHours === 1 ? 'hour' : 'hours'}`;
   }
-  return 'in less than an hour';
-};
+  if (remainingMinutes > 0) {
+    return `in ${remainingMinutes} min`;
+  }
+  return 'in less than a minute';
+}
 
-const PricingWindow = ({ pricing }: PricingWindowProps) => {
+function getCurrencySymbol(currency?: string | null): string {
+  const symbols: Record<string, string> = {
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    NGN: '₦',
+    GHS: '₵',
+    KES: 'KSh',
+    ZAR: 'R',
+  };
+  return symbols[(currency || 'USD').toUpperCase()] || '₦';
+}
+
+function formatPrice(
+  price: number | string | null | undefined,
+  currency?: string | null,
+): string {
+  if (price == null) return '—';
+  const num = typeof price === 'string' ? parseFloat(price) : price;
+  if (Number.isNaN(num)) return '—';
+  const symbol = getCurrencySymbol(currency);
+  return `${symbol}${num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+const PricingWindow = ({
+  pricing,
+  currency = 'NGN',
+}: PricingWindowProps) => {
   const { currentPrice, nextPrice, nextPriceChangeAt } = pricing;
-  const countdown = formatCountdown(nextPriceChangeAt);
+  const [countdown, setCountdown] = useState<string>(() =>
+    formatCountdown(nextPriceChangeAt),
+  );
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown(formatCountdown(nextPriceChangeAt));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [nextPriceChangeAt]);
+
+  const hasNextPrice = nextPrice != null && nextPriceChangeAt != null;
 
   return (
-    <div className="pricing-window">
+    <div className="pricing-window" aria-label="Pricing information">
       <div className="pricing-window__current">
         <span className="pricing-window__label">Current Price</span>
-        <span className="pricing-window__value">₦{currentPrice.toLocaleString()}</span>
+        <span className="pricing-window__value">
+          {formatPrice(currentPrice, currency)}
+        </span>
       </div>
-      <div className="pricing-window__next">
-        <span className="pricing-window__label">Next Price</span>
-        <span className="pricing-window__value">₦{nextPrice.toLocaleString()}</span>
-      </div>
-      <div className="pricing-window__countdown">
-        {countdown ? (
-          <span className="pricing-window__countdown-text">{countdown}</span>
-        ) : null}
-      </div>
+      {hasNextPrice && (
+        <>
+          <div className="pricing-window__next">
+            <span className="pricing-window__label">Next Price</span>
+            <span className="pricing-window__value">
+              {formatPrice(nextPrice, currency)}
+            </span>
+          </div>
+          <div className="pricing-window__countdown">
+            <span className="pricing-window__countdown-text">
+              Price changes {countdown}
+            </span>
+          </div>
+        </>
+      )}
     </div>
   );
 };

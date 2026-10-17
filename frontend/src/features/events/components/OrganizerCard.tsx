@@ -1,26 +1,23 @@
 import React from 'react';
+import type { SharedOrganizer } from '../types/shared';
 
 export interface OrganizerCardProps {
-  organizer: import('../types/shared').Organizer;
+  organizer: SharedOrganizer;
   onClick?: () => void;
 }
 
 const OrganizerCard = ({ organizer, onClick }: OrganizerCardProps) => {
-  const avatarUrl = organizer.avatarUrl;
+  const avatarUrl = organizer.avatarUrl || organizer.avatar;
   const displayName = organizer.displayName || organizer.name || 'Unknown Organizer';
   const bio = organizer.bio ? organizer.bio.substring(0, 100) + '...' : '';
-  const profilePath = organizer.publicUrl || `/o/${organizer.userId}`;
+  const profilePath: string = organizer.publicUrl || `/o/${String(organizer.id ?? '')}`;
 
   const firstChar = displayName?.charAt(0) || '';
-  const lastChar =
-    displayName?.lastIndexOf(' ') > -1
-      ? displayName.charAt(displayName.length - 1)
-      : '';
-  const initials = `${firstChar}${lastChar}`.toUpperCase().trim() || 'UN';
+  const initials = firstChar.toUpperCase() || 'UN';
 
   return (
     <div
-      className="organizer-card cursor-pointer"
+      className="organizer-card"
       onClick={onClick}
       role="button"
       tabIndex={0}
@@ -34,7 +31,7 @@ const OrganizerCard = ({ organizer, onClick }: OrganizerCardProps) => {
             className="organizer-card__avatar-image"
             loading="lazy"
             onError={() => {
-              // fallback handled by CSS
+              // fallback handled by CSS placeholder
             }}
           />
         ) : (
@@ -55,8 +52,7 @@ const OrganizerCard = ({ organizer, onClick }: OrganizerCardProps) => {
         {bio && (
           <p
             className="organizer-card__bio"
-            title={organizer.bio}
-            // truncate on hover if needed
+            title={organizer.bio || undefined}
           >
             {bio}
           </p>

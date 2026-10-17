@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import RoleBadge from './RoleBadge.tsx';
+import RoleBadge from './RoleBadge';
 import type { User, SortDirection, SortState, OptimisticUpdate } from '../types';
 import './RolesComponents.css';
 

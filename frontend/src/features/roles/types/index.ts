@@ -100,6 +100,12 @@ export interface SortState {
   direction: SortDirection;
 }
 
+export interface RoleColor {
+  bg: string;
+  text: string;
+  border: string;
+}
+
 export interface OptimisticUpdate {
   userId: string;
 }

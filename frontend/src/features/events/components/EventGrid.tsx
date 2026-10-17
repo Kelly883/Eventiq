@@ -1,13 +1,13 @@
 import React from 'react';
 import EventCard from './EventCard';
-import { Skeleton } from './Skeletons';
+import type { Event } from '../types/shared';
 
 export interface EventGridProps {
-  events: import('../types/shared').Event[];
+  events: Event[];
   isLoading: boolean;
   hasMore: boolean;
   onLoadMore?: () => void;
-  onEventClick?: (event: import('../types/shared').Event) => void;
+  onEventClick?: (event: Event) => void;
 }
 
 const getColumnCount = (): number => {
@@ -28,13 +28,16 @@ const EventGrid = ({
   const columnCount = getColumnCount();
 
   if (isLoading) {
-    // Improved skeleton matching EventCard silhouette
     return (
-      <div className="event-grid" style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}>
+      <div
+        className="event-grid"
+        style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}
+        aria-label="Loading events"
+      >
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="event-card skeleton-lg"
+            className="event-card skeleton-card"
             style={{ marginBottom: '1rem' }}
             aria-hidden="true"
           >
@@ -42,6 +45,7 @@ const EventGrid = ({
             <div className="skeleton-title-lg" />
             <div className="skeleton-text-sm" />
             <div className="skeleton-text-xs" />
+            <div className="skeleton-text-sm" />
           </div>
         ))}
       </div>
@@ -50,7 +54,10 @@ const EventGrid = ({
 
   if (events.length === 0) {
     return (
-      <div className="event-grid" style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}>
+      <div
+        className="event-grid"
+        style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}
+      >
         <div className="empty-state">
           <svg
             className="empty-state__icon"
@@ -65,14 +72,14 @@ const EventGrid = ({
             <line x1="9" y1="9" x2="15" y2="15" />
             <line x1="9" y1="15" x2="15" y2="9" />
           </svg>
-          <p className="empty-state__title">No events found</p>
+          <h2 className="empty-state__title">No events found</h2>
           <p className="empty-state__description">
             Try adjusting your search or filters.
           </p>
-          {hasMore && (
+          {hasMore && onLoadMore && (
             <button
               className="empty-state__load-more"
-              onClick={() => onLoadMore?.()}
+              onClick={onLoadMore}
               aria-label="Load more events"
             >
               Load More
@@ -84,7 +91,10 @@ const EventGrid = ({
   }
 
   return (
-    <div className="event-grid" style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}>
+    <div
+      className="event-grid"
+      style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}
+    >
       {events.map((event) => (
         <EventCard
           key={event.id}

@@ -11,21 +11,27 @@ export interface RoleData {
 export const roleService = {
   getRoles: async (): Promise<unknown> => {
     // Implementation here
+    return undefined;
   },
   createRole: async (roleData: RoleData): Promise<unknown> => {
     // Implementation here
+    return undefined;
   },
   updateRole: async (roleId: string, roleData: Partial<RoleData>): Promise<unknown> => {
     // Implementation here
+    return undefined;
   },
   deleteRole: async (roleId: string): Promise<unknown> => {
     // Implementation here
+    return undefined;
   },
   assignRoleToUser: async (roleId: string, userId: string): Promise<unknown> => {
     // Implementation here
+    return undefined;
   },
   removeRoleFromUser: async (roleId: string, userId: string): Promise<unknown> => {
     // Implementation here
+    return undefined;
   },
 };
 
@@ -37,23 +43,30 @@ export interface PermissionData {
 export const permissionService = {
   getPermissions: async (): Promise<unknown> => {
     // Implementation here
+    return undefined;
   },
   updateRolePermissions: async (roleId: string, permissionIds: string[]): Promise<unknown> => {
     // Implementation here
+    return undefined;
   },
   getAuditLog: async (): Promise<unknown> => {
     // Implementation here
+    return undefined;
   },
   getPermissionRequests: async (): Promise<unknown> => {
     // Implementation here
+    return undefined;
   },
   approvePermissionRequest: async (requestId: string): Promise<unknown> => {
     // Implementation here
+    return undefined;
   },
   rejectPermissionRequest: async (requestId: string): Promise<unknown> => {
     // Implementation here
+    return undefined;
   },
   submitPermissionRequest: async (permissionId: string, reason?: string): Promise<unknown> => {
     // Implementation here
+    return undefined;
   },
 };
