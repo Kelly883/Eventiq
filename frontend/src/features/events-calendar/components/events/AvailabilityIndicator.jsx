@@ -7,14 +7,20 @@ const LABELS = {
   soldOut: 'Sold out',
 };
 
-/**
- * Shows ticket availability as color + text + shape (not color alone),
- * per WCAG 1.4.1 (use of color). Screen readers get the label via
- * visible text, not just an aria-label on a colored dot.
- */
-const AvailabilityIndicator = ({ status = 'available' }) => {
-  const color = AVAILABILITY_COLORS[status] ?? AVAILABILITY_COLORS.available;
-  const label = LABELS[status] ?? LABELS.available;
+const AvailabilityIndicator = ({
+  availability = 'available',
+  ticketsRemaining,
+}: {
+  availability: 'available' | 'low' | 'sold_out';
+  ticketsRemaining?: number;
+}) => {
+  const color = AVAILABILITY_COLORS[availability] ?? AVAILABILITY_COLORS.available;
+  const label =
+    availability === 'available'
+      ? `${ticketsRemaining ?? ''} tickets remaining`
+      : availability === 'lowStock'
+      ? `${ticketsRemaining ?? 'few'} tickets remaining`
+      : 'Sold Out';
 
   return (
     <span className="inline-flex items-center gap-1.5 text-sm">
@@ -22,6 +28,7 @@ const AvailabilityIndicator = ({ status = 'available' }) => {
         aria-hidden="true"
         style={{ backgroundColor: color }}
         className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+        aria-label={label}
       />
       <span>{label}</span>
     </span>
