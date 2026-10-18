@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import LiveIndicator from '../../../analytics/components/LiveIndicator';
 import { api } from '../../../../lib/api';
 
-const debounce = (func: Function, wait: number) => {
-  let timeout: NodeJS.Timeout;
-  return function executedFunction(...args: any[]) {
+const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
     const later = () => {
       clearTimeout(timeout);
       func(...args);
@@ -30,7 +30,7 @@ const DashboardHeader = ({ user, onFilterChange, onDateRangeChange, onCreateEven
   });
 
   const debouncedFilterChange = useCallback(
-    debounce((filter: string) => {
+    debounce((filter) => {
       setSelectedFilter(filter);
       if (onFilterChange) onFilterChange(filter);
     }, 300),
@@ -38,7 +38,7 @@ const DashboardHeader = ({ user, onFilterChange, onDateRangeChange, onCreateEven
   );
 
   const debouncedDateRangeChange = useCallback(
-    debounce((range: { from: Date; to: Date }) => {
+    debounce((range) => {
       setDateRange(range);
       if (onDateRangeChange) onDateRangeChange(range);
     }, 300),

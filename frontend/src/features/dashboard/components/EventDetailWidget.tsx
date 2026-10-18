@@ -33,7 +33,7 @@ const EventDetailWidget = ({ eventId, onViewAnalytics, onManageInventory, onEdit
   if (isLoading) {
     return (
       <div role="status" className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm mb-6 animate-spin">
-        <span className="inline-block bg-slate-100 rounded-full animate-pulse" style={width: '2rem', height: '2rem'} aria-hidden="true" />
+        <span className="inline-block bg-slate-100 rounded-full animate-pulse" style={{width: '2rem', height: '2rem'}} aria-hidden="true" />
         <span className="text-slate-500">Loading event details...</span>
       </div>
     );

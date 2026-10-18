@@ -10,7 +10,7 @@ const DateHeader = ({ date, eventCount }: { date: string; eventCount: number }) 
         {formatted}
       </span>
       <span className="text-sm text-gray-500">
-        {eventCount} event{s eventCount !== 1 ? 's' : ''}
+        {eventCount} {eventCount !== 1 ? 'events' : 'event'}
       </span>
     </div>
   );
