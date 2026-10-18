@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCartContext } from '../context/CartContext';
 import { api } from '../../../lib/api';
+import { CartSkeleton } from '../components/Skeletons';
 import '../../../styles/shared-pages.css';
 
 const CartPage = () => {
@@ -9,6 +10,7 @@ const CartPage = () => {
   const { cart, removeFromCart } = useCartContext();
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   const itemCount = cart.length;
 
   useEffect(() => {
@@ -19,9 +21,10 @@ const CartPage = () => {
       api.post('/cart/verify', { items: cart })
         .then(() => { if (!cancelled) setVerifyError(null); })
         .catch(() => { if (!cancelled) setVerifyError('Some cart items may be unavailable. Please review before checkout.'); })
-        .finally(() => { if (!cancelled) setVerifying(false); });
+        .finally(() => { if (!cancelled) { setVerifying(false); setInitialLoading(false); } });
     } else {
       setVerifying(false);
+      setInitialLoading(false);
     }
     return () => { cancelled = true; };
   }, [cart]);
@@ -34,6 +37,10 @@ const CartPage = () => {
       .catch(() => setVerifyError('Verification failed again. Please remove unavailable items or try later.'))
       .finally(() => setVerifying(false));
   };
+
+  if (initialLoading) {
+    return <CartSkeleton />;
+  }
 
   return (
     <div className="spa-page">

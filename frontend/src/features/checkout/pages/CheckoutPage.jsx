@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../../lib/api';
 import { useAuthContext } from '../../../features/auth/context/AuthContext';
 import { useCartContext } from '../context/CartContext';
+import { CheckoutSkeleton } from '../components/Skeletons';
 import '../../../styles/shared-pages.css';
 
 const CheckoutPage = () => {
@@ -11,6 +12,7 @@ const CheckoutPage = () => {
   const { cart } = useCartContext();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
   const [billingDetails, setBillingDetails] = useState({
     fullName: user?.name || '',
@@ -26,6 +28,7 @@ const CheckoutPage = () => {
       return () => clearTimeout(redirectTimer);
     }
     setError(null);
+    setInitialLoading(false);
     return undefined;
   }, [cart.length, navigate]);
 
@@ -60,6 +63,10 @@ const CheckoutPage = () => {
       setLoading(false);
     }
   };
+
+  if (initialLoading) {
+    return <CheckoutSkeleton />;
+  }
 
   if (error && cart.length === 0) {
     return (

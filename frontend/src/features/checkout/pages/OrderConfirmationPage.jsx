@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../../lib/api';
 import { useAuthContext } from '../../../features/auth/context/AuthContext';
+import { OrderConfirmationSkeleton } from '../components/Skeletons';
 
 const OrderConfirmationPage = () => {
   const { orderId } = useParams();
@@ -39,12 +40,7 @@ const OrderConfirmationPage = () => {
   }, [orderId, user]);
 
   if (loading) {
-    return <div className="min-h-screen bg-slate-50 p-6 md:p-10">
-      <div className="text-center py-12">
-        <div className="spinner md:spinner-xl" />
-        <p className="text-slate-500 mt-4">Loading order details...</p>
-      </div>
-    </div>;
+    return <OrderConfirmationSkeleton />;
   }
 
   if (error) {

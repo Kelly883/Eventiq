@@ -11,6 +11,10 @@ interface PaymentFormProps {
   onError: (error: string) => void;
   isLoading: boolean;
   gateway?: 'paystack' | 'flutterwave';
+  amount: number;
+  currency: string;
+  email: string;
+  reference?: string;
 }
 
 const PaymentForm: React.FC<PaymentFormProps> = ({
@@ -19,24 +23,37 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   onError,
   isLoading,
   gateway = 'paystack',
+  amount,
+  currency = 'NGN',
+  email,
+  reference = 'eventiq-checkout',
 }) => {
   const [error, setError] = useState<string | null>(null);
+  const [errorAnnouncement, setErrorAnnouncement] = useState<string | null>(null);
+
+  const announceError = (message: string) => {
+    setError(message);
+    setErrorAnnouncement(message);
+    onError(message);
+    // Clear announcement after screen readers have time to read it
+    setTimeout(() => setErrorAnnouncement(null), 1000);
+  };
 
   const initializePaystackPayment: InitializePayment = usePaystackPayment({
     publicKey: paystackConfig.publicKey,
-    amount: 0,
-    currency: paystackConfig.currency as 'NGN',
-    reference: 'eventiq-checkout',
+    amount: Math.round(amount * 100), // Paystack expects amount in kobo (smallest unit)
+    currency: currency as 'NGN' | 'USD' | 'GHS' | 'ZAR' | 'KES',
+    reference,
   });
 
   const initiateFlutterwavePayment = useFlutterwave({
     public_key: flutterwaveConfig.publicKey,
-    tx_ref: 'eventiq-checkout',
-    amount: 0,
-    currency: flutterwaveConfig.currency,
+    tx_ref: reference,
+    amount,
+    currency,
     payment_options: 'card',
     customer: {
-      email: '',
+      email,
       phone_number: '',
       name: '',
     },
@@ -55,8 +72,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
     if (gateway === 'paystack') {
       if (!isPaystackConfigured()) {
-        setError('Paystack not configured');
-        onError('Paystack not configured');
+        announceError('Paystack not configured');
         return;
       }
 
@@ -65,19 +81,18 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           onSuccess(response);
         },
         onClose: () => {
-          onError('Payment closed');
+          announceError('Payment closed');
         },
         config: {
-          email: '',
-          amount: 0,
-          currency: paystackConfig.currency,
-          reference: 'eventiq-checkout',
+          email,
+          amount: Math.round(amount * 100),
+          currency,
+          reference,
         },
       });
     } else if (gateway === 'flutterwave') {
       if (!isFlutterwaveConfigured()) {
-        setError('Flutterwave not configured');
-        onError('Flutterwave not configured');
+        announceError('Flutterwave not configured');
         return;
       }
 
@@ -86,7 +101,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           onSuccess(response);
         },
         onClose: () => {
-          onError('Payment closed');
+          announceError('Payment closed');
         },
       });
     }
@@ -121,8 +136,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         )}
       </div>
 
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {errorAnnouncement}
+      </div>
+
       {error && (
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-red-600" role="alert">
+          {error}
+        </p>
       )}
     </form>
   );
