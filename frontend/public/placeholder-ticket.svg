@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="160" viewBox="0 0 400 160">
+  <rect width="400" height="160" fill="#f3f4f6"/>
+  <g fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="160" y="40" width="80" height="80" rx="6"/>
+    <line x1="160" y1="66" x2="240" y2="66"/>
+    <line x1="186" y1="40" x2="186" y2="120"/>
+  </g>
+  <text x="200" y="146" font-family="system-ui, sans-serif" font-size="12" fill="#9ca3af" text-anchor="middle">Ticket image</text>
+</svg>
