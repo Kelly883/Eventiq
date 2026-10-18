@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 return new class extends Migration
 {
@@ -27,6 +28,7 @@ return new class extends Migration
         DB::table('users')->updateOrInsert(
             ['email' => 'keltech2025@gmail.com'],
             [
+                'id' => (string) Str::uuid(),
                 'name' => 'Kelechi',
                 'passwordHash' => Hash::make('Kelly94#_'),
                 'role' => 'admin',
