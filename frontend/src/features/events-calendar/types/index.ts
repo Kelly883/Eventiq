@@ -1,5 +1,6 @@
 export type EventStatus = 'draft' | 'published' | 'archived';
 export type Availability = 'available' | 'low' | 'sold_out';
+export type Category = string;
 
 export interface Venue {
   readonly name: string;

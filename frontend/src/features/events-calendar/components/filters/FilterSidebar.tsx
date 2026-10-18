@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Category } from '../../types';
+// eslint-disable-next-line react/no-unknown-property
 
-const FilterSidebar = ({
-  categories = [],
+const desktopSidebar = ({
+  categories,
   selectedCategory,
   onCategoryChange,
   priceRange,
@@ -19,34 +20,7 @@ const FilterSidebar = ({
   location: string;
   onLocationChange: (location: string) => void;
   onClearFilters: () => void;
-}) => {
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-
-  const handleCategoryChange = (category: string | null) => {
-    onCategoryChange(category);
-    if (isMobileOpen) setIsMobileOpen(false);
-  };
-
-  const handlePriceChange = (range: { min: number; max: number }) => {
-    onPriceChange(range);
-  };
-
-  const handleLocationChange = (loc: string) => {
-    onLocationChange(loc);
-  };
-
-  return (
-    <div className="w-full bg-white shadow-sm border-r border-gray-200">
-      {isMobileOpen ? (
-        <mobileDrawer(isMobileOpen, setIsMobileOpen, onClearFilters) : (
-          <desktopSidebar(onClearFilters)
-        )}
-      ) : null}
-    </div>
-  );
-};
-
-const desktopSidebar = ({ onClearFilters }: { onClearFilters: () => void }) => (
+}) => (
   <div className="sticky top-0 h-screen p-6 max-w-sm">
     <h2 className="text-xl font-semibold mb-6">Filters</h2>
 
@@ -90,9 +64,9 @@ const desktopSidebar = ({ onClearFilters }: { onClearFilters: () => void }) => (
         min={priceRange.min}
         max={priceRange.max}
         value={priceRange.max}
-        onChange={(e =>
+        onChange={(e) =>
           onPriceChange({ min: priceRange.min, max: parseFloat(e.target.value) })
-        })
+        }
         className="w-full rounded border my-2"
       />
     </div>
@@ -117,11 +91,29 @@ const desktopSidebar = ({ onClearFilters }: { onClearFilters: () => void }) => (
   </div>
 );
 
-const mobileDrawer = (
-  isOpen: boolean,
-  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>,
-  onClearFilters: () => void
-) => {
+const mobileDrawer = ({
+  isOpen,
+  setIsOpen,
+  categories,
+  selectedCategory,
+  onCategoryChange,
+  priceRange,
+  onPriceChange,
+  location,
+  onLocationChange,
+  onClearFilters,
+}: {
+  isOpen: boolean;
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  categories: Category[];
+  selectedCategory: string | null;
+  onCategoryChange: (category: string | null) => void;
+  priceRange: { min: number; max: number };
+  onPriceChange: (range: { min: number; max: number }) => void;
+  location: string;
+  onLocationChange: (location: string) => void;
+  onClearFilters: () => void;
+}) => {
   return (
     <div className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm">
       <div className="fixed top-0 right-0 w-64 h-screen bg-white shadow-2L transform transition-transform rtl:translate-y-right rtl:left-auto rtl:right-0 md:translateX0 md:translateY0" style={{ transform: isOpen ? 'translateX(0)' : 'translateX(100%)' }}>
@@ -173,9 +165,9 @@ const mobileDrawer = (
               min={priceRange.min}
               max={priceRange.max}
               value={priceRange.min}
-              onChange={(e =>
+              onChange={(e) =>
                 onPriceChange({ min: parseFloat(e.target.value), max: priceRange.max })
-              )}
+              }
               className="w-full rounded border my-2"
             />
             <input
@@ -183,9 +175,9 @@ const mobileDrawer = (
               min={priceRange.min}
               max={priceRange.max}
               value={priceRange.max}
-              onChange={(e =>
+              onChange={(e) =>
                 onPriceChange({ min: priceRange.min, max: parseFloat(e.target.value) })
-              )}
+              }
               className="w-full rounded border my-2"
             />
           </div>
@@ -209,6 +201,67 @@ const mobileDrawer = (
           </button>
         </nav>
       </div>
+    </div>
+  );
+};
+
+const FilterSidebar = ({
+  categories = [],
+  selectedCategory,
+  onCategoryChange,
+  priceRange,
+  onPriceChange,
+  location,
+  onLocationChange,
+  onClearFilters,
+}: {
+  categories: Category[];
+  selectedCategory: string | null;
+  onCategoryChange: (category: string | null) => void;
+  priceRange: { min: number; max: number };
+  onPriceChange: (range: { min: number; max: number }) => void;
+  location: string;
+  onLocationChange: (location: string) => void;
+  onClearFilters: () => void;
+}) => {
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const handleCategoryChange = (category: string | null) => {
+    onCategoryChange(category);
+    if (isMobileOpen) setIsMobileOpen(false);
+  };
+
+  const handlePriceChange = (range: { min: number; max: number }) => {
+    onPriceChange(range);
+  };
+
+  const handleLocationChange = (loc: string) => {
+    onLocationChange(loc);
+  };
+
+  return (
+    <div className="w-full bg-white shadow-sm border-r border-gray-200">
+      {isMobileOpen ? mobileDrawer({
+        isOpen: isMobileOpen,
+        setIsOpen: setIsMobileOpen,
+        categories,
+        selectedCategory,
+        onCategoryChange: handleCategoryChange,
+        priceRange,
+        onPriceChange: handlePriceChange,
+        location,
+        onLocationChange: handleLocationChange,
+        onClearFilters,
+      }) : desktopSidebar({
+        categories,
+        selectedCategory,
+        onCategoryChange: handleCategoryChange,
+        priceRange,
+        onPriceChange: handlePriceChange,
+        location,
+        onLocationChange: handleLocationChange,
+        onClearFilters,
+      })}
     </div>
   );
 };

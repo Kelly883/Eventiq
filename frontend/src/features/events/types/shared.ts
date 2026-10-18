@@ -132,6 +132,8 @@ export interface Event {
   readonly analyticsMetrics: AnalyticsEventsMetrics | null;
   readonly created_at: string;
   readonly updated_at: string;
+  readonly rating?: number | null;
+  readonly ratingCount?: number | null;
 }
 
 /* ---------------------------------------------------------------------------

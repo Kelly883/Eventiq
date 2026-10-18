@@ -7,6 +7,6 @@ export const paystackConfig = {
   currency: 'NGN',
 };
 
-export function isPaystackConfigured() {
+export function isPaystackConfigured(): boolean {
   return Boolean(paystackConfig.publicKey);
 }

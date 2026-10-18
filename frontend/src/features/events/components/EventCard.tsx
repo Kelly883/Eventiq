@@ -4,6 +4,8 @@ import type { Event } from '../types/shared';
 export interface EventCardProps {
   event: Event;
   onClick?: (event: Event) => void;
+  onFavoriteToggle?: (eventId: number) => void;
+  isFavorite?: boolean;
   loading?: boolean;
 }
 
@@ -59,6 +61,8 @@ function formatPrice(
 const EventCard = ({
   event,
   onClick,
+  onFavoriteToggle,
+  isFavorite = false,
   loading = false,
 }: EventCardProps) => {
   const [hover, setHover] = React.useState(false);
@@ -175,6 +179,24 @@ const EventCard = ({
         {isTrending && (
           <span className="event-badge trending">Trending</span>
         )}
+        <button
+          className="event-favorite-btn"
+          onClick={() => onFavoriteToggle?.(event.id)}
+          aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill={isFavorite ? '#e83e8c' : 'none'}
+            stroke={isFavorite ? '#e83e8c' : 'currentColor'}
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 1.5 9.15.82 7.5 1.5 3.75 6.34 1.5 2l.75-.75C3.51 7.34 5.77 8.5 8 8.5c.77 0 1.53-.2 2.29-.61l2.18 1.89 1.25-2.03a.995.995 0 01.96.69l-1.5 1.25 2.7 2.19 1.55-1.13.75.57a3.12 3.12 0 014.23 2.22l-1.89 2.15z" />
+          </svg>
+        </button>
       </div>
       <div className="event-details">
         <h3 className="event-title">{event.title || 'Untitled Event'}</h3>
@@ -222,6 +244,29 @@ const EventCard = ({
           <span className={`availability-badge availability-badge--${availabilityStatus === 'plenty' ? 'green' : availabilityStatus === 'low' ? 'amber' : 'red'}`}>
             {availabilityText}
           </span>
+          {event.ticket_tiers && event.ticket_tiers.length > 0 && (
+            <div className="event-rating">
+              <span className="event-rating-stars">
+                {Array(5)
+                  .fill(0)
+                  .map((_, i) => (
+                    <svg
+                      key={i}
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill={i < (event.rating ?? 0) ? '#f6e05e' : '#e5e5e5'}
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 7.93L12 17.77l-6.18 3.21L5 12.14 2 9.27l6.9-1.53L12 2z" />
+                    </svg>
+                  ))}
+              </span>
+              <span className="event-rating-count">{event.ratingCount || 0} reviews</span>
+            </div>
+          )}
         </div>
       </div>
       {onClick && (

@@ -7,6 +7,6 @@ export const flutterwaveConfig = {
   currency: 'NGN',
 };
 
-export function isFlutterwaveConfigured() {
+export function isFlutterwaveConfigured(): boolean {
   return Boolean(flutterwaveConfig.publicKey);
 }

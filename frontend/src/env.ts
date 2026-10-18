@@ -18,7 +18,6 @@ const requiredInProd: Record<string, string> = {
   VITE_API_BASE_URL: 'Production API base URL (e.g. https://app.eventiq.com)',
 };
 
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export default class EnvValidator {
   static missing(): string[] {
     const meta = import.meta as any;
@@ -49,7 +48,6 @@ export default class EnvValidator {
       `${missing.join(', ')}. Without a valid API base URL, live data will not load. ` +
       `Rebuild with VITE_API_BASE_URL set (see vite.config.js).`;
 
-    // eslint-disable-next-line no-console
     console.warn('[env] ' + message);
 
     if (typeof window !== 'undefined') {
