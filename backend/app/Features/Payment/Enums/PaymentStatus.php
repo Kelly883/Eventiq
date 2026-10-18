@@ -15,4 +15,5 @@ enum PaymentStatus: string
     case REVERSED = 'reversed';
     case REFUND_PENDING = 'refund_pending';
     case REFUND_FAILED = 'refund_failed';
+    case CANCELLED = 'cancelled';
 }

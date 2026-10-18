@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Features\Payment\Controllers\PaystackController;
 use App\Features\Payment\Controllers\FlutterwaveController;
+use App\Features\Payment\Controllers\PaystackCallbackController;
+use App\Features\Payment\Controllers\FlutterwaveCallbackController;
 use App\Features\Payment\Controllers\PaystackInitializeController;
 use App\Features\Payment\Controllers\PaystackVerifyController;
 use App\Features\Payment\Controllers\FlutterwaveInitializeController;
@@ -15,9 +17,13 @@ use App\Features\Payment\Controllers\TransactionController;
 // Payment gateway endpoints.
 // Webhooks are unauthenticated by nature (called by the payment provider).
 // Initialize/verify endpoints are used by the frontend checkout flow.
+// Callback endpoints are called by the payment provider after user completes payment.
 
 Route::post('/payments/paystack/webhook', [PaystackController::class, 'webhook']);
 Route::post('/payments/flutterwave/webhook', [FlutterwaveController::class, 'webhook']);
+
+Route::get('/payments/paystack/callback', [PaystackCallbackController::class, 'handle']);
+Route::get('/payments/flutterwave/callback', [FlutterwaveCallbackController::class, 'handle']);
 
 Route::post('/payments/paystack/initialize', [PaystackInitializeController::class, '__invoke']);
 Route::post('/payments/paystack/verify', [PaystackVerifyController::class, '__invoke']);
