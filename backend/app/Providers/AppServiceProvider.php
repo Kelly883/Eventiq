@@ -302,7 +302,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Startup health check: verify critical tables exist to catch missing
         // migrations early instead of failing with 500s on first request.
-        try {
+        // Only run on HTTP requests, not during artisan commands (migrate, queue, etc.)
+        if (!$this->app->runningInConsole()) {
+            try {
             $criticalTables = ['events', 'ticket_tiers', 'audit_logs', 'users', 'organizers', 'sessions', 'password_reset_tokens'];
             $missing = [];
             foreach ($criticalTables as $table) {
@@ -323,5 +325,6 @@ class AppServiceProvider extends ServiceProvider
                 'error' => $e->getMessage(),
             ]);
         }
+    }
     }
 }
