@@ -9,15 +9,34 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Use raw PDO to check table existence, avoiding transaction issues
+        // Use raw PDO to check table existence and primary key, avoiding transaction issues
         $pdo = DB::connection()->getPdo();
+        
+        // Check if users table exists
         $stmt = $pdo->query("
             SELECT 1 FROM information_schema.tables
             WHERE table_name = 'users' AND table_schema = 'public'
             LIMIT 1
         ");
-        if ($stmt && $stmt->fetch()) {
-            return;
+        $tableExists = $stmt && $stmt->fetch();
+        
+        if ($tableExists) {
+            // Check if primary key exists
+            $stmt = $pdo->query("
+                SELECT 1 FROM information_schema.table_constraints
+                WHERE table_name = 'users' AND table_schema = 'public'
+                AND constraint_type = 'PRIMARY KEY'
+                LIMIT 1
+            ");
+            $hasPrimaryKey = $stmt && $stmt->fetch();
+            
+            if ($hasPrimaryKey) {
+                // Table exists and has primary key - migration already applied
+                return;
+            }
+            
+            // Table exists but is incomplete (no primary key) - drop and recreate
+            Schema::dropIfExists('users');
         }
 
         Schema::create('users', function (Blueprint $table) {
