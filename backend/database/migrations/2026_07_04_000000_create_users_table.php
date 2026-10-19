@@ -3,13 +3,14 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
         // Check if users table exists using the schema builder directly
-        $schema = Schema::connection()->getSchemaBuilder();
+        $schema = DB::connection()->getSchemaBuilder();
         if ($schema->hasTable('users')) {
             return;
         }
