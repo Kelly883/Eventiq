@@ -9,9 +9,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Check if users table exists using the schema builder directly
-        $schema = DB::connection()->getSchemaBuilder();
-        if ($schema->hasTable('users')) {
+        // Use raw PDO to check table existence, avoiding transaction issues
+        $pdo = DB::connection()->getPdo();
+        $stmt = $pdo->query("
+            SELECT 1 FROM information_schema.tables
+            WHERE table_name = 'users' AND table_schema = 'public'
+            LIMIT 1
+        ");
+        if ($stmt && $stmt->fetch()) {
             return;
         }
 
