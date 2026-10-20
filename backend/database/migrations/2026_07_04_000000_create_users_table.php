@@ -12,6 +12,40 @@ return new class extends Migration
     {
         // Check table state using a fresh PDO connection (outside Laravel's transaction)
         $config = DB::connection()->getConfig();
+        $driver = $config['driver'] ?? 'sqlite';
+        
+        // For SQLite, use Laravel's Schema facade directly since we can't easily
+        // create a separate PDO connection outside the transaction
+        if ($driver === 'sqlite') {
+            if (Schema::hasTable('users')) {
+                // Check if table has primary key
+                $hasPrimaryKey = DB::connection()->getSchemaBuilder()
+                    ->getConnection()
+                    ->getDoctrineSchemaManager()
+                    ->listTableDetails('users')
+                    ->getPrimaryKey() !== null;
+                
+                if ($hasPrimaryKey) {
+                    return; // Already migrated
+                }
+                
+                // Table exists but incomplete - drop and recreate
+                Schema::dropIfExists('users');
+            }
+            
+            // Create the table fresh
+            Schema::create('users', function (Blueprint $table) {
+                $table->uuid('id')->primary();
+                $table->string('name');
+                $table->string('email')->unique()->index();
+                $table->string('passwordHash');
+                $table->string('role')->default('attendee');
+                $table->boolean('emailVerified')->default(false);
+                $table->timestamps();
+                $table->timestamp('lastLoginAt')->nullable();
+            });
+            return;
+        }
         
         // Handle DATABASE_URL format (used in production on Render)
         if (!empty($config['url'])) {
@@ -24,8 +58,15 @@ return new class extends Migration
                 \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
             ]);
         } else {
-            $dsn = "pgsql:host={$config['host']};port={$config['port']};dbname={$config['database']}";
-            $pdo = new \PDO($dsn, $config['username'], $config['password'], [
+            // Ensure all required config keys exist
+            $host = $config['host'] ?? '127.0.0.1';
+            $port = $config['port'] ?? 5432;
+            $database = $config['database'] ?? 'eventiq';
+            $username = $config['username'] ?? 'eventiq';
+            $password = $config['password'] ?? '';
+            
+            $dsn = "pgsql:host={$host};port={$port};dbname={$database}";
+            $pdo = new \PDO($dsn, $username, $password, [
                 \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
             ]);
         }
