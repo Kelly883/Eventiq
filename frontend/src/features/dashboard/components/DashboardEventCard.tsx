@@ -119,7 +119,7 @@ export const DashboardEventCard = React.memo(function DashboardEventCard({
         </div>
         <div className="absolute bottom-3 left-3 right-3">
           <h3 className="text-white text-lg font-bold truncate">{event.title}</h3>
-          <p className="text-white/80 text-sm mt-0.5">
+          <p className="text-white/80 text-sm mt-0.5 truncate max-w-[140px]">
             {event.organizerName || 'Unknown Organizer'}
           </p>
         </div>

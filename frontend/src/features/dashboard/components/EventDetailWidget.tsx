@@ -132,19 +132,20 @@ const EventDetailWidgetContent = ({
         <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
           <h3 className="text-sm font-semibold text-slate-600 mb-2">Tier Breakdown</h3>
           <div className="space-y-3 text-sm text-slate-700">
-            {tierData.map((tier, i) => (
-              <div key={`${tier.tier}-${i}`} className="flex items-center justify-between">
-                <span>{tier.tier}</span>
-                <div className="flex items-center gap-2">
-                  <span>{tier.sold}/{tier.capacity} sold</span>
-                  <span className="text-xs text-slate-500">(|</span>
-                  <span>
-                    {tier.capacity > 0 ? ((tier.sold / tier.capacity) * 100).toFixed(0) : 0}%
-                  </span>
-                  <span className="text-xs text-slate-500">|)</span>
+            {tierData.map((tier, i) => {
+              const pct = tier.capacity > 0 ? Math.round((tier.sold / tier.capacity) * 100) : 0;
+              return (
+                <div key={`${tier.tier}-${i}`} className="flex items-center justify-between">
+                  <span>{tier.tier}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-slate-500">{tier.sold}/{tier.capacity} sold</span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700">
+                      {pct}% full
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

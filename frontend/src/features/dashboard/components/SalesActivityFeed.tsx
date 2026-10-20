@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { toast } from 'react-hot-toast';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import toast from 'react-hot-toast';
 import { useSalesActivity, useSalesActivitySSE, SalesActivityItem } from '../hooks/useDashboardMetrics';
 import { ErrorBoundary } from './ErrorBoundary';
+import { useSearchParams } from 'react-router-dom';
 
 interface ActivityFilters {
   event?: string;
@@ -57,15 +58,30 @@ const EmptyState = () => (
 );
 
 export const SalesActivityFeed = () => {
-  const [filters, setFilters] = useState<ActivityFilters>({
-    event: '',
-    tier: '',
-    dateFrom: '',
-    dateTo: '',
-  });
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isExporting, setIsExporting] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const activitiesRef = useRef<SalesActivityItem[]>([]);
+
+  // Initialize filters from URL params
+  const initialFilters = useMemo((): ActivityFilters => ({
+    event: searchParams.get('event') || '',
+    tier: searchParams.get('tier') || '',
+    dateFrom: searchParams.get('dateFrom') || '',
+    dateTo: searchParams.get('dateTo') || '',
+  }), [searchParams]);
+
+  const [filters, setFilters] = useState<ActivityFilters>(initialFilters);
+
+  // Sync filters to URL when they change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.event) params.set('event', filters.event);
+    if (filters.tier) params.set('tier', filters.tier);
+    if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+    if (filters.dateTo) params.set('dateTo', filters.dateTo);
+    setSearchParams(params, { replace: true });
+  }, [filters, setSearchParams]);
 
   const { data: activities = [], isLoading, isFetching, error, refetch } = useSalesActivity(filters);
 
