@@ -111,8 +111,13 @@ return new class extends Migration
         // -----------------------------------------------------------------
         Schema::dropIfExists('ticket_inventory');
 
-        Schema::create('ticket_inventory', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+        $isPostgres = Schema::getConnection()->getDriverName() === 'pgsql';
+        Schema::create('ticket_inventory', function (Blueprint $table) use ($isPostgres) {
+            if ($isPostgres) {
+                $table->uuid('id')->default(DB::raw('gen_random_uuid()'))->primary();
+            } else {
+                $table->uuid('id')->primary();
+            }
             $table->foreignId('event_id')->constrained()->onDelete('cascade');
             $table->foreignId('ticket_tier_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('pricing_window_id')->nullable()->constrained('pricing_windows')->onDelete('cascade');

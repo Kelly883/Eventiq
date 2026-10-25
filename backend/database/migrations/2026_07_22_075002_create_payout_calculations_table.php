@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -12,8 +13,13 @@ return new class extends Migration
             return;
         }
 
-        Schema::create('payout_calculations', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+        $isPostgres = Schema::getConnection()->getDriverName() === 'pgsql';
+        Schema::create('payout_calculations', function (Blueprint $table) use ($isPostgres) {
+            if ($isPostgres) {
+                $table->uuid('id')->default(DB::raw('gen_random_uuid()'))->primary();
+            } else {
+                $table->uuid('id')->primary();
+            }
             $table->uuid('payout_id');
             $table->foreignId('organizer_id');
             $table->timestamp('settlement_period_start_date');

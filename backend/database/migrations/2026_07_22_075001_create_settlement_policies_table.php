@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -12,8 +13,13 @@ return new class extends Migration
             return;
         }
 
-        Schema::create('settlement_policies', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+        $isPostgres = Schema::getConnection()->getDriverName() === 'pgsql';
+        Schema::create('settlement_policies', function (Blueprint $table) use ($isPostgres) {
+            if ($isPostgres) {
+                $table->uuid('id')->default(DB::raw('gen_random_uuid()'))->primary();
+            } else {
+                $table->uuid('id')->primary();
+            }
             $table->string('organizer_tier'); // standard, premium, enterprise
             $table->decimal('platform_commission_percentage', 5, 2);
             $table->decimal('processing_fee_percentage', 5, 2);

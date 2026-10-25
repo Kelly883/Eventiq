@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,8 +12,13 @@ return new class extends Migration
         // Drop the old table created by the conflicting migration (071002)
         Schema::dropIfExists('fraud_events');
 
-        Schema::create('fraud_events', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+        $isPostgres = Schema::getConnection()->getDriverName() === 'pgsql';
+        Schema::create('fraud_events', function (Blueprint $table) use ($isPostgres) {
+            if ($isPostgres) {
+                $table->uuid('id')->default(DB::raw('gen_random_uuid()'))->primary();
+            } else {
+                $table->uuid('id')->primary();
+            }
             
             // Foreign keys to core entities
             $table->uuid('order_id');

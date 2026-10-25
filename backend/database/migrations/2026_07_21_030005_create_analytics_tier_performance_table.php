@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -10,8 +11,13 @@ return new class extends Migration
     {
         Schema::dropIfExists('analytics_tier_performance');
         
-        Schema::create('analytics_tier_performance', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+        $isPostgres = Schema::getConnection()->getDriverName() === 'pgsql';
+        Schema::create('analytics_tier_performance', function (Blueprint $table) use ($isPostgres) {
+            if ($isPostgres) {
+                $table->uuid('id')->default(DB::raw('gen_random_uuid()'))->primary();
+            } else {
+                $table->uuid('id')->primary();
+            }
             $table->foreignId('event_id')->constrained()->onDelete('cascade');
             $table->foreignId('ticket_tier_id')->constrained()->onDelete('cascade');
             $table->integer('total_sold')->default(0);

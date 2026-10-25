@@ -10,8 +10,13 @@ return new class extends Migration
     public function up(): void
     {
         if (!Schema::hasTable('inventory_adjustments')) {
-            Schema::create('inventory_adjustments', function (Blueprint $table) {
-                $table->uuid('id')->primary();
+            $isPostgres = Schema::getConnection()->getDriverName() === 'pgsql';
+            Schema::create('inventory_adjustments', function (Blueprint $table) use ($isPostgres) {
+                if ($isPostgres) {
+                    $table->uuid('id')->default(DB::raw('gen_random_uuid()'))->primary();
+                } else {
+                    $table->uuid('id')->primary();
+                }
                 $table->foreignId('event_id')->constrained()->onDelete('cascade');
                 $table->foreignId('ticket_tier_id')->constrained()->onDelete('cascade');
                 $table->foreignUuid('pricing_window_id')->nullable()->constrained('pricing_windows')->onDelete('set null');
@@ -35,8 +40,13 @@ return new class extends Migration
 
         Schema::dropIfExists('inventory_adjustments');
 
-        Schema::create('inventory_adjustments', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+        $isPostgres = Schema::getConnection()->getDriverName() === 'pgsql';
+        Schema::create('inventory_adjustments', function (Blueprint $table) use ($isPostgres) {
+            if ($isPostgres) {
+                $table->uuid('id')->default(DB::raw('gen_random_uuid()'))->primary();
+            } else {
+                $table->uuid('id')->primary();
+            }
             $table->foreignId('event_id')->constrained()->onDelete('cascade');
             $table->foreignId('ticket_tier_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('pricing_window_id')->nullable()->constrained('pricing_windows')->onDelete('set null');
