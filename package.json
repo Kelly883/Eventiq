@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "react-image-crop": "^11.1.2"
+    "react-image-crop": "^11.1.2",
+    "xlsx": "^0.18.5"
   }
 }

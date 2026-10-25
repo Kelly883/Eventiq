@@ -95,6 +95,12 @@ const HelpPage = lazy(() => import('./features/static-pages/pages/HelpPage'));
   const RefundPolicyPage = lazy(() => import('./features/static-pages/pages/RefundPolicyPage'));
   const TermsPage = lazy(() => import('./features/static-pages/pages/TermsPage'));
   const ComponentTestPage = lazy(() => import('./features/auth/pages/ComponentTestPage'));
+const DiscoveryComponentsGallery = lazy(
+  () => import('./features/events/pages/DiscoveryComponentsGallery'),
+);
+const DashboardComponentsGallery = lazy(
+  () => import('./features/dashboard/pages/DashboardComponentsGallery'),
+);
 
 const AUTH_PAGES = ['/login', '/register', '/admin-register', '/forgot-password', '/reset-password', '/access-denied'];
 
@@ -499,6 +505,12 @@ function App() {
               <Route path="/refund-policy" element={<RefundPolicyPage />} />
               <Route path="/terms" element={<TermsPage />} />
               {import.meta.env.DEV && <Route path="/auth-components" element={<ComponentTestPage />} />}
+              {import.meta.env.DEV && (
+                <Route path="/discovery-components" element={<DiscoveryComponentsGallery />} />
+              )}
+              {import.meta.env.DEV && (
+                <Route path="/dashboard-components" element={<DashboardComponentsGallery />} />
+              )}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             </Suspense>

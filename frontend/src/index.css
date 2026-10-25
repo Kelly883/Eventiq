@@ -1,3 +1,11 @@
+/* Tailwind layers first so hand-written rules below (and every feature
+   stylesheet loaded after this file) still win over utilities on ties.
+   The components in this codebase are written against Tailwind's utility
+   vocabulary — without these directives those class names are inert. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Global base — EventIQ design system defaults.
    Previously the Vite starter sheet centered the entire app inside a flex
    body, which clipped page tops once content outgrew the viewport and

@@ -10,6 +10,7 @@
       "@/*": ["src/*"]
     },
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true

@@ -1,12 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDashboardPreferences } from '../hooks/useDashboardPreferences';
-import { useEvents, useDashboardMetrics, EventData } from '../hooks/useEvents';
-import EventDetailWidget from '../components/EventDetailWidget';
-import { DashboardEventCard } from '../components/DashboardEventCard';
+import { useEvents, EventData } from '../hooks/useEvents';
+import { DashboardEventCard, DashboardEventCardSkeleton } from '../components/DashboardEventCard';
 import { MetricCardRow } from '../components/MetricCard';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader';
 import { SalesActivityFeed } from '../components/SalesActivityFeed';
+import { toEventStatusFilter, toMetricDateRange } from '../utils/dashboardFilters';
 import { useAuthContext } from '../../auth/context/AuthContext';
 import { getUserRoles } from '../../../lib/authRoles';
 
@@ -30,15 +30,33 @@ const OrganizerDashboardPage = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const deepEventId = urlParams.get('eventId');
-    if (deepEventId && expandedEventId !== parseInt(deepEventId, 10)) {
-      setExpandedEventId(parseInt(deepEventId, 10));
+    if (deepEventId && String(expandedEventId) !== deepEventId) {
+      setExpandedEventId(deepEventId);
     }
   }, [location.search, expandedEventId, setExpandedEventId]);
 
-  const { data: events = [], isLoading: eventsLoading, error: eventsError, refetch: refetchEvents } = useEvents();
+  const { data: events = [], isLoading: eventsLoading, error: eventsError, refetch: refetchEvents } = useEvents({
+    status: toEventStatusFilter(filters.status),
+    category: filters.category,
+  });
+
+  const metricDateRange = toMetricDateRange(filters.dateRange);
+
+  const categoryOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const options: { value: string; label: string }[] = [];
+    for (const event of events) {
+      const category = (event as { category?: string }).category;
+      if (category && !seen.has(category)) {
+        seen.add(category);
+        options.push({ value: category, label: category });
+      }
+    }
+    return [{ value: 'all', label: 'All Events' }, ...options];
+  }, [events]);
 
   const handleFilterChange = (filter: string) => {
-    setFilters({ ...filters, status: filter });
+    setFilters({ ...filters, category: filter });
   };
 
   const handleDateRangeChange = (range: { from: Date; to: Date }) => {
@@ -54,9 +72,10 @@ const OrganizerDashboardPage = () => {
     navigate('/organizer/events/new');
   };
 
-  const eventMap = events.length > 0
-    ? events.reduce((map, ev) => ({ ...map, [ev.id]: ev }), {})
-    : {};
+  const eventMap = events.reduce<Record<string, EventData>>((map, ev) => {
+    map[String(ev.id)] = ev;
+    return map;
+  }, {});
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">
@@ -67,10 +86,11 @@ const OrganizerDashboardPage = () => {
           onFilterChange={handleFilterChange}
           onDateRangeChange={handleDateRangeChange}
           onCreateEvent={handleCreateEvent}
+          filterOptions={categoryOptions}
         />
 
         {/* Metrics Row */}
-        <MetricCardRow />
+        <MetricCardRow dateRange={metricDateRange} category={filters.category} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
           {/* Main Panel: Events List with Expanded Accordions */}
@@ -93,15 +113,10 @@ const OrganizerDashboardPage = () => {
                 </Link>
                 {eventsLoading ? (
                   Array.from({ length: 3 }).map((_, i) => (
-                    <DashboardEventCard key={`skeleton-${i}`} event={{ 
-                      id: 'skeleton', 
-                      title: '', 
-                      bannerUrl: '', 
-                      status: 'active' 
-                    }} isExpanded={false} onToggle={() => {}} />
+                    <DashboardEventCardSkeleton key={`skeleton-${i}`} />
                   ))
                 ) : Object.values(eventMap).map((event: EventData) => {
-                  const isExpanded = expandedEventId === event.id;
+                  const isExpanded = String(expandedEventId) === String(event.id);
                   return (
                     <DashboardEventCard
                       key={event.id}
@@ -118,7 +133,7 @@ const OrganizerDashboardPage = () => {
 
               {eventsError && (
                 <div className="mt-4 p-4 bg-rose-50 border border-rose-200 rounded-lg">
-                  <p className="text-sm text-rose-600">Failed to load events. <button onClick={refetchEvents} className="text-rose-700 underline ml-1">Retry</button></p>
+                  <p className="text-sm text-rose-600">Failed to load events. <button onClick={() => refetchEvents()} className="text-rose-700 underline ml-1">Retry</button></p>
                 </div>
               )}
 

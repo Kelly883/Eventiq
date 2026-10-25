@@ -70,12 +70,13 @@ class DashboardController extends Controller
             'startDate' => 'nullable|date',
             'endDate' => 'nullable|date|after_or_equal:startDate',
             'eventFilter' => 'nullable|string',
+            'category' => 'nullable|string|max:80',
         ]);
 
         $dateRange = $validated['dateRange'] ?? 'last_30_days';
         $eventFilter = $validated['eventFilter'] ?? null;
 
-        $cacheKey = 'dashboard.overview.' . $user->id . '.' . $dateRange . '.' . ($eventFilter ?? 'all');
+        $cacheKey = 'dashboard.overview.' . $user->id . '.' . $dateRange . '.' . ($eventFilter ?? 'all') . '.' . ($validated['category'] ?? 'all');
 
         return Cache::remember($cacheKey, 180, function () use ($request, $dateRange, $validated, $eventFilter) {
             [$startDate, $endDate] = $this->resolveDateRange($dateRange, $validated);
@@ -84,6 +85,9 @@ class DashboardController extends Controller
             $eventQuery = $this->getEventQueryForOrganizer($request);
             if ($eventFilter && $eventFilter !== 'all') {
                 $eventQuery->where('id', $eventFilter);
+            }
+            if (!empty($validated['category'])) {
+                $eventQuery->where('category', $validated['category']);
             }
             $eventIds = $eventQuery->pluck('id')->toArray();
             $totalEvents = count($eventIds);
@@ -153,6 +157,7 @@ class DashboardController extends Controller
             'sortBy' => 'nullable|in:date,revenue,tickets,title,status',
             'sortOrder' => 'nullable|in:asc,desc',
             'status' => 'nullable|in:published,draft,cancelled,flagged,all',
+            'category' => 'nullable|string|max:80',
         ]);
 
         $perPage = $validated['perPage'] ?? 10;
@@ -160,10 +165,15 @@ class DashboardController extends Controller
         $sortOrder = $validated['sortOrder'] ?? 'desc';
         $status = $validated['status'] ?? 'all';
 
-        $query = $this->getEventQueryForOrganizer($request)->with('analyticsEventsMetric');
+        $query = $this->getEventQueryForOrganizer($request)
+            ->with(['analyticsEventsMetric', 'organizer:id,displayName']);
 
         if ($status !== 'all') {
             $query->where('status', $status);
+        }
+
+        if (!empty($validated['category'])) {
+            $query->where('category', $validated['category']);
         }
 
         $sortColumn = match ($sortBy) {
@@ -182,10 +192,13 @@ class DashboardController extends Controller
             'events' => $events->map(fn ($event) => [
                 'id' => $event->id,
                 'title' => $event->title,
+                'description' => $event->description,
                 'status' => $event->status,
                 'startDatetime' => $event->start_datetime?->toIso8601String(),
                 'endDatetime' => $event->end_datetime?->toIso8601String(),
                 'venueName' => $event->venue_name,
+                'bannerUrl' => $event->banner_image_url,
+                'organizerName' => $event->organizer?->displayName,
                 'capacity' => $event->capacity,
                 'ticketsSold' => $event->analyticsEventsMetric ? (int) $event->analyticsEventsMetric->total_tickets_sold : 0,
                 'revenue' => $event->analyticsEventsMetric ? (float) $event->analyticsEventsMetric->total_revenue : 0.0,
@@ -207,7 +220,11 @@ class DashboardController extends Controller
     {
         $this->authorizeDashboardAccess($request);
 
-        $event = $this->getEventQueryForOrganizer($request)->with(['analyticsEventsMetric', 'ticketTiers' => fn ($q) => $q->withTrashed()])->find($eventId);
+        $event = $this->getEventQueryForOrganizer($request)->with([
+            'analyticsEventsMetric',
+            'ticketTiers' => fn ($q) => $q->withTrashed(),
+            'pricingWindows' => fn ($q) => $q->where('is_active', true)->orderBy('start_date_time'),
+        ])->find($eventId);
 
         if (!$event) {
             return response()->json(['message' => 'Event not found'], 404);
@@ -220,9 +237,12 @@ class DashboardController extends Controller
             'event' => [
                 'id' => $event->id,
                 'title' => $event->title,
+                'description' => $event->description,
                 'status' => $event->status,
                 'startDatetime' => $event->start_datetime?->toIso8601String(),
                 'endDatetime' => $event->end_datetime?->toIso8601String(),
+                'venueName' => $event->venue_name,
+                'bannerUrl' => $event->banner_image_url,
                 'capacity' => $event->capacity,
                 'tiers' => $event->ticketTiers->map(fn ($tier) => [
                     'id' => $tier->id,
@@ -232,6 +252,13 @@ class DashboardController extends Controller
                     'soldCount' => (int) ($tier->sold_count ?? 0),
                     'isActive' => (bool) $tier->is_active,
                 ]),
+                'pricingTimeline' => $event->pricingWindows->map(fn ($window) => [
+                    'id' => $window->id,
+                    'label' => $window->window_name,
+                    'price' => (float) $window->price,
+                    'date' => $window->start_date_time?->toIso8601String(),
+                    'endDate' => $window->end_date_time?->toIso8601String(),
+                ])->values(),
                 'metrics' => [
                     'totalRevenue' => $metric ? (float) $metric->total_revenue : 0,
                     'totalTicketsSold' => $metric ? (int) $metric->total_tickets_sold : 0,
@@ -262,7 +289,10 @@ class DashboardController extends Controller
         }
 
         $prefs = OrganizerDashboardPreferences::where('organizer_id', $organizer->id)->first();
-        if (!$prefs || !$prefs->show_activity_feed) {
+        // No preferences row means the organizer has never touched the toggle —
+        // the documented default is an enabled feed, so only an explicit
+        // opt-out hides it.
+        if ($prefs && !$prefs->show_activity_feed) {
             return response()->json(['success' => true, 'enabled' => false, 'activities' => []]);
         }
 
@@ -276,9 +306,12 @@ class DashboardController extends Controller
 
         $limit = $validated['limit'] ?? 20;
 
-        // JOIN instead of subquery for performance
+        // JOIN instead of subquery for performance. The tier join is a LEFT JOIN
+        // and intentionally ignores soft deletes: a historical sale must keep
+        // showing the tier it was sold under even after the tier is archived.
         $query = AnalyticsSalesTimeline::query()
             ->join('events', 'analytics_sales_timeline.event_id', '=', 'events.id')
+            ->leftJoin('ticket_tiers', 'ticket_tiers.id', '=', 'analytics_sales_timeline.ticket_tier_id')
             ->where('events.organizer_id', $organizer->id)
             ->whereNull('events.deleted_at');
 
@@ -297,13 +330,24 @@ class DashboardController extends Controller
 
         $activities = $query->orderBy('analytics_sales_timeline.sale_timestamp', 'desc')
             ->limit($limit)
-            ->get(['analytics_sales_timeline.*'])
+            ->get([
+                'analytics_sales_timeline.*',
+                'events.title as event_title',
+                'ticket_tiers.name as tier_name',
+            ])
             ->map(fn ($sale) => [
                 'id' => $sale->id,
                 'type' => 'ticket_sale',
                 'message' => "Ticket sale: {$sale->quantity} ticket(s) for \${$sale->total_amount}",
                 'timestamp' => $sale->sale_timestamp?->toIso8601String(),
+                'eventId' => (string) $sale->event_id,
+                'eventName' => $sale->event_title,
+                'eventInitials' => $this->initialsFor($sale->event_title),
                 'tierId' => $sale->ticket_tier_id,
+                'tier' => $sale->tier_name,
+                'quantity' => (int) $sale->quantity,
+                'price' => (float) $sale->unit_price,
+                'totalAmount' => (float) $sale->total_amount,
             ]);
 
         return response()->json(['success' => true, 'enabled' => true, 'activities' => $activities]);
@@ -399,6 +443,21 @@ class DashboardController extends Controller
             'percentageChange' => $pct,
             'delta' => round($delta, 2),
         ];
+    }
+
+    /**
+     * Two-letter avatar initials for a title, e.g. "Lagos Jazz Festival" -> "LJ".
+     */
+    private function initialsFor(?string $title): string
+    {
+        $words = preg_split('/\s+/', trim((string) $title), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (count($words) === 0) {
+            return 'EV';
+        }
+        if (count($words) === 1) {
+            return strtoupper(substr($words[0], 0, 2));
+        }
+        return strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
     }
 
     private function emptyMetrics(): array

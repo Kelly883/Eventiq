@@ -19,8 +19,8 @@ export type CalendarView = (typeof CALENDAR_VIEWS)[keyof typeof CALENDAR_VIEWS];
 /** Ticket availability status → color, used for calendar day/event badges. */
 export const AVAILABILITY_COLORS = {
   available: '#16a34a', // green-600
-  lowStock: '#d97706', // amber-600
-  soldOut: '#dc2626', // red-600
+  low: '#d97706', // amber-600
+  sold_out: '#dc2626', // red-600
 } as const;
 
 export type AvailabilityStatus = keyof typeof AVAILABILITY_COLORS;

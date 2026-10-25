@@ -3,8 +3,8 @@ import { AVAILABILITY_COLORS } from '../../utils/dateConstants';
 
 const LABELS = {
   available: 'Available',
-  lowStock: 'Low stock',
-  soldOut: 'Sold out',
+  low: 'Low stock',
+  sold_out: 'Sold out',
 };
 
 const AvailabilityIndicator = ({
@@ -18,7 +18,7 @@ const AvailabilityIndicator = ({
   const label =
     availability === 'available'
       ? `${ticketsRemaining ?? ''} tickets remaining`
-      : availability === 'lowStock'
+      : availability === 'low'
       ? `${ticketsRemaining ?? 'few'} tickets remaining`
       : 'Sold Out';
 

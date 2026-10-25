@@ -10,6 +10,7 @@ export const useDashboardPreferences = create(
       filters: {
         dateRange: 'all',
         status: 'all',
+        category: 'all',
         search: '',
       },
       isActivityFeedVisible: true,
