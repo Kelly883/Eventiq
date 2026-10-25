@@ -12,17 +12,26 @@ return new class extends Migration
         // Use Laravel's Schema facade consistently - it works within transactions
         // and handles all database drivers properly
         
-        if (Schema::hasTable('users')) {
-            // Check if table has primary key using Laravel's schema builder
-            $columns = Schema::getColumnListing('users');
-            
-            // If table exists and has columns, check if it has primary key
-            // For a properly created users table, it should have 'id' as primary
-            if (in_array('id', $columns)) {
-                // Table exists with id column - assume properly migrated
-                return;
+        // Check if table exists - wrap in try-catch to avoid transaction abort on permission issues
+        $tableExists = false;
+        $hasIdColumn = false;
+        try {
+            $tableExists = Schema::hasTable('users');
+            if ($tableExists) {
+                $columns = Schema::getColumnListing('users');
+                $hasIdColumn = in_array('id', $columns);
             }
-            
+        } catch (\Throwable $e) {
+            // If schema introspection fails (e.g., permission issues on managed PG),
+            // proceed to create table - it will fail with a clear error if table exists
+        }
+        
+        if ($tableExists && $hasIdColumn) {
+            // Table exists with id column - assume properly migrated
+            return;
+        }
+        
+        if ($tableExists && !$hasIdColumn) {
             // Table exists but incomplete - drop and recreate
             Schema::dropIfExists('users');
         }

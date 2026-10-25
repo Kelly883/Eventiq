@@ -6,6 +6,10 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    // Run without transaction to avoid aborted transaction state on managed PostgreSQL
+    // where CREATE EXTENSION may fail due to lack of superuser privileges
+    public $withinTransaction = false;
+
     public function up(): void
     {
         // Only run on PostgreSQL
@@ -14,7 +18,6 @@ return new class extends Migration
         }
 
         // Check if pgcrypto extension exists using Laravel's DB facade
-        // This runs in the same transaction as other migrations
         try {
             $exists = DB::selectOne(
                 "SELECT 1 FROM pg_extension WHERE extname = 'pgcrypto'"
