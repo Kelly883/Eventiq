@@ -38,7 +38,7 @@ export default [
     // Build / config files run in Node, not the browser. `process`,
     // `__dirname`, etc. are valid globals here (esp. vite.config.js
     // which reads process.cwd() for loadEnv).
-    files: ["vite.config.js", "*.config.js", "playwright.config.ts", "scripts/*.ts", "src/env.ts"],
+    files: ["vite.config.js", "*.config.js", "playwright.config.ts", "scripts/*.ts", "src/env.ts", "tests/*.spec.ts"],
     languageOptions: {
       ecmaVersion: 2020,
       globals: {

@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+/// <reference types="react" />
+import type { ReactNode, ReactElement } from 'react';
 
 export interface AuthUser {
   id?: number | string;
@@ -15,5 +16,5 @@ export interface AuthContextValue {
   [key: string]: unknown;
 }
 
-export declare const AuthProvider: (props: { children: ReactNode }) => JSX.Element;
+export declare const AuthProvider: (props: { children: ReactNode }) => ReactElement;
 export declare function useAuthContext(): AuthContextValue;
