@@ -7,6 +7,13 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    // Disable the implicit transaction wrapper for this migration.
+    // The introspection queries can fail on managed PG (permission denied on
+    // pg_catalog.pg_attribute), which aborts the outer transaction and causes
+    // the subsequent CREATE TABLE to fail with "current transaction is aborted".
+    // By opting out, each statement runs in its own autocommit transaction.
+    protected $withinTransaction = false;
+
     public function up(): void
     {
         // Check if table exists using raw SQL to avoid permission issues on managed PostgreSQL
