@@ -9,28 +9,48 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Use Laravel's Schema facade consistently - it works within transactions
-        // and handles all database drivers properly
-        
-        // Check if table exists - wrap in try-catch to avoid transaction abort on permission issues
+        // Check if table exists using raw SQL to avoid permission issues on managed PostgreSQL
+        // that cause transaction aborts when querying information_schema
         $tableExists = false;
         $hasIdColumn = false;
+
         try {
-            $tableExists = Schema::hasTable('users');
-            if ($tableExists) {
-                $columns = Schema::getColumnListing('users');
-                $hasIdColumn = in_array('id', $columns);
+            $driver = Schema::getConnection()->getDriverName();
+
+            if ($driver === 'pgsql') {
+                // Use pg_catalog which is more permissive on managed PG instances
+                $result = DB::select("
+                    SELECT 1 FROM pg_catalog.pg_tables
+                    WHERE schemaname = current_schema() AND tablename = 'users'
+                ");
+                $tableExists = !empty($result);
+
+                if ($tableExists) {
+                    $columns = DB::select("
+                        SELECT column_name FROM pg_catalog.pg_attribute
+                        WHERE attrelid = 'users'::regclass AND attnum > 0 AND NOT attisdropped
+                    ");
+                    $hasIdColumn = collect($columns)->contains('column_name', 'id');
+                }
+            } else {
+                // SQLite/MySQL - use Schema facade (less permission issues)
+                $tableExists = Schema::hasTable('users');
+                if ($tableExists) {
+                    $columns = Schema::getColumnListing('users');
+                    $hasIdColumn = in_array('id', $columns);
+                }
             }
         } catch (\Throwable $e) {
-            // If schema introspection fails (e.g., permission issues on managed PG),
-            // proceed to create table - it will fail with a clear error if table exists
+            // If introspection fails (e.g., permissions on managed PG), assume fresh DB
+            $tableExists = false;
+            $hasIdColumn = false;
         }
-        
+
         if ($tableExists && $hasIdColumn) {
             // Table exists with id column - assume properly migrated
             return;
         }
-        
+
         if ($tableExists && !$hasIdColumn) {
             // Table exists but incomplete - drop and recreate
             Schema::dropIfExists('users');
