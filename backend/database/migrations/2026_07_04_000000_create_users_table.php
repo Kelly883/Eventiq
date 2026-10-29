@@ -12,7 +12,7 @@ return new class extends Migration
     // pg_catalog.pg_attribute), which aborts the outer transaction and causes
     // the subsequent CREATE TABLE to fail with "current transaction is aborted".
     // By opting out, each statement runs in its own autocommit transaction.
-    protected $withinTransaction = false;
+    public $withinTransaction = false;
 
     public function up(): void
     {
