@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+class CreateUsersTable extends Migration
 {
     // Disable the implicit transaction wrapper for this migration.
     // The introspection queries can fail on managed PG (permission denied on
@@ -85,4 +85,4 @@ return new class extends Migration
     {
         Schema::dropIfExists('users');
     }
-};
+}
