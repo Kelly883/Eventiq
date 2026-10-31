@@ -110,7 +110,7 @@ return new class extends Migration
                 RETURN NEW;
             END;
             $$
-        SQL);
+SQL);
 
         DB::statement('CREATE TRIGGER trg_pricing_windows_prevent_overlap BEFORE INSERT ON pricing_windows FOR EACH ROW EXECUTE FUNCTION trg_pricing_windows_prevent_overlap()');
 
@@ -140,7 +140,7 @@ return new class extends Migration
                 RETURN NEW;
             END;
             $$
-        SQL);
+SQL);
 
         DB::statement('CREATE TRIGGER trg_pricing_windows_prevent_overlap_update BEFORE UPDATE ON pricing_windows FOR EACH ROW EXECUTE FUNCTION trg_pricing_windows_prevent_overlap_update()');
     }
