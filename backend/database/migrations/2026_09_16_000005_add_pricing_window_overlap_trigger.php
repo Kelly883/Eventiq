@@ -85,7 +85,7 @@ return new class extends Migration
         DB::statement('DROP FUNCTION IF EXISTS trg_pricing_windows_prevent_overlap()');
         DB::statement('DROP FUNCTION IF EXISTS trg_pricing_windows_prevent_overlap_update()');
 
-        DB::statement('
+        DB::statement(<<<'SQL'
             CREATE OR REPLACE FUNCTION trg_pricing_windows_prevent_overlap()
             RETURNS trigger
             LANGUAGE plpgsql
@@ -109,10 +109,12 @@ return new class extends Migration
                 END IF;
                 RETURN NEW;
             END;
-            $$');
+            $$
+        SQL);
+
         DB::statement('CREATE TRIGGER trg_pricing_windows_prevent_overlap BEFORE INSERT ON pricing_windows FOR EACH ROW EXECUTE FUNCTION trg_pricing_windows_prevent_overlap()');
 
-        DB::statement('
+        DB::statement(<<<'SQL'
             CREATE OR REPLACE FUNCTION trg_pricing_windows_prevent_overlap_update()
             RETURNS trigger
             LANGUAGE plpgsql
@@ -137,7 +139,9 @@ return new class extends Migration
                 END IF;
                 RETURN NEW;
             END;
-            $$');
+            $$
+        SQL);
+
         DB::statement('CREATE TRIGGER trg_pricing_windows_prevent_overlap_update BEFORE UPDATE ON pricing_windows FOR EACH ROW EXECUTE FUNCTION trg_pricing_windows_prevent_overlap_update()');
     }
 
