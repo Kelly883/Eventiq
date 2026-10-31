@@ -6,17 +6,13 @@
 
 # Test info
 
-- Name: dashboard-components.spec.ts >> SalesActivityFeed >> auto-updates every 30 seconds and puts new items on top
-- Location: tests/dashboard-components.spec.ts:606:3
+- Name: dashboard-components.spec.ts >> EventCard >> triggers the correct callbacks from the card actions
+- Location: tests/dashboard-components.spec.ts:381:3
 
 # Error details
 
 ```
-Test timeout of 30000ms exceeded while running "beforeEach" hook.
-```
-
-```
-Error: page.goto: Test timeout of 30000ms exceeded.
+Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/dashboard-components
 Call log:
   - navigating to "http://localhost:3000/dashboard-components", waiting until "load"
 
@@ -126,7 +122,7 @@ Call log:
   279 | 
   280 | async function openGallery(page: Page) {
 > 281 |   await page.goto(GALLERY);
-      |              ^ Error: page.goto: Test timeout of 30000ms exceeded.
+      |              ^ Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3000/dashboard-components
   282 |   await page.waitForSelector('[data-testid="dashboard-gallery"]', { timeout: 20000 });
   283 | }
   284 | 
