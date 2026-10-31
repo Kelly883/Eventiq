@@ -6,6 +6,12 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    // Disable the implicit transaction wrapper for this migration.
+    // On managed PostgreSQL (Render, RDS, etc.), a prior statement failure
+    // in the same transaction aborts the entire transaction, causing
+    // subsequent CREATE TABLE/ALTER TABLE to fail with "current transaction is aborted".
+    // By opting out, each statement runs in its own autocommit transaction.
+    public $withinTransaction = false;
     /**
      * Fixes identified issues in Step 66 verification:
      * 1. Add soft deletes to orders table

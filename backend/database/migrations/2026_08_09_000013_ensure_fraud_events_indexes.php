@@ -23,6 +23,12 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
+    // Disable the implicit transaction wrapper for this migration.
+    // On managed PostgreSQL (Render, RDS, etc.), a prior statement failure
+    // in the same transaction aborts the entire transaction, causing
+    // subsequent CREATE TABLE/ALTER TABLE to fail with "current transaction is aborted".
+    // By opting out, each statement runs in its own autocommit transaction.
+    public $withinTransaction = false;
     private array $indexes = [
         // Dashboard: fraud activity per user over time
         'idx_fraud_user_created'      => ['fraud_events', ['user_id', 'created_at']],

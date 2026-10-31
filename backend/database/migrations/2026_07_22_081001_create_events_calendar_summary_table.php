@@ -7,6 +7,12 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    // Disable the implicit transaction wrapper for this migration.
+    // On managed PostgreSQL (Render, RDS, etc.), a prior statement failure
+    // in the same transaction aborts the entire transaction, causing
+    // subsequent CREATE TABLE/ALTER TABLE to fail with "current transaction is aborted".
+    // By opting out, each statement runs in its own autocommit transaction.
+    public $withinTransaction = false;
     /**
      * Create a physical summary table that acts as a materialized view
      * for calendar queries. This is refreshed via:

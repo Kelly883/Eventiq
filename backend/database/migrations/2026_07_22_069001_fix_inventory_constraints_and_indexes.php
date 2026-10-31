@@ -8,6 +8,12 @@ use Illuminate\Support\Str;
 
 return new class extends Migration
 {
+    // Disable the implicit transaction wrapper for this migration.
+    // On managed PostgreSQL (Render, RDS, etc.), a prior statement failure
+    // in the same transaction aborts the entire transaction, causing
+    // subsequent CREATE TABLE/ALTER TABLE to fail with "current transaction is aborted".
+    // By opting out, each statement runs in its own autocommit transaction.
+    public $withinTransaction = false;
      private function foreignKeyExists(string $table, string $column): bool
      {
          if (DB::getDriverName() === 'sqlite') {
