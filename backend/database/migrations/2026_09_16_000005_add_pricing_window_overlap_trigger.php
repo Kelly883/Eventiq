@@ -104,7 +104,7 @@ return new class extends Migration
                               OR (start_date_time <= NEW.start_date_time AND end_date_time >= NEW.end_date_time)
                           )
                     ) THEN
-                        RAISE EXCEPTION "An active pricing window already exists for this ticket category with overlapping dates.";
+                        RAISE EXCEPTION 'An active pricing window already exists for this ticket category with overlapping dates.' USING ERRCODE = 'P0001';
                     END IF;
                 END IF;
                 RETURN NEW;
@@ -132,7 +132,7 @@ return new class extends Migration
                               OR (start_date_time <= NEW.start_date_time AND end_date_time >= NEW.end_date_time)
                           )
                     ) THEN
-                        RAISE EXCEPTION "An active pricing window already exists for this ticket category with overlapping dates.";
+                        RAISE EXCEPTION 'An active pricing window already exists for this ticket category with overlapping dates.' USING ERRCODE = 'P0001';
                     END IF;
                 END IF;
                 RETURN NEW;
