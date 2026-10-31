@@ -84,30 +84,75 @@ return new class extends Migration
         $hasTotalCheckedIn = Schema::hasColumn('ticket_inventory', 'total_checked_in');
         $hasTotalVoid = Schema::hasColumn('ticket_inventory', 'total_void');
 
-        if ($hasTotalAvailable && $hasTotalCheckedIn) {
-            Schema::table('ticket_inventory', function (Blueprint $table) use ($hasTotalAvailable, $hasTotalCheckedIn) {
-                if ($hasTotalCheckedIn) {
-                    $table->integer('total_checked_in');
+        if ($hasTotalAvailable) {
+            Schema::table('ticket_inventory', function (Blueprint $table) use ($hasTotalAvailable, $hasTotalCheckedIn, $hasTotalVoid) {
+                if (!$hasTotalCheckedIn) {
+                    $table->integer('total_checked_in')->default(0)->after('total_available');
                 }
             });
         }
 
-        if ($hasTotalAvailable && $hasTotalVoid) {
+        if ($hasTotalAvailable) {
             Schema::table('ticket_inventory', function (Blueprint $table) use ($hasTotalAvailable, $hasTotalVoid) {
-                if ($hasTotalVoid) {
-                    $table->integer('total_void');
+                if (!$hasTotalVoid) {
+                    $table->integer('total_void')->default(0)->after('total_checked_in');
                 }
             });
         }
 
         // Add check constraint for data integrity (MySQL/PostgreSQL only)
         // SQLite does not support CHECK constraints in the same way
-        if ($hasTotalAvailable && $hasTotalCheckedIn) {
-            DB::statement('ALTER TABLE ticket_inventory ADD CONSTRAINT chk_inventory_limits CHECK (total_checked_in <= total_available)');
-        }
+        if ($hasTotalAvailable && $hasTotalCheckedIn && $hasTotalVoid) {
+            $driver = Schema::getConnection()->getDriverName();
+            if ($driver === 'pgsql') {
+                $constraintExists = DB::selectOne(
+                    "SELECT 1 FROM pg_constraint c
+                     JOIN pg_class t ON c.conrelid = t.oid
+                     JOIN pg_namespace n ON t.relnamespace = n.oid
+                     WHERE n.nspname = current_schema()
+                       AND t.relname = 'ticket_inventory'
+                       AND c.conname = 'chk_inventory_limits'
+                       AND c.contype = 'c'"
+                );
+                if (!$constraintExists) {
+                    DB::statement('ALTER TABLE ticket_inventory ADD CONSTRAINT chk_inventory_limits CHECK (total_checked_in <= total_available)');
+                }
 
-        if ($hasTotalAvailable && $hasTotalVoid) {
-            DB::statement('ALTER TABLE ticket_inventory ADD CONSTRAINT chk_void_limits CHECK (total_void <= total_available)');
+                $constraintExists = DB::selectOne(
+                    "SELECT 1 FROM pg_constraint c
+                     JOIN pg_class t ON c.conrelid = t.oid
+                     JOIN pg_namespace n ON t.relnamespace = n.oid
+                     WHERE n.nspname = current_schema()
+                       AND t.relname = 'ticket_inventory'
+                       AND c.conname = 'chk_void_limits'
+                       AND c.contype = 'c'"
+                );
+                if (!$constraintExists) {
+                    DB::statement('ALTER TABLE ticket_inventory ADD CONSTRAINT chk_void_limits CHECK (total_void <= total_available)');
+                }
+            } elseif ($driver === 'mysql') {
+                $constraintExists = DB::selectOne(
+                    "SELECT constraint_name FROM information_schema.table_constraints
+                     WHERE table_schema = DATABASE()
+                       AND table_name = 'ticket_inventory'
+                       AND constraint_type = 'CHECK'
+                       AND constraint_name = 'chk_inventory_limits'"
+                );
+                if (!$constraintExists) {
+                    DB::statement("ALTER TABLE ticket_inventory ADD CONSTRAINT chk_inventory_limits CHECK (total_checked_in <= total_available)");
+                }
+
+                $constraintExists = DB::selectOne(
+                    "SELECT constraint_name FROM information_schema.table_constraints
+                     WHERE table_schema = DATABASE()
+                       AND table_name = 'ticket_inventory'
+                       AND constraint_type = 'CHECK'
+                       AND constraint_name = 'chk_void_limits'"
+                );
+                if (!$constraintExists) {
+                    DB::statement("ALTER TABLE ticket_inventory ADD CONSTRAINT chk_void_limits CHECK (total_void <= total_available)");
+                }
+            }
         }
     }
 
