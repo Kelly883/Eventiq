@@ -495,6 +495,7 @@ function App() {
             <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
             <Route path="/admin-register" element={<PublicRoute><AdminRegisterPage /></PublicRoute>} />
+            <Route path="/admin/register" element={<PublicRoute><AdminRegisterPage /></PublicRoute>} />
             <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
             <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
             <Route path="/access-denied" element={<AccessDeniedPage />} />
