@@ -1,4 +1,5 @@
 import React from 'react';
+/* global process */
 import { useParams } from 'react-router-dom';
 import { useEventDetail } from '../hooks/useEvents';
 import { ErrorBoundary } from './ErrorBoundary';
