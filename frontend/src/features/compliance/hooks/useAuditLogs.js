@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { complianceService } from '../services/complianceService';
 import { normalizeAuditLog } from '../types/audit';
 
@@ -9,7 +9,7 @@ export const useAuditLogs = () => {
   const [filters, setFilters] = useState({ query: '', start: '', end: '', action: '', targetType: '', status: '' });
   const [selectedIds, setSelectedIds] = useState([]);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -32,11 +32,11 @@ export const useAuditLogs = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [complianceService]);
 
   useEffect(() => {
     fetchLogs();
-  }, [JSON.stringify(filters)]);
+  }, [JSON.stringify(filters), fetchLogs]);
 
   const bulkAction = async (action) => {
     if (!selectedIds.length) return;

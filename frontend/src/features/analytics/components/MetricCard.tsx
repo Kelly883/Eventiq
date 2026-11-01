@@ -43,7 +43,7 @@ const TrendIndicator = ({ direction, percentage }) => {
 const defaultValue = '—';
 const defaultLabel = 'Metric';
 
-const CardSkeleton = ({ reducedMotion }: { reducedMotion: boolean }) => (
+const CardSkeleton = ({ reducedMotion }: { reducedMotion?: boolean }) => (
   <div className="w-full space-y-3" aria-hidden="true">
     <div className={`h-3 w-1/2 rounded bg-slate-100 ${reducedMotion ? '' : 'animate-pulse'}`} />
     <div className={`h-7 w-3/4 rounded bg-slate-100 ${reducedMotion ? '' : 'animate-pulse'}`} />

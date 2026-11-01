@@ -34,13 +34,13 @@ const TicketTierForm = ({ tiers = [], onChange, disabled = false, errors = {} })
       if (internalTiers.length <= 1) return;
       emitChange(internalTiers.filter((_, i) => i !== index));
     },
-    [emitChange, internalTiers.length]
+    [emitChange, internalTiers]
   );
 
   const handleAdd = useCallback(() => {
     if (internalTiers.length >= 10) return;
     emitChange([...internalTiers, { id: null, name: '', price: '', quantity: '' }]);
-  }, [emitChange, internalTiers.length]);
+  }, [emitChange, internalTiers]);
 
   return (
     <div className="ticket-tier-form">

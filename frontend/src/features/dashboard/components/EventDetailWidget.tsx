@@ -1,4 +1,5 @@
 import React from 'react';
+/* global process */
 import { useParams } from 'react-router-dom';
 import { useEventDetail } from '../hooks/useEvents';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -237,7 +238,7 @@ const EventDetailWidget = ({
   const resolvedEventId = eventId ?? routeEventId;
   
   // Warn in development if both sources exist and differ
-  if (process.env.NODE_ENV !== 'production' && eventId && routeEventId && String(eventId) !== String(routeEventId)) {
+  if ((process as any).env.NODE_ENV !== 'production' && eventId && routeEventId && String(eventId) !== String(routeEventId)) {
     console.warn(
       `[EventDetailWidget] Conflicting event IDs: prop=${eventId}, URL param=${routeEventId}. Using prop value.`
     );

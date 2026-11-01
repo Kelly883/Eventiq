@@ -82,7 +82,7 @@ const AvatarUploadField = ({ currentAvatarUrl, onUpload, isLoading = false }) =>
       document.removeEventListener('keydown', handleKeyDown);
       previousActiveElement.current?.focus();
     };
-  }, [cropModalSrc]);
+  }, [cropModalSrc, handleCancelCrop]);
 
   const processFile = useCallback((file) => {
     setError('');
@@ -184,13 +184,13 @@ const AvatarUploadField = ({ currentAvatarUrl, onUpload, isLoading = false }) =>
     }
   };
 
-  const handleCancelCrop = () => {
+  const handleCancelCrop = useCallback(() => {
     if (cropModalSrc) {
       URL.revokeObjectURL(cropModalSrc);
     }
     setCropModalSrc(null);
     setCrop(null);
-  };
+  }, [cropModalSrc]);
 
   return (
     <div className="avatar-upload">
