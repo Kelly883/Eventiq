@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Category } from '../../types';
-// eslint-disable-next-line react/no-unknown-property
 
 const desktopSidebar = ({
   categories,

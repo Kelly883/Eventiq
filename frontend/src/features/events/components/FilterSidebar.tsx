@@ -106,7 +106,7 @@ export const FilterSidebar = ({
         })
         .catch(() => setCategories([]));
     }
-  }, [availableCategories?.length]);
+  }, [availableCategories, categories.length]);
 
   const [categoryValues, setCategoryValues] = useState<Set<string>>(
     new Set(
