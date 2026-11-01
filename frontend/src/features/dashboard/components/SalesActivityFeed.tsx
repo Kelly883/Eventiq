@@ -6,6 +6,7 @@ import { useSalesActivity, useSalesActivitySSE, SalesActivityItem } from '../hoo
 import { ErrorBoundary } from './ErrorBoundary';
 import { useSearchParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 interface ActivityFilters {
   event?: string;
@@ -16,9 +17,9 @@ interface ActivityFilters {
 
 const FILTER_KEYS: Array<keyof ActivityFilters> = ['event', 'tier', 'dateFrom', 'dateTo'];
 
-const SkeletonRow = () => (
-  <li className="py-3 border-b border-slate-100 animate-pulse" aria-hidden="true">
-    <div className="flex items-start gap-3">
+const SkeletonRow = ({ reducedMotion }: { reducedMotion: boolean }) => (
+  <li className="py-3 border-b border-slate-100" aria-hidden="true">
+    <div className={`flex items-start gap-3 ${reducedMotion ? '' : 'animate-pulse'}`}>
       <div className="w-8 h-8 rounded-md bg-slate-200 flex-shrink-0" />
       <div className="flex-1 min-w-0 space-y-1.5">
         <div className="h-4 w-3/4 bg-slate-200 rounded" />
@@ -119,14 +120,23 @@ export const SalesActivityFeed = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [liveItems, setLiveItems] = useState<SalesActivityItem[]>([]);
-  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
-    event: true,
-    quantity: true,
-    price: true,
-    time: true,
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') {
+      return { event: true, quantity: true, price: true, time: true };
+    }
+    try {
+      const stored = localStorage.getItem('activity-feed-columns');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {
+      // ignore parse errors
+    }
+    return { event: true, quantity: true, price: true, time: true };
   });
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const filterEventRef = useRef<HTMLSelectElement>(null);
+  const reducedMotion = useReducedMotion();
 
   const initialFilters = useMemo(
     (): ActivityFilters => ({
@@ -168,7 +178,7 @@ export const SalesActivityFeed = () => {
   }, [filters, setSearchParams]);
 
   // Keyboard shortcuts: Cmd+K for create event, / for filter focus
-  useEffect(() => {
+useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Cmd+K or Ctrl+K
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -186,8 +196,8 @@ export const SalesActivityFeed = () => {
         filterEventRef.current?.focus();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
   }, [navigate]);
 
   const { data, isLoading, isFetching, error, refetch, dataUpdatedAt } = useSalesActivity(filters);
@@ -259,6 +269,15 @@ export const SalesActivityFeed = () => {
   const handleFilterChange = useCallback((newFilters: Partial<ActivityFilters>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
   }, []);
+
+  // Persist column visibility to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('activity-feed-columns', JSON.stringify(visibleColumns));
+    } catch {
+      // ignore quota errors
+    }
+  }, [visibleColumns]);
 
   const clearFilters = useCallback(() => {
     setFilters({ event: '', tier: '', dateFrom: '', dateTo: '' });
@@ -332,7 +351,7 @@ export const SalesActivityFeed = () => {
 
   const renderRows = () => {
     if (isLoading) {
-      return Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={`skeleton-${i}`} />);
+      return Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={`skeleton-${i}`} reducedMotion={reducedMotion} />);
     }
     if (error) {
       return <ErrorState onRetry={() => refetch()} />;
@@ -345,7 +364,7 @@ export const SalesActivityFeed = () => {
       const RowComponent = ({ index, style }: { index: number; style: React.CSSProperties }) => {
         const activity = sortedActivities[index];
         return (
-          <li style={style} className="py-2 px-0 border-b border-slate-100 last:border-0">
+          <li style={style} className="py-2 px-0 border-b border-slate-100 last:border-0 overflow-hidden">
             <div className="grid grid-cols-[2rem_1fr] sm:grid-cols-[2rem_1fr_5.5rem_6.5rem_7rem] items-start gap-x-3 gap-y-1.5">
               <span
                 className="w-8 h-8 rounded-md flex items-center justify-center bg-indigo-100 text-indigo-700 text-xs font-bold flex-shrink-0"
@@ -391,9 +410,9 @@ export const SalesActivityFeed = () => {
         <List
           rowComponent={({ index, style }: any) => <RowComponent index={index} style={style} />}
           rowCount={sortedActivities.length}
-          rowHeight={60}
+          rowHeight={72}
           overscanCount={5}
-          style={{ height: 384, width: '100%' }}
+          style={{ height: 432, width: '100%' }}
           rowProps={{}}
         />
       );
@@ -402,7 +421,7 @@ export const SalesActivityFeed = () => {
     return sortedActivities.map((activity) => (
       <li
         key={activity.id}
-        className="py-3 border-b border-slate-100 last:border-0 last:pb-0 first:pt-0"
+        className="py-3 border-b border-slate-100 last:border-0 last:pb-0 first:pt-0 overflow-hidden"
       >
         <div className="grid grid-cols-[2rem_1fr] sm:grid-cols-[2rem_1fr_5.5rem_6.5rem_7rem] items-start gap-x-3 gap-y-1.5">
           <span
@@ -583,7 +602,7 @@ export const SalesActivityFeed = () => {
           )}
         </div>
 
-        <div className="px-4 py-2 max-h-96 overflow-y-auto" aria-busy={isLoading || isFetching}>
+        <div className="px-4 py-2 max-h-96 overflow-y-auto" aria-busy={isLoading || isFetching} style={{ maxHeight: '500px' }}>
           <ul className="text-sm">{renderRows()}</ul>
         </div>
       </section>

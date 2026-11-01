@@ -64,15 +64,6 @@ export function MetricCardRow({
         const value = metrics?.[config.key] ?? 0;
         const trend = metrics?.[config.trendKey] as DashboardMetrics[typeof config.trendKey] | undefined;
 
-        // Generate a simple 7-day trend sparkline (optional enhancement)
-        const sparklineData = metrics
-          ? Array.from({ length: 7 }).map((_, i) => {
-              const base = Number(value) || 0;
-              const variance = (base * 0.1 * (Math.sin(i) * 0.5 + 0.5));
-              return Math.max(0, Math.round(base * 0.7 + variance));
-            })
-          : undefined;
-
         return (
           <BaseMetricCard
             key={config.key}

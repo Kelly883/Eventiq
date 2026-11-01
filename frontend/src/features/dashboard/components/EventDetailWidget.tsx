@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useEventDetail } from '../hooks/useEvents';
 import { ErrorBoundary } from './ErrorBoundary';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 interface TierRow {
   tier: string;
@@ -83,11 +84,12 @@ const EventDetailWidgetContent = ({
   onEditEvent?: () => void;
 }) => {
   const { data: event, isLoading, isError } = useEventDetail(eventId, true);
+  const reducedMotion = useReducedMotion();
 
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-5" aria-busy="true">
-        <div className="animate-pulse">
+        <div className={reducedMotion ? '' : 'animate-pulse'}>
           <div className="h-5 w-40 bg-slate-200 rounded mb-4" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-4">
             <SkeletonInfoCard />
@@ -145,7 +147,7 @@ const EventDetailWidgetContent = ({
                 const pct = tier.capacity > 0 ? Math.round((tier.sold / tier.capacity) * 100) : 0;
                 return (
                   <li key={`${tier.tier}-${i}`} className="flex items-center justify-between gap-2">
-                    <span className="truncate" title={tier.tier}>{tier.tier}</span>
+                    <span className="truncate max-w-[12rem]" title={tier.tier}>{tier.tier}</span>
                     <span className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-xs text-slate-500">{tier.sold}/{tier.capacity}</span>
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-100 text-indigo-700">
@@ -229,7 +231,17 @@ const EventDetailWidget = ({
   onEditEvent?: () => void;
 }) => {
   const { eventId: routeEventId } = useParams();
+  
+  // Prioritize explicit prop over URL params to avoid confusion
+  // Only use URL params as fallback when prop is not provided
   const resolvedEventId = eventId ?? routeEventId;
+  
+  // Warn in development if both sources exist and differ
+  if (process.env.NODE_ENV !== 'production' && eventId && routeEventId && String(eventId) !== String(routeEventId)) {
+    console.warn(
+      `[EventDetailWidget] Conflicting event IDs: prop=${eventId}, URL param=${routeEventId}. Using prop value.`
+    );
+  }
 
   if (!resolvedEventId) {
     return (

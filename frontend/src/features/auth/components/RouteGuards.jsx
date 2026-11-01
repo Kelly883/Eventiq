@@ -148,7 +148,7 @@ export const PublicRoute = ({ children }) => {
     if (roles.includes('admin')) {
       return <Navigate to="/admin" replace />;
     }
-    if (roles.some((r) => ['venue_staff', 'organizer'].includes(r))) {
+    if (roles.includes('venue_staff')) {
       return <Navigate to="/venue/dashboard" replace />;
     }
     if (roles.includes('organizer')) {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
+import { useReducedMotion } from '@/features/dashboard/hooks/useReducedMotion';
 
 const DIRECTION_ARIA = { up: 'up', down: 'down', neutral: 'flat' };
 
@@ -42,11 +43,11 @@ const TrendIndicator = ({ direction, percentage }) => {
 const defaultValue = '—';
 const defaultLabel = 'Metric';
 
-const CardSkeleton = () => (
+const CardSkeleton = ({ reducedMotion }: { reducedMotion: boolean }) => (
   <div className="w-full space-y-3" aria-hidden="true">
-    <div className="h-3 w-1/2 rounded bg-slate-100 animate-pulse" />
-    <div className="h-7 w-3/4 rounded bg-slate-100 animate-pulse" />
-    <div className="h-5 w-16 rounded-full bg-slate-100 animate-pulse" />
+    <div className={`h-3 w-1/2 rounded bg-slate-100 ${reducedMotion ? '' : 'animate-pulse'}`} />
+    <div className={`h-7 w-3/4 rounded bg-slate-100 ${reducedMotion ? '' : 'animate-pulse'}`} />
+    <div className={`h-5 w-16 rounded-full bg-slate-100 ${reducedMotion ? '' : 'animate-pulse'}`} />
   </div>
 );
 
@@ -63,6 +64,8 @@ const MetricCard = ({
     ? sparklineData.map((v, i) => ({ value: v, index: i }))
     : undefined;
 
+  const reducedMotion = useReducedMotion();
+
   return (
     <div
       className="bg-white border border-slate-100 rounded-xl p-6 shadow-sm flex flex-col items-start gap-3 min-w-0"
@@ -71,7 +74,7 @@ const MetricCard = ({
       aria-busy={loading ? 'true' : 'false'}
     >
       {loading ? (
-        <CardSkeleton />
+        <CardSkeleton reducedMotion={reducedMotion} />
       ) : (
         <>
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider truncate w-full">

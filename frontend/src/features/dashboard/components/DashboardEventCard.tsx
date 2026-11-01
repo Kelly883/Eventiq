@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 import EventDetailWidget from './EventDetailWidget';
 
@@ -90,17 +91,17 @@ const SkeletonCard = () => (
   </div>
 );
 
-const EventBanner = ({ title, bannerUrl }: { title: string; bannerUrl?: string }) => {
+const EventBanner = ({ title, bannerUrl, reducedMotion }: { title: string; bannerUrl?: string; reducedMotion: boolean }) => {
   const [failed, setFailed] = useState(false);
   const showImage = Boolean(bannerUrl) && !failed;
 
   return (
-    <div className="absolute inset-0 overflow-hidden rounded-t-xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-slate-700">
+    <div className={`absolute inset-0 overflow-hidden rounded-t-xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-slate-700 ${reducedMotion ? '' : 'group'}`}>
       {showImage ? (
         <img
           src={bannerUrl}
           alt={title}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className={`absolute inset-0 w-full h-full object-cover ${reducedMotion ? '' : 'transition-transform duration-300 group-hover:scale-105'}`}
           loading="lazy"
           onError={() => setFailed(true)}
         />
@@ -143,16 +144,18 @@ export const DashboardEventCard = React.memo(function DashboardEventCard({
     }
   };
 
+  const reducedMotion = useReducedMotion();
+
   return (
     <div
-      className={`group border rounded-xl overflow-hidden transition-all duration-200 ${
+      className={`group border rounded-xl overflow-hidden ${reducedMotion ? '' : 'transition-all duration-200'} ${
         isExpanded
           ? 'border-indigo-300 bg-indigo-50/30 shadow-md'
           : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
       }`}
     >
       <div className="relative h-40">
-        <EventBanner title={event.title} bannerUrl={event.bannerUrl} />
+        <EventBanner title={event.title} bannerUrl={event.bannerUrl} reducedMotion={reducedMotion} />
         <div className="absolute top-3 right-3">{getStatusBadge(event.status)}</div>
         <div className="absolute bottom-3 left-3 right-3">
           <h3 className="text-white text-lg font-bold truncate" title={event.title}>
@@ -165,13 +168,13 @@ export const DashboardEventCard = React.memo(function DashboardEventCard({
       </div>
 
       <div className="p-4">
-        <button
-          onClick={onToggle}
-          onKeyDown={handleKeyDown}
-          className="w-full text-left flex items-start justify-between gap-3 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-md"
-          aria-expanded={isExpanded}
-          aria-controls={`event-details-${event.id}`}
-        >
+<button
+            onClick={onToggle}
+            onKeyDown={handleKeyDown}
+            className={`w-full text-left flex items-start justify-between gap-3 ${reducedMotion ? '' : 'transition-colors'} focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-md`}
+            aria-expanded={isExpanded}
+            aria-controls={`event-details-${event.id}`}
+          >
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Event ID: {event.id}</p>
             <p className="font-bold text-slate-800 text-sm truncate mt-0.5" title={event.title}>
@@ -200,7 +203,7 @@ export const DashboardEventCard = React.memo(function DashboardEventCard({
           >
             {isExpanded ? 'Hide' : 'Details'}
             <svg
-              className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+              className={`w-3.5 h-3.5 ${reducedMotion ? '' : 'transition-transform duration-200'} ${isExpanded ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -236,11 +239,11 @@ export const DashboardEventCard = React.memo(function DashboardEventCard({
               aria-label={`Tickets sold for ${event.title}`}
             >
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  progress >= 100 ? 'bg-emerald-500' : 'bg-indigo-600'
-                }`}
-                style={{ width: `${progress}%` }}
-              />
+              className={`h-full rounded-full ${reducedMotion ? '' : 'transition-all duration-500'} ${
+                progress >= 100 ? 'bg-emerald-500' : 'bg-indigo-600'
+              }`}
+              style={{ width: `${progress}%` }}
+            />
             </div>
           </div>
         </div>
@@ -253,7 +256,7 @@ export const DashboardEventCard = React.memo(function DashboardEventCard({
           {onViewAnalytics && (
             <button
               onClick={onViewAnalytics}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-slate-700 bg-white border border-slate-200 ${reducedMotion ? '' : 'hover:bg-slate-50 hover:border-slate-300 transition-colors'}`}
               aria-label="View analytics"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -265,7 +268,7 @@ export const DashboardEventCard = React.memo(function DashboardEventCard({
           {onManageInventory && (
             <button
               onClick={onManageInventory}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-slate-700 bg-white border border-slate-200 ${reducedMotion ? '' : 'hover:bg-slate-50 hover:border-slate-300 transition-colors'}`}
               aria-label="Manage inventory"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -277,7 +280,7 @@ export const DashboardEventCard = React.memo(function DashboardEventCard({
           {onEditEvent && (
             <button
               onClick={onEditEvent}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-indigo-600 ${reducedMotion ? '' : 'hover:bg-indigo-700 transition-colors'}`}
               aria-label="Edit event"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

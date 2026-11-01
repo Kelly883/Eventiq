@@ -186,6 +186,7 @@ export function useEventDetail(eventId: string | number | null, enabled = true) 
     },
     enabled: !!eventId && enabled,
     staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
     retry: 1,
   });
 }
