@@ -1,0 +1,242 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuthContext } from '../context/AuthContext';
+import { showToast, clearToasts } from '../../../lib/api';
+import BrandLogo from '../../common/components/BrandLogo';
+import { safeRedirectPath, defaultRedirect, normalizeFromPath } from '../utils';
+import './AdminLoginPage.css';
+
+const AdminLoginPage = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { login, adminSetup, user, sessionExpired, setSessionExpired } = useAuthContext();
+
+  // Clear stale authentication UI state when entering the login page.
+  useEffect(() => {
+    clearToasts();
+
+    if (sessionExpired) {
+      setSessionExpired(false);
+    }
+
+    try {
+      sessionStorage.removeItem('session-expired-return');
+    } catch { /* ignore */ }
+  }, [sessionExpired, setSessionExpired]);
+
+  const sessionExpiredReturn = (() => {
+    try {
+      return sessionStorage.getItem('session-expired-return');
+    } catch {
+      return null;
+    }
+  })();
+
+  useEffect(() => {
+    if (location.state?.message && location.state?.from) {
+      const fromPath = location.state.from.pathname || '';
+      const isProtectedRoute = fromPath.startsWith('/admin/') ||
+        fromPath.startsWith('/dashboard/') ||
+        fromPath.startsWith('/organizer/');
+      if (isProtectedRoute) {
+        showToast('Authentication Required', 'Please log in to access the protected route.', 'info');
+      } else if (location.state.message) {
+        showToast('Notice', location.state.message, location.state.messageType || 'warning');
+      }
+    }
+
+    if (sessionExpiredReturn) {
+      showToast('Session expired', 'Please log in again to continue.', 'warning');
+    }
+  }, [location.state?.message, location.state?.messageType, location.state?.from, sessionExpiredReturn]);
+
+  useEffect(() => {
+    if (sessionExpiredReturn) {
+      try { sessionStorage.removeItem('session-expired-return'); } catch { /* ignore */ }
+    }
+  }, [sessionExpiredReturn]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const { user: authenticatedUser } = await login(email, password, rememberMe);
+      window.dispatchEvent(new CustomEvent('session-extended'));
+      const fromPath = normalizeFromPath(location.state?.from) || sessionExpiredReturn || null;
+      const redirectTo = redirectBasedOnRole(authenticatedUser);
+      navigate(redirectTo, { replace: true });
+    } catch (err) {
+      if (err.response?.status === 419) {
+        setError('Security token expired. Please refresh the page and try again.');
+      } else if (err.response?.status === 428) {
+        setError('Please complete the captcha to continue.');
+      } else {
+        setError(
+          err.response?.data?.message ||
+          err.message ||
+          'Invalid email or password.'
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const redirectBasedOnRole = (user) => {
+    if (!user) return '/login';
+
+    const roles = user?.roles?.map((r) => r.name).sort().join(',') || '';
+    const isAdmin = roles.includes('admin') || user?.role === 'admin';
+
+    if (isAdmin) {
+      return '/admin';
+    }
+
+    if (user?.role === 'organizer') {
+      return '/organizer';
+    }
+
+    return '/';
+  };
+
+  useEffect(() => {
+    if (user) {
+      const redirectTo = redirectBasedOnRole(user);
+      if (redirectTo !== window.location.pathname) {
+        navigate(redirectTo, { replace: true });
+      }
+    }
+  }, [user, navigate]);
+
+  return (
+    <div className="login-page">
+      <div aria-hidden="true" className="login-page__orb login-page__orb--coral" />
+      <div aria-hidden="true" className="login-page__orb login-page__orb--teal" />
+
+      <section className="login-page__content">
+        <div className="login-page__brand-row">
+          <Link to="/" className="login-page__brand" aria-label="eventIQ home">
+            <BrandLogo />
+          </Link>
+          <span className="login-page__secure-badge">
+            Secure sign-in
+          </span>
+        </div>
+
+        <div className="login-page__card">
+          <div className="login-page__intro">
+            <p>Event Workspace</p>
+            <h1>Sign in</h1>
+            <p>Manage events, tickets, and check-ins.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="login-page__form" aria-busy={loading}>
+            <div className="login-page__field">
+              <label htmlFor="login-email">
+                Email address
+              </label>
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="login-page__input"
+                required
+                disabled={loading}
+                autoComplete="email"
+                spellCheck={false}
+                placeholder="you@example.com…"
+              />
+            </div>
+
+            <div className="login-page__field">
+              <div className="login-page__field-header">
+                <label htmlFor="login-password">
+                  Password
+                </label>
+                <Link to="/forgot-password" className="login-page__text-link">
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="login-page__password-field">
+                <input
+                  id="login-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`login-page__input ${error ? 'login-page__input--error' : ''}`}
+                  required
+                  disabled={loading}
+                  autoComplete="current-password"
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? 'login-error' : undefined}
+                  placeholder="Enter your password…"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  disabled={loading}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  className="login-page__password-toggle"
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              {error && (
+                <p id="login-error" role="alert" className="login-page__error">
+                  {error}
+                </p>
+              )}
+            </div>
+
+            <label className="login-page__remember">
+              <input
+                name="remember-me"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                disabled={loading}
+                className="login-page__checkbox"
+              />
+              Keep me signed in on this device
+            </label>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="login-page__submit"
+            >
+              {loading && <span aria-hidden="true" className="login-page__spinner" />}
+              {loading ? 'Signing in…' : 'Sign in to Eventiq'}
+            </button>
+          </form>
+
+          <div className="login-page__signup">
+            Need an account?
+            <Link to="/admin/register" className="login-page__text-link">
+              Create administrator account
+            </Link>
+          </div>
+
+          <p className="login-page__security-note">
+            Your account is protected with secure authentication.
+          </p>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+export default AdminLoginPage;
