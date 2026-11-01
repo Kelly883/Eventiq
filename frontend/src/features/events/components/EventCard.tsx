@@ -233,6 +233,17 @@ const EventCard = ({
             </svg>
             <span>{venue}</span>
           </div>
+          <div className="event-progress">
+            <span
+              className="sr-only"
+              aria-valuemin="0"
+              aria-valuemax={totalCapacity}
+              aria-valuenow={ticketsRemaining ?? 0}
+              role="progressbar"
+            >
+              {percentAvailable}% available
+            </span>
+          </div>
         </div>
         <div className="event-footer">
           <div className="event-price">
