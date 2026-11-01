@@ -76,12 +76,6 @@ const ErrorState = ({ onRetry }: { onRetry: () => void }) => (
 
 /** Ticking relative timestamp, isolated so the whole feed doesn't re-render. */
 const TimeAgo = ({ value, intervalMs = 30_000 }: { value: string; intervalMs?: number }) => {
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), intervalMs);
-    return () => clearInterval(id);
-  }, [intervalMs]);
-
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return <time dateTime={value}>{value}</time>;
@@ -114,7 +108,9 @@ const ALL_COLUMNS = [
   { key: 'time' as const, label: 'Time' },
 ];
 
-export const SalesActivityFeed = () => {
+export const SalesActivityFeed = ({
+  currency = 'NGN',
+}: { currency?: string }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isExporting, setIsExporting] = useState(false);
@@ -385,7 +381,7 @@ useEffect(() => {
               )}
               {visibleColumns.price && (
                 <p className="hidden sm:block text-sm font-semibold text-slate-800 text-right whitespace-nowrap">
-                  ₦{Number(activity.price || 0).toLocaleString()}
+                  {currency}{Number(activity.price || 0).toLocaleString()}
                 </p>
               )}
               {visibleColumns.time && (
@@ -394,7 +390,7 @@ useEffect(() => {
                 </p>
               )}
               <p className="col-span-2 sm:hidden text-xs text-slate-500 flex flex-wrap gap-x-3">
-                {visibleColumns.price && <span className="font-semibold text-slate-700">₦{Number(activity.price || 0).toLocaleString()}</span>}
+                {visibleColumns.price && <span className="font-semibold text-slate-700">{currency}{Number(activity.price || 0).toLocaleString()}</span>}
                 {visibleColumns.quantity && <span>{activity.quantity > 0 ? `${activity.quantity} tickets` : 'No tickets'}</span>}
                 {visibleColumns.time && (
                   <span className="text-slate-400">
@@ -443,7 +439,7 @@ useEffect(() => {
           )}
           {visibleColumns.price && (
             <p className="hidden sm:block text-sm font-semibold text-slate-800 text-right whitespace-nowrap">
-              ₦{Number(activity.price || 0).toLocaleString()}
+              {currency}{Number(activity.price || 0).toLocaleString()}
             </p>
           )}
           {visibleColumns.time && (
@@ -452,7 +448,7 @@ useEffect(() => {
             </p>
           )}
           <p className="col-span-2 sm:hidden text-xs text-slate-500 flex flex-wrap gap-x-3">
-            {visibleColumns.price && <span className="font-semibold text-slate-700">₦{Number(activity.price || 0).toLocaleString()}</span>}
+            {visibleColumns.price && <span className="font-semibold text-slate-700">{currency}{Number(activity.price || 0).toLocaleString()}</span>}
             {visibleColumns.quantity && <span>{activity.quantity > 0 ? `${activity.quantity} tickets` : 'No tickets'}</span>}
             {visibleColumns.time && (
               <span className="text-slate-400">
@@ -492,6 +488,9 @@ useEffect(() => {
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-slate-800" id="activity-feed-title">
               Sales Activity Feed
+              {import.meta.env.VITE_ACTIVITY_STREAM_URL && (
+                <span className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded ml-2">Live</span>
+              )}
             </h2>
             {lastRefresh && (
               <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
