@@ -4,7 +4,7 @@ import { useReducedMotion } from '@/features/dashboard/hooks/useReducedMotion';
 
 const DIRECTION_ARIA = { up: 'up', down: 'down', neutral: 'flat' };
 
-const Sparkline = ({ data = [] }: { data?: unknown[] }) => {
+const Sparkline = ({ data = [] }) => {
   if (!data || data.length === 0) return null;
   return (
     <div className="w-16 h-8">
