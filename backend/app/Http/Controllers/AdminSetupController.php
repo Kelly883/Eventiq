@@ -21,14 +21,18 @@ class AdminSetupController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $hasAdmin = User::whereHas('roles', function ($q) {
+        $adminCount = User::whereHas('roles', function ($q) {
             $q->where('name', 'admin');
         })
             ->orWhere('role', 'admin')
-            ->exists();
+            ->count();
+
+        $maxAdmins = config('eventiq.admin_limit', 1);
 
         return response()->json([
-            'required' => ! $hasAdmin,
+            'required' => $adminCount < $maxAdmins,
+            'admin_count' => $adminCount,
+            'max_admins' => $maxAdmins,
         ]);
     }
 
@@ -52,15 +56,17 @@ class AdminSetupController extends Controller
 
         RateLimiter::hit($limiterKey, 3600);
 
-        $hasAdmin = User::whereHas('roles', function ($q) {
+        $adminCount = User::whereHas('roles', function ($q) {
             $q->where('name', 'admin');
         })
             ->orWhere('role', 'admin')
-            ->exists();
+            ->count();
 
-        if ($hasAdmin) {
+        $maxAdmins = config('eventiq.admin_limit', 1);
+
+        if ($adminCount >= $maxAdmins) {
             return response()->json([
-                'message' => 'Not found.',
+                'message' => 'Maximum administrator accounts reached. The platform allows a maximum of ' . $maxAdmins . ' administrator accounts.',
             ], 404);
         }
 
