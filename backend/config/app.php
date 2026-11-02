@@ -38,6 +38,8 @@ return [
     // the API and frontend are deployed on separate origins.
     'frontend_url' => env('FRONTEND_URL', env('APP_URL', 'http://localhost')),
 
+    'admin_limit' => env('ADMIN_LIMIT', 1),
+
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*
