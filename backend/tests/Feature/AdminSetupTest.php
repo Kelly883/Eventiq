@@ -62,7 +62,7 @@ class AdminSetupTest extends TestCase
         ]);
 
         $response->assertStatus(404)
-            ->assertJsonPath('message', 'Not found.');
+            ->assertJsonPath('message', 'Maximum administrator accounts reached. The platform allows a maximum of 1 administrator accounts.');
 
         $this->assertDatabaseMissing('users', [
             'email' => 'second@eventiq.test',
