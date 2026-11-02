@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { List } from 'react-window';
-import { useSalesActivity, useSalesActivitySSE, SalesActivityItem } from '../hooks/useDashboardMetrics';
+import { useSalesActivity, useSalesActivitySSE, SalesActivityItem, useDebouncedFilter } from '../hooks/useDashboardMetrics';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useSearchParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
@@ -59,15 +59,16 @@ const EmptyState = ({ hasFilters, onClearFilters }: { hasFilters: boolean; onCle
 
 const ErrorState = ({ onRetry }: { onRetry: () => void }) => (
   <li role="alert" className="py-8 text-center">
-    <svg className="w-10 h-10 mx-auto text-rose-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="w-10 h-10 mx-auto text-rose-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-label="Activity feed error" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
     </svg>
     <p className="text-base font-semibold text-slate-700 mb-1">Activity feed unavailable</p>
-    <p className="text-sm text-slate-500 mb-3">We couldn&apos;t load recent sales right now.</p>
+    <p className="text-sm text-slate-500 mb-3">We couldn't load recent sales right now.</p>
     <button
       type="button"
       onClick={onRetry}
       className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-100"
+      aria-label="Retry loading activity feed"
     >
       Retry
     </button>
@@ -265,6 +266,8 @@ useEffect(() => {
   const handleFilterChange = useCallback((newFilters: Partial<ActivityFilters>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
   }, []);
+
+  const debouncedFilterChange = useDebouncedFilter(filters, handleFilterChange);
 
   // Persist column visibility to localStorage
   useEffect(() => {
@@ -464,7 +467,7 @@ useEffect(() => {
   return (
     <ErrorBoundary
       fallbackRender={(error, reset) => (
-        <div className="bg-white rounded-xl border border-rose-200 p-6" role="alert">
+        <div className="bg-white rounded-xl border border-rose-200 p-6" role="alert" aria-describedby="activity-feed-error-title">
           <div className="flex items-start gap-3">
             <svg className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -483,7 +486,7 @@ useEffect(() => {
         </div>
       )}
     >
-      <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" aria-labelledby="activity-feed-title">
+      <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" aria-labelledby="activity-feed-title" role="region" aria-label="Sales activity feed">
         <div className="px-4 py-3 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-slate-800" id="activity-feed-title">
@@ -517,12 +520,13 @@ useEffect(() => {
                         checked={visibleColumns[col.key]}
                         onChange={(e) => setVisibleColumns((prev) => ({ ...prev, [col.key]: e.target.checked }))}
                         className="rounded"
+                        aria-label={`Show ${col.label} column`}
                       />
+                      <span className="sr-only">{col.label}</span>
                       <span className="text-xs text-slate-700">{col.label}</span>
                     </label>
-                  ))}
+)}
                 </div>
-              )}
             </div>
             <button
               type="button"
@@ -549,7 +553,7 @@ useEffect(() => {
                 id="filter-event"
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 value={filters.event}
-                onChange={(e) => handleFilterChange({ event: e.target.value })}
+                onChange={(e) => debouncedFilterChange({ event: e.target.value })}
               >
                 {eventOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -562,7 +566,7 @@ useEffect(() => {
                 id="filter-tier"
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 value={filters.tier}
-                onChange={(e) => handleFilterChange({ tier: e.target.value })}
+                onChange={(e) => debouncedFilterChange({ tier: e.target.value })}
               >
                 {tierOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -576,7 +580,7 @@ useEffect(() => {
                 type="date"
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 value={filters.dateFrom}
-                onChange={(e) => handleFilterChange({ dateFrom: e.target.value })}
+                onChange={(e) => debouncedFilterChange({ dateFrom: e.target.value })}
               />
             </div>
             <div>
@@ -586,7 +590,7 @@ useEffect(() => {
                 type="date"
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 value={filters.dateTo}
-                onChange={(e) => handleFilterChange({ dateTo: e.target.value })}
+                onChange={(e) => debouncedFilterChange({ dateTo: e.target.value })}
               />
             </div>
           </div>
@@ -601,8 +605,12 @@ useEffect(() => {
           )}
         </div>
 
-        <div className="px-4 py-2 max-h-96 overflow-y-auto" aria-busy={isLoading || isFetching} style={{ maxHeight: '500px' }}>
-          <ul className="text-sm">{renderRows()}</ul>
+        <div className="px-4 py-2 max-h-[500px] overflow-y-auto overflow-x-auto" aria-busy={isLoading || isFetching} style={{ maxHeight: '500px' }}>
+          <div className="flex flex-col sm:flex-row gap-0" style={{ overflowX: 'auto', '-webkitOverflowScrolling': 'touch' }}>
+            <ul className="text-sm whitespace-nowrap" style={{ minWidth: 'max-content' }}>
+              {renderRows()}
+            </ul>
+          </div>
         </div>
       </section>
     </ErrorBoundary>

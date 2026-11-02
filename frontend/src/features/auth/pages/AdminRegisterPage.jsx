@@ -15,6 +15,8 @@ const AdminRegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(true);
+  const [adminCount, setAdminCount] = useState(0);
+  const [maxAdmins, setMaxAdmins] = useState(1);
   const navigate = useNavigate();
   const { adminSetup } = useAuthContext();
 
@@ -24,12 +26,19 @@ const AdminRegisterPage = () => {
     const checkAdminExists = async () => {
       try {
         const res = await api.get('/auth/admin-setup');
-        const required = res.data?.required === true;
+        const adminCountFromApi = res.data?.admin_count ?? 0;
+        const maxAdminsFromApi = res.data?.max_admins ?? 1;
+        setAdminCount(adminCountFromApi);
+        setMaxAdmins(maxAdminsFromApi);
+        const required = adminCountFromApi < maxAdminsFromApi;
 
         if (!required) {
+          const msg = adminCountFromApi >= maxAdminsFromApi
+            ? `Maximum administrator accounts reached (${maxAdminsFromApi} allowed). Please sign in.`
+            : `An administrator account already exists. Please sign in.`;
           showToast(
             'Admin exists',
-            'An administrator account already exists. Please sign in.',
+            msg,
             'warning',
             5000
           );
@@ -38,7 +47,8 @@ const AdminRegisterPage = () => {
       } catch (err) {
         const status = err.response?.status;
 
-        if (status === 404) {
+        if (status === 404 || status === 404) {
+          // This shouldn't happen with new backend, but handle gracefully
           showToast(
             'Admin exists',
             'An administrator account already exists. Please sign in.',
@@ -164,7 +174,7 @@ const AdminRegisterPage = () => {
           <div className="admin-register-page__intro">
             <p>Eventiq</p>
             <h1>Create administrator account</h1>
-            <p>This page is only available before the first admin account is created.</p>
+            <p>This page allows creating up to {maxAdmins} administrator account{maxAdmins > 1 ? 's' : ''}. {adminCount > 0 && adminCount < maxAdmins && adminCount > 0 ? `Current admin count: ${adminCount} / ${maxAdmins}` : ''}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="admin-register-page__form" aria-busy={loading}>
@@ -291,8 +301,8 @@ const AdminRegisterPage = () => {
         </div>
 
         <p className="admin-register-page__security-note">
-          This page is disabled after the first admin is created.
-        </p>
+              You can create up to {maxAdmins} administrator account{maxAdmins > 1 ? 's' : ''}.
+            </p>
       </section>
     </div>
   );

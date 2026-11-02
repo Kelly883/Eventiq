@@ -30,6 +30,8 @@ export const METRIC_DATE_RANGES = [
 
 export type MetricDateRange = (typeof METRIC_DATE_RANGES)[number];
 
+const DEBOUNCE_MS = 300;
+
 const NEUTRAL_TREND: Trend = { direction: 'neutral', percentage: '0%' };
 
 /**
@@ -125,6 +127,9 @@ export interface SalesActivityResponse {
 /** The feed must feel live even when SSE is unavailable, so poll as a floor. */
 export const ACTIVITY_POLL_INTERVAL_MS = 30_000;
 
+/** Debounce delay for filter changes (ms). */
+export const DEBOUNCE_MS = 300;
+
 /** Filters as the UI holds them; translated to API params below. */
 export interface ActivityFilterInput {
   event?: string;
@@ -158,6 +163,19 @@ export const toActivityQueryParams = (filters: ActivityFilterInput) => {
   }
 
   return params;
+};
+
+/** Debounces filter changes to reduce re-renders and API calls. */
+export const useDebouncedFilter = (filters: ActivityFilters, onChange: (filters: ActivityFilters) => void) => {
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      onChange(filters);
+    }, DEBOUNCE_MS);
+  }, [JSON.stringify(filters), onChange]);
 };
 
 /** Defensive mapping of an API activity row onto the shape the feed renders. */
