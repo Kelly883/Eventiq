@@ -30,6 +30,8 @@ export const METRIC_DATE_RANGES = [
 
 export type MetricDateRange = (typeof METRIC_DATE_RANGES)[number];
 
+const DEBOUNCE_MS = 300;
+
 const NEUTRAL_TREND: Trend = { direction: 'neutral', percentage: '0%' };
 
 /**
