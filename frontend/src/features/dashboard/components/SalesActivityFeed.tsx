@@ -525,9 +525,8 @@ useEffect(() => {
                       <span className="sr-only">{col.label}</span>
                       <span className="text-xs text-slate-700">{col.label}</span>
                     </label>
-                  ))}}
+)}
                 </div>
-              )}
             </div>
             <button
               type="button"
