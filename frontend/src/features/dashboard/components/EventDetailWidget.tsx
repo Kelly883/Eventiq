@@ -10,13 +10,53 @@ interface TierRow {
   sold: number;
   capacity: number;
   price: number;
+  revenue?: number;
+  conversionRate?: number;
 }
 
 interface PricingPoint {
   label: string;
   price: number;
-  date: string;
+  date?: string;
+  status?: 'active' | 'upcoming' | 'past';
 }
+
+const getStatusLabel = (status?: string) => {
+  const normalized = (status || 'active').toLowerCase();
+  if (normalized === 'draft') return 'Draft';
+  if (normalized === 'live' || normalized === 'published') return 'Active';
+  if (normalized === 'past' || normalized === 'completed') return 'Completed';
+  if (normalized === 'cancelled') return 'Cancelled';
+  return 'Active';
+};
+
+const getStatusBadgeClasses = (status?: string) => {
+  const normalized = (status || 'active').toLowerCase();
+  if (normalized === 'draft') return 'bg-slate-100 text-slate-700 border-slate-200';
+  if (normalized === 'live' || normalized === 'published') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+  if (normalized === 'past' || normalized === 'completed') return 'bg-blue-100 text-blue-700 border-blue-200';
+  if (normalized === 'cancelled') return 'bg-rose-100 text-rose-700 border-rose-200';
+  return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+};
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(value) ? value : 0);
+
+const formatDate = (value?: string) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+};
 
 const SkeletonInfoCard = () => (
   <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 animate-pulse">
@@ -106,8 +146,43 @@ const EventDetailWidgetContent = ({
     return <EmptyEventState />;
   }
 
-  const tierData: TierRow[] = event.tiers ?? [];
-  const pricingTimeline: PricingPoint[] = event.pricing_timeline ?? [];
+  const tierData: TierRow[] = Array.isArray(event.tiers) && event.tiers.length
+    ? event.tiers.map((tier) => {
+        const sold = Number(tier.sold ?? 0);
+        const capacity = Number(tier.capacity ?? 0);
+        const revenue = Number(tier.price ?? 0) * sold;
+        const conversionRate = capacity > 0 ? Math.min(100, Math.max(0, Math.round((sold / capacity) * 100))) : 0;
+
+        return {
+          ...tier,
+          sold,
+          capacity,
+          revenue,
+          conversionRate,
+        };
+      })
+    : [];
+
+  const pricingTimeline: PricingPoint[] = Array.isArray(event.pricing_timeline)
+    ? event.pricing_timeline.map((point, index) => {
+        const now = Date.now();
+        const date = point.date ? new Date(point.date) : null;
+        const status: PricingPoint['status'] =
+          date && !Number.isNaN(date.getTime())
+            ? now > date.getTime()
+              ? 'past'
+              : now < date.getTime()
+                ? 'upcoming'
+                : 'active'
+            : 'past';
+
+        return {
+          ...point,
+          status,
+          label: point.label || `Window ${index + 1}`,
+        };
+      })
+    : [];
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-5">
@@ -123,7 +198,11 @@ const EventDetailWidgetContent = ({
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-slate-500">Status</dt>
-              <dd className="font-medium text-right">{event.status || 'Active'}</dd>
+              <dd className="font-medium text-right">
+                <span className={`inline-flex px-2 py-0.5 rounded-full border text-[11px] font-semibold ${getStatusBadgeClasses(event.status)}`}>
+                  {getStatusLabel(event.status)}
+                </span>
+              </dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-slate-500">Venue</dt>
@@ -145,16 +224,29 @@ const EventDetailWidgetContent = ({
           ) : (
             <ul className="space-y-3 text-sm text-slate-700">
               {tierData.map((tier, i) => {
-                const pct = tier.capacity > 0 ? Math.round((tier.sold / tier.capacity) * 100) : 0;
+                const capacity = Math.max(1, tier.capacity || 1);
+                const pct = Math.min(100, Math.max(0, Math.round((tier.sold / capacity) * 100)));
+                const revenue = Number(tier.revenue ?? 0);
+                const conversionRate = tier.conversionRate ?? pct;
+
                 return (
-                  <li key={`${tier.tier}-${i}`} className="flex items-center justify-between gap-2">
-                    <span className="truncate max-w-[12rem]" title={tier.tier}>{tier.tier}</span>
-                    <span className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-xs text-slate-500">{tier.sold}/{tier.capacity}</span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-100 text-indigo-700">
-                        {pct}%
+                  <li key={`${tier.tier}-${i}`} className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate max-w-[12rem]" title={tier.tier}>{tier.tier}</span>
+                      <span className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-slate-500">{tier.sold}/{tier.capacity || 0}</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-100 text-indigo-700">
+                          {pct}%
+                        </span>
                       </span>
-                    </span>
+                    </div>
+                    <div className="h-2.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                      <div className="h-full rounded-full bg-indigo-600" style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className="flex justify-between gap-2 text-[11px] text-slate-500">
+                      <span>{formatCurrency(revenue)}</span>
+                      <span>{conversionRate}% conversion</span>
+                    </div>
                   </li>
                 );
               })}
@@ -168,17 +260,26 @@ const EventDetailWidgetContent = ({
             <EmptyBlock>No scheduled price changes for this event.</EmptyBlock>
           ) : (
             <ul className="space-y-2 text-xs text-slate-600">
-              {pricingTimeline.map((point, i) => (
-                <li key={`${point.label}-${i}`} className="flex items-center justify-between gap-3">
-                  <span className="truncate">
-                    {point.label}
-                    {point.date ? <span className="text-slate-400"> · {point.date}</span> : null}
-                  </span>
-                  <span className="font-semibold text-slate-800 flex-shrink-0">
-                    ₦{Number(point.price || 0).toLocaleString()}
-                  </span>
-                </li>
-              ))}
+              {pricingTimeline.map((point, i) => {
+                const styles =
+                  point.status === 'active'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : point.status === 'upcoming'
+                      ? 'bg-blue-50 text-blue-700 border-blue-200'
+                      : 'bg-slate-100 text-slate-600 border-slate-200';
+
+                return (
+                  <li key={`${point.label}-${i}`} className={`flex items-center justify-between gap-3 border rounded-lg p-2 ${styles}`}>
+                    <div className="min-w-0">
+                      <span className="block font-semibold truncate">{point.label}</span>
+                      <span className="block text-[10px] opacity-80">
+                        {point.date ? formatDate(point.date) : 'Date TBD'}
+                      </span>
+                    </div>
+                    <span className="font-semibold text-slate-800 flex-shrink-0">{formatCurrency(point.price)}</span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -190,9 +291,6 @@ const EventDetailWidgetContent = ({
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors"
           aria-label="View full analytics"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
           View Analytics
         </button>
         <button
@@ -200,9 +298,6 @@ const EventDetailWidgetContent = ({
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors"
           aria-label="Manage inventory"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-          </svg>
           Manage Inventory
         </button>
         <button
@@ -210,9 +305,6 @@ const EventDetailWidgetContent = ({
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
           aria-label="Edit event"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
           Edit Event
         </button>
       </div>
@@ -232,12 +324,9 @@ const EventDetailWidget = ({
   onEditEvent?: () => void;
 }) => {
   const { eventId: routeEventId } = useParams();
-  
-  // Prioritize explicit prop over URL params to avoid confusion
-  // Only use URL params as fallback when prop is not provided
+
   const resolvedEventId = eventId ?? routeEventId;
-  
-  // Warn in development if both sources exist and differ
+
   if ((process as any).env.NODE_ENV !== 'production' && eventId && routeEventId && String(eventId) !== String(routeEventId)) {
     console.warn(
       `[EventDetailWidget] Conflicting event IDs: prop=${eventId}, URL param=${routeEventId}. Using prop value.`
