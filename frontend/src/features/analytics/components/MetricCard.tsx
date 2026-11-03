@@ -22,6 +22,7 @@ const TrendIndicator = ({ direction, percentage }) => {
   const isDown = direction === 'down';
   const dir = isUp ? 'up' : isDown ? 'down' : 'neutral';
   const arrow = isUp ? '↑' : isDown ? '↓' : '→';
+  const trendValue = percentage == null || percentage === '' ? '0%' : percentage;
 
   return (
     <span
@@ -33,9 +34,9 @@ const TrendIndicator = ({ direction, percentage }) => {
             : 'text-slate-500 bg-slate-100 border-slate-200'
       }`}
       aria-live="polite"
-      aria-label={`Trending ${DIRECTION_ARIA[dir]} by ${percentage || '0%'}`}
+      aria-label={`Trending ${DIRECTION_ARIA[dir]} by ${trendValue}`}
     >
-      <span aria-hidden="true">{arrow}</span> {percentage || '0%'}
+      <span aria-hidden="true">{arrow}</span> {trendValue}
     </span>
   );
 };
@@ -65,6 +66,7 @@ const MetricCard = ({
     : undefined;
 
   const reducedMotion = useReducedMotion();
+  const displayValue = value === null || value === undefined || value === '' ? defaultValue : value;
 
   return (
     <div
@@ -81,7 +83,7 @@ const MetricCard = ({
             {label || defaultLabel}
           </p>
           <div className="w-full flex items-end justify-between gap-2">
-            <h3 className="text-2xl font-bold text-slate-800 truncate">{value || defaultValue}</h3>
+            <h3 className="text-2xl font-bold text-slate-800 truncate">{displayValue}</h3>
             <Sparkline data={sparkData} />
           </div>
           <TrendIndicator direction={trendDirection} percentage={trendPercentage} />
