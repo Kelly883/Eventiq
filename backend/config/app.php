@@ -36,6 +36,8 @@ return [
 
     // The SPA owns payment-return screens. This may differ from APP_URL when
     // the API and frontend are deployed on separate origins.
+    'admin_limit' => env('ADMIN_LIMIT', 1),
+
     'frontend_url' => env('FRONTEND_URL', env('APP_URL', 'http://localhost')),
 
     'timezone' => env('APP_TIMEZONE', 'UTC'),
