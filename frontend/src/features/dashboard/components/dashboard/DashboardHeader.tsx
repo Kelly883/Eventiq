@@ -58,8 +58,11 @@ export const DashboardHeader = ({
   const eventFilters = filterOptions?.length ? filterOptions : DEFAULT_EVENT_FILTERS;
 
   const handleCreateEvent = useCallback(() => {
-    if (onCreateEvent) onCreateEvent();
-    else window.location.href = '/organizer/events/create';
+    if (onCreateEvent) {
+      onCreateEvent();
+      return;
+    }
+    window.location.href = '/organizer/events/new';
   }, [onCreateEvent]);
 
   const handleFilterChange = useCallback(
