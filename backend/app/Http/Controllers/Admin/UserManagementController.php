@@ -12,6 +12,7 @@ use App\Features\Compliance\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -140,6 +141,65 @@ class UserManagementController extends Controller
             \Log::error('admin users list failed', ['error' => $e->getMessage()]);
             return response()->json(['message' => 'Database error'], 500);
         }
+    }
+
+    /**
+     * POST /api/admin/users/admin-accounts
+     * Create an additional administrator account from the authenticated admin panel.
+     */
+    public function createAdminAccount(Request $request)
+    {
+        if (!$request->user() || !$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Forbidden — admin access required'], 403);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'min:2', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user = DB::transaction(function () use ($validated) {
+            $role = Role::firstOrCreate(
+                ['name' => 'admin'],
+                ['description' => 'Administrator', 'isSystemRole' => true]
+            );
+
+            if (!$role->isSystemRole) {
+                $role->forceFill(['isSystemRole' => true])->save();
+            }
+
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'passwordHash' => Hash::make($validated['password']),
+                'role' => 'admin',
+                'role_id' => $role->id,
+                'emailVerified' => true,
+                'status' => 'active',
+            ]);
+            $user->roles()->sync([$role->id]);
+
+            return $user;
+        });
+
+        $this->auditLogService->log(
+            'admin_account_created',
+            'user',
+            $user->id,
+            ['email' => $user->email, 'role' => 'admin'],
+            $request->user()->id
+        );
+
+        return response()->json([
+            'message' => 'Administrator account created successfully.',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ],
+        ], 201);
     }
 
     /**

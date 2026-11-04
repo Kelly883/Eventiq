@@ -21,6 +21,7 @@ export type AuditLogAction =
   | 'fraud_flagged'
   | 'fraud_approved'
   | 'admin_setting_changed'
+  | 'admin_account_created'
   | 'user_permission_changed'
   | 'data_export_requested'
   | 'check_in'
@@ -139,6 +140,7 @@ export function isAuditLogAction(value: string): value is AuditLogAction {
     'fraud_flagged',
     'fraud_approved',
     'admin_setting_changed',
+    'admin_account_created',
     'user_permission_changed',
     'data_export_requested',
     'check_in',

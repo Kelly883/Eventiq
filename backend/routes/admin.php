@@ -30,6 +30,7 @@ Route::middleware(['throttle:api', 'bearer'])->prefix('admin')->group(function (
     // GET /api/admin/users/list — paginated users with roles/permissions (10/min)
     Route::middleware(['throttle:admin-users', 'isAdmin'])->group(function () {
         Route::get('/users/list', [\App\Http\Controllers\Admin\UserManagementController::class, 'listUsers']);
+        Route::post('/users/admin-accounts', [\App\Http\Controllers\Admin\UserManagementController::class, 'createAdminAccount']);
     });
 
     // POST /api/admin/roles/assign — assign role to users (10/min)

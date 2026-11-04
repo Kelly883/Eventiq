@@ -37,6 +37,7 @@ const FilterPanel = ({ filters, onFiltersChange }) => {
           <option value="fraud_flagged">Fraud flagged</option>
           <option value="fraud_approved">Fraud approved</option>
           <option value="admin_setting_changed">Admin setting changed</option>
+          <option value="admin_account_created">Admin account created</option>
           <option value="user_permission_changed">User permission changed</option>
           <option value="data_export_requested">Data export requested</option>
           <option value="check_in">Check in</option>

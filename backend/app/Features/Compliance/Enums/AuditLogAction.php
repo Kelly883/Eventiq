@@ -24,6 +24,7 @@ enum AuditLogAction: string
     case FRAUD_FLAGGED = 'fraud_flagged';
     case FRAUD_APPROVED = 'fraud_approved';
     case ADMIN_SETTING_CHANGED = 'admin_setting_changed';
+    case ADMIN_ACCOUNT_CREATED = 'admin_account_created';
     case USER_PERMISSION_CHANGED = 'user_permission_changed';
     case DATA_EXPORT_REQUESTED = 'data_export_requested';
     case CHECK_IN = 'check_in';
