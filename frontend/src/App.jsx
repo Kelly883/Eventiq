@@ -66,6 +66,7 @@ const OrderConfirmationPage = lazy(() => import('./features/checkout/pages/Order
 const UserTicketsDashboardPage = lazy(() => import('./features/tickets/pages/UserTicketsDashboardPage'));
 const TicketDetailPage = lazy(() => import('./features/tickets/pages/TicketDetailPage'));
 const UserDashboardPage = lazy(() => import('./features/dashboard/pages/UserDashboardPage'));
+const AttendeeLayout = lazy(() => import('./features/dashboard/components/AttendeeLayout'));
 const TicketInventoryDashboardPage = lazy(() => import('./features/ticket-inventory/pages').then(m => ({ default: m.TicketInventoryDashboardPage })));
 const TicketTierManagementPage = lazy(() => import('./features/ticketing/pages').then(m => ({ default: m.TicketTierManagementPage })));
 const EventPricingConfigPage = lazy(() => import('./features/pricing/pages').then(m => ({ default: m.EventPricingConfigPage })));
@@ -398,13 +399,13 @@ function App() {
             <Suspense fallback={<LoadingSpinner message="Loading page..." />}>
               <Routes>
               <Route path="/" element={<Homepage />} />
-              <Route path="/events" element={<EventBrowsePage />} />
-            <Route path="/events/calendar" element={<EventCalendarPage />} />
+              <Route path="/events" element={<AttendeeLayout><EventBrowsePage /></AttendeeLayout>} />
+            <Route path="/events/calendar" element={<AttendeeLayout><EventCalendarPage /></AttendeeLayout>} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
             <Route path="/checkout/callback" element={<ProtectedRoute><CheckoutCallbackPage /></ProtectedRoute>} />
             <Route path="/order/:orderId/confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
-            <Route path="/my-tickets" element={<ProtectedRoute unauthenticatedToast={true}><MyTicketsLayout /></ProtectedRoute>}>
+            <Route path="/my-tickets" element={<ProtectedRoute unauthenticatedToast={true}><AttendeeLayout><MyTicketsLayout /></AttendeeLayout></ProtectedRoute>}>
               <Route index element={<UserTicketsDashboardPage />} />
               <Route path="status" element={<TicketStatusPage />} />
               <Route path=":ticketId" element={<TicketDetailPage />} />
@@ -428,7 +429,7 @@ function App() {
                 <Route path="refunds" element={<AdminRefundDashboardPage />} />
                 <Route path="refunds/dashboard" element={<AdminRefundDashboardPage />} />
               </Route>
-             <Route path="/settings" element={<ProtectedRoute><SettingsLayout /></ProtectedRoute>}>
+             <Route path="/settings" element={<ProtectedRoute><AttendeeLayout><SettingsLayout /></AttendeeLayout></ProtectedRoute>}>
                <Route index element={<DeliverySettingsPage />} />
                <Route path="permissions" element={<UserPermissionsPage />} />
                <Route path="delivery-preferences" element={<DeliverySettingsPage />} />
@@ -443,9 +444,9 @@ function App() {
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/organizer/analytics/compare" element={<ProtectedRoute requiredRole="organizer"><AnalyticsComparisonPage /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-              <Route path="organizer" element={<OrganizerDashboardPage />} />
-              <Route index element={<UserDashboardPage />} />
+            <Route path="/dashboard" element={<ProtectedRoute><AttendeeLayout><UserDashboardPage /></AttendeeLayout></ProtectedRoute>} />
+            <Route path="/dashboard/organizer" element={<ProtectedRoute requiredRole="organizer"><DashboardLayout /></ProtectedRoute>}>
+              <Route index element={<OrganizerDashboardPage />} />
             </Route>
             <Route path="/organizer/payouts" element={<ProtectedRoute requiredRole="organizer"><OrganizerPayoutDashboardPage /></ProtectedRoute>} />
             <Route

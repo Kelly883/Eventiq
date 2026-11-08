@@ -1816,3 +1816,102 @@ body {
 .dashboard-tab.active .dashboard-tab-icon {
   color: var(--color-primary);
 }
+
+/* =========================================================================
+   Attendee Layout — shared layout for all attendee dashboard pages
+   ========================================================================= */
+
+.attendee-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--color-bg);
+}
+
+.attendee-layout main {
+  flex: 1;
+  overflow-y: auto;
+  /* pb-24 = 96px for bottom nav space */
+  padding-bottom: 6rem;
+}
+
+/* Attendee Bottom Navigation - Fixed to bottom on mobile */
+.attendee-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+  padding: var(--space-xs) 0;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+@media (min-width: 768px) {
+  .attendee-bottom-nav {
+    display: none;
+  }
+}
+
+.attendee-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--space-xs) var(--space-sm);
+  min-width: 48px;
+  min-height: 48px;
+  border: none;
+  background: transparent;
+  text-decoration: none;
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+  flex: 1;
+}
+
+.attendee-nav-item:hover,
+.attendee-nav-item.active {
+  color: var(--color-primary);
+}
+
+.attendee-nav-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+
+.attendee-nav-item.active .attendee-nav-item-icon {
+  background: var(--color-primary-light);
+  color: var(--color-surface);
+}
+
+.attendee-nav-item-label {
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 56px;
+}
+
+/* Ensure content isn't hidden behind fixed bottom nav on mobile */
+@media (max-width: 767px) {
+  .attendee-layout main {
+    padding-bottom: 96px; /* extra space for bottom nav */
+  }
+}

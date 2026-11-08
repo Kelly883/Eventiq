@@ -5,7 +5,6 @@ import { api } from '../../../lib/api';
 import { getUserRoles } from '../../../lib/authRoles';
 import CalendarGrid from '../components/calendar/CalendarGrid';
 import CalendarDayDetailModal from '../pages/CalendarDayDetailModal';
-import '../../../styles/shared-pages.css';
 
 const EventCalendarPage = () => {
   const navigate = useNavigate();
@@ -59,10 +58,10 @@ const EventCalendarPage = () => {
   };
 
   return (
-    <div className="spa-page">
-      <div className="spa-container">
-        <div className="spa-page__header">
-          <h1 className="spa-page__title">Event Calendar</h1>
+    <div className="p-6 md:p-10">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-6">
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Event Calendar</h1>
         </div>
 
         {/* Calendar with date selection */}
@@ -88,7 +87,7 @@ const EventCalendarPage = () => {
           <div style={{ marginTop: '24px' }}>
             <Link
               to="/organizer/events/create"
-              className="spa-btn spa-btn--primary"
+              className="btn-primary"
             >
               ✨ Create Event
             </Link>

@@ -41,7 +41,7 @@ const MyTicketsLayout = () => {
   const breadcrumbs = getBreadcrumbs();
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
+    <div className="p-6 md:p-10">
       <div className="mx-auto max-w-4xl">
         {/* Breadcrumbs */}
         <nav className="mb-4 flex items-center gap-2 text-sm" aria-label="Breadcrumb">
