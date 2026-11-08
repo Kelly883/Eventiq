@@ -177,7 +177,11 @@ export const AuthProvider = ({ children }) => {
       clearTimeout(idleTimer);
       idleTimer = setTimeout(async () => {
         if (!document.hidden) {
-          await fetchCurrentUser();
+          try {
+            await fetchCurrentUser();
+          } catch {
+            // Background refresh failure is non-critical; next cycle will retry.
+          }
         }
       }, 300000);
     };
@@ -212,8 +216,11 @@ export const AuthProvider = ({ children }) => {
       if (!user) return;
       try {
         await fetchCurrentUser();
-      } catch {
-        window.dispatchEvent(new CustomEvent('session-expired'));
+      } catch (err) {
+        const status = err?.response?.status;
+        if (status === 401) {
+          window.dispatchEvent(new CustomEvent('session-expired'));
+        }
       }
     };
 
@@ -221,8 +228,11 @@ export const AuthProvider = ({ children }) => {
       if (!user || document.hidden) return;
       try {
         await fetchCurrentUser();
-      } catch {
-        window.dispatchEvent(new CustomEvent('session-expired'));
+      } catch (err) {
+        const status = err?.response?.status;
+        if (status === 401) {
+          window.dispatchEvent(new CustomEvent('session-expired'));
+        }
       }
     };
 
@@ -258,7 +268,10 @@ export const AuthProvider = ({ children }) => {
     const handleBroadcastMessage = (event) => {
       const fromOtherTab = event?.data?.tabId !== TAB_ID;
       if (event?.data?.type === 'role-change') {
-        fetchCurrentUser();
+        fetchCurrentUser().catch(() => {
+          // Background sync failure is non-critical; user will see updated
+          // roles on next focus/visibility check or manual refresh.
+        });
       } else if (event?.data?.type === 'session-ended') {
         // Only react to sessions ended in ANOTHER tab. The current tab's own
         // /auth/me 401 already handled local session clearing; self-broadcasts
@@ -268,7 +281,9 @@ export const AuthProvider = ({ children }) => {
         showToast('Session ended', 'Your session was terminated in another tab.', 'info');
         emitRedirectToLogin({ source: 'broadcast-session-ended' });
       } else if (event?.data?.type === 'session-established') {
-        fetchCurrentUser();
+        fetchCurrentUser().catch(() => {
+          // Background sync failure is non-critical.
+        });
       }
     };
 
@@ -279,13 +294,17 @@ export const AuthProvider = ({ children }) => {
           // storage events never fire in the tab that wrote them, so this is
           // always from another tab.
           if (eventData.type === 'role-change') {
-            fetchCurrentUser();
+            fetchCurrentUser().catch(() => {
+              // Background sync failure is non-critical.
+            });
           } else if (eventData.type === 'session-ended') {
             setUser(null);
             showToast('Session ended', 'Your session was terminated in another tab.', 'info');
             emitRedirectToLogin({ source: 'storage-session-ended' });
           } else if (eventData.type === 'session-established') {
-            fetchCurrentUser();
+            fetchCurrentUser().catch(() => {
+              // Background sync failure is non-critical.
+            });
           }
         } catch {
           // ignore parse errors
@@ -307,7 +326,9 @@ export const AuthProvider = ({ children }) => {
     };
 
     const handleRoleChange = () => {
-      fetchCurrentUser();
+      fetchCurrentUser().catch(() => {
+        // Background sync failure is non-critical.
+      });
     };
 
     const handleSessionExpired = () => {
