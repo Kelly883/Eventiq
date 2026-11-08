@@ -18,8 +18,8 @@ const SettingsLayout = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA]">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <div className="p-6 md:p-10">
+      <div className="mx-auto max-w-7xl">
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
             Settings
