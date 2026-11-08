@@ -98,9 +98,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    if (!user) return; // start polling only after authentication
     const interval = setInterval(refreshAuth, 60000);
     return () => clearInterval(interval);
-  }, [refreshAuth]);
+  }, [refreshAuth, user]);
 
   const fetchCurrentUser = useCallback(async () => {
     const hasToken = Boolean(sessionStorage.getItem('auth_token'));
