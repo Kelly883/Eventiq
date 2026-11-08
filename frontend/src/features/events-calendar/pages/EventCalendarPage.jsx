@@ -48,7 +48,10 @@ const EventCalendarPage = () => {
   }, []);
 
   // Check if user is organizer for Create Event button
-  const isOrganizer = getUserRoles(user).includes('organizer');
+  // Check if user can create events (organizer or admin)
+  const canCreateEvent = getUserRoles(user).some(
+    (role) => role === 'organizer' || role === 'admin'
+  );
 
   // Handle event selection - navigate to event detail page
   const handleSelectEvent = (event) => {
@@ -81,7 +84,7 @@ const EventCalendarPage = () => {
         )}
 
         {/* Create Event button - visible only to organizers */}
-        {isOrganizer && (
+        {canCreateEvent && (
           <div style={{ marginTop: '24px' }}>
             <Link
               to="/organizer/events/create"

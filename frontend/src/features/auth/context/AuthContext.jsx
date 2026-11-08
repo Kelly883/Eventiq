@@ -105,6 +105,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchCurrentUser = useCallback(async () => {
     const hasToken = Boolean(sessionStorage.getItem('auth_token'));
+    if (!hasToken) { setLoading(false); return; }
     try {
       const res = await api.get('/auth/me');
       const fetchedUser = res.data;
@@ -123,17 +124,11 @@ export const AuthProvider = ({ children }) => {
       });
     } catch (err) {
       const status = err?.response?.status;
-      const hasTokenNow = Boolean(sessionStorage.getItem('auth_token'));
-      if (status === 401 && (!hasTokenNow || hasToken)) {
-        // Confirmed expired/invalid — clear locally and sync across tabs.
-        // Stale race guard: a /auth/me dispatched before login stored the
-        // token must not clear the fresh session.
-        setUser(null);
-        broadcastAuthEvent('session-ended');
-        throw err;
+      if (status === 401) {
+        // Session invalid – keep user null without forcing logout broadcast.
+        return;
       }
-      // Non-401 (network failure, timeout, 5xx): do NOT destroy auth state.
-      // The user stays logged in; the next poll/focus check re-evaluates.
+      // Non-401 errors: propagate so UI can handle (e.g., network issues).
       throw err;
     }
   }, []);
