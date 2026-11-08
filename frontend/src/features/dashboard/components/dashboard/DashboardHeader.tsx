@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import LiveIndicator from '@/features/analytics/components/LiveIndicator';
+import { useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from '../ErrorBoundary';
 
 interface DashboardHeaderProps {
@@ -49,6 +50,7 @@ export const DashboardHeader = ({
   onCreateEvent,
   filterOptions,
 }: DashboardHeaderProps) => {
+  const navigate = useNavigate();
   const firstName = user?.name?.split(' ')[0] || 'there';
   const greeting = getGreeting();
 
@@ -62,8 +64,8 @@ export const DashboardHeader = ({
       onCreateEvent();
       return;
     }
-    window.location.href = '/organizer/events/new';
-  }, [onCreateEvent]);
+    navigate('/organizer/events/create');
+  }, [navigate, onCreateEvent]);
 
   const handleFilterChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -126,7 +128,7 @@ export const DashboardHeader = ({
 
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <div className="relative flex-1 min-w-[150px]">
-                <label htmlFor="header-filter" className="sr-only">Filter by event type</label>
+                <label htmlFor="header-filter" className="sr-only">Filter by category</label>
                 <select
                   id="header-filter"
                   value={selectedFilter}

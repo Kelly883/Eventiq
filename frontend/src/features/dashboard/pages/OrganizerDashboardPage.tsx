@@ -69,7 +69,7 @@ const OrganizerDashboardPage = () => {
   };
 
   const handleCreateEvent = () => {
-    navigate('/organizer/events/new');
+    navigate('/organizer/events/create');
   };
 
   const eventMap = events.reduce<Record<string, EventData>>((map, ev) => {

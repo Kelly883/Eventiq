@@ -101,6 +101,12 @@ const RefreshedAgo = ({ at }: { at: Date }) => {
 const dedupeById = (items: SalesActivityItem[]): SalesActivityItem[] =>
   items.filter((item, index, self) => index === self.findIndex((t) => String(t.id) === String(item.id)));
 
+const csvCell = (value: string | number): string => {
+  const cell = String(value);
+  const safeCell = /^[=+\-@]/.test(cell.trimStart()) ? `'${cell}` : cell;
+  return `"${safeCell.replace(/"/g, '""')}"`;
+};
+
 const ALL_COLUMNS = [
   { key: 'event' as const, label: 'Event' },
   { key: 'quantity' as const, label: 'Quantity' },
@@ -109,13 +115,17 @@ const ALL_COLUMNS = [
 ];
 
 export const SalesActivityFeed = ({
-  currency = 'NGN',
+  currency = '₦',
 }: { currency?: string }) => {
+  const displayCurrency = currency === 'NGN' ? '₦' : currency;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isExporting, setIsExporting] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [liveItems, setLiveItems] = useState<SalesActivityItem[]>([]);
+  const [newActivityCount, setNewActivityCount] = useState(0);
+  const knownActivityIds = useRef(new Set<string>());
+  const hasLoadedActivities = useRef(false);
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => {
     if (typeof window === 'undefined') {
       return { event: true, quantity: true, price: true, time: true };
@@ -174,12 +184,12 @@ export const SalesActivityFeed = ({
   }, [filters, setSearchParams]);
 
   // Keyboard shortcuts: Cmd+K for create event, / for filter focus
-useEffect(() => {
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Cmd+K or Ctrl+K
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        navigate('/events/new');
+        navigate('/organizer/events/create');
         return;
       }
       // / for filter focus (only if not typing in input/textarea)
@@ -198,6 +208,17 @@ useEffect(() => {
 
   const { data, isLoading, isFetching, error, refetch, dataUpdatedAt } = useSalesActivity(filters);
   const activities = useMemo(() => data ?? [], [data]);
+
+  useEffect(() => {
+    const currentIds = new Set(activities.map((activity) => String(activity.id)));
+    if (hasLoadedActivities.current) {
+      const incomingCount = activities.filter((activity) => !knownActivityIds.current.has(String(activity.id))).length;
+      if (incomingCount > 0) setNewActivityCount((count) => count + incomingCount);
+    } else if (!isLoading) {
+      hasLoadedActivities.current = true;
+    }
+    knownActivityIds.current = currentIds;
+  }, [activities, isLoading]);
 
   const handleNewActivities = useCallback((incoming: SalesActivityItem[]) => {
     setLiveItems((prev) => dedupeById([...incoming, ...prev]).slice(0, 50));
@@ -287,30 +308,7 @@ useEffect(() => {
       const dateSuffix = filters.dateFrom && filters.dateTo
         ? `${filters.dateFrom}_to_${filters.dateTo}`
         : new Date().toISOString().slice(0, 10);
-      
-      // Try to export as Excel if available
-      try {
-        const XLSX = await import('xlsx');
-        const wsData = [
-          ['Timestamp', 'Event', 'Tier', 'Quantity', 'Price'],
-          ...activitiesToExport.map((a) => [
-            a.timestamp,
-            a.eventName || '',
-            a.tier || '',
-            a.quantity,
-            a.price,
-          ]),
-        ];
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Activity');
-        XLSX.writeFile(wb, `activity-export-${dateSuffix}.xlsx`);
-        toast.success('Activity exported successfully');
-        return;
-      } catch {
-        // Fall through to CSV
-      }
-      
+
       const headers = ['Timestamp', 'Event', 'Tier', 'Quantity', 'Price'];
       const rows = activitiesToExport.map((a) => [
         a.timestamp,
@@ -320,7 +318,7 @@ useEffect(() => {
         String(a.price),
       ]);
       const csv = [headers, ...rows]
-        .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .map((row) => row.map(csvCell).join(','))
         .join('\r\n');
 
       const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -381,7 +379,7 @@ useEffect(() => {
               )}
               {visibleColumns.price && (
                 <p className="hidden sm:block text-sm font-semibold text-slate-800 text-right whitespace-nowrap">
-                  {currency}{Number(activity.price || 0).toLocaleString()}
+                  {displayCurrency}{Number(activity.price || 0).toLocaleString()}
                 </p>
               )}
               {visibleColumns.time && (
@@ -390,7 +388,7 @@ useEffect(() => {
                 </p>
               )}
               <p className="col-span-2 sm:hidden text-xs text-slate-500 flex flex-wrap gap-x-3">
-                {visibleColumns.price && <span className="font-semibold text-slate-700">{currency}{Number(activity.price || 0).toLocaleString()}</span>}
+                {visibleColumns.price && <span className="font-semibold text-slate-700">{displayCurrency}{Number(activity.price || 0).toLocaleString()}</span>}
                 {visibleColumns.quantity && <span>{activity.quantity > 0 ? `${activity.quantity} tickets` : 'No tickets'}</span>}
                 {visibleColumns.time && (
                   <span className="text-slate-400">
@@ -439,7 +437,7 @@ useEffect(() => {
           )}
           {visibleColumns.price && (
             <p className="hidden sm:block text-sm font-semibold text-slate-800 text-right whitespace-nowrap">
-              {currency}{Number(activity.price || 0).toLocaleString()}
+              {displayCurrency}{Number(activity.price || 0).toLocaleString()}
             </p>
           )}
           {visibleColumns.time && (
@@ -448,7 +446,7 @@ useEffect(() => {
             </p>
           )}
           <p className="col-span-2 sm:hidden text-xs text-slate-500 flex flex-wrap gap-x-3">
-            {visibleColumns.price && <span className="font-semibold text-slate-700">{currency}{Number(activity.price || 0).toLocaleString()}</span>}
+            {visibleColumns.price && <span className="font-semibold text-slate-700">{displayCurrency}{Number(activity.price || 0).toLocaleString()}</span>}
             {visibleColumns.quantity && <span>{activity.quantity > 0 ? `${activity.quantity} tickets` : 'No tickets'}</span>}
             {visibleColumns.time && (
               <span className="text-slate-400">
@@ -540,6 +538,21 @@ useEffect(() => {
           </div>
         </div>
 
+        {newActivityCount > 0 && (
+          <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between gap-3" role="status">
+            <p className="text-xs font-medium text-indigo-800">
+              {newActivityCount} new {newActivityCount === 1 ? 'sale' : 'sales'} received
+            </p>
+            <button
+              type="button"
+              onClick={() => setNewActivityCount(0)}
+              className="text-xs font-semibold text-indigo-700 hover:text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+            >
+              Mark as seen
+            </button>
+          </div>
+        )}
+
         <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
@@ -590,6 +603,7 @@ useEffect(() => {
               />
             </div>
           </div>
+          <p className="mt-2 text-xs text-slate-500">Dates use your local calendar day, from 12:00 AM through 11:59 PM.</p>
           {hasActiveFilters && (
             <button
               type="button"

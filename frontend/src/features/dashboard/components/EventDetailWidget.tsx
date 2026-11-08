@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 /* global process */
 import { useParams } from 'react-router-dom';
 import { useEventDetail } from '../hooks/useEvents';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+import { track } from '@/lib/analytics';
 
 interface TierRow {
   tier: string;
@@ -126,6 +127,12 @@ const EventDetailWidgetContent = ({
 }) => {
   const { data: event, isLoading, isError } = useEventDetail(eventId, true);
   const reducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (isError || (!isLoading && !event)) {
+      track('dashboard_event_detail_unavailable', { event_id: String(eventId) });
+    }
+  }, [event, eventId, isError, isLoading]);
 
   if (isLoading) {
     return (

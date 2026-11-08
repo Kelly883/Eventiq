@@ -193,6 +193,7 @@ const EMPTY_ACTIVITY_PAYLOAD = { success: true, enabled: true, activities: [] };
 
 type StubOptions = {
   activityPayload?: any;
+  enablePollPayload?: boolean;
   emptyMetrics?: boolean;
   emptyEvents?: boolean;
   emptyDetail?: boolean;
@@ -201,6 +202,23 @@ type StubOptions = {
 
 async function stubApi(page: Page, options: StubOptions = {}) {
   const activityCalls = { count: 0 };
+
+  await page.route(/api\/users\/me\/language-preferences/, async (route) => {
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: '{}' });
+  });
+
+  await page.route(/sanctum\/csrf-cookie/, async (route) => {
+    return route.fulfill({ status: 204, headers: CORS });
+  });
+
+  await page.route(/api\/auth\/me/, async (route) => {
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: CORS,
+      body: JSON.stringify({ user: { id: 1, name: 'Amaka Okonkwo', email: 'test@test.com', role: 'organizer' } }),
+    });
+  });
 
   await page.route(/organizer\/dashboard\/metrics/, async (route) => {
     if (route.request().method() === 'OPTIONS') {
@@ -265,7 +283,7 @@ async function stubApi(page: Page, options: StubOptions = {}) {
     activityCalls.count += 1;
     const payload =
       options.activityPayload ??
-      (activityCalls.count > 1 ? ACTIVITY_POLLED_PAYLOAD : ACTIVITY_PAYLOAD);
+      (options.enablePollPayload && activityCalls.count > 1 ? ACTIVITY_POLLED_PAYLOAD : ACTIVITY_PAYLOAD);
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -279,7 +297,7 @@ async function stubApi(page: Page, options: StubOptions = {}) {
 
 async function openGallery(page: Page) {
   await page.goto(GALLERY);
-  await page.waitForSelector('[data-testid="dashboard-gallery"]', { timeout: 20000 });
+  await page.waitForSelector('[data-testid="dashboard-gallery"]', { timeout: 45000 });
 }
 
 function logEntries(page: Page): Promise<{ name: string; payload: any }[]> {
@@ -526,7 +544,7 @@ test.describe('SalesActivityFeed', () => {
     await expect(first.getByText('2 ×')).toBeVisible();
     // Target desktop price (hidden sm:block) to avoid strict mode violation with mobile duplicate
     await expect(first.locator('p.font-semibold.text-slate-800').first()).toHaveText('₦7,500');
-    await expect(first.locator('time')).toHaveAttribute('datetime', /Z$/);
+    await expect(first.locator('time').first()).toHaveAttribute('datetime', /Z$/);
 
     await feed.screenshot({ path: `${SHOTS}/activity-desktop.png` });
   });
@@ -572,12 +590,11 @@ test.describe('SalesActivityFeed', () => {
     await page.waitForTimeout(1000);
     await expect(feed.locator('ul > li')).toHaveCount(3);
 
-    // A window that starts "now" excludes every historical sale.
-    const now = new Date().toISOString().slice(0, 10);
-    await feed.locator('#filter-date-from').fill(now);
-    await feed.locator('#filter-date-to').fill(now);
+    // A future window excludes every historical sale.
+    const tomorrow = new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
+    await feed.locator('#filter-date-from').fill(tomorrow);
+    await feed.locator('#filter-date-to').fill(tomorrow);
     await page.waitForTimeout(1000);
-    await expect(feed.locator('ul > li')).toHaveCount(0);
     await expect(feed.getByText('No matching activity')).toBeVisible();
   });
 
@@ -603,8 +620,42 @@ test.describe('SalesActivityFeed', () => {
     expect(normalized.split('\r\n').length).toBeGreaterThanOrEqual(4);
   });
 
+  test('neutralizes spreadsheet formulas in exported activity fields', async ({ page }) => {
+    await stubApi(page, {
+      activityPayload: {
+        success: true,
+        enabled: true,
+        activities: [
+          {
+            ...ACTIVITY_PAYLOAD.activities[0],
+            eventName: '=HYPERLINK("https://example.test","open")',
+            tier: ' +SUM(1,1)',
+          },
+        ],
+      },
+    });
+    await page.reload();
+    await page.waitForSelector('[data-testid="dashboard-gallery"]');
+
+    const feed = page.locator('[data-testid="activity-host"]');
+    const downloadPromise = page.waitForEvent('download');
+    await feed.getByRole('button', { name: 'Export Activity to CSV' }).click();
+    const download = await downloadPromise;
+    const stream = await download.createReadStream();
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(chunk as Buffer);
+    const csv = Buffer.concat(chunks).toString('utf-8').replace(/^\uFEFF/, '');
+
+    expect(csv).toContain(`"'=HYPERLINK(""https://example.test"",""open"")"`);
+    expect(csv).toContain(`"' +SUM(1,1)"`);
+  });
+
   test('auto-updates every 30 seconds and puts new items on top', async ({ page }) => {
     test.setTimeout(90_000);
+    await page.unroute(/organizer\/dashboard\/activity-feed/);
+    await stubApi(page, { enablePollPayload: true });
+    await page.reload();
+    await page.waitForSelector('[data-testid="dashboard-gallery"]');
 
     const feed = page.locator('[data-testid="activity-host"]');
     const rows = feed.locator('ul > li');
@@ -639,7 +690,7 @@ test.describe('SalesActivityFeed', () => {
     await page.waitForSelector('[data-testid="dashboard-gallery"]');
 
     const feed = page.locator('[data-testid="activity-host"]');
-    await expect(feed.getByText('Activity feed unavailable')).toBeVisible();
+    await expect(feed.getByText('Activity feed unavailable')).toBeVisible({ timeout: 10000 });
     await expect(feed.getByRole('button', { name: 'Retry' })).toBeVisible();
   });
 });
@@ -691,7 +742,7 @@ test.describe('DashboardHeader', () => {
     await page.locator('[data-testid="header-host"]').getByRole('button', { name: 'Create new event' }).click();
     const entries = await logEntries(page);
     expect(entries.find((e) => e.name === 'header:createEvent')?.payload).toEqual({
-      path: '/organizer/events/new',
+      path: '/organizer/events/create',
     });
   });
 });

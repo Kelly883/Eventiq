@@ -117,7 +117,7 @@ const DashboardComponentsGallery = () => {
   }, []);
 
   const handleCreateEvent = useCallback(() => {
-    log('header:createEvent', { path: '/organizer/events/new' });
+    log('header:createEvent', { path: '/organizer/events/create' });
   }, []);
 
   const sampleMetrics = useMemo(

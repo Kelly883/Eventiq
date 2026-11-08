@@ -47,14 +47,16 @@ const LoginPage = () => {
   })();
 
   useEffect(() => {
-    if (location.state?.message && location.state?.from) {
-      const fromPath = location.state.from.pathname || '';
-      const isProtectedRoute = fromPath.startsWith('/admin/') ||
+    if (location.state?.message) {
+      const fromPath = location.state.from?.pathname || '';
+      const isProtectedRoute = location.state.from && (
+        fromPath.startsWith('/admin/') ||
         fromPath.startsWith('/dashboard/') ||
-        fromPath.startsWith('/organizer/');
+        fromPath.startsWith('/organizer/')
+      );
       if (isProtectedRoute) {
         showToast('Authentication Required', 'Please log in to access the protected route.', 'info');
-      } else if (location.state.message) {
+      } else {
         showToast('Notice', location.state.message, location.state.messageType || 'warning');
       }
     }

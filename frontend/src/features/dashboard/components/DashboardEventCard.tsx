@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+import { track } from '@/lib/analytics';
 
 import EventDetailWidget from './EventDetailWidget';
 
@@ -91,7 +92,17 @@ const SkeletonCard = () => (
   </div>
 );
 
-const EventBanner = ({ title, bannerUrl, reducedMotion }: { title: string; bannerUrl?: string; reducedMotion: boolean }) => {
+const EventBanner = ({
+  eventId,
+  title,
+  bannerUrl,
+  reducedMotion,
+}: {
+  eventId: string | number;
+  title: string;
+  bannerUrl?: string;
+  reducedMotion: boolean;
+}) => {
   const [failed, setFailed] = useState(false);
   const showImage = Boolean(bannerUrl) && !failed;
 
@@ -103,7 +114,10 @@ const EventBanner = ({ title, bannerUrl, reducedMotion }: { title: string; banne
           alt={title}
           className={`absolute inset-0 w-full h-full object-cover ${reducedMotion ? '' : 'transition-transform duration-300 group-hover:scale-105'}`}
           loading="lazy"
-          onError={() => setFailed(true)}
+          onError={() => {
+            setFailed(true);
+            track('dashboard_event_banner_load_failed', { event_id: String(eventId) });
+          }}
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center" role="presentation">
@@ -155,7 +169,7 @@ export const DashboardEventCard = React.memo(function DashboardEventCard({
       }`}
     >
       <div className="relative h-40">
-        <EventBanner title={event.title} bannerUrl={event.bannerUrl} reducedMotion={reducedMotion} />
+        <EventBanner eventId={event.id} title={event.title} bannerUrl={event.bannerUrl} reducedMotion={reducedMotion} />
         <div className="absolute top-3 right-3">{getStatusBadge(event.status)}</div>
         <div className="absolute bottom-3 left-3 right-3">
           <h3 className="text-white text-lg font-bold truncate" title={event.title}>

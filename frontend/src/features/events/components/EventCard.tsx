@@ -236,7 +236,7 @@ const EventCard = ({
           <div className="event-progress">
             <span
               className="sr-only"
-              aria-valuemin="0"
+              aria-valuemin={0}
               aria-valuemax={totalCapacity}
               aria-valuenow={ticketsRemaining ?? 0}
               role="progressbar"

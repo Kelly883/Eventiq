@@ -5,6 +5,9 @@ import { api, showToast, clearToasts } from '../../../lib/api';
 import BrandLogo from '../../common/components/BrandLogo';
 import './AdminRegisterPage.css';
 
+const ADMIN_SETUP_COMPLETE_MESSAGE =
+  'Initial administrator setup is complete. Sign in, then open Admin Panel > Users to add administrators.';
+
 const AdminRegisterPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -14,56 +17,64 @@ const AdminRegisterPage = () => {
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [checking, setChecking] = useState(true);
+  const [setupCheckState, setSetupCheckState] = useState('checking');
+  const [setupCheckError, setSetupCheckError] = useState('');
+  const [setupCheckAttempt, setSetupCheckAttempt] = useState(0);
   const navigate = useNavigate();
   const { adminSetup } = useAuthContext();
 
   useEffect(() => {
     clearToasts();
+    let active = true;
 
     const checkAdminExists = async () => {
+      setSetupCheckState('checking');
+      setSetupCheckError('');
       try {
         const res = await api.get('/auth/admin-setup');
+        if (!active) return;
         const required = res.data?.required === true;
 
         if (!required) {
-          showToast(
-            'Admin exists',
-            'An administrator account already exists. Please sign in.',
-            'warning',
-            5000
-          );
-          navigate('/login', { replace: true });
+          navigate('/login', {
+            replace: true,
+            state: {
+              message: ADMIN_SETUP_COMPLETE_MESSAGE,
+              messageType: 'info',
+            },
+          });
+          return;
         }
+        setSetupCheckState('ready');
       } catch (err) {
+        if (!active) return;
         const status = err.response?.status;
 
         if (status === 404) {
-          showToast(
-            'Admin exists',
-            'An administrator account already exists. Please sign in.',
-            'warning',
-            5000
-          );
-          navigate('/login', { replace: true });
+          navigate('/login', {
+            replace: true,
+            state: {
+              message: ADMIN_SETUP_COMPLETE_MESSAGE,
+              messageType: 'info',
+            },
+          });
           return;
         }
 
-        if (status === 429) {
-          showToast(
-            'Too many attempts',
-            'Please wait a moment before trying again.',
-            'warning',
-            5000
-          );
-        }
-      } finally {
-        setChecking(false);
+        setSetupCheckError(
+          status === 429
+            ? 'Too many attempts. Please wait a moment and try again.'
+            : 'Unable to verify administrator setup. Please try again.'
+        );
+        setSetupCheckState('error');
       }
     };
 
     checkAdminExists();
-  }, [navigate]);
+    return () => {
+      active = false;
+    };
+  }, [navigate, setupCheckAttempt]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -130,7 +141,7 @@ const AdminRegisterPage = () => {
     }
   };
 
-  if (checking) {
+  if (setupCheckState === 'checking') {
     return (
       <div className="admin-register-page">
         <div className="admin-register-page__content">
@@ -139,6 +150,30 @@ const AdminRegisterPage = () => {
           </div>
           <div className="admin-register-page__card">
             <p className="admin-register-page__loading">Checking setup status...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (setupCheckState === 'error') {
+    return (
+      <div className="admin-register-page">
+        <div className="admin-register-page__content">
+          <div className="admin-register-page__brand-row">
+            <Link to="/" className="admin-register-page__brand" aria-label="eventIQ home">
+              <BrandLogo />
+            </Link>
+          </div>
+          <div className="admin-register-page__card">
+            <p className="admin-register-page__error" role="alert">{setupCheckError}</p>
+            <button
+              type="button"
+              className="admin-register-page__submit"
+              onClick={() => setSetupCheckAttempt((attempt) => attempt + 1)}
+            >
+              Retry setup check
+            </button>
           </div>
         </div>
       </div>
@@ -167,7 +202,12 @@ const AdminRegisterPage = () => {
             <p>This page is only available before the first admin account is created.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="admin-register-page__form" aria-busy={loading}>
+          <form
+            onSubmit={handleSubmit}
+            className="admin-register-page__form"
+            aria-busy={loading}
+            data-testid="admin-bootstrap-form"
+          >
             <div className="admin-register-page__field">
               <label htmlFor="admin-register-name">
                 Full Name
