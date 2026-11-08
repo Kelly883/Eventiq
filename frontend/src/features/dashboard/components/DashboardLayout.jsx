@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../auth/context/AuthContext';
 import Icon from './dashboard/Icon';
 import MobileNav from './dashboard/MobileNav';
@@ -110,11 +110,11 @@ const DashboardLayout = () => {
     return 'Dashboard';
   };
 
-  const handleSidebarLogout = () => {
-    logout();
-    window.location.href = '/login';
+// Consolidated logout helper using SPA navigation
+  const performLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
   };
-
   return (
     <div className="dashboard-layout">
       {/* ── Mobile Header (< 768px) ── */}
