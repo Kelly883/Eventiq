@@ -1,5 +1,6 @@
 import React from 'react';
 import { AttendeeBottomNav } from './AttendeeBottomNav';
+import '../dashboard.css';
 
 /**
  * Shared layout for every attendee dashboard page.
