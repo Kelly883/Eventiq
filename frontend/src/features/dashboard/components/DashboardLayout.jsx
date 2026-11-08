@@ -10,6 +10,7 @@ import { getUserRoles } from '../../../lib/authRoles';
 import '../dashboard.css';
 
 const DashboardLayout = () => {
+  const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthContext();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -227,7 +228,7 @@ const DashboardLayout = () => {
             <button
               type="button"
               className="dashboard-sidebar-logout"
-              onClick={handleSidebarLogout}
+              onClick={performLogout}
               aria-label="Sign out"
             >
               <Icon name="logout" size={20} />

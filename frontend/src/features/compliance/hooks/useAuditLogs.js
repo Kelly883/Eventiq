@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { complianceService } from '../services/complianceService';
 import { normalizeAuditLog } from '../types/audit';
 
@@ -32,11 +32,13 @@ export const useAuditLogs = () => {
     } finally {
       setLoading(false);
     }
-  }, [complianceService]);
+  }, [complianceService, filters]);
+
+  const filtersString = useMemo(() => JSON.stringify(filters), [filters]);
 
   useEffect(() => {
     fetchLogs();
-  }, [JSON.stringify(filters), fetchLogs]);
+  }, [filtersString, fetchLogs]);
 
   const bulkAction = async (action) => {
     if (!selectedIds.length) return;
