@@ -1,5 +1,6 @@
 import React from 'react';
 import { Event, Availability } from '../../types';
+import AvailabilityIndicator from './AvailabilityIndicator';
 
 const TRUNCATE_LINES = 2;
 const LINE_HEIGHT = 1.2;
@@ -8,43 +9,6 @@ const getTruncatedTitle = (title: string, maxLines = TRUNCATE_LINES): string => 
   if (title.length <= 40) return title;
   const trimmed = title.slice(0, 40);
   return trimmed + '...';
-};
-
-const AvailabilityIndicator = ({
-  availability,
-  ticketsRemaining,
-}: {
-  availability: Availability;
-  ticketsRemaining?: number;
-}) => {
-  const colorMap: Record<Availability, string> = {
-    available: '#10b981',
-    low: '#f59e0b',
-    sold_out: '#ef4444',
-  };
-
-  const textMap: Record<Availability, string> = {
-    available: `${ticketsRemaining ?? '?' } tickets remaining`,
-    low: `${ticketsRemaining ?? 'few'} tickets remaining`,
-    sold_out: 'Sold Out',
-  };
-
-  const color = colorMap[availability];
-  const text = textMap[availability];
-
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 text-xs font-medium"
-      aria-label={text}
-    >
-      <span
-        className="inline-block h-2 w-2 rounded-full shrink-0"
-        style={{ backgroundColor: color }}
-        aria-hidden="true"
-      />
-      <span>{text}</span>
-    </span>
-  );
 };
 
 const EventCard = ({ event, onClick }: { event: Event; onClick: () => void }) => {
@@ -89,10 +53,18 @@ const EventCard = ({ event, onClick }: { event: Event; onClick: () => void }) =>
 
   const [isMouseOver, setIsMouseOver] = React.useState(false);
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <div
       className="group rounded-lg overflow-cursor-pointer transition-all duration-200 hover:shadow-md hover:shadow-gray-200/20"
       onClick={onClick}
+      onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
       aria-label={`${title} event, ${organizerName}, ${startTime} to ${endTime}`}

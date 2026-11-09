@@ -1,10 +1,10 @@
 import React from 'react';
 import { AVAILABILITY_COLORS } from '../../utils/dateConstants';
 
-const LABELS = {
-  available: 'Available',
-  low: 'Low stock',
-  sold_out: 'Sold out',
+const ICONS: Record<Availability, string> = {
+  available: '✓',
+  low: '⚠',
+  sold_out: '✗',
 };
 
 const AvailabilityIndicator = ({
@@ -23,13 +23,18 @@ const AvailabilityIndicator = ({
       : 'Sold Out';
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-sm">
+    <span
+      className="inline-flex items-center gap-1.5 text-sm"
+      aria-label={label}
+    >
       <span
         aria-hidden="true"
         style={{ backgroundColor: color }}
         className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
-        aria-label={label}
       />
+      <span className="font-medium" aria-hidden="true">
+        {ICONS[availability]}
+      </span>
       <span>{label}</span>
     </span>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Calendar } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { calendarLocalizer } from '../../utils/calendarLocalizer';
@@ -34,30 +34,22 @@ const CalendarGrid = ({
     }
   };
 
-  // Group events by date to show counts
-  const eventsByDate = {};
-  events.forEach((event) => {
-    const start = new Date(event.start);
-    const dateKey = start.toISOString().split('T')[0];
-    if (!eventsByDate[dateKey]) {
-      eventsByDate[dateKey] = 0;
-    }
-    eventsByDate[dateKey]++;
-  });
+  // Group events by date for O(1) lookup in getDayProps (memoized)
+  const eventsByDate = useMemo(() => {
+    const map = {};
+    events.forEach((event) => {
+      const start = new Date(event.start);
+      const dateKey = start.toISOString().split('T')[0];
+      if (!map[dateKey]) map[dateKey] = [];
+      map[dateKey].push(event);
+    });
+    return map;
+  }, [events]);
 
   const getDayProps = (date, view) => {
     const dateKey = date.toISOString().split('T')[0];
-    const eventCount = eventsByDate[dateKey] || 0;
-    const dayEvents = events.filter(
-      (e) => {
-        const eventStart = new Date(e.start);
-        const eventEnd = new Date(e.end);
-        const eventStartMs = eventStart.getTime();
-        const eventEndMs = eventEnd.getTime();
-        const dateMs = date.getTime();
-        return eventStartMs <= dateMs && eventEndMs >= dateMs;
-      }
-    );
+    const dayEvents = eventsByDate[dateKey] || [];
+    const eventCount = dayEvents.length;
 
     let availabilityColor = 'available';
     if (dayEvents.length > 0) {
@@ -87,6 +79,9 @@ const CalendarGrid = ({
         borderRadius: '0',
       },
       className: `relative${eventCount > 0 ? ' p-1' : ''}`,
+      'aria-label': eventCount > 0
+        ? `${eventCount} event${eventCount !== 1 ? 's' : ''} on ${dateKey}`
+        : `No events on ${dateKey}`,
     };
   };
 
@@ -120,7 +115,6 @@ const CalendarGrid = ({
       <ViewToggle
         currentView={currentView}
         onViewChange={handleViewChange}
-        onDateSelect={handleDateSelect}
       />
       <div
         style={{ height: 600, marginTop: '16px' }}
@@ -138,6 +132,7 @@ const CalendarGrid = ({
           onSelectEvent={(event) => {
             handleDateSelect(event.start);
           }}
+          onSelectSlot={handleSlotSelect}
           dayProp={getDayProps}
           eventProp={getEventProps}
           style={{ height: '100%' }}

@@ -12,6 +12,7 @@ const SearchBar = ({
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const debouncedSearch = useCallback((query: string) => {
@@ -20,6 +21,7 @@ const SearchBar = ({
     }
     debounceTimer.current = setTimeout(() => {
       setResults([]);
+      setHighlightedIndex(-1);
       if (query.trim().length < 2) {
         setIsOpen(false);
         return;
@@ -39,10 +41,37 @@ const SearchBar = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
+    setHighlightedIndex(-1);
     debouncedSearch(value);
 
     if (value.trim().length === 0) {
       setIsOpen(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isOpen || results.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) =>
+        prev >= results.length - 1 ? 0 : prev + 1
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) =>
+        prev <= 0 ? results.length - 1 : prev - 1
+      );
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && highlightedIndex < results.length) {
+        handleSelect(results[highlightedIndex]);
+      }
+      setIsOpen(false);
+      setHighlightedIndex(-1);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+      setHighlightedIndex(-1);
     }
   };
 
@@ -51,6 +80,7 @@ const SearchBar = ({
     setIsOpen(false);
     setResults([]);
     setQuery(event.title || event.name || '');
+    setHighlightedIndex(-1);
   };
 
   return (
@@ -69,24 +99,34 @@ const SearchBar = ({
           type="text"
           value={query}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="ml-2 block w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           aria-label="Search events"
+          aria-expanded={isOpen}
+          aria-controls="search-results"
+          role="combobox"
         />
       </div>
 
       {isOpen && results.length > 0 && (
         <div
+          id="search-results"
           className="absolute top-full left-0 right-4 w-64 rounded border border-gray-300 bg-white shadow-lg z-10 max-h-64 overflow-y-auto"
           role="listbox"
+          aria-label="Search results"
         >
-          {results.map((result) => (
+          {results.map((result, index) => (
             <div
               key={result.id || result.title}
-              className="px-3 py-2 cursor-pointer hover:bg-gray-50"
+              className={`px-3 py-2 cursor-pointer hover:bg-gray-50 ${
+                highlightedIndex === index
+                  ? 'bg-primary-50 text-primary-700 font-medium'
+                  : ''
+              }`}
               onClick={() => handleSelect(result)}
               role="option"
-              aria-selected={false}
+              aria-selected={highlightedIndex === index}
             >
               <div className="font-medium truncate">
                 {result.title || result.name}
