@@ -48,7 +48,7 @@ const CategoryBrowsePage = () => {
   }, [department]);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10">
+    <div className="p-6 md:p-10">
       <div className="mx-auto max-w-7xl">
         {/* Breadcrumb */}
         <nav className="bg-white rounded-xl border border-slate-200 p-4 mb-6 shadow-sm">

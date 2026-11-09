@@ -439,8 +439,8 @@ function App() {
                <Route path="payment-methods" element={<PaymentMethodsPage />} />
                <Route path="*" element={<Navigate to="/settings" replace />} />
              </Route>
-            <Route path="/events/category/:categoryId" element={<CategoryBrowsePage />} />
-            <Route path="/events/:eventId" element={<EventDetailPage />} />
+            <Route path="/events/category/:categoryId" element={<AttendeeLayout><CategoryBrowsePage /></AttendeeLayout>} />
+            <Route path="/events/:eventId" element={<AttendeeLayout><EventDetailPage /></AttendeeLayout>} />
             <Route path="/analytics" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/analytics/:eventId" element={<SalesAnalyticsDashboardPage />} />
             <Route path="/organizer/analytics/compare" element={<ProtectedRoute requiredRole="organizer"><AnalyticsComparisonPage /></ProtectedRoute>} />

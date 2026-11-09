@@ -58,7 +58,7 @@ const DeliveryStatusPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="py-10 px-4 sm:px-6 lg:px-8 font-sans">
       {toast && (
         <div
           className={`fixed top-5 right-5 z-50 flex items-center p-4 rounded-lg shadow-lg border transition-all duration-300 ${
