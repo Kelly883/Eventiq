@@ -20,36 +20,19 @@ const items = [
 ];
 
 export const AttendeeBottomNav = () => (
-  <nav
-    className="attendee-bottom-nav"
-    aria-label="Attendee navigation"
-  >
+  <nav className="attendee-bottom-nav" aria-label="Attendee navigation">
     {items.map((item) => (
       <NavLink
         key={item.to}
         to={item.to}
         end={true}
-        className="attendee-nav-item"
-        children={({ isActive }) => (
-          <>
-            <span
-              className={`attendee-nav-item-icon ${isActive ? 'active' : ''}`}
-            >
-              <Icon
-                name={item.icon}
-                size={20}
-                strokeWidth={2}
-                className={isActive ? 'text-white' : 'text-[#6B7280]'}
-              />
-            </span>
-            <span
-              className={`attendee-nav-item-label ${isActive ? 'active' : ''}`}
-            >
-              {item.label}
-            </span>
-          </>
-        )}
-      />
+        className={({ isActive }) => `attendee-nav-item ${isActive ? 'active' : ''}`}
+      >
+        <span className="attendee-nav-item-icon">
+          <Icon name={item.icon} size={20} strokeWidth={2} />
+        </span>
+        <span className="attendee-nav-item-label">{item.label}</span>
+      </NavLink>
     ))}
   </nav>
 );
