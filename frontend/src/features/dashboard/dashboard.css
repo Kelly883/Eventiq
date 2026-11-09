@@ -1835,7 +1835,7 @@ body {
   padding-bottom: 6rem;
 }
 
-/* Attendee Bottom Navigation - Fixed to bottom on mobile */
+/* Attendee Bottom Navigation - Fixed to bottom on all screen sizes */
 .attendee-bottom-nav {
   position: fixed;
   bottom: 0;
@@ -1850,12 +1850,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-around;
-}
-
-@media (min-width: 768px) {
-  .attendee-bottom-nav {
-    display: none;
-  }
 }
 
 .attendee-nav-item {
@@ -1892,8 +1886,10 @@ body {
   height: 28px;
   border-radius: var(--radius-sm);
   transition: var(--transition);
+  color: var(--color-text-muted);
 }
 
+.attendee-nav-item-icon.active,
 .attendee-nav-item.active .attendee-nav-item-icon {
   background: var(--color-primary-light);
   color: var(--color-surface);
@@ -1907,11 +1903,17 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 56px;
+  color: var(--color-text-muted);
+  transition: var(--transition);
 }
 
-/* Ensure content isn't hidden behind fixed bottom nav on mobile */
-@media (max-width: 767px) {
-  .attendee-layout main {
-    padding-bottom: 96px; /* extra space for bottom nav */
-  }
+.attendee-nav-item-label.active,
+.attendee-nav-item.active .attendee-nav-item-label {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Ensure content isn't hidden behind fixed bottom nav */
+.attendee-layout main {
+  padding-bottom: 96px; /* extra space for bottom nav */
 }
