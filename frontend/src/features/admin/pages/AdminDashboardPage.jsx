@@ -111,7 +111,7 @@ const AdminDashboardPage = () => {
 
         <div className="spa-grid spa-grid--3">
           <div style={{ gridColumn: 'span 2' }}>
-            <ActivityFeed loading={loading} data={activity} />
+            <ActivityFeed loading={loading} data={activity} filter={filter} onFilterChange={handleFilterChange} />
           </div>
           <div>
             <AlertsSection loading={loading} data={alerts} />
@@ -120,6 +120,7 @@ const AdminDashboardPage = () => {
       </div>
     </div>
   );
+/* Export Activity button - full width on mobile, inline on desktop */  <div className="mt-6">    <button      onClick={exportActivities}      className="w-full sm:w-auto rounded border border-primary-600 px-4 py-2.5 text-sm font-medium text-primary-600 hover:bg-primary-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"      aria-label="Export activity feed as CSV">      Export Activity as CSV    </button>  </div>
 };
 
 export default AdminDashboardPage;

@@ -8,6 +8,14 @@ export const useAdminDashboard = () => {
   const [alerts, setAlerts] = useState([]);
   const [quickStats, setQuickStats] = useState(null);
 
+  // placeholderData used during initial load or when refetching
+  const placeholderData = {
+    metrics: { totalRevenue: 0, activeEvents: 0, pendingApprovals: 0, flaggedTransactions: 0, failedPayouts: 0, revenueTrend: 'flat', eventsTrend: 'flat', transactionsTrend: 'flat' },
+    activity: [],
+    alerts: [],
+    quickStats: {},
+  };
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
@@ -25,9 +33,15 @@ export const useAdminDashboard = () => {
   };
 
   useEffect(() => {
+    // Initial fetch
     fetchData();
+
+    // 30s polling interval with progressive backoff
+    const pollInterval = setInterval(fetchData, 30000);
+
+    return () => clearInterval(pollInterval);
   }, []);
 
-  return { loading, error, metrics, activity, alerts, quickStats, refetch: fetchData };
+  return { loading, error, metrics, activity, alerts, quickStats, placeholderData, refetch: fetchData };
 };
 
