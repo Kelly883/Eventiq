@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "check:enums": "tsx scripts/check-enum-sync.ts",
     "check:mocks": "node scripts/verify-mocks.mjs",
-    "check:session-modal": "node scripts/verify-session-modal.mjs"
+    "check:session-modal": "node scripts/verify-session-modal.mjs",
+    "test": "vitest run",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -57,6 +59,9 @@
     "@eslint/js": "^9.13.0",
     "@mswjs/data": "^0.16.2",
     "@playwright/test": "^1.62.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.9",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.3.3",
@@ -66,13 +71,15 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.14",
     "globals": "^15.11.0",
+    "jest-axe": "^11.0.0",
     "msw": "^2.15.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.23.12",
     "typescript": "^5.9.3",
     "typescript-language-server": "^6.0.0",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+    "vitest": "^2.1.9"
   },
   "msw": {
     "workerDirectory": [

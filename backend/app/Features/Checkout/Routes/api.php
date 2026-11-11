@@ -31,4 +31,6 @@ Route::middleware('bearer')->group(function () {
     Route::post('/tickets/{identifier}/resend-email', [TicketController::class, 'resend']);
     Route::post('/tickets/{identifier}/resend-sms', [TicketController::class, 'resend']);
     Route::post('/tickets/{identifier}/resend-dashboard', [TicketController::class, 'resend']);
+    Route::post('/tickets/{identifier}/wallet-pass', [TicketController::class, 'walletPass']);
+    Route::get('/tickets/{identifier}/wallet-pass/download', [TicketController::class, 'downloadWalletPass']);
 });
