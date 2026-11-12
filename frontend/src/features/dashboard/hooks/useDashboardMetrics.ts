@@ -2,6 +2,19 @@ import { useQuery } from '@tanstack/react-query';
 import { useRef, useEffect } from 'react';
 import { api } from '../../../lib/api';
 
+// Debounce function to limit the rate of callbacks
+const debounce = (func: Function, wait: number) => {
+  let timeout: ReturnType<typeof setTimeout>;
+  return function executedFunction(...args: any[]) => {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
+
 export type TrendDirection = 'up' | 'down' | 'neutral';
 
 export interface Trend {
@@ -125,6 +138,9 @@ export interface SalesActivityResponse {
 /** The feed must feel live even when SSE is unavailable, so poll as a floor. */
 export const ACTIVITY_POLL_INTERVAL_MS = 30_000;
 
+/** Default staleTime: 30s off-peak, consumers can override for 15s peak. */
+export const ACTIVITY_STALE_TIME_MS = 1000 * 30;
+
 /** Filters as the UI holds them; translated to API params below. */
 export interface ActivityFilterInput {
   event?: string;
@@ -160,7 +176,7 @@ export const toActivityQueryParams = (filters: ActivityFilterInput) => {
   return params;
 };
 
-/** Defensive mapping of an API activity row onto the shape the feed renders. */
+/** Map raw API event stream message onto our internal item shape. */
 export const normalizeActivity = (raw: any): SalesActivityItem => ({
   id: String(raw?.id ?? ''),
   timestamp: raw?.timestamp ?? '',
@@ -187,7 +203,7 @@ export function useSalesActivity(filters: ActivityFilterInput) {
       const rows = res.data?.activities ?? res.data ?? [];
       return Array.isArray(rows) ? rows.map(normalizeActivity) : [];
     },
-    staleTime: 1000 * 15,
+    staleTime: ACTIVITY_STALE_TIME_MS,
     refetchInterval: streamUrl ? false : ACTIVITY_POLL_INTERVAL_MS,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
@@ -210,11 +226,40 @@ export function useSalesActivitySSE(onMessage: (activities: SalesActivityItem[])
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onMessageRef = useRef(onMessage);
+  const isOnlineRef = useRef(true);
 
   // Keep callback ref current without triggering effect re-run
   useEffect(() => {
     onMessageRef.current = onMessage;
   }, [onMessage]);
+
+  // Handle online/offline events to trigger reconnection on network recovery
+  useEffect(() => {
+    const handleOnline = () => {
+      isOnlineRef.current = true;
+      // Trigger immediate reconnect if we have a stream URL and no active connection
+      const streamUrl = (import.meta as unknown as { env?: Record<string, string> }).env
+        ?.VITE_ACTIVITY_STREAM_URL;
+      if (streamUrl && !eventSourceRef.current) {
+        // The main effect will handle reconnection since disposed will be false
+        // Force a re-run by using a state change or just let the existing logic handle it
+        // We'll use a custom event to signal the main effect
+        window.dispatchEvent(new CustomEvent('network-recovered'));
+      }
+    };
+
+    const handleOffline = () => {
+      isOnlineRef.current = false;
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof EventSource === 'undefined') return;
@@ -234,6 +279,11 @@ export function useSalesActivitySSE(onMessage: (activities: SalesActivityItem[])
 
     const connect = () => {
       if (disposed) return;
+      // Don't attempt connection if offline
+      if (!isOnlineRef.current) {
+        scheduleReconnect();
+        return;
+      }
       const eventSource = new EventSource(streamUrl);
       eventSourceRef.current = eventSource;
 
@@ -242,15 +292,15 @@ export function useSalesActivitySSE(onMessage: (activities: SalesActivityItem[])
       };
 
       eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.activities) {
-            onMessageRef.current((data.activities as any[]).map(normalizeActivity));
-          }
-        } catch {
-          console.error('[activity-stream] ignoring malformed SSE payload');
+      try {
+        const data = JSON.parse(event.data);
+        if (data.activities) {
+          debounce(onMessageRef.current, 100)((data.activities as any[]).map(normalizeActivity));
         }
-      };
+      } catch {
+        console.error('[activity-stream] ignoring malformed SSE payload');
+      }
+    };
 
       eventSource.onerror = () => {
         eventSource.close();
@@ -265,6 +315,15 @@ export function useSalesActivitySSE(onMessage: (activities: SalesActivityItem[])
       };
     };
 
+    // Also listen for network recovery to trigger immediate reconnect
+    const handleNetworkRecovered = () => {
+      if (disposed) return;
+      consecutiveFailures = 0;
+      connect();
+    };
+
+    window.addEventListener('network-recovered', handleNetworkRecovered);
+
     connect();
 
     return () => {
@@ -273,6 +332,7 @@ export function useSalesActivitySSE(onMessage: (activities: SalesActivityItem[])
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
+      window.removeEventListener('network-recovered', handleNetworkRecovered);
     };
   }, []);
 
