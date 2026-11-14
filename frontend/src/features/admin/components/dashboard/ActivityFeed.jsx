@@ -16,18 +16,31 @@ export const ActivityFeed = ({ loading, data, filter = '' }) => {
     );
   }, [data, filter]);
 
-  const hasData = filteredActivity && filteredActivity.length > 0;
+  const hasOriginalData = data && data.length > 0;
+  const hasMatchingData = filteredActivity && filteredActivity.length > 0;
 
-  if (!hasData) {
-    return (
-      <div className="p-4 text-center">
-        <div className="h-48 flex items-center justify-center border-2 border-dashed border-gray-300 rounded mb-3">
-          <svg className="w-12 h-12 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15l-3-3l-3 3l-3-3l3-3l3 3l3-3l-3-3l-3 3z"/><circle cx="12" cy="12" r="10"/></svg>
+  if (!hasMatchingData) {
+    if (!hasOriginalData) {
+      return (
+        <div className="p-4 text-center">
+          <div className="h-48 flex items-center justify-center border-2 border-dashed border-gray-300 rounded mb-3">
+            <svg className="w-12 h-12 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15l-3-3l-3 3l-3-3l3-3l3 3l3-3l-3-3l-3 3z"/><circle cx="12" cy="12" r="10"/></svg>
+          </div>
+          <p className="text-sm text-gray-500">No activity</p>
+          {filter && <p className="text-xs text-gray-400">Try adjusting the filter or <span className="underline cursor-pointer">clear search</span></p>}
         </div>
-        <p className="text-sm text-gray-500">No activity</p>
-        {filter && <p className="text-xs text-gray-400">Try adjusting the filter or <span className="underline cursor-pointer">clear search</span></p>}
-      </div>
-    );
+      );
+    } else {
+      return (
+        <div className="p-4 text-center">
+          <div className="h-48 flex items-center justify-center border-2 border-dashed border-gray-300 rounded mb-3">
+            <svg className="w-12 h-12 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15l-3-3l-3 3l-3-3l3-3l3 3l3-3l-3-3l-3 3z"/><circle cx="12" cy="12" r="10"/></svg>
+          </div>
+          <p className="text-sm text-gray-500">No activity matching filters</p>
+          <p className="text-xs text-gray-400">Try adjusting the filter or <span className="underline cursor-pointer">clear search</span></p>
+        </div>
+      );
+    }
   }
 
   const truncateName = (name, maxLength = 30) => {

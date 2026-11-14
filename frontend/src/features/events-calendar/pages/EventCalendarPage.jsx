@@ -69,8 +69,8 @@ const EventCalendarPage = () => {
           <CalendarGrid
             events={events}
             onSelectDate={setSelectedDate}
-            onSelectEvent={handleSelectEvent}
-            defaultView="month"
+            onDateSelect={setSelectedDate}
+            view="month"
           />
         </div>
 

@@ -1,7 +1,7 @@
 import React from 'react';
-import { AVAILABILITY_COLORS } from '../../utils/dateConstants';
+import { AVAILABILITY_COLORS, AvailabilityStatus } from '../../utils/dateConstants';
 
-const ICONS: Record<Availability, string> = {
+const ICONS: Record<AvailabilityStatus, string> = {
   available: '✓',
   low: '⚠',
   sold_out: '✗',
@@ -17,7 +17,7 @@ const AvailabilityIndicator = ({
   const color = AVAILABILITY_COLORS[availability] ?? AVAILABILITY_COLORS.available;
   const label =
     availability === 'available'
-      ? `${ticketsRemaining ?? ''} tickets remaining`
+      ? `${ticketsRemaining ?? 0} tickets remaining`
       : availability === 'low'
       ? `${ticketsRemaining ?? 'few'} tickets remaining`
       : 'Sold Out';

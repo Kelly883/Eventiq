@@ -56,10 +56,15 @@ const QRCodeDisplay = ({ data, size = 200, label = 'QR Code', lazy = false }) =>
       ref={containerRef}
       className="relative"
       style={{ width: size, height: size }}
-      role="img"
-      aria-label={label}
     >
-      <QRCodeSVG value={data} size={size} level="M" includeMargin />
+      <QRCodeSVG
+        value={data}
+        size={size}
+        level="M"
+        includeMargin
+        aria-label={label}
+        title={label}
+      />
       {data.length > 0 && (
         <span className="absolute bottom-1 left-1 text-xs text-slate-700 capitalize">
           {label}

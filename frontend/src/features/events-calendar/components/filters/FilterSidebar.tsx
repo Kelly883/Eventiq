@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Category } from '../../types';
 
 const desktopSidebar = ({
@@ -20,12 +20,13 @@ const desktopSidebar = ({
   onLocationChange: (location: string) => void;
   onClearFilters: () => void;
 }) => (
-  <div className="sticky top-0 h-screen p-6 max-w-sm">
+  <div className="sticky top-0 max-h-screen overflow-y-auto p-6 max-w-sm">
     <h2 className="text-xl font-semibold mb-6">Filters</h2>
 
     <div className="mb-4">
-      <label className="block text-sm font-medium mb-2">Category</label>
+      <label htmlFor="category-select" className="block text-sm font-medium mb-2">Category</label>
       <select
+        id="category-select"
         onChange={(e) => onCategoryChange(e.target.value || null)}
         className="w-full rounded border px-3 py-2"
       >
@@ -49,20 +50,24 @@ const desktopSidebar = ({
         <span className="text-xs text-gray-600">Max: €{priceRange.max}</span>
       </div>
       <input
+        id="price-min-input"
         type="range"
         min={priceRange.min}
         max={priceRange.max}
         value={priceRange.min}
+        aria-label="Minimum price"
         onChange={(e) =>
           onPriceChange({ min: parseFloat(e.target.value), max: priceRange.max })
         }
         className="w-full rounded border my-2"
       />
       <input
+        id="price-max-input"
         type="range"
         min={priceRange.min}
         max={priceRange.max}
         value={priceRange.max}
+        aria-label="Maximum price"
         onChange={(e) =>
           onPriceChange({ min: priceRange.min, max: parseFloat(e.target.value) })
         }
@@ -71,8 +76,9 @@ const desktopSidebar = ({
     </div>
 
     <div className="mb-4">
-      <label className="block text-sm font-medium mb-2">Location</label>
+      <label htmlFor="location-input" className="block text-sm font-medium mb-2">Location</label>
       <input
+        id="location-input"
         type="text"
         placeholder="Search location..."
         value={location || ''}
@@ -182,8 +188,11 @@ const mobileDrawer = ({
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Location</label>
+            <label htmlFor="mobile-location-input" className="block text-sm font-medium mb-2">
+              Location
+            </label>
             <input
+              id="mobile-location-input"
               type="text"
               placeholder="Search location..."
               value={location || ''}
@@ -224,6 +233,16 @@ const FilterSidebar = ({
   onClearFilters: () => void;
 }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768;
+  });
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const handleCategoryChange = (category: string | null) => {
     onCategoryChange(category);
@@ -237,6 +256,21 @@ const FilterSidebar = ({
   const handleLocationChange = (loc: string) => {
     onLocationChange(loc);
   };
+
+  // On mobile the sidebar collapses into a trigger button that opens a
+  // drawer; on desktop the sticky sidebar is shown inline.
+  if (isMobile && !isMobileOpen) {
+    return (
+      <div className="w-full bg-white border-b border-gray-200">
+        <button
+          onClick={() => setIsMobileOpen(true)}
+          className="w-full px-6 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50 border-b border-gray-200 hover:bg-gray-100"
+        >
+          Filters
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-white shadow-sm border-r border-gray-200">

@@ -101,11 +101,6 @@ const RefreshedAgo = ({ at }: { at: Date }) => {
 const dedupeById = (items: SalesActivityItem[]): SalesActivityItem[] =>
   items.filter((item, index, self) => index === self.findIndex((t) => String(t.id) === String(item.id)));
 
-const csvCell = (value: string | number): string => {
-  const cell = String(value);
-  const safeCell = /^[=+\-@]/.test(cell.trimStart()) ? `'${cell}` : cell;
-  return `"${safeCell.replace(/"/g, '""')}"`;
-};
 
 const ALL_COLUMNS = [
   { key: 'event' as const, label: 'Event' },
@@ -300,18 +295,32 @@ export const SalesActivityFeed = ({
     setFilters({ event: '', tier: '', dateFrom: '', dateTo: '' });
   }, []);
 
+  const csvCell = (value: string | number | undefined | null): string => {
+    const str = String(value === null || value === undefined ? '' : value);
+    // If value contains comma, quote, or newline, wrap in quotes and escape existing quotes
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
   const exportToCSV = useCallback(async () => {
     if (sortedActivities.length === 0) return;
     setIsExporting(true);
     try {
       const activitiesToExport = sortedActivities.slice(0, 1000);
-      const dateSuffix = filters.dateFrom && filters.dateTo
+      const datePart = filters.dateFrom && filters.dateTo
         ? `${filters.dateFrom}_to_${filters.dateTo}`
-        : new Date().toISOString().slice(0, 10);
+        : filters.dateFrom || filters.dateTo
+          ? filters.dateFrom || filters.dateTo
+          : 'all-time';
+
+      const eventPart = filters.event ? `_event-${filters.event}` : '';
+      const tierPart = filters.tier ? `_tier-${filters.tier}` : '';
 
       const headers = ['Timestamp', 'Event', 'Tier', 'Quantity', 'Price'];
       const rows = activitiesToExport.map((a) => [
-        a.timestamp,
+        formatDistanceToNow(new Date(a.timestamp), { addSuffix: true }),
         a.eventName || '',
         a.tier || '',
         String(a.quantity),
@@ -325,7 +334,8 @@ export const SalesActivityFeed = ({
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `activity-export-${dateSuffix}.csv`;
+      // Improved filename with date, event, and tier info
+      link.download = `activity-export${eventPart}${tierPart}-${datePart}.csv`;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
@@ -339,7 +349,7 @@ export const SalesActivityFeed = ({
     } finally {
       setIsExporting(false);
     }
-  }, [sortedActivities, filters]);
+  }, [sortedActivities, filters, onDownloadCsv]);
 
   const hasActiveFilters = Boolean(filters.event || filters.tier || filters.dateFrom || filters.dateTo);
 
@@ -616,8 +626,12 @@ export const SalesActivityFeed = ({
         </div>
 
         <div className="px-4 py-2 max-h-96 overflow-y-auto" aria-busy={isLoading || isFetching} style={{ maxHeight: '500px' }}>
+        {isLoading || isFetching ? (
+          <SkeletonRow reducedMotion={reducedMotion} key="skeleton" />
+        ) : (
           <ul className="text-sm">{renderRows()}</ul>
-        </div>
+        )}
+      </div>
       </section>
     </ErrorBoundary>
   );

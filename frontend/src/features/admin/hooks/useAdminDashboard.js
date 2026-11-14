@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
 
+// Debounce function to limit the rate of fetchData calls
+const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
 export const useAdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -36,10 +45,23 @@ export const useAdminDashboard = () => {
     // Initial fetch
     fetchData();
 
-    // 30s polling interval with progressive backoff
-    const pollInterval = setInterval(fetchData, 30000);
+    // 30s debounced polling - uses setTimeout instead of setInterval
+    // Each fetch resets the timer, effectively debouncing rapid calls
+    let timeoutId;
+    const fetchWithDelay = async () => {
+      timeoutId = setTimeout(async () => {
+        try {
+          await fetchData();
+        } finally {
+          // Reschedule for next poll cycle
+          fetchWithDelay();
+        }
+      }, 30000);
+    };
 
-    return () => clearInterval(pollInterval);
+    fetchWithDelay();
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   return { loading, error, metrics, activity, alerts, quickStats, placeholderData, refetch: fetchData };

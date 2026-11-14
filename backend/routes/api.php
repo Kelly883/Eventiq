@@ -12,6 +12,7 @@ use App\Features\Ticketing\Controllers\EventTicketingController;
 use App\Features\Pricing\Controllers\PricingWindowController;
 use App\Features\Pricing\Controllers\PricingController;
 use App\Features\Delivery\Controllers\DeliveryController;
+use App\Http\Controllers\FavoriteController;
 
 // Include Push Notifications routes
 require base_path('app/Features/PushNotifications/Routes/api.php');
@@ -98,6 +99,14 @@ Route::middleware('bearer')->group(function () {
 
     // User-facing permission routes
     Route::post('/permissions/request', [PermissionController::class, 'submitPermissionRequest']);
+
+    // Favorites/Wishlist routes
+    Route::prefix('favorites')->group(function () {
+        Route::get('/', [FavoriteController::class, 'index']);
+        Route::post('/', [FavoriteController::class, 'store']);
+        Route::delete('/{eventId}', [FavoriteController::class, 'destroy']);
+        Route::get('/{eventId}/check', [FavoriteController::class, 'check']);
+    });
 
     // Organizer routes
     Route::prefix('organizer')->group(function () {

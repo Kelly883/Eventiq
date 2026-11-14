@@ -255,9 +255,30 @@ export function useSalesActivitySSE(onMessage: (activities: SalesActivityItem[])
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+
+    // Also listen for visibility change to prevent unnecessary connections when tab is hidden
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab is hidden - close the connection to save resources
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
+        }
+      } else {
+        // Tab is visible - try to reconnect if connection was closed while hidden
+        const streamUrl = (import.meta as unknown as { env?: Record<string, string> }).env
+          ?.VITE_ACTIVITY_STREAM_URL;
+        if (streamUrl && !eventSourceRef.current) {
+          connect();
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 

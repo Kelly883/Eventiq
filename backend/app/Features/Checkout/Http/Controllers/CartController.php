@@ -2,6 +2,8 @@
 
 namespace App\Features\Checkout\Http\Controllers;
 
+use App\Features\Checkout\Models\OrderItem;
+use App\Features\Checkout\Models\Ticket;
 use App\Http\Controllers\Controller;
 use App\Models\TicketTier;
 use App\Features\Inventory\Models\TicketInventory;
@@ -9,6 +11,35 @@ use Illuminate\Http\Request;
 
 class CartController extends Controller
 {
+    const CART_SESSION_KEY = 'cart_items';
+
+    /**
+     * GET /api/cart - returns the authenticated user's persisted cart items.
+     */
+    public function index(Request $request)
+    {
+        $cart = $request->session()->get(self::CART_SESSION_KEY, []);
+
+        return response()->json(['data' => $cart]);
+    }
+
+    /**
+     * PUT /api/cart - persists the authenticated user's cart items to the session.
+     */
+    public function update(Request $request)
+    {
+        $validated = $request->validate([
+            'cart' => ['required', 'array'],
+            'cart.*.ticketTierId' => ['sometimes', 'string'],
+            'cart.*.quantity' => ['sometimes', 'integer', 'min:1'],
+            'cart.*.unitPrice' => ['sometimes', 'numeric'],
+        ]);
+
+        $request->session()->put(self::CART_SESSION_KEY, $validated['cart']);
+
+        return response()->json(['data' => $validated['cart'], 'message' => 'Cart saved.']);
+    }
+
     /**
      * POST /api/cart/verify - re-checks prices and availability against
      * the database before checkout, so a stale cart (price changed,

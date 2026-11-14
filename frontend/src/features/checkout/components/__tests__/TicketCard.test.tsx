@@ -32,7 +32,7 @@ const mockTicketTier = {
   currency: 'USD',
 };
 
-vi.mock('../services/ticketDeliveryService', () => ({
+vi.mock('../../services/ticketDeliveryService', () => ({
   downloadTicketPdf: vi.fn().mockResolvedValue(undefined),
   addToWallet: vi.fn().mockResolvedValue('https://example.com/pass.pkpass'),
 }));

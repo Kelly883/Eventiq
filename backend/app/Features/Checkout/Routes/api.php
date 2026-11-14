@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Route;
 Route::post('/webhooks/payment-provider', [WebhookController::class, 'handle'])->middleware('throttle:webhooks');
 
 Route::middleware('bearer')->group(function () {
+    Route::get('/cart', [CartController::class, 'index']);
+    Route::put('/cart', [CartController::class, 'update']);
     Route::post('/cart/verify', [CartController::class, 'verify']);
     Route::post('/checkout/create-payment-intent', [CheckoutController::class, 'createPaymentIntent']);
         Route::get('/orders/{orderId}', [OrderController::class, 'show']);

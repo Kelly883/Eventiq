@@ -1,7 +1,24 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import LiveIndicator from '@/features/analytics/components/LiveIndicator';
 import { useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from '../ErrorBoundary';
+
+const useOnlineStatus = () => {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return { isOnline };
+};
 
 interface DashboardHeaderProps {
   user?: { name?: string | null } | null;
@@ -51,6 +68,7 @@ export const DashboardHeader = ({
   filterOptions,
 }: DashboardHeaderProps) => {
   const navigate = useNavigate();
+  const { isOnline } = useOnlineStatus();
   const firstName = user?.name?.split(' ')[0] || 'there';
   const greeting = getGreeting();
 
@@ -114,6 +132,22 @@ export const DashboardHeader = ({
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
             <LiveIndicator />
+
+            {isOnline ? (
+              <span className="inline-flex items-center gap-1 px-2 rounded-md bg-emerald-100 text-emerald-700 text-xs font-medium">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 0012 20.944a12.02 12.02 0 008.382-5.944z" />
+                </svg>
+                Online
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 rounded-md bg-rose-100 text-rose-700 text-xs font-medium">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18M6 6l12 12" />
+                </svg>
+                Offline
+              </span>
+            )}
 
             <button
               onClick={handleCreateEvent}

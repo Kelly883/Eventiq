@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../../lib/api';
 import { useAuthContext } from '../../../features/auth/context/AuthContext';
+import Breadcrumb from '../../components/Breadcrumb';
 
 const EventDetailPage = () => {
   const { eventId } = useParams();
@@ -10,6 +11,8 @@ const EventDetailPage = () => {
   const { user } = useAuthContext();
   const [event, setEvent] = useState(null);
   const [breadcrumb, setBreadcrumb] = useState(['Events']);
+  const [relatedEvents, setRelatedEvents] = useState<readonly any[]>([]);
+  const [isLoadingRelated, setIsLoadingRelated] = useState(false);
 
   // Fetch event data on mount
   useEffect(() => {
@@ -31,8 +34,6 @@ const EventDetailPage = () => {
 
   // Update breadcrumb when navigating from calendar/detail
   useEffect(() => {
-    // If coming from calendar detail, breadcrumb is already set
-    // Otherwise, ensure default breadcrumb state
     if (!breadcrumb[1]) {
       setBreadcrumb(['Events']);
     }
@@ -49,32 +50,36 @@ const EventDetailPage = () => {
     }
   }, [eventId, location, event]);
 
-  return (
-    <div className="p-6 md:p-10">
-      <div className="mx-auto max-w-3xl">
+  // Fetch related events
+  useEffect(() => {
+    const loadRelatedEvents = async () => {
+      if (!event) return;
+      setIsLoadingRelated(true);
+      try {
+        const res = await api.get(`/events/${eventId}/related`, {
+          params: {
+            limit: 4,
+            category: event.category,
+            organizerId: event.organizerId,
+          },
+        });
+        setRelatedEvents(res.data.data || []);
+      } catch (err) {
+        console.error('Failed to fetch related events', err);
+        setRelatedEvents([]);
+      } finally {
+        setIsLoadingRelated(false);
+      }
+    };
+    loadRelatedEvents();
+  }, [eventId, event]);
 
-        {/* Breadcrumb Navigation */}
-        <nav className="bg-white rounded-xl border border-slate-200 p-4 mb-6 shadow-sm">
-          <ol className="flex flex-wrap items-center gap-2">
-{breadcrumb.map((segment, index) => {
-              const isLast = index === breadcrumb.length - 1;
-              return (
-                <li key={index} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors">
-                  {isLast ? (
-                    <span>{segment}</span>
-                  ) : (
-                    <Link
-                      to={index === 0 ? '/events' : '/events'}
-                      className="underline cursor-pointer text-indigo-600"
-                    >
-                      {segment}
-                    </Link>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        </nav>
+        {/* Breadcrumb */}
+        <Breadcrumb
+          items={[{ label: 'Events', href: '/events' }]}
+          currentItem={{ label: event?.name || event?.title || `Event #${eventId}` }}
+          separator='>'
+        />
 
         {/* Navigation aids */}
         {breadcrumb.length >= 2 && (
@@ -125,14 +130,81 @@ const EventDetailPage = () => {
               </div>
             ) : null}
           </div>
-        ) : (
-          <div className="text-center py-12">
-            <h2 className="text-xl font-bold text-slate-900">Event Not Found</h2>
-            <p className="text-slate-500">The event you requested does not exist.</p>
-            <Link to="/events" className="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700">
-              Go to Event Browse
-            </Link>
-          </div>
+          {/* Share Button */}
+          {event && (
+            <div className="mb-4 flex items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (navigator.share) {
+                    navigator.share({
+                      title: event.name || event.title || 'Event',
+                      text: event.description || 'Check out this event!',
+                      url: window.location.href,
+                    });
+                  } else {
+                    navigator.clipboard.writeText(window.location.href).then(() => {
+                      alert('Link copied to clipboard!');
+                    });
+                  }
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm text-primary-600 hover:bg-primary-100 transition-colors"
+                aria-label="Share event"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Share
+              </button>
+            </div>
+          )}
+
+          {/* Related Events Section */}
+          {relatedEvents.length > 0 && !isLoadingRelated && (
+            <div className="mt-8 pt-8 border-t border-slate-200">
+              <h2 className="text-xl font-bold text-slate-800 mb-4">You Might Also Like</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {relatedEvents.map((relatedEvent) => (
+                  <div
+                    key={relatedEvent.id}
+                    className="bg-white rounded-xl border border-slate-200 hover:border-primary-200 transition-colors p-4 min-h-[280px]"
+                  >
+                    <h3 className="text-sm font-medium text-slate-800 mb-2 truncate">
+                      {relatedEvent.name || relatedEvent.title}
+                    </h3>
+                    <p className="text-xs text-slate-500 line-clamp-2">
+                      {relatedEvent.description?.substring(0, 100) || ''}...
+                    </p>
+                    {relatedEvent.ticketTiers?.[0] && (
+                      <p className="text-xs text-primary-600 mt-1">
+                        from {relatedEvent.ticketTiers[0].price || '0.00'}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                {isLoadingRelated && (
+                  <p className="text-sm text-slate-400 text-center">Loading more events...</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {relatedEvents.length === 0 && !isLoadingRelated && (
+            <p className="text-sm text-slate-400 mt-2">No related events found.</p>
+          )}
+
+          {event ? null : (
+            <div className="text-center py-12">
+              <h2 className="text-xl font-bold text-slate-900">Event Not Found</h2>
+              <p className="text-slate-500">The event you requested does not exist.</p>
+              <Link
+                to="/events"
+                className="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
+              >
+                Go to Event Browse
+              </Link>
+            </div>
+          )}
         )}
       </div>
     </div>

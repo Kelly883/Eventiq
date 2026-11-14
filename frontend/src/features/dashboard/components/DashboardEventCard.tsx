@@ -97,11 +97,13 @@ const EventBanner = ({
   title,
   bannerUrl,
   reducedMotion,
+  onError,
 }: {
   eventId: string | number;
   title: string;
   bannerUrl?: string;
   reducedMotion: boolean;
+  onError?: () => void;
 }) => {
   const [failed, setFailed] = useState(false);
   const showImage = Boolean(bannerUrl) && !failed;
@@ -156,6 +158,11 @@ export const DashboardEventCard = React.memo(function DashboardEventCard({
       e.preventDefault();
       onToggle();
     }
+    // Close expanded details on Escape key
+    if (e.key === 'Escape' && isExpanded) {
+      e.preventDefault();
+      onToggle();
+    }
   };
 
   const reducedMotion = useReducedMotion();
@@ -185,6 +192,7 @@ export const DashboardEventCard = React.memo(function DashboardEventCard({
 <button
             onClick={onToggle}
             onKeyDown={handleKeyDown}
+            tabIndex={0}
             className={`w-full text-left flex items-start justify-between gap-3 ${reducedMotion ? '' : 'transition-colors'} focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-md`}
             aria-expanded={isExpanded}
             aria-controls={`event-details-${event.id}`}

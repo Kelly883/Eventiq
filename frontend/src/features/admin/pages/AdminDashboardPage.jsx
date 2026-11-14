@@ -6,12 +6,13 @@ import { showToast } from '../../../lib/api';
 import '../../../styles/shared-pages.css';
 
 const AdminDashboardPage = () => {
-  const { loading, error, metrics, activity, alerts, quickStats } = useAdminDashboard();
+  const { loading, error, metrics, activity, alerts, quickStats, refetch } = useAdminDashboard();
   const [notificationStatus, setNotificationStatus] = useState(() => {
     if (typeof Notification === 'undefined') return 'unsupported';
     return Notification.permission;
   });
   const [enabling, setEnabling] = useState(false);
+  const [filter, setFilter] = useState('');
 
   const handleEnableNotifications = async () => {
     setEnabling(true);
@@ -31,6 +32,45 @@ const AdminDashboardPage = () => {
       showToast('Could not enable notifications', 'Push notifications are not supported in this browser.', 'error');
     } finally {
       setEnabling(false);
+    }
+  };
+
+  const handleFilterChange = (e) => {
+    setFilter(e.target.value);
+    showToast('Filter updated', 'Activity feed filter has been updated.', 'info');
+  };
+
+  const handleClearFilter = () => {
+    setFilter('');
+    showToast('Filter cleared', 'Activity feed filter has been cleared.', 'info');
+  };
+
+  const exportActivities = async () => {
+    try {
+      const response = await fetch('/api/admin/dashboard/activity-feed?export=true', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'activity-feed-' + new Date().toISOString().slice(0, 10) + '.csv';
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      showToast('Export started', 'Activity feed export initiated.', 'success');
+    } catch (err) {
+      console.error('CSV export error:', err);
+      showToast('Export failed', 'Could not export activity feed.', 'error');
     }
   };
 
@@ -120,7 +160,6 @@ const AdminDashboardPage = () => {
       </div>
     </div>
   );
-/* Export Activity button - full width on mobile, inline on desktop */  <div className="mt-6">    <button      onClick={exportActivities}      className="w-full sm:w-auto rounded border border-primary-600 px-4 py-2.5 text-sm font-medium text-primary-600 hover:bg-primary-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"      aria-label="Export activity feed as CSV">      Export Activity as CSV    </button>  </div>
 };
 
 export default AdminDashboardPage;

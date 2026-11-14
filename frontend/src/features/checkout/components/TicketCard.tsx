@@ -42,8 +42,9 @@ const TicketCard: React.FC<TicketCardProps> = ({
   const [walletLoading, setWalletLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const formattedDate = event?.date
-    ? new Date(event.date).toLocaleDateString('en-US', {
+  const dateStr = event?.date || ticket.eventDate;
+  const formattedDate = dateStr
+    ? new Date(dateStr).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -143,7 +144,6 @@ const TicketCard: React.FC<TicketCardProps> = ({
                 ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                 : 'bg-white border border-indigo-600 text-indigo-600 hover:bg-indigo-600 hover:text-white'
             }`}
-            aria-label="Download ticket as PDF"
             aria-busy={pdfLoading}
           >
             {pdfLoading ? 'Generating…' : 'Download PDF'}
@@ -157,7 +157,6 @@ const TicketCard: React.FC<TicketCardProps> = ({
                 ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                 : 'bg-white border border-indigo-600 text-indigo-600 hover:bg-indigo-600 hover:text-white'
             }`}
-            aria-label="Add to mobile wallet"
             aria-busy={walletLoading}
           >
             {walletLoading ? 'Adding…' : 'Add to Wallet'}

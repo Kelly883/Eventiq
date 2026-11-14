@@ -1,5 +1,6 @@
 import React from 'react';
 import EventCard from './EventCard';
+import { EventCardSkeleton } from './ContentSkeletons';
 import type { Event } from '../types/shared';
 
 export interface EventGridProps {
@@ -18,35 +19,18 @@ const getColumnCount = (): number => {
   return 1;
 };
 
-const EventGrid = ({
-  events,
-  isLoading,
-  hasMore,
-  onLoadMore,
-  onEventClick,
-}: EventGridProps) => {
+const EventGrid = ({ events, isLoading, hasMore, onLoadMore, onEventClick }: EventGridProps) => {
   const columnCount = getColumnCount();
 
   if (isLoading) {
     return (
       <div
-        className="event-grid"
+        className="event-grid loading"
         style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}
         aria-label="Loading events"
       >
         {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="event-card skeleton-card"
-            style={{ marginBottom: '1rem' }}
-            aria-hidden="true"
-          >
-            <div className="skeleton-image-lg" />
-            <div className="skeleton-title-lg" />
-            <div className="skeleton-text-sm" />
-            <div className="skeleton-text-xs" />
-            <div className="skeleton-text-sm" />
-          </div>
+          <EventCardSkeleton key={i} />
         ))}
       </div>
     );
@@ -91,17 +75,24 @@ const EventGrid = ({
   }
 
   return (
-    <div
-      className="event-grid"
-      style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}
-    >
-      {events.map((event) => (
-        <EventCard
-          key={event.id}
-          event={event}
-          onClick={() => onEventClick?.(event)}
-        />
-      ))}
+    <div className="event-grid">
+      <header className="sticky top-0 bg-white z-10 border-b border-slate-200 py-3">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 gap-2 px-4">
+          {events.map((event) => (
+            <div key={event.id} className="flex flex-col">
+              <h3 className="text-sm font-medium text-gray-700 line-clamp-1">
+                {event.title.length > 30 ? event.title.slice(0, 30) + '...' : event.title}
+              </h3>
+              <p className="text-xs text-gray-500">{event.venue?.name || 'Unknown venue'}</p>
+            </div>
+          ))}
+        </div>
+      </header>
+      <div style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }} className="grid gap-4">
+        {events.map((event) => (
+          <EventCard key={event.id} event={event} onClick={() => onEventClick?.(event)} />
+        ))}
+      </div>
     </div>
   );
 };

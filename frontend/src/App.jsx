@@ -102,6 +102,15 @@ const DiscoveryComponentsGallery = lazy(
 const DashboardComponentsGallery = lazy(
   () => import('./features/dashboard/pages/DashboardComponentsGallery'),
 );
+const CalendarComponentsGallery = lazy(
+  () => import('./features/events-calendar/pages/CalendarComponentsGallery'),
+);
+const CheckoutComponentsGallery = lazy(
+  () => import('./features/checkout/pages/CheckoutComponentsGallery'),
+);
+const EventComponentsGallery = lazy(
+  () => import('./features/events/pages/EventComponentsGallery'),
+);
 
 const AUTH_PAGES = ['/login', '/register', '/admin-register', '/forgot-password', '/reset-password', '/access-denied'];
 
@@ -512,6 +521,24 @@ function App() {
               )}
               {import.meta.env.DEV && (
                 <Route path="/dashboard-components" element={<DashboardComponentsGallery />} />
+              )}
+              {import.meta.env.DEV && (
+                <Route
+                  path="/calendar-components"
+                  element={<CalendarComponentsGallery />}
+                />
+              )}
+              {import.meta.env.DEV && (
+                <Route
+                  path="/checkout-components"
+                  element={<CheckoutComponentsGallery />}
+                />
+              )}
+              {import.meta.env.DEV && (
+                <Route
+                  path="/event-components"
+                  element={<EventComponentsGallery />}
+                />
               )}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

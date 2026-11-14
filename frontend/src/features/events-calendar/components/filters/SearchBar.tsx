@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useId } from 'react';
 
 const SearchBar = ({
   onSearch,
@@ -9,6 +9,7 @@ const SearchBar = ({
   onSelectResult: (event: any) => void;
   placeholder: string;
 }) => {
+  const inputId = useId();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -26,6 +27,7 @@ const SearchBar = ({
         setIsOpen(false);
         return;
       }
+      setIsOpen(true);
       onSearch(query);
     }, 300);
   }, [onSearch]);
@@ -102,9 +104,13 @@ const SearchBar = ({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="ml-2 block w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          id={inputId}
           aria-label="Search events"
           aria-expanded={isOpen}
           aria-controls="search-results"
+          aria-activedescendant={
+            highlightedIndex >= 0 ? `${inputId}-option-${highlightedIndex}` : undefined
+          }
           role="combobox"
         />
       </div>
@@ -125,6 +131,7 @@ const SearchBar = ({
                   : ''
               }`}
               onClick={() => handleSelect(result)}
+              id={`${inputId}-option-${index}`}
               role="option"
               aria-selected={highlightedIndex === index}
             >

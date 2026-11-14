@@ -1,12 +1,7 @@
-import React from 'react';
+import React, { useContext, useState } from 'react';
+import { useCartContext } from '../../../features/checkout/context/CartContext';
 import AvailabilityBadge from './AvailabilityBadge';
 import type { SharedTicketTier } from '../types/shared';
-
-export interface TicketTierCardProps {
-  tier: SharedTicketTier;
-  onSelect?: () => void;
-  loading?: boolean;
-}
 
 function getCurrencySymbol(currency?: string | null): string {
   const symbols: Record<string, string> = {
@@ -32,11 +27,21 @@ function formatPrice(
   return `${symbol}${num.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
+export interface TicketTierCardProps {
+  tier: SharedTicketTier;
+  onSelect?: () => void;
+  loading?: boolean;
+}
+
 const TicketTierCard = ({
   tier,
   onSelect,
   loading = false,
 }: TicketTierCardProps) => {
+  const { cart, addToCart } = useCartContext();
+  const [added, setAdded] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+
   if (!tier) return null;
 
   const name = tier.name || 'General Admission';
@@ -46,6 +51,37 @@ const TicketTierCard = ({
   const soldCount = tier.sold_count ?? 0;
   const availableCount = tier.available_count ?? (quantity != null ? quantity - soldCount : null);
   const isSoldOut = availableCount != null ? availableCount <= 0 : false;
+
+  const cartItemCount = cart.reduce((sum, item) => sum + (item.quantity ?? 1), 0);
+
+  const handleSelect = async () => {
+    if (isSoldOut || !onSelect) return;
+
+    setAdded(true);
+    setShowToast(true);
+
+    // Add to cart with optimistic UI
+    if (onSelect) {
+      await onSelect();
+    }
+
+    // Add to cart context
+    if (addToCart) {
+      await addToCart({
+        ticketTierId: tier.id || name,
+        quantity: 1,
+        unitPrice: price || 0,
+        eventTitle: tier.eventTitle || name,
+        eventDate: tier.eventDate || '',
+        eventVenue: tier.eventVenue || '',
+        tierName: name,
+        currency,
+      });
+    }
+
+    // Reset added state after toast
+    setTimeout(() => setAdded(false), 2000);
+  };
 
   return (
     <div
@@ -70,12 +106,20 @@ const TicketTierCard = ({
         ) : (
           <button
             type="button"
-            onClick={onSelect}
+            onClick={handleSelect}
             disabled={isSoldOut || !onSelect}
-            className="ticket-tier-card__select-button"
+            className={`ticket-tier-card__select-button ${added ? 'opacity-80' : ''}`}
             aria-disabled={isSoldOut || !onSelect}
+            aria-label={isSoldOut ? 'Sold out' : `Add ${name} ticket to cart`}
           >
-            Select Ticket
+            {showToast ? (
+              <span>Added to cart!</span>
+            ) : (
+              <span>{selectedCount ? `${selectedCount} Selected` : 'Select Ticket'}</span>
+            )}
+            {cartItemCount > 0 && (
+              <span className="cart-badge">${cartItemCount}</span>
+            )}
           </button>
         )}
       </div>
@@ -83,4 +127,4 @@ const TicketTierCard = ({
   );
 };
 
-export default TicketTierCard;
+export default React.memo(TicketTierCard);

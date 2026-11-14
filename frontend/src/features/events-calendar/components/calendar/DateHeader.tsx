@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatEventDate, Availability } from '../../types';
+import { formatEventDate } from '../../types';
 
 const DateHeader = ({ date, eventCount }: { date: string; eventCount: number }) => {
   const formatted = formatEventDate(date);

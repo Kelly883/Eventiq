@@ -1,25 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../../lib/api';
 import type { DiscoveryCategory, PriceRange } from '../types/shared';
-
-export interface FilterSidebarProps {
-  currentFilters: {
-    category?: string;
-    dateRange?: string;
-    minPrice?: number;
-    maxPrice?: number;
-    location?: string;
-  };
-  onChange: (filters: {
-    category?: string;
-    dateRange?: string;
-    minPrice?: number;
-    maxPrice?: number;
-    location?: string;
-  }) => void;
-  availableCategories?: DiscoveryCategory[];
-  priceRange?: PriceRange;
-}
+import { getCategoryIcon } from '../utils/categoryIcons';
+import PriceRangeSlider from './PriceRangeSlider';
 
 const DateButton = ({
   label,
@@ -58,6 +41,7 @@ const CategoryChip = ({
     role="button"
     aria-checked={isSelected}
   >
+    {getCategoryIcon(value)({ className: 'category-chip__icon', 'aria-hidden': true })}
     {label}
     {isSelected && (
       <span
@@ -121,80 +105,100 @@ export const FilterSidebar = ({
   const minPrice = currentFilters.minPrice ?? minPriceDefault;
   const maxPrice = currentFilters.maxPrice ?? maxPriceDefault;
 
-  const handleCategoryChange = useCallback(
-    (value: string) => {
-      setCategoryValues((prev) => {
-        const next = new Set(prev);
-        if (next.has(value)) {
-          next.delete(value);
-        } else {
-          next.add(value);
-        }
-        return next;
-      });
-      setCategoryValues((prev) => {
-        const next = new Set(prev);
-        if (next.has(value)) next.delete(value);
-        else next.add(value);
-        const cat = Array.from(next).length > 0 ? Array.from(next).join(',') : undefined;
-        onChange({ ...currentFilters, category: cat });
-        return next;
-      });
-    },
-    [currentFilters, onChange],
-  );
-
-  const handleDateChange = useCallback(
-    (dateRange: string) => {
-      onChange({ ...currentFilters, dateRange });
-    },
-    [currentFilters, onChange],
-  );
-
-  const handleMinPriceChange = useCallback(
-    (value: number) => {
-      onChange({ ...currentFilters, minPrice: value });
-    },
-    [currentFilters, onChange],
-  );
-
-  const handleMaxPriceChange = useCallback(
-    (value: number) => {
-      onChange({ ...currentFilters, maxPrice: value });
-    },
-    [currentFilters, onChange],
-  );
-
-  const handleLocationChange = useCallback(
-    (location: string) => {
-      onChange({ ...currentFilters, location: location || undefined });
-    },
-    [currentFilters, onChange],
-  );
-
-  const handleToggleDrawer = () => {
-    setIsDrawerOpen((prev) => !prev);
+  const handleCategoryChange = (value: string) => {
+    const values = new Set(categoryValues);
+    if (values.has(value)) {
+      values.delete(value);
+    } else {
+      values.add(value);
+    }
+    setCategoryValues(values);
+    onChange({
+      category: values.size > 0 ? Array.from(values).join(',') : undefined,
+      dateRange: currentFilters.dateRange,
+      minPrice,
+      maxPrice,
+      location: currentFilters.location,
+    });
   };
 
-  const selectedCategoryName = currentFilters.category
-    ? categories.find((c) => c.slug === currentFilters.category)?.name ||
-      currentFilters.category
-    : 'All Categories';
+  const handleDateChange = (value: string) => {
+    setCategoryValues(new Set());
+    onChange({
+      category: currentFilters.category,
+      dateRange: value,
+      minPrice,
+      maxPrice,
+      location: currentFilters.location,
+    });
+  };
+
+  const handlePriceChange = (value: [number, number]) => {
+    onChange({
+      category: currentFilters.category,
+      dateRange: currentFilters.dateRange,
+      minPrice: value[0],
+      maxPrice: value[1],
+      location: currentFilters.location,
+    });
+  };
+
+  const handleLocationChange = (value: string) => {
+    onChange({
+      category: currentFilters.category,
+      dateRange: currentFilters.dateRange,
+      minPrice,
+      maxPrice,
+      location: value,
+    });
+  };
+
+  const handleToggleDrawer = () => {
+    setIsDrawerOpen(!isDrawerOpen);
+  };
 
   const drawerContent = (
-    <div className="filter-sidebar__content">
+    <div className="filter-sidebar open" role="dialog" aria-modal="true" aria-label="Filters">
+      <div className="filter-sidebar__header">
+        <h3 className="filter-sidebar__title">Filters</h3>
+        <button
+          className="filter-sidebar__toggle"
+          onClick={handleToggleDrawer}
+          aria-label="Close filters"
+        >
+          ✕
+        </button>
+      </div>
+      {drawerBody}
+    </div>
+  );
+
+  const drawerBody = (
+    <div className="filter-sidebar__content space-y-4">
       <div className="filter-sidebar__section">
         <h4 className="filter-sidebar__section-title">Category</h4>
-        <div className="category-select" onClick={() => {}} role="button" aria-haspopup="listbox" aria-expanded={categoryValues.size > 0}>
-          <span className="category-select__trigger">{selectedCategoryName}</span>
-          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M6 9l6 6 6-6" />
-          </svg>
+        <div className="space-y-2 category-chips" role="group" aria-label="Categories">
+          {categories.map((category) => (
+            <CategoryChip
+              key={category.id || category.slug}
+              label={category.name}
+              value={category.slug || category.id}
+              isSelected={categoryValues.has(category.slug || category.id)}
+              onSelect={() => handleCategoryChange(category.slug || category.id)}
+            />
+          ))}
+          <button
+            onClick={() => setCategoryValues(new Set())}
+            className="add-category-btn"
+            aria-label="Clear all categories"
+          >
+            Add Category
+          </button>
         </div>
       </div>
       <div className="filter-sidebar__section">
         <h4 className="filter-sidebar__section-title">Date Range</h4>
-        <div className="filter-sidebar__date-buttons">
+        <div className="filter-sidebar__date-buttons space-y-2" role="radiogroup" aria-label="Date range filters">
           <DateButton
             label="Upcoming"
             value="upcoming"
@@ -223,29 +227,14 @@ export const FilterSidebar = ({
       </div>
       <div className="filter-sidebar__section">
         <h4 className="filter-sidebar__section-title">Price</h4>
-        <div className="price-inputs">
-          <input
-            type="number"
-            min={minPriceDefault}
-            max={maxPriceDefault}
-            step={500}
-            value={minPrice}
-            onChange={(e) => handleMinPriceChange(Number(e.target.value))}
-            className="price-input__field"
-            placeholder="Min"
-          />
-          <span className="price-input__separator">-</span>
-          <input
-            type="number"
-            min={minPriceDefault}
-            max={maxPriceDefault}
-            step={500}
-            value={maxPrice}
-            onChange={(e) => handleMaxPriceChange(Number(e.target.value))}
-            className="price-input__field"
-            placeholder="Max"
-          />
-        </div>
+        <PriceRangeSlider
+          min={minPriceDefault}
+          max={maxPriceDefault}
+          value={[minPrice, maxPrice]}
+          onChange={handlePriceChange}
+          step={500}
+          currency="NGN"
+        />
       </div>
       <div className="filter-sidebar__section">
         <h4 className="filter-sidebar__section-title">Location</h4>
@@ -277,17 +266,8 @@ export const FilterSidebar = ({
             role="dialog"
             aria-modal="true"
             aria-label="Filters"
+            onClick={handleToggleDrawer}
           >
-            <div className="filter-sidebar__header">
-              <h3 className="filter-sidebar__title">Filters</h3>
-              <button
-                className="filter-sidebar__toggle"
-                onClick={handleToggleDrawer}
-                aria-label="Close filters"
-              >
-                ✕
-              </button>
-            </div>
             {drawerContent}
           </div>
         )}
