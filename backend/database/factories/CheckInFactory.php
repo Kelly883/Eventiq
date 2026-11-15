@@ -25,8 +25,13 @@ class CheckInFactory extends Factory
             'user_agent' => $this->faker->userAgent(),
             'qr_verified' => $this->faker->boolean(90),
             'failure_reason' => $this->faker->boolean(10) ? $this->faker->sentence() : null,
-            'scanned_at' => now(),
+            'checked_in_at' => now(),
             'client_mutation_id' => $this->faker->uuid(),
+            'ticket_tier_id' => 1,
+            'attendee_name' => $this->faker->name(),
+            'attendee_email' => $this->faker->safeEmail(),
+            'gate_number' => $this->faker->randomElement(['A', 'B', 'C', 'D']) . $this->faker->numberBetween(1, 10),
+            'scanned_by_name' => $this->faker->name(),
         ];
     }
 }

@@ -6,10 +6,11 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CheckIn extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * The table associated with the model.
@@ -33,6 +34,11 @@ class CheckIn extends Model
         'failure_reason',
         'checked_in_at',
         'client_mutation_id',
+        'ticket_tier_id',
+        'attendee_name',
+        'attendee_email',
+        'gate_number',
+        'scanned_by_name',
     ];
 
     /**
@@ -41,6 +47,7 @@ class CheckIn extends Model
     protected $casts = [
         'qr_verified' => 'boolean',
         'checked_in_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     /**
@@ -73,5 +80,13 @@ class CheckIn extends Model
     public function scannedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'scanned_by');
+    }
+
+    /**
+     * Get the ticket tier for this check-in.
+     */
+    public function ticketTier(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\TicketTier::class, 'ticket_tier_id');
     }
 }

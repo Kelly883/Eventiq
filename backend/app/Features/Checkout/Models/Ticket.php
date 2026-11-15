@@ -53,6 +53,11 @@ class Ticket extends Model
         'checked_in_by',
         'qr_code_scanned_count',
         'last_qr_scan_at',
+        'seat_number',
+        'section',
+        'row',
+        'price_paid',
+        'currency',
     ];
 
     protected $casts = [
@@ -62,6 +67,7 @@ class Ticket extends Model
         'qr_code_expires_at' => 'datetime',
         'last_qr_scan_at' => 'datetime',
         'qr_code_scanned_count' => 'integer',
+        'price_paid' => 'decimal:2',
     ];
 
     public function order(): BelongsTo

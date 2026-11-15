@@ -24,7 +24,9 @@ const AdminDashboardPage = () => {
       <QuickStatsSection loading={loading} data={quickStats} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <MetricCard loading={loading} data={metrics} />
+        <MetricCard label="Total Revenue" value="$48,230" trend="up" trendLabel="12.5" loading={loading} />
+        <MetricCard label="Total Events" value="24" trend="up" trendLabel="4.2" loading={loading} />
+        <MetricCard label="Total Attendees" value="1,840" trend="down" trendLabel="3.1" loading={loading} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

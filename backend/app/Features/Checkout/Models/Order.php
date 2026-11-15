@@ -55,6 +55,8 @@ class Order extends Model
         'billing_email',
         'billing_phone',
         'failure_reason',
+        'completed_at',
+        'refunded_at',
     ];
 
     protected $casts = [
@@ -62,6 +64,8 @@ class Order extends Model
         'subtotal' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
+        'completed_at' => 'datetime',
+        'refunded_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

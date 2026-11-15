@@ -30,6 +30,11 @@ class TicketFactory extends Factory
             'qr_code_generated_at' => now(),
             'qr_code_expires_at' => now()->addDays(30),
             'qr_code_scanned_count' => 0,
+            'seat_number' => $this->faker->optional()->bothify('?##'),
+            'section' => $this->faker->optional()->randomElement(['A', 'B', 'C', 'D', 'VIP', 'GA']),
+            'row' => $this->faker->optional()->bothify('?##'),
+            'price_paid' => $this->faker->randomFloat(2, 1000, 10000),
+            'currency' => 'NGN',
         ];
     }
 }
