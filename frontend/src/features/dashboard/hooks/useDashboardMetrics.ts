@@ -328,6 +328,11 @@ export function useSalesActivitySSE(onMessage: (activities: SalesActivityItem[])
         if (disposed) return;
 
         consecutiveFailures += 1;
+        onSseError?.({
+          message: '[activity-stream] stream unavailable',
+          consecutiveFailures,
+          totalFailures: consecutiveFailures,
+        });
         if (consecutiveFailures > SSE_MAX_CONSECUTIVE_FAILURES) {
           console.warn('[activity-stream] stream unavailable; relying on 30s polling');
           return;

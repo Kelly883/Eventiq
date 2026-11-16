@@ -30,6 +30,10 @@ interface MetricCardProps {
   loading?: boolean;
   /** Numeric data for the sparkline; empty array means no sparkline */
   sparklineData?: number[];
+  /** Currency code for value formatting (e.g. 'NGN', 'USD') */
+  currency?: 'NGN' | 'USD' | 'EUR';
+  /** onClick handler for drill-down navigation */
+  onClick?: () => void;
 }
 
 const DIRECTION_ARIA = { up: 'up', down: 'down', neutral: 'flat' };
@@ -54,17 +58,20 @@ interface TrendIndicatorProps {
 
 /**
  * Displays an arrow and coloured badge based on the trend direction.
- * Hides the badge when direction is neutral and no explicit percentage is provided.
+/**
+ * Displays an arrow and coloured badge based on the trend direction.
+ * Always shows a subtle indicator for neutral trends, even without an explicit percentage.
+ * Shows colored arrows and badges for up/down trends with percentage.
  */
-const TrendIndicator = ({ direction, percentage }: TrendIndicatorProps) => {
-  if (direction === 'neutral' && (percentage === undefined || percentage === null || percentage === '')) {
-    return null;
-  }
+  // Always show a subtle indicator for neutral trends, even without explicit percentage
+  // For up/down trends, show the arrow and percentage if available
   const isUp = direction === 'up';
   const isDown = direction === 'down';
   const dir = isUp ? 'up' : isDown ? 'down' : 'neutral';
   const arrow = isUp ? '↑' : isDown ? '↓' : '→';
-  const trendValue = percentage == null || percentage === '' ? '0%' : String(percentage);
+  // Show '0' for neutral or when percentage is not available, otherwise show the actual percentage
+  const displayPercentage = percentage != null && percentage !== '' && percentage !== 'null' ? String(percentage) : '0';
+  const trendValue = displayPercentage;
 
   return (
     <span
@@ -82,6 +89,20 @@ const TrendIndicator = ({ direction, percentage }: TrendIndicatorProps) => {
     </span>
   );
 };
+
+const formatMetricValue = (value: number | string | undefined, currency?: 'NGN' | 'USD' | 'EUR'): string => {
+  if (value === undefined || value === null) return defaultValue;
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  if (currency) {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(numValue);
+  }
+  return new Intl.NumberFormat('en-US').format(numValue);
+}
 
 const defaultValue = '—';
 const defaultLabel = 'Metric';
@@ -101,17 +122,23 @@ const MetricCard = ({
   trendPercentage,
   loading,
   sparklineData,
+  currency,
+  onClick,
 }: MetricCardProps) => {
   const sparkData = Array.isArray(sparklineData) ? sparklineData.map((v, i) => ({ value: v, index: i })) : [];
   const reducedMotion = useReducedMotion();
-  const displayValue = value === null || value === undefined || value === '' ? defaultValue : value;
+  useTrendAnnouncement(trendDirection, typeof trendPercentage === 'string' ? trendPercentage : undefined);
+  const displayValue = value === null || value === undefined || value === '' ? defaultValue : formatMetricValue(value as number, currency);
 
   return (
     <div
-      className="bg-white border border-slate-100 rounded-xl p-6 shadow-sm flex flex-col items-start gap-3 min-w-0"
+      className="bg-white border border-slate-100 rounded-xl p-6 shadow-sm flex flex-col items-start gap-3 min-w-0 dark:bg-slate-900 dark:text-slate-100"
       role="group"
       aria-label={label || defaultLabel}
       aria-busy={loading ? 'true' : 'false'}
+      aria-live="polite"
+      onClick={() => onClick?.()}
+      tabIndex={0}
     >
       {loading ? (
         <CardSkeleton reducedMotion={reducedMotion} />
@@ -134,3 +161,33 @@ const MetricCard = ({
 MetricCard.displayName = 'MetricCard';
 
 export default MetricCard;
+
+/** Accessibility enhancer: announces trend changes to screen readers via visually-hidden element */
+const useTrendAnnouncement = (direction?: 'up' | 'down' | 'neutral', percentage?: string) => {
+  const [announced, setAnnounced] = useState(false);
+
+  useEffect(() => {
+    if (direction && !announced) {
+      const announcer = document.createElement('div');
+      announcer.setAttribute('aria-live', 'polite');
+      announcer.setAttribute('aria-atomic', 'true');
+      announcer.style.position = 'absolute';
+      announcer.style.left = '-9999px';
+      announcer.style.top = '-9999px';
+      announcer.style.width = '1px';
+      announcer.style.height = '1px';
+      announcer.style.overflow = 'hidden';
+      document.body.appendChild(announcer);
+
+      const arrow = direction === 'up' ? '↑' : direction === 'down' ? '↓' : '→';
+      const sign = percentage && Number(percentage) > 0 ? '+' : '';
+      announcer.textContent = `Trending ${direction} by ${sign}${String(percentage)}%`;
+      setAnnounced(true);
+
+      setTimeout(() => {
+        document.body.removeChild(announcer);
+        setAnnounced(false);
+      }, 5000);
+    }
+  }, [direction, percentage, announced]);
+};

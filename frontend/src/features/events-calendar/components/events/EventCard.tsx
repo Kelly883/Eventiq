@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Event, Availability } from '../../types';
 import AvailabilityIndicator from './AvailabilityIndicator';
 import { useAuthContext } from '../../../auth/context/AuthContext';
+import { FaHeart, FaShare, FaThumbtack } from 'react-icons/fa';
 
 const TRUNCATE_LINES = 2;
 const LINE_HEIGHT = 1.2;
@@ -34,7 +36,18 @@ const formatPrice = (price: number, currency: string = 'EUR'): string => {
   return `from €${price.toFixed(2)}`;
 };
 
-const EventCard = ({ event, onClick, onAddToCart }: { event: Event; onClick: () => void; onAddToCart?: (event: Event) => void }) => {
+interface EventCardProps {
+  event: Event;
+  onClick: () => void;
+  onAddToCart?: (event: Event) => void;
+  onFavorite?: (event: Event) => void;
+  onShare?: (event: Event) => void;
+  onWishlist?: (event: Event) => void;
+  isWished?: boolean;
+  wishlistUrl?: string;
+}
+
+const EventCard = ({ event, onClick, onAddToCart, onFavorite, onShare, onWishlist, isWished, wishlistUrl }: EventCardProps) => {
   const {
     title,
     organizer,
@@ -75,6 +88,8 @@ const EventCard = ({ event, onClick, onAddToCart }: { event: Event; onClick: () 
   const [isMouseOver, setIsMouseOver] = React.useState(false);
   const [imageFailed, setImageFailed] = React.useState(false);
   const [isTouching, setIsTouching] = React.useState(false);
+  const [isFavorite, setIsFavorite] = React.useState(false);
+  const [isWished, setIsWished] = React.useState(false);
   const { user, isAuthenticated } = useAuthContext();
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -181,11 +196,81 @@ const EventCard = ({ event, onClick, onAddToCart }: { event: Event; onClick: () 
             Add to Cart
           </button>
         )}
+
+        {/* Action Buttons - Favorite, Share, Wishlist */}
+        {isAuthenticated && (
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+            <button
+              onClick={() => setIsFavorite((prev) => !prev)}
+              className={`p-1 rounded hover:bg-gray-100 transition-colors ${
+                isFavorite ? 'text-red-500' : ''
+              }`}
+              aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <svg
+                className={`w-4 h-4 ${
+                  isFavorite ? 'text-red-500 fill-red-500' : 'currentColor'
+                }`}
+                fill={isFavorite ? 'red' : 'currentColor'}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.68l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.32 1.32L12 21.28l7.73-7.73a5.5 5.5 0 0 0 0-7.78l-1.32-1.32L12 4.38a5.5 5.5 0 0 0-7.78 0zM12 15.93a3.37 3.37 0 0 0 0 6.74 3.37 3.37 0 0 0 6.74 0 3.37 3.37 0 0 0-6.74 0z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => onShare?.(event)}
+              className="p-1 rounded hover:bg-gray-100 transition-colors"
+              aria-label="Share event"
+              title="Share event"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M13.5 13.5L19.5 19.5M19.5 4.5L4.5 19.5M13.5 13.5L16.5 16.5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setIsWished((prev) => !prev)}
+              className={`p-1 rounded hover:bg-gray-100 transition-colors ${
+                isWished ? 'text-indigo-600' : ''
+              }`}
+              aria-label={isWished ? 'Remove from wishlist' : 'Add to wishlist'}
+              title={isWished ? 'Remove from wishlist' : 'Add to wishlist'}
+            >
+              <svg
+                className={`w-4 h-4 ${
+                  isWished ? 'text-indigo-600 fill-indigo-600' : 'currentColor'
+                }`}
+                fill={isWished ? 'indigo' : 'currentColor'}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path d="M17 8l-1.41 1.41L14 10.83l-1.98 1.98L7 15.83l-1.41 1.41L11 9.59l1.98 1.98L7 15.83 11 17.83l1.41-1.41L11 9.59 17 3z" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
+    window.dispatchEvent(
+      new CustomEvent('eventiq:event-id-changed', {
+        detail: { eventId: eventId },
+      })
+    );
+  }
+}, [useSearchParams()]);
+
 export default React.memo(EventCard);
+
+    window.dispatchEvent(
+      new CustomEvent('eventiq:event-id-changed', {
+        detail: { eventId: eventId },
+      })
+    );
+  }
+}, [useSearchParams()]);
 
 export default React.memo(EventCard);

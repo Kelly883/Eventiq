@@ -13,6 +13,11 @@ export type PaymentGateway = 'paystack' | 'flutterwave';
 const paymentSchema = z.object({
   email: z.string().email('Enter a valid email address').min(1, 'Email is required'),
   gateway: z.enum(['paystack', 'flutterwave']),
+  password: z.string().min(8, 'Password must be at least 8 characters').optional(),
+  confirmPassword: z.string().min(8, 'Confirm password must be at least 8 characters').optional(),
+}).refine(data => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
 });
 
 interface PaymentFormProps {
@@ -25,6 +30,8 @@ interface PaymentFormProps {
   currency: string;
   email?: string;
   reference?: string;
+  enableAccountCreation?: boolean;
+  savedPaymentMethods?: string[];
 }
 
 interface PaymentInitiator {
@@ -100,9 +107,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   currency = 'NGN',
   email: defaultEmail,
   reference = 'eventiq-checkout',
+  enableAccountCreation = false,
 }) => {
   const [formError, setFormError] = useState<string | null>(null);
   const [errorAnnouncement, setErrorAnnouncement] = useState<string | null>(null);
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
 
   const announceError = useCallback((message: string) => {
     setFormError(message);

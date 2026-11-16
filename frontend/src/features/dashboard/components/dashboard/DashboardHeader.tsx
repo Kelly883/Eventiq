@@ -164,6 +164,7 @@ export const DashboardHeader = ({
               <div className="relative flex-1 min-w-[150px]">
                 <label htmlFor="header-filter" className="sr-only">Filter by category</label>
                 <select
+                aria-label="Filter by category"
                   id="header-filter"
                   value={selectedFilter}
                   onChange={handleFilterChange}
@@ -181,6 +182,7 @@ export const DashboardHeader = ({
               <div className="relative flex-1 min-w-[150px]">
                 <label htmlFor="header-date-range" className="sr-only">Select date range</label>
                 <select
+                aria-label="Select date range"
                   id="header-date-range"
                   value={selectedRange}
                   className="w-full appearance-none px-3 py-2 pr-10 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"

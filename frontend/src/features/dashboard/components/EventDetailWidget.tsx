@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 /* global process */
 import { useParams } from 'react-router-dom';
 import { useEventDetail } from '../hooks/useEvents';
@@ -22,8 +22,21 @@ interface PricingPoint {
   status?: 'active' | 'upcoming' | 'past';
 }
 
+const [hasError, setHasError] = useState(false);
+const useReducedMotion = useReducedMotion();
+
+const onErrorDismiss = useCallback(() => {
+  setHasError(false);
+}, []);
+
 const getStatusLabel = (status?: string) => {
   const normalized = (status || 'active').toLowerCase();
+  if (normalized === 'draft') return 'Draft';
+  if (normalized === 'live' || normalized === 'published') return 'Active';
+  if (normalized === 'past' || normalized === 'completed') return 'Completed';
+  if (normalized === 'cancelled') return 'Cancelled';
+  return 'Active';
+};
   if (normalized === 'draft') return 'Draft';
   if (normalized === 'live' || normalized === 'published') return 'Active';
   if (normalized === 'past' || normalized === 'completed') return 'Completed';
@@ -39,6 +52,54 @@ const getStatusBadgeClasses = (status?: string) => {
   if (normalized === 'cancelled') return 'bg-rose-100 text-rose-700 border-rose-200';
   return 'bg-emerald-100 text-emerald-700 border-emerald-200';
 };
+
+/** Improved error boundary fallback with retry and dismiss actions */
+const ErrorFallback = ({
+  error,
+  reset,
+  onDismiss,
+}: {
+  error: Error;
+  reset: () => void;
+  onDismiss: () => void;
+}) => (
+  <div className="bg-white rounded-lg border border-rose-200 p-4" role="alert">
+    <div className="flex items-start gap-3">
+      <svg
+        className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5"
+        fill="currentColor"
+        viewBox="0 0 20 20"
+        aria-hidden="true"
+      >
+        <path
+          fillRule="evenodd"
+          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+          clipRule="evenodd"
+        />
+      </svg>
+      <div>
+        <h3 className="text-base font-semibold text-rose-800">Failed to load event details</h3>
+        <p className="text-sm text-rose-600 mt-1">{error.message}</p>
+        <div className="mt-3 flex gap-2">
+          <button
+            onClick={reset}
+            className="flex-1 py-1.5 rounded-md text-sm font-medium text-rose-700 bg-rose-100 border border-rose-200 hover:bg-rose-200 transition-colors"
+            aria-label="Retry loading event details"
+          >
+            Try Again
+          </button>
+          <button
+            onClick={onDismiss}
+            className="flex-1 py-1.5 rounded-md text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors"
+            aria-label="Dismiss error message"
+          >
+            dismiss
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);;
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('en-NG', {
@@ -348,26 +409,19 @@ const EventDetailWidget = ({
     );
   }
 
-  return (
+  const onErrorDismiss = useCallback(() => {
+  reset();
+  setHasError(false);
+}, [reset]);
+
+return (
     <ErrorBoundary
       fallbackRender={(error, reset) => (
-        <div className="bg-white rounded-lg border border-rose-200 p-4" role="alert">
-          <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
-            <div>
-              <h3 className="text-base font-semibold text-rose-800">Failed to load event details</h3>
-              <p className="text-sm text-rose-600 mt-1">{error.message}</p>
-              <button
-                onClick={reset}
-                className="mt-3 px-3 py-1.5 text-sm font-medium text-rose-700 bg-rose-100 border border-rose-200 rounded-lg hover:bg-rose-200"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        </div>
+        <ErrorFallback
+          error={error}
+          reset={reset}
+          onDismiss={onErrorDismiss}
+        />
       )}
     >
       <EventDetailWidgetContent

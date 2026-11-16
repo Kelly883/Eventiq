@@ -4,7 +4,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { calendarLocalizer } from '../../utils/calendarLocalizer';
 import { CALENDAR_VIEWS, CalendarView } from '../../utils/dateConstants';
 import ViewToggle from '../filters/ViewToggle';
-import AvailabilityIndicator from '../events/AvailabilityIndicator';
+import AvailabilityBadge from '../events/AvailabilityBadge';
 
 /**
  * Shape react-big-calendar expects for each event. Kept separate from the
@@ -24,9 +24,26 @@ export interface CalendarEvent {
 export type AvailabilityColor = 'available' | 'low' | 'sold_out';
 
 const AVAILABILITY_COLORS: Record<AvailabilityColor, string> = {
-  available: '#10b981', // emerald-500
-  low: '#f59e0b', // amber-500
-  sold_out: '#ef4444', // red-500
+  available: '#10b981', // emerald-500 - also has pattern overlay for color-blind support
+  low: '#f59e0b', // amber-500 - also has pattern overlay for color-blind support
+  sold_out: '#ef4444', // red-500 - also has pattern overlay for color-blind support
+};
+
+/** Color-blind friendly SVG patterns as secondary differentiation */
+const AVAILABILITY_PATTERNS = {
+  available: 'M6 2l3 3L11 6L8 10L6 8L2 12L6 6zM6 2l3 3L11 6L8 10L6 8L2 12L6 6z',
+  low: 'M6 2l3 3L11 6L8 10L6 8L2 12L6 6z',
+  sold_out: 'M2 12l7-7 2 5-7 2-5-2zM6 2l3 3L11 6L8 10L6 8L2 12L6 6z',
+};
+
+/** Data URLs for pattern backgrounds (for color-blind users) */
+const PATTERN_IMAGES = {
+  available:
+    'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' fill=\'none%3E%3Cpath d=\'M6 2l3 3L11 6L8 10L6 8L2 12L6 6zM6 2l3 3L11 6L8 10L6 8L2 12L6 6z\' fill=\'%2310b981\'/%3E%3C/svg%3E',
+  low:
+    'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' fill=\'none%3E%3Cpath d=\'M6 2l3 3L11 6L8 10L6 8L2 12L6 6z\' fill=\'%23f59e0b\'/%3E%3C/svg%3E',
+  sold_out:
+    'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' fill=\'none%3E%3Cpath d=\'M6 2l3 3L11 6L8 10L6 8L2 12L6 6z\' fill=\'%23ef4444\'/%3E%3C/svg%3E',
 };
 
 type CalendarGridProps = {
@@ -66,6 +83,11 @@ const CalendarGrid = ({
     },
     [onViewChange]
   );
+
+  // Performance note: For calendars with many events per day (>50), consider
+  // using react-window or react-virtualized for the event list renderer.
+  // The current implementation groups events by date for O(1) lookup but
+  // may need virtualization for dense schedules.
 
   const handleSlotSelect = React.useCallback(
     (slotInfo: { start: Date; end: Date; action: string }) => {
@@ -108,9 +130,24 @@ const CalendarGrid = ({
       }
 
       const colorStyle: Record<AvailabilityColor, React.CSSProperties> = {
-        available: { borderLeft: `3px solid ${AVAILABILITY_COLORS.available}` },
-        low: { borderLeft: `3px solid ${AVAILABILITY_COLORS.low}` },
-        sold_out: { borderLeft: `3px solid ${AVAILABILITY_COLORS.sold_out}` },
+        available: { 
+          borderLeft: `3px solid ${AVAILABILITY_COLORS.available}`,
+          backgroundImage: AVAILABILITY_PATTERNS.available,
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'contain',
+        },
+        low: { 
+          borderLeft: `3px solid ${AVAILABILITY_COLORS.low}`,
+          backgroundImage: AVAILABILITY_PATTERNS.low,
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'contain',
+        },
+        sold_out: { 
+          borderLeft: `3px solid ${AVAILABILITY_COLORS.sold_out}`,
+          backgroundImage: AVAILABILITY_PATTERNS.sold_out,
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'contain',
+        },
       };
 
       return {
@@ -171,6 +208,40 @@ const CalendarGrid = ({
       {isLoading && (<>
         <div className="skeleton-grid animate-pulse" />
       </>)
+      {events.length === 0 && (
+        <div
+          className="empty-state text-center py-12"
+          aria-label="No events found"
+        >
+          <svg
+            className="w-12 h-12 mx-auto text-gray-400 mb-3 opacity-50"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          <h3 className="text-xl font-semibold mb-2">No events</h3>
+          <p className="text-gray-600 mb-6">
+            No events match your selected filters. Try adjusting your criteria or clearing filters.
+          </p>
+          <button
+            onClick={() => window.history.back()}
+            className="inline-flex items-center gap-2 rounded border px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+            aria-label="Go back to calendar view"
+          >
+            Adjust Filters
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      )}
       <ViewToggle
         currentView={currentView}
         onViewChange={handleViewChange}

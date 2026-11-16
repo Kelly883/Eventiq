@@ -8,6 +8,7 @@ interface OrderConfirmationProps {
   status: 'success' | 'failed' | 'pending';
   onContinueShopping: () => void;
   onViewTickets: () => void;
+  items?: { tierName: string; quantity: number }[];
 }
 
 export default function OrderConfirmation({

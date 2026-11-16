@@ -22,25 +22,31 @@ interface CartItemRowProps {
 const buttonBase =
   'p-2 rounded-md font-medium text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2';
 
-const getDecrementClass = (quantity: number) =>
-  quantity <= 1
+const getDecrementClass = (quantity: number, isDisabled = false) =>
+  quantity <= 1 || isDisabled
     ? `${buttonBase} bg-slate-100 text-slate-300 cursor-not-allowed`
     : `${buttonBase} bg-slate-50 text-slate-600 hover:bg-slate-100`;
 
-const getIncrementClass = (quantity: number) =>
-  `${buttonBase} bg-slate-50 text-slate-600 hover:bg-slate-100`;
+const getIncrementClass = (quantity: number, isDisabled = false) =>
+  quantity < 1 || isDisabled
+    ? `${buttonBase} bg-slate-100 text-slate-300 cursor-not-allowed`
+    : `${buttonBase} bg-slate-50 text-slate-600 hover:bg-slate-100`;
 
 const CartItemRow: React.FC<CartItemRowProps> = ({
   item,
   quantity,
   onQuantityChange,
   onRemove,
+  isLoading = false,
 }) => {
   const handleIncrement = () => onQuantityChange(quantity + 1);
   const handleDecrement = () => {
     if (quantity <= 1) return;
     onQuantityChange(quantity - 1);
   };
+
+  const isLoadingRef = useRef(isLoading);
+  isLoadingRef.current = isLoading;
 
   const lineTotal = quantity * item.unitPrice;
   const currency = item.currency || 'USD';
@@ -64,10 +70,10 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
       <div className="flex items-center gap-2">
         <button
           onClick={handleDecrement}
-          disabled={quantity <= 1}
+          disabled={quantity <= 1 || isLoadingRef.current}
           aria-label={`Decrease ${item.tierName} quantity`}
           aria-controls="cart-item-quantity"
-          className={getDecrementClass(quantity)}
+          className={getDecrementClass(quantity, isLoadingRef.current)}
         >
           -
         </button>
@@ -81,9 +87,10 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
         </span>
         <button
           onClick={handleIncrement}
+          disabled={isLoadingRef.current}
           aria-label={`Increase ${item.tierName} quantity`}
           aria-controls="cart-item-quantity"
-          className={getIncrementClass(quantity)}
+          className={getIncrementClass(quantity, isLoadingRef.current)}
         >
           +
         </button>

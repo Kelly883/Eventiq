@@ -105,7 +105,7 @@ const TicketCard: React.FC<TicketCardProps> = ({
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-4 items-start">
+      <div className="flex flex-col sm:flex-row gap-4 items-start md:items-center">
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-bold text-slate-900 mb-1">
             {event?.title || ticket.eventTitle}
@@ -114,7 +114,7 @@ const TicketCard: React.FC<TicketCardProps> = ({
           <p className="text-sm text-slate-500">{formattedVenue}</p>
           {ticketTier.price > 0 && (
             <p className="text-sm text-slate-500 mt-1">
-              {formatCurrency(ticketTier.price, ticketTier.currency || 'USD')}
+              {formatCurrency(ticketTier.price, ticketTier.currency || 'NGN', ticketTier.locale || 'en-NG')}
             </p>
           )}
         </div>

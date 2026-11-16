@@ -42,8 +42,8 @@ const EmptyState = ({ hasFilters, onClearFilters }: { hasFilters: boolean; onCle
     </span>
     <p className="text-sm">
       {hasFilters
-        ? 'No sales match the selected filters.'
-        : 'New ticket sales will appear here in real time.'}
+        ? 'No sales match the selected filters.\nTry clearing filters or adjusting your criteria.'
+        : 'New ticket sales will appear here in real time.\nThey\'ll show up instantly via SSE or within 30 seconds.'}
     </p>
     {hasFilters && (
       <button
@@ -202,6 +202,7 @@ export const SalesActivityFeed = ({
   }, [navigate]);
 
   const { data, isLoading, isFetching, error, refetch, dataUpdatedAt } = useSalesActivity(filters);
+  const [sseError, setSSEError] = useState<{message?: string; consecutiveFailures?: number; totalFailures?: number} | null>(null);
   const activities = useMemo(() => data ?? [], [data]);
 
   useEffect(() => {
@@ -220,7 +221,7 @@ export const SalesActivityFeed = ({
     setLastRefresh(new Date());
   }, []);
 
-  useSalesActivitySSE(handleNewActivities);
+  useSalesActivitySSE(handleNewActivities, onSseError);
 
   // Stamp refresh time when a successful fetch settles. Keyed on the query's
   // `dataUpdatedAt` (a primitive) so this never loops on array identity.
@@ -568,6 +569,7 @@ export const SalesActivityFeed = ({
             <div>
               <label htmlFor="filter-event" className="block text-xs font-medium text-slate-600 mb-1">Event</label>
               <select
+                aria-label="Filter by event"
                 ref={filterEventRef}
                 id="filter-event"
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -582,6 +584,7 @@ export const SalesActivityFeed = ({
             <div>
               <label htmlFor="filter-tier" className="block text-xs font-medium text-slate-600 mb-1">Tier</label>
               <select
+                aria-label="Filter by tier"
                 id="filter-tier"
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 value={filters.tier}
@@ -628,6 +631,21 @@ export const SalesActivityFeed = ({
         <div className="px-4 py-2 max-h-96 overflow-y-auto" aria-busy={isLoading || isFetching} style={{ maxHeight: '500px' }}>
         {isLoading || isFetching ? (
           <SkeletonRow reducedMotion={reducedMotion} key="skeleton" />
+        ) : sseError ? (
+          <li role="alert" className="py-8 text-center bg-rose-50 border border-rose-200">
+            <svg className="w-10 h-10 mx-auto text-rose-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <p className="text-base font-semibold text-rose-700 mb-1">SSE Stream Unavailable</p>
+            <p className="text-sm text-rose-500 mb-3">{sseError?.message || 'Connection issue'}</p>
+            {sseError?.consecutiveFailures > 5 ? 'The real-time activity stream has encountered repeated issues.' : 'Connection unstable.'}
+            <button
+              type="button"
+              onClick={() => setSSEError(null)}
+              className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-100">
+              Retry
+            </button>
+          </li>
         ) : (
           <ul className="text-sm">{renderRows()}</ul>
         )}

@@ -145,6 +145,38 @@ const SearchBar = ({
           ))}
         </div>
       )}
+      {isOpen && results.length === 0 && (
+        <div
+          className="absolute top-full left-0 right-4 w-64 rounded border border-gray-300 bg-white py-8 text-center shadow-lg z-10"
+          role="alert"
+          aria-label="No search results"
+        >
+          <svg
+            className="w-10 h-10 mx-auto text-gray-400 mb-3 opacity-50"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <h3 className="text-sm font-medium text-gray-600 mb-2">No results found</h3>
+          <p className="text-xs text-gray-400">
+            Try searching with different keywords or check the spelling.
+          </p>
+          <button
+            onClick={() => setIsOpen(false)}
+            className="mt-3 inline-flex items-center gap-2 rounded border px-4 py-2 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+            aria-label="Close search results"
+          >
+            Close
+          </button>
+        </div>
+      )}
     </div>
   );
 };

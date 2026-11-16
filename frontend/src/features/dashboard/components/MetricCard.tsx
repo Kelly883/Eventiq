@@ -63,15 +63,20 @@ export function MetricCardRow({
       {METRIC_CONFIGS.map((config) => {
         const value = metrics?.[config.key] ?? 0;
         const trend = metrics?.[config.trendKey] as DashboardMetrics[typeof config.trendKey] | undefined;
+        // A metric is loading if the overall data is loading OR if the specific key hasn't arrived yet
+        const metricIsLoading = isLoading || (metrics && metrics[config.key] === undefined);
+        const displayValue = metrics?.[config.key] ?? (metricIsLoading ? undefined : 0);
 
         return (
           <BaseMetricCard
             key={config.key}
-            value={config.format ? config.format(value as number) : String(value)}
+            value={config.format ? config.format(displayValue as number) : String(displayValue ?? '…')}
             label={config.label}
             trendDirection={trend?.direction}
             trendPercentage={trend?.percentage}
-            loading={isLoading}
+            loading={metricIsLoading}
+            currency={"NGN"}
+            onClick={() => console.log('Drill-down to details')}
           />
         );
       })}

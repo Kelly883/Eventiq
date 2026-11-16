@@ -6,17 +6,22 @@ import type { SearchSuggestion } from '../types/shared';
 export interface SearchBarProps {
   onSearch?: (suggestion: SearchSuggestion) => void;
   placeholder?: string;
+  locale?: 'en' | 'es' | 'fr' | 'de' | 'pt' | 'zh' | 'ja' | 'ar';
 }
 
 const DEBOUNCE_MS = 300;
 
 const SearchBar = ({
   onSearch,
-  placeholder = 'Search events…',
+  placeholder,
+  locale = 'en',
 }: SearchBarProps) => {
+  const { t } = useTranslation();
+  const SearchPlaceholder = placeholder || t('search.placeholder', 'Search events…');
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -34,6 +39,7 @@ const SearchBar = ({
         return;
       }
 
+      setIsLoading(true);
       try {
         const res = await api.get('/events/public/search', {
           params: { q: trimmed },
@@ -46,6 +52,8 @@ const SearchBar = ({
         console.error('Search failed', err);
         setSuggestions([]);
         setIsOpen(false);
+      } finally {
+        setIsLoading(false);
       }
     }, DEBOUNCE_MS);
 
@@ -101,7 +109,12 @@ const SearchBar = ({
         />
         {isOpen && suggestions.length > 0 && (
           <div className="search-bar__dropdown" role="listbox" aria-label="Search suggestions">
-            {suggestions.map((suggestion) => (
+            {isLoading ? (
+              <div className="search-bar__loading" aria-label="Loading suggestions">
+                Searching…
+              </div>
+            ) : (
+              {suggestions.map((suggestion) => (
               <div
                 key={suggestion.id}
                 className="search-bar__dropdown-item"
