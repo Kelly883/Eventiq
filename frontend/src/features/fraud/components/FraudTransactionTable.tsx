@@ -12,10 +12,13 @@ interface FraudTransactionTableProps {
   limit?: number;
   total?: number;
   onPageChange?: (page: number) => void;
+  currency?: 'NGN' | 'USD' | 'EUR';
 }
 
-const formatCurrency = (amount: number): string =>
-  new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount);
+const formatCurrency = (amount: number, currency?: 'NGN' | 'USD' | 'EUR') => {
+  const curr = currency ?? 'NGN';
+  return new Intl.NumberFormat('en-NG', { style: 'currency', currency: curr }).format(amount);
+};
 
 const formatDate = (timestamp: string | undefined): string => {
   if (!timestamp) return 'N/A';
@@ -84,6 +87,9 @@ const FraudTransactionTable: React.FC<FraudTransactionTableProps> = ({
   }, [sortedTransactions, page, limit]);
 
   const totalPages = useMemo(() => Math.ceil(total / limit) || 1, [total, limit]);
+
+  // Empty state - shown when not loading and no transactions to display
+  const emptyTransactions = pagedTransactions.length === 0 && !isLoading;
 
   const handleKeyDown = useCallback(
     (transaction: FraudTransaction, event: React.KeyboardEvent) => {
@@ -213,22 +219,34 @@ const FraudTransactionTable: React.FC<FraudTransactionTableProps> = ({
           </tr>
         </thead>
         <tbody>
-          {pagedTransactions.map((transaction, index) => (
-            <tr
-              key={transaction.id}
-              className="border-b last:border-b-0 hover:bg-slate-50 transition-colors cursor-pointer"
-              role="button"
-              tabIndex={0}
-              onClick={() => onRowClick?.(transaction)}
-              onKeyDown={(e) => handleKeyDown(transaction, e)}
-              aria-label={`Transaction: ${transaction.id} - ${transaction.reason || 'No reason'}`}
-            >
-              <td className="p-3 font-medium">{new Intl.NumberFormat('en-US').format(transaction.amount)}</td>
-              <td className="p-3 text-sm text-slate-500">{formatDate(transaction.timestamp)}</td>
-              <td className="p-3">{transaction.riskScore ?? 'N/A'}</td>
-              <td className="p-3 line-clamp-2" title={transaction.reason ?? undefined}>{transaction.reason || 'N/A'}</td>
+          {emptyTransactions ? (
+            <tr>
+              <td
+                colSpan={4}
+                className="p-6 text-center text-slate-500"
+                aria-label="No transactions found"
+              >
+                <p className="font-medium">No transactions match the current filters</p>
+              </td>
             </tr>
-          ))}
+          ) : (
+            pagedTransactions.map((transaction, index) => (
+              <tr
+                key={transaction.id}
+                className="border-b last:border-b-0 hover:bg-slate-50 transition-colors cursor-pointer"
+                role="button"
+                tabIndex={0}
+                onClick={() => onRowClick?.(transaction)}
+                onKeyDown={(e) => handleKeyDown(transaction, e)}
+                aria-label={`Transaction: ${transaction.id} - ${transaction.reason || 'No reason'}`}
+              >
+                <td className="p-3 font-medium">{formatCurrency(transaction.amount, currency)}</td>
+                <td className="p-3 text-sm text-slate-500">{formatDate(transaction.timestamp)}</td>
+                <td className="p-3">{transaction.riskScore ?? 'N/A'}</td>
+                <td className="p-3 line-clamp-2" title={transaction.reason ?? undefined}>{transaction.reason || 'N/A'}</td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
 

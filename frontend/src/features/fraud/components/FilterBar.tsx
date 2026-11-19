@@ -1,17 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FraudAlertFilters } from '../types/fraud';
 
 interface FilterBarProps {
   onFilterChange: (filters: FraudAlertFilters) => void;
   filters: FraudAlertFilters;
+  paymentMethods?: { value: string; label: string }[];
 }
 
-const FilterBar: React.FC<FilterBarProps> = ({ onFilterChange, filters }) => {
+const FilterBar: React.FC<FilterBarProps> = ({
+  onFilterChange,
+  filters,
+  paymentMethods = [],
+}) => {
   const [riskLevel, setRiskLevel] = useState<FraudAlertFilters['risk_level']>(filters.risk_level ?? undefined);
   const [dateFrom, setDateFrom] = useState<string>(filters.date_from ?? '');
   const [dateTo, setDateTo] = useState<string>(filters.date_to ?? '');
   const [paymentMethod, setPaymentMethod] = useState<string | undefined>(filters.payment_method ?? undefined);
   const [search, setSearch] = useState<string>(filters.search ?? '');
+  const [dateError, setDateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      setDateError('End date must be on or after the start date');
+    } else {
+      setDateError(null);
+    }
+  }, [dateFrom, dateTo]);
 
   const handleRiskChange = (value: FraudAlertFilters['risk_level']) => {
     setRiskLevel(value);
@@ -24,6 +38,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ onFilterChange, filters }) => {
   const handleDateChange = (from: string, to: string) => {
     setDateFrom(from);
     setDateTo(to);
+    setDateError(null);
     onFilterChange({
       ...filters,
       date_from: from || undefined,
@@ -69,6 +84,11 @@ const FilterBar: React.FC<FilterBarProps> = ({ onFilterChange, filters }) => {
         {/* Date Range Filter */}
         <div>
           <label className="block text-sm font-medium text-slate-600 mb-1">Date Range</label>
+          {dateError && (
+            <p id="date-error" className="text-xs text-red-600 mb-1" role="alert">
+              {dateError}
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <input
               type="date"
@@ -77,6 +97,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ onFilterChange, filters }) => {
               onChange={(e) => handleDateChange(e.target.value, dateTo || '')}
               placeholder="Start date"
               aria-label="Start date"
+              aria-describedby={dateError ? 'date-error' : undefined}
             />
             <input
               type="date"
@@ -85,6 +106,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ onFilterChange, filters }) => {
               onChange={(e) => handleDateChange(dateFrom || '', e.target.value)}
               placeholder="End date"
               aria-label="End date"
+              aria-describedby={dateError ? 'date-error' : undefined}
             />
           </div>
         </div>
@@ -94,12 +116,16 @@ const FilterBar: React.FC<FilterBarProps> = ({ onFilterChange, filters }) => {
           <label className="block text-sm font-medium text-slate-600 mb-1">Payment Method</label>
           <select
             className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            value={payment_method ?? undefined}
+            value={paymentMethod ?? ''}
             onChange={(e) => handlePaymentChange(e.target.value as string | undefined)}
             aria-label="Filter by payment method"
           >
             <option value="">All methods</option>
-            {/* Payment methods would be populated dynamically */}
+            {paymentMethods.map((method) => (
+              <option key={method.value} value={method.value}>
+                {method.label}
+              </option>
+            ))}
           </select>
         </div>
 

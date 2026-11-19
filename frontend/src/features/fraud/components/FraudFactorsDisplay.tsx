@@ -4,6 +4,7 @@ import { FraudFactors } from '../types/fraud';
 interface FraudFactorsDisplayProps {
   fraudFactors: FraudFactors;
   detectionMethod: string;
+  isLoading?: boolean;
 }
 
 const factorLabels: Record<keyof FraudFactors, { label: string; icon: string }> = {
@@ -52,31 +53,63 @@ const factorLabels: Record<keyof FraudFactors, { label: string; icon: string }> 
 const FraudFactorsDisplay: React.FC<FraudFactorsDisplayProps> = ({
   fraudFactors,
   detectionMethod,
+  isLoading,
 }) => {
   const activeFactors = Object.entries(fraudFactors)
     .filter(([, triggered]) => triggered)
     .map(([key]) => factorLabels[key]);
 
+  // Truncate long labels with tooltip
+  const truncateLabel = (label: string) => {
+    // If label is longer than 40 characters, truncate with tooltip
+    if (label.length > 40) {
+      return (
+        <span
+          className="truncate"
+          title={label}
+          aria-label={`Fraud factor: ${label}`}
+        >
+          {label.substring(0, 40)}...
+        </span>
+      );
+    }
+    return (
+      <span
+        className="truncate"
+        title={label}
+        aria-label={`Fraud factor: ${label}`}
+      >
+        {label}
+      </span>
+    );
+  };
+
   return (
-    <div className="space-y-1.5 text-sm" aria-label="Fraud factors">
-      {activeFactors.length > 0 ? (
-        activeFactors.map(({ label, icon }, index) => (
-          <div
-            key={index}
-            className="flex items-start gap-2"
-            aria-label={`Fraud factor: ${label}`}
-          >
-            <svg
-              className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
+    <div
+      className={isLoading ? "space-y-1.5 text-sm opacity-50" : "space-y-1.5 text-sm"}
+      aria-label="Fraud factors"
+    >
+      {isLoading ? (
+        <p className="text-slate-500">Loading fraud factors...</p>
+      ) : activeFactors.length > 0 ? (
+        <div>
+          {activeFactors.map(({ label, icon }, index) => (
+            <div
+              key={index}
+              className="flex items-start gap-2"
             >
-              <path d={icon} />
-            </svg>
-            <span className="flex-1">{label}</span>
-          </div>
-        ))
+              <svg
+                className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d={icon} />
+              </svg>
+              <span>{truncateLabel(label)}</span>
+            </div>
+          ))}
+        </div>
       ) : (
         <p className="text-slate-500">No fraud factors detected</p>
       )}
