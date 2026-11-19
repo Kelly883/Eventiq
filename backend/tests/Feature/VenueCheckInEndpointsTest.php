@@ -55,6 +55,12 @@ class VenueCheckInEndpointsTest extends TestCase
             if (!$user->roles()->where('name', 'venue_staff')->exists()) {
                 $user->roles()->attach($staffRole);
             }
+        } elseif ($role === 'attendee') {
+            // Remove default organizer role from factory
+            $organizerRole = Role::where('name', 'organizer')->first();
+            if ($organizerRole && $user->roles()->where('name', 'organizer')->exists()) {
+                $user->roles()->detach($organizerRole);
+            }
         }
 
         return $user;

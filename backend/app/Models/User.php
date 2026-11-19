@@ -200,15 +200,32 @@ class User extends Authenticatable
 
     public function hasRole(string $roleName): bool
     {
+        // Check loaded roleRelation first (primary role)
         if ($this->relationLoaded('roleRelation') && $this->roleRelation !== null) {
-            return $this->roleRelation->name === $roleName;
-        }
-
-        if ($this->roleRelation()->where('name', $roleName)->exists()) {
+            if ($this->roleRelation->name === $roleName) {
+                return true;
+            }
+            // Primary role doesn't match — fall through to check additional roles
+        } elseif ($this->roleRelation()->where('name', $roleName)->exists()) {
             return true;
         }
 
+        // Check additional roles via belongsToMany
         return $this->roles()->where('name', $roleName)->exists();
+    }
+
+    public function assignRole(string $roleName): self
+    {
+        $role = Role::where('name', $roleName)->firstOrFail();
+
+        $this->roles()->syncWithoutDetaching([$role->id]);
+
+        if (empty($this->role_id)) {
+            $this->role_id = $role->id;
+            $this->save();
+        }
+
+        return $this->refreshRoles();
     }
 
     public function hasPermission(string $permissionName): bool
