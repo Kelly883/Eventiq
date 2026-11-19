@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 interface ConfirmationDialogProps {
   isOpen: boolean;
@@ -35,6 +35,19 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onCancel();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onCancel]);
+
   if (!isOpen) {
     return null;
   }
@@ -42,18 +55,18 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
-      aria-modal="true"
     >
       <div
         className={`rounded-lg bg-white p-6 shadow-xl transform transition-all duration-300 scale-100 w-full max-w-md`}
         role="dialog"
+        aria-modal="true"
         aria-labelledby="dialog-title"
         aria-describedby="dialog-message"
       >
         <h2 id="dialog-title" className="text-xl font-bold text-slate-900 mb-2">
           {title}
         </h2>
-        <p id="dialog-message" className="text-slate-500 mb-6 line-clamp-3">
+        <p id="dialog-message" className="text-slate-500 mb-6">
           {message}
         </p>
 

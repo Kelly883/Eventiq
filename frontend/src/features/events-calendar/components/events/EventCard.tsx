@@ -145,8 +145,9 @@ const EventCard = ({ event, onClick, onAddToCart, onFavorite, onShare, onWishlis
         <img
           src={imageFailed ? '/placeholder-event.jpg' : (bannerUrl || '/placeholder-event.jpg')}
           alt={title}
-          className="absolute inset-0 w-full h-full object-cover transition-opacity group-hover:opacity-80"
+          className="absolute inset-0 w-full h-full object-cover transition-opacity group-hover:opacity-80 cursor-pointer"
           onError={handleImageError}
+          onClick={() => window.open(bannerUrl || "#", "_blank")}
         />
         <div
           className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/40 to-transparent p-3"
@@ -273,4 +274,3 @@ export default React.memo(EventCard);
   }
 }, [useSearchParams()]);
 
-export default React.memo(EventCard);
