@@ -135,7 +135,6 @@ const EventDetailPage = () => {
             ) : null}
           </div>
 
-          {/* Share Button */}
           {event && (
             <div className="mb-4 flex items-center gap-2">
               <button
