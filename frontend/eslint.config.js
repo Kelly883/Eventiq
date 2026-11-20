@@ -11,17 +11,11 @@ export default [
       "dist",
       "node_modules",
       "public/mockServiceWorker.js",
-      // Type-declaration stubs written in TS/JSDoc-typedef syntax ahead of a
-      // planned TS migration. They are intentionally outside the Vite build
-      // graph (never imported at runtime) and cannot parse as plain JS.
       "src/features/*/types/**",
     ],
   },
   {
-    // Service workers run in a different global scope than the rest of
-    // the app (importScripts, self, clients - no window/document), and
-    // `firebase` is injected at runtime by importScripts() rather than
-    // an ES import, so ESLint can't infer it statically.
+    // Service workers
     files: ["public/firebase-messaging-sw.js"],
     languageOptions: {
       ecmaVersion: 2020,
@@ -35,18 +29,12 @@ export default [
     },
   },
   {
-    // Build / config files run in Node, not the browser. `process`,
-    // `__dirname`, etc. are valid globals here (esp. vite.config.js
-    // which reads process.cwd() for loadEnv).
+    // Build / config files
     files: ["vite.config.js", "*.config.js", "playwright.config.ts", "scripts/*.ts", "src/env.ts", "tests/*.spec.ts"],
     languageOptions: {
       ecmaVersion: 2020,
       globals: {
         ...globals.node,
-      },
-      parserOptions: {
-        ecmaVersion: "latest",
-        sourceType: "module",
       },
     },
     rules: {
@@ -54,6 +42,52 @@ export default [
     },
   },
   {
+    // Test files - vitest globals
+    files: ["**/*.test.{ts,tsx,js,jsx}", "**/*.spec.{ts,tsx,js,jsx}", "tests/**/*.{ts,js,tsx,jsx}"],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        describe: "readonly",
+        it: "readonly",
+        expect: "readonly",
+        beforeAll: "readonly",
+        afterEach: "readonly",
+        afterAll: "readonly",
+        beforeEach: "readonly",
+        jest: "readonly",
+        global: "readonly",
+      },
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        ecmaFeatures: { jsx: true },
+        sourceType: "module",
+      },
+    },
+    plugins: {
+      react,
+      "react-hooks": reactHooks,
+      "react-refresh": reactRefresh,
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      ...react.configs.recommended.rules,
+      ...react.configs["jsx-runtime"].rules,
+      ...reactHooks.configs.recommended.rules,
+      "react-refresh/only-export-components": "off",
+      "react/prop-types": "off",
+      "no-unused-vars": "off",
+      "react/no-unescaped-entities": "off",
+      "no-empty": "off",
+      "react-hooks/rules-of-hooks": "off",
+      "no-case-declarations": "off",
+      "no-undef": "off",
+    },
+  },
+  {
+    // JS/JSX files
     files: ["**/*.{js,jsx}"],
     ignores: ["public/firebase-messaging-sw.js"],
     languageOptions: {
@@ -87,10 +121,11 @@ export default [
       "react/no-unescaped-entities": "off",
       "no-empty": "off",
       "react-hooks/rules-of-hooks": "off",
-      "no-case-declarations": "off"
+      "no-case-declarations": "off",
     },
   },
   {
+    // TS/TSX files
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: 2020,
@@ -123,7 +158,7 @@ export default [
       "react/no-unescaped-entities": "off",
       "no-empty": "off",
       "react-hooks/rules-of-hooks": "off",
-      "no-case-declarations": "off"
+      "no-case-declarations": "off",
     },
   },
 ];

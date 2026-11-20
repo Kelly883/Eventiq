@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { formatCurrency } from '../../../lib/currencyUtils';
 
 interface CartItem {
